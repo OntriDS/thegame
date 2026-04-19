@@ -42,44 +42,110 @@ export class SummaryRepository {
     const profitDelta = revenueDelta - costDelta;
     const monthlyKey = this.getMonthlyKey(monthYear);
     
+    let commandCount = 0;
+
     // Create an atomic pipeline
     const pipeline = kv.pipeline();
 
     // Track this month in the summary activity index
     pipeline.sadd(buildSummaryMonthsKey(), monthYear);
+    commandCount += 1;
 
     // Monthly scope
-    if (revenueDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'revenue', revenueDelta);
-    if (costDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'costs', costDelta);
-    if (profitDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'profit', profitDelta);
-    if (salesRevenueDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'salesRevenue', salesRevenueDelta);
-    if (salesVolumeDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'salesVolume', salesVolumeDelta);
-    if (itemsSoldDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'itemsSold', itemsSoldDelta);
-    if (taskCountDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'taskCount', taskCountDelta);
-    if (jungleCoinsDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'jungleCoins', jungleCoinsDelta);
-    if (inventoryValueDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'inventoryValue', inventoryValueDelta);
-    if (inventoryCostDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'inventoryCost', inventoryCostDelta);
-    if (inventoryJ$Delta !== 0) pipeline.hincrbyfloat(monthlyKey, 'inventoryJ$', inventoryJ$Delta);
+    if (revenueDelta !== 0) {
+      pipeline.hincrbyfloat(monthlyKey, 'revenue', revenueDelta);
+      commandCount += 1;
+    }
+    if (costDelta !== 0) {
+      pipeline.hincrbyfloat(monthlyKey, 'costs', costDelta);
+      commandCount += 1;
+    }
+    if (profitDelta !== 0) {
+      pipeline.hincrbyfloat(monthlyKey, 'profit', profitDelta);
+      commandCount += 1;
+    }
+    if (salesRevenueDelta !== 0) {
+      pipeline.hincrbyfloat(monthlyKey, 'salesRevenue', salesRevenueDelta);
+      commandCount += 1;
+    }
+    if (salesVolumeDelta !== 0) {
+      pipeline.hincrbyfloat(monthlyKey, 'salesVolume', salesVolumeDelta);
+      commandCount += 1;
+    }
+    if (itemsSoldDelta !== 0) {
+      pipeline.hincrbyfloat(monthlyKey, 'itemsSold', itemsSoldDelta);
+      commandCount += 1;
+    }
+    if (taskCountDelta !== 0) {
+      pipeline.hincrbyfloat(monthlyKey, 'taskCount', taskCountDelta);
+      commandCount += 1;
+    }
+    if (jungleCoinsDelta !== 0) {
+      pipeline.hincrbyfloat(monthlyKey, 'jungleCoins', jungleCoinsDelta);
+      commandCount += 1;
+    }
+    if (inventoryValueDelta !== 0) {
+      pipeline.hincrbyfloat(monthlyKey, 'inventoryValue', inventoryValueDelta);
+      commandCount += 1;
+    }
+    if (inventoryCostDelta !== 0) {
+      pipeline.hincrbyfloat(monthlyKey, 'inventoryCost', inventoryCostDelta);
+      commandCount += 1;
+    }
+    if (inventoryJ$Delta !== 0) {
+      pipeline.hincrbyfloat(monthlyKey, 'inventoryJ$', inventoryJ$Delta);
+      commandCount += 1;
+    }
 
     // All-Time scope
-    if (revenueDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'revenue', revenueDelta);
-    if (costDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'costs', costDelta);
-    if (profitDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'profit', profitDelta);
-    if (salesRevenueDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'salesRevenue', salesRevenueDelta);
-    if (salesVolumeDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'salesVolume', salesVolumeDelta);
-    if (itemsSoldDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'itemsSold', itemsSoldDelta);
-    if (taskCountDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'taskCount', taskCountDelta);
-    if (jungleCoinsDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'jungleCoins', jungleCoinsDelta);
-    if (inventoryValueDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryValue', inventoryValueDelta);
-    if (inventoryCostDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryCost', inventoryCostDelta);
-    if (inventoryJ$Delta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryJ$', inventoryJ$Delta);
+    if (revenueDelta !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'revenue', revenueDelta);
+      commandCount += 1;
+    }
+    if (costDelta !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'costs', costDelta);
+      commandCount += 1;
+    }
+    if (profitDelta !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'profit', profitDelta);
+      commandCount += 1;
+    }
+    if (salesRevenueDelta !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'salesRevenue', salesRevenueDelta);
+      commandCount += 1;
+    }
+    if (salesVolumeDelta !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'salesVolume', salesVolumeDelta);
+      commandCount += 1;
+    }
+    if (itemsSoldDelta !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'itemsSold', itemsSoldDelta);
+      commandCount += 1;
+    }
+    if (taskCountDelta !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'taskCount', taskCountDelta);
+      commandCount += 1;
+    }
+    if (jungleCoinsDelta !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'jungleCoins', jungleCoinsDelta);
+      commandCount += 1;
+    }
+    if (inventoryValueDelta !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryValue', inventoryValueDelta);
+      commandCount += 1;
+    }
+    if (inventoryCostDelta !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryCost', inventoryCostDelta);
+      commandCount += 1;
+    }
+    if (inventoryJ$Delta !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryJ$', inventoryJ$Delta);
+      commandCount += 1;
+    }
 
     // Execute all commands atomically in a single network round-trip
-    const commands = (pipeline as any).length ?? (pipeline as any).commands?.length ?? 0;
-    if (commands > 0) {
+    if (commandCount > 0) {
       await pipeline.exec();
-    } else {
-      console.warn(`[SummaryRepository] updateCounters: Skipping empty pipeline for ${monthYear}`);
     }
   }
 
@@ -103,32 +169,67 @@ export class SummaryRepository {
 
     const profit = revenue - costs;
 
-    if (revenue !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'revenue', revenue);
-    if (costs !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'costs', costs);
-    if (profit !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'profit', profit);
-    if (salesRevenue !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'salesRevenue', salesRevenue);
-    if (salesVolume !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'salesVolume', salesVolume);
-    if (itemsSold !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'itemsSold', itemsSold);
-    if (taskCount !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'taskCount', taskCount);
-    if (jungleCoins !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'jungleCoins', jungleCoins);
-    if (inventoryValue !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryValue', inventoryValue);
-    if (inventoryCost !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryCost', inventoryCost);
-    if (inventoryJ$ !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryJ$', inventoryJ$);
+    let commandCount = 0;
 
-    const commands = (pipeline as any).length ?? (pipeline as any).commands?.length ?? 0;
-    if (commands > 0) {
+    if (revenue !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'revenue', revenue);
+      commandCount += 1;
+    }
+    if (costs !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'costs', costs);
+      commandCount += 1;
+    }
+    if (profit !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'profit', profit);
+      commandCount += 1;
+    }
+    if (salesRevenue !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'salesRevenue', salesRevenue);
+      commandCount += 1;
+    }
+    if (salesVolume !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'salesVolume', salesVolume);
+      commandCount += 1;
+    }
+    if (itemsSold !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'itemsSold', itemsSold);
+      commandCount += 1;
+    }
+    if (taskCount !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'taskCount', taskCount);
+      commandCount += 1;
+    }
+    if (jungleCoins !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'jungleCoins', jungleCoins);
+      commandCount += 1;
+    }
+    if (inventoryValue !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryValue', inventoryValue);
+      commandCount += 1;
+    }
+    if (inventoryCost !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryCost', inventoryCost);
+      commandCount += 1;
+    }
+    if (inventoryJ$ !== 0) {
+      pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryJ$', inventoryJ$);
+      commandCount += 1;
+    }
+
+    if (commandCount > 0) {
       await pipeline.exec();
-    } else {
-      console.warn(`[SummaryRepository] updateAllTimeCounters: Skipping empty pipeline`);
     }
   }
 
   static async setMonthlyAbsolute(monthYear: string, totals: SummaryTotals): Promise<void> {
     const monthlyKey = this.getMonthlyKey(monthYear);
-    const pipeline = kv.pipeline();
+    const kvClient = (await import('@/lib/utils/kv')).kv as unknown as {
+      sadd: (key: string, ...members: string[]) => Promise<void>;
+      hset: (key: string, fields: Record<string, number>) => Promise<void>;
+    };
 
-    pipeline.sadd(buildSummaryMonthsKey(), monthYear);
-    pipeline.hset(monthlyKey, {
+    await kvClient.sadd(buildSummaryMonthsKey(), monthYear);
+    await kvClient.hset(monthlyKey, {
       revenue: totals.revenue,
       costs: totals.costs,
       profit: totals.profit,
@@ -141,13 +242,6 @@ export class SummaryRepository {
       inventoryCost: totals.inventoryCost,
       'inventoryJ$': totals.inventoryJ$,
     });
-
-    const commands = (pipeline as any).length ?? (pipeline as any).commands?.length ?? 0;
-    if (commands > 0) {
-      await pipeline.exec();
-    } else {
-      console.warn(`[SummaryRepository] setMonthlyAbsolute: Skipping empty pipeline for ${monthYear}`);
-    }
   }
 
   /**

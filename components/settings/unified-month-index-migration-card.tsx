@@ -21,6 +21,9 @@ export function UnifiedMonthIndexMigrationCard() {
   }>({ type: 'idle', message: '' });
 
   const run = async (dryRun: boolean) => {
+    if (!dryRun && !window.confirm('This will delete legacy month-index keys and is not reversible. Continue?')) {
+      return;
+    }
     setLoading(true);
     setStatus({ type: 'idle', message: dryRun ? 'Dry-run in progress…' : 'Applying migration…' });
 
@@ -98,9 +101,9 @@ export function UnifiedMonthIndexMigrationCard() {
             Dry-run
           </Button>
 
-          <Button onClick={() => run(false)} disabled={loading} className="h-9">
+          <Button onClick={() => run(false)} disabled={loading} className="h-9 bg-amber-500 hover:bg-amber-600">
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Database className="mr-2 h-4 w-4" />}
-            Execute migration
+            Finish cleanup migration
           </Button>
         </div>
       </CardContent>
