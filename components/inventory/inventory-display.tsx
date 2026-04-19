@@ -87,6 +87,10 @@ function inventoryTabForItem(item: Item): InventoryTab {
 }
 
 type InventorySortOption =
+  | 'name-asc'
+  | 'name-desc'
+  | 'year-asc'
+  | 'year-desc'
   | 'collection-asc'
   | 'collection-desc'
   | 'site-asc'
@@ -527,6 +531,10 @@ export function InventoryDisplay({
     }
 
     const digitalSortValues: InventorySortOption[] = [
+      'name-asc',
+      'name-desc',
+      'year-asc',
+      'year-desc',
       'collection-asc',
       'collection-desc',
       'site-asc',
@@ -627,6 +635,25 @@ export function InventoryDisplay({
     return [...filtered].sort((a, b) => {
       let cmp = 0;
       switch (sort) {
+        case 'name-asc':
+          cmp = compareNameTiebreak(a, b);
+          break;
+        case 'name-desc':
+          cmp = compareNameTiebreak(b, a);
+          break;
+        case 'year-asc':
+        case 'year-desc': {
+          const ya = a.year;
+          const yb = b.year;
+          const emptyA = ya == null;
+          const emptyB = yb == null;
+          if (emptyA && emptyB) cmp = 0;
+          else if (emptyA) cmp = 1;
+          else if (emptyB) cmp = -1;
+          else cmp = (ya as number) - (yb as number);
+          if (sort === 'year-desc') cmp = -cmp;
+          break;
+        }
         case 'collection-asc':
         case 'collection-desc': {
           const emptyA = !a.collection;
@@ -727,6 +754,10 @@ export function InventoryDisplay({
   );
 
   const DIGITAL_SORT_OPTIONS: { value: InventorySortOption; label: string }[] = [
+    { value: 'name-asc', label: 'Name A-Z' },
+    { value: 'name-desc', label: 'Name Z-A' },
+    { value: 'year-asc', label: 'Year: oldest first' },
+    { value: 'year-desc', label: 'Year: newest first' },
     { value: 'collection-asc', label: 'Collection A-Z' },
     { value: 'collection-desc', label: 'Collection Z-A' },
     { value: 'site-asc', label: 'Sites A-Z' },

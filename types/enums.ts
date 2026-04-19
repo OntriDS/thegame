@@ -340,6 +340,7 @@ export enum Collection {
   BITUAYA = 'bituaya',
   LANDSCAPES = 'landscapes',
   EXILIADO = 'exiliado',
+  CLIENT_WORK = 'client-work',
 }
 
 // ============================================================================
