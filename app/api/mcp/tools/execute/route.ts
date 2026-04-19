@@ -129,21 +129,44 @@ export async function POST(req: NextRequest) {
         const offset = clampOffset(parameters.offset);
         const dateRange = parameters.dateRange as { start?: string; end?: string } | undefined;
         let sales = await getAllSales();
-        if (dateRange?.start && dateRange?.end) {
-          const monthly = isMonthScopedUTCRange(dateRange.start, dateRange.end);
-          if (monthly) {
-            sales = await getSalesForMonth(monthly.year, monthly.month);
-          } else {
-            const start = toUTC(dateRange.start).getTime();
-            const end = endOfDayUTC(toUTC(dateRange.end)).getTime();
-            sales = sales.filter((s) => {
-              try {
-                const timestamp = toUTC(s.saleDate).getTime();
-                return timestamp >= start && timestamp <= end;
-              } catch {
-                return false;
+        if (dateRange) {
+          const hasStart = typeof dateRange.start === 'string' && dateRange.start.length > 0;
+          const hasEnd = typeof dateRange.end === 'string' && dateRange.end.length > 0;
+          if (hasStart !== hasEnd) {
+            return NextResponse.json(
+              { success: false, error: 'dateRange requires both `start` and `end` when provided.' },
+              { status: 400 }
+            );
+          }
+          if (hasStart && hasEnd) {
+            try {
+              const monthly = isMonthScopedUTCRange(dateRange.start as string, dateRange.end as string);
+              if (monthly) {
+                sales = await getSalesForMonth(monthly.year, monthly.month);
+              } else {
+                const start = toUTC(dateRange.start as string).getTime();
+                const end = endOfDayUTC(toUTC(dateRange.end as string)).getTime();
+                if (start > end) {
+                  return NextResponse.json(
+                    { success: false, error: '`dateRange.start` must be <= `dateRange.end`.' },
+                    { status: 400 }
+                  );
+                }
+                sales = sales.filter((s) => {
+                  try {
+                    const timestamp = toUTC(s.saleDate).getTime();
+                    return timestamp >= start && timestamp <= end;
+                  } catch {
+                    return false;
+                  }
+                });
               }
-            });
+            } catch {
+              return NextResponse.json(
+                { success: false, error: 'dateRange values must be parseable UTC date strings.' },
+                { status: 400 }
+              );
+            }
           }
         }
         const slice = sales.slice(offset, offset + limit);
@@ -310,12 +333,12 @@ export async function POST(req: NextRequest) {
         const monthKey = parameters.monthKey ? String(parameters.monthKey).trim() : undefined;
         if (monthKey) {
           try {
-            await SummaryService.rebuildSummaryForMonth(monthKey);
+            const totals = await SummaryService.rebuildSummaryForMonth(monthKey);
+            return NextResponse.json({ success: true, message: `Rebuilt summary for ${monthKey}`, data: { totals } });
           } catch (err) {
             const message = err instanceof Error ? err.message : 'Invalid monthKey';
             return NextResponse.json({ success: false, error: message }, { status: 400 });
           }
-          return NextResponse.json({ success: true, message: `Rebuilt summary for ${monthKey}` });
         }
         const data = await SummaryService.rebuildAllSummaries();
         return NextResponse.json({ success: true, data });

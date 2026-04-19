@@ -228,7 +228,7 @@ export class SummaryService {
     await SummaryRepository.resetSummary();
 
     // 2. Identify all months that exist in live month indexes
-    const rawMonths = await this.getMonthKeysFromLiveIndexes();
+    const rawMonths = await this.getAllKnownMonths();
     
     // 3. Normalize and deduplicate (e.g., "12-2024" and "12-24" both become "12-24")
     const uniqueMonths = Array.from(new Set(rawMonths.map(m => formatMonthKey(m))));
@@ -259,9 +259,8 @@ export class SummaryService {
   /**
    * Rebuilds a specific month and adapts the All-Time counters correctly.
    */
-  static async rebuildSummaryForMonth(monthKey: string, isBulkRebuild: boolean = false): Promise<void> {
+  static async rebuildSummaryForMonth(monthKey: string, isBulkRebuild: boolean = false): Promise<SummaryTotals> {
     const { getTasksFromMonthIndex, getFinancialsFromMonthIndex, getSalesFromMonthIndex } = await import('@/data-store/datastore');
-    const { formatMonthKey } = await import('@/lib/utils/date-utils');
 
     // Normalize monthKey (handles MM-YYYY -> MM-YY conversion)
     const normalizedMonthKey = this.normalizeMonthKeyInput(monthKey);
@@ -269,21 +268,23 @@ export class SummaryService {
 
     // 1. If not bulk, we need to subtract current monthly values from All-Time first
     if (!isBulkRebuild) {
-      const currentMonth = await SummaryRepository.getSummary(normalizedMonthKey);
-      const subtractions: Partial<SummaryTotals> = {
-        revenue: -currentMonth.revenue,
-        costs: -currentMonth.costs,
-        salesRevenue: -currentMonth.salesRevenue,
-        salesVolume: -currentMonth.salesVolume,
-        itemsSold: -currentMonth.itemsSold,
-        taskCount: -currentMonth.taskCount,
-        jungleCoins: -currentMonth.jungleCoins,
-      };
-      await SummaryRepository.updateAllTimeCounters(subtractions);
+      const currentMonth = await SummaryRepository.getRawSummary(normalizedMonthKey);
+      if (currentMonth) {
+        const subtractions: Partial<SummaryTotals> = {
+          revenue: -currentMonth.revenue,
+          costs: -currentMonth.costs,
+          salesRevenue: -currentMonth.salesRevenue,
+          salesVolume: -currentMonth.salesVolume,
+          itemsSold: -currentMonth.itemsSold,
+          taskCount: -currentMonth.taskCount,
+          jungleCoins: -currentMonth.jungleCoins,
+          inventoryValue: -currentMonth.inventoryValue,
+          inventoryCost: -currentMonth.inventoryCost,
+          inventoryJ$: -currentMonth.inventoryJ$,
+        };
+        await SummaryRepository.updateAllTimeCounters(subtractions);
+      }
     }
-
-    // 2. Clear this month's key
-    await SummaryRepository.resetSummary(normalizedMonthKey);
 
     // 3. Scan live month indexes
     const [tasks, financials, sales] = await Promise.all([
@@ -312,23 +313,32 @@ export class SummaryService {
     console.log(`[SummaryService] Live index stats for ${normalizedMonthKey}: Sales: ${countableSales.length}, Financials (cashflow-contributing): ${withCashflow.length}, Tasks: ${countableTasks.length}`);
 
     // 4. Calculate totals for this month
-    const totals = {
-      monthYear: normalizedMonthKey,
-      revenueDelta: financials.reduce((sum, f) => sum + cashflowCountableRevenue(f), 0),
-      costDelta: financials.reduce((sum, f) => sum + cashflowCountableCost(f), 0),
-      salesRevenueDelta: countableSales.reduce((sum, s) => sum + (s.totals.totalRevenue || 0), 0),
-      salesVolumeDelta: countableSales.length,
-      itemsSoldDelta: this.sumPhysicalUnitsFromSales(countableSales),
-      taskCountDelta: countableTasks.length,
-      jungleCoinsDelta: financials.reduce((sum, f) => sum + cashflowCountableJungleCoins(f), 0),
+    const totals: SummaryTotals = {
+      revenue: financials.reduce((sum, f) => sum + cashflowCountableRevenue(f), 0),
+      costs: financials.reduce((sum, f) => sum + cashflowCountableCost(f), 0),
+      profit: 0,
+      salesRevenue: countableSales.reduce((sum, s) => sum + (s.totals.totalRevenue || 0), 0),
+      salesVolume: countableSales.length,
+      itemsSold: this.sumPhysicalUnitsFromSales(countableSales),
+      taskCount: countableTasks.length,
+      jungleCoins: financials.reduce((sum, f) => sum + cashflowCountableJungleCoins(f), 0),
+      inventoryValue: 0,
+      inventoryCost: 0,
+      inventoryJ$: 0,
     };
+    totals.profit = totals.revenue - totals.costs;
 
     // 5. Push to Redis (Updates Monthly Hash and INCREMENTS All-Time)
-    await SummaryRepository.updateCounters(totals);
+    await SummaryRepository.setMonthlyAbsolute(normalizedMonthKey, totals);
+    await SummaryRepository.updateAllTimeCounters(totals);
+
+    return totals;
   }
 
-  private static async getMonthKeysFromLiveIndexes(): Promise<string[]> {
-    const { kvScan } = await import('@/lib/utils/kv');
+  private static async getAllKnownMonths(): Promise<string[]> {
+    const { kvScan, kvSMembers } = await import('@/lib/utils/kv');
+    const { buildArchiveMonthsKey, buildSummaryMonthsKey } = await import('@/data-store/keys');
+
     const prefixes = [
       'thegame:index:sale:by-month:',
       'thegame:index:task:by-month:',
@@ -336,16 +346,33 @@ export class SummaryService {
       'thegame:index:item:by-month:',
     ];
 
-    const keys = (await Promise.all(prefixes.map(prefix => kvScan(prefix)))).flat();
+    const liveKeys = (await Promise.all(prefixes.map(prefix => kvScan(prefix)))).flat();
+    const metaMonths = (
+      await Promise.all([kvSMembers(buildArchiveMonthsKey()), kvSMembers(buildSummaryMonthsKey())])
+    ).flat();
+
     const months = new Set<string>();
 
-    for (const key of keys) {
+    for (const key of liveKeys) {
       const parts = key.split(':');
       const monthKey = parts[parts.length - 1];
       if (monthKey) months.add(monthKey);
     }
 
-    return [...months];
+    for (const monthKey of metaMonths) {
+      if (monthKey) months.add(monthKey);
+    }
+
+    const normalizedMonths = new Set<string>();
+    for (const monthKey of months) {
+      try {
+        normalizedMonths.add(formatMonthKey(monthKey));
+      } catch (error) {
+        // Ignore non-month-like set members; this should only include months in practice.
+      }
+    }
+
+    return [...normalizedMonths];
   }
 }
 

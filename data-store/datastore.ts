@@ -96,7 +96,6 @@ import {
   toUTCISOString,
   formatArchiveMonthKeyUTC,
   formatArchiveMonthKeyUTCFromParts,
-  endOfMonthUTC,
 } from '@/lib/utils/utc-utils';
 import { resolveTaskCompletedArchiveMonthKeyUTC } from '@/lib/utils/task-archive-index-utils';
 import { kvDel, kvMGet, kvSAdd, kvSMembers, kvSRem } from './kv';
@@ -104,7 +103,6 @@ import {
   buildDataKey,
   buildIndexKey,
   buildMonthIndexKey,
-  buildArchiveCollectionIndexKey,
   buildArchiveMonthsKey,
   buildSummaryMonthsKey,
   buildTaskActiveIndexKey,
@@ -332,7 +330,7 @@ export async function repairTaskActiveIndex(options?: {
   } else {
     const months = await getAvailableArchiveMonths();
     for (const mmyy of months) {
-      const key = buildArchiveCollectionIndexKey('tasks', mmyy);
+      const key = buildMonthIndexKey(EntityType.TASK, mmyy);
       const memberIds = await kvSMembers(key);
       for (const id of memberIds) {
         collectedIdSet.add(id);
@@ -496,35 +494,9 @@ function saleMonthIndexKeyUTC(sale: Sale): string | null {
   return formatArchiveMonthKeyUTC(d) || null;
 }
 
-function saleArchiveCollectionMonthKeyUTC(sale: Sale): string | null {
-  const archived = sale.status === SaleStatus.COLLECTED || !!sale.isCollected;
-  if (!archived) return null;
-  if (sale.collectedAt) {
-    const c = sale.collectedAt instanceof Date ? sale.collectedAt : new Date(sale.collectedAt as string);
-    if (Number.isFinite(c.getTime())) return formatArchiveMonthKeyUTC(c) || null;
-  }
-  const sDate = sale.saleDate ? new Date(sale.saleDate) : sale.createdAt ? new Date(sale.createdAt) : getUTCNow();
-  if (!Number.isFinite(sDate.getTime())) return null;
-  return formatArchiveMonthKeyUTC(endOfMonthUTC(sDate)) || null;
-}
-
 function financialMonthIndexKeyUTC(f: FinancialRecord): string | null {
   if (!f.year || f.month == null || f.month < 1 || f.month > 12) return null;
   return formatArchiveMonthKeyUTCFromParts(f.year, f.month);
-}
-
-function financialArchiveCollectionMonthKeyUTC(f: FinancialRecord): string | null {
-  if (f.isNotPaid || f.isNotCharged) return null;
-  let snapshotDate: Date;
-  const referenceDate = new Date(Date.UTC(f.year, (f.month || 1) - 1, 1));
-  if (Number.isFinite(referenceDate.getTime())) {
-    snapshotDate = endOfMonthUTC(referenceDate);
-  } else if (f.createdAt) {
-    snapshotDate = endOfMonthUTC(f.createdAt instanceof Date ? f.createdAt : new Date(f.createdAt as string));
-  } else {
-    snapshotDate = endOfMonthUTC(new Date(Date.UTC(f.year, 0, 1)));
-  }
-  return formatArchiveMonthKeyUTC(snapshotDate) || null;
 }
 
 export type MigrateUtcMonthlyRedisIndexesResult = {
@@ -534,17 +506,13 @@ export type MigrateUtcMonthlyRedisIndexesResult = {
   tasksActiveIndex: RepairTaskActiveIndexResult;
   tasksMonthIndex: MonthBucketsRebuildSummary;
   itemsMonthIndex: MonthBucketsRebuildSummary;
-  itemsArchiveCollection: MonthBucketsRebuildSummary;
   salesMonthIndex: MonthBucketsRebuildSummary;
-  salesArchiveCollection: MonthBucketsRebuildSummary;
   financialMonthIndex: MonthBucketsRebuildSummary;
-  financialArchiveCollection: MonthBucketsRebuildSummary;
 };
 
 /**
- * Rebuild UTC `MM-yy` Redis month buckets (archive collection sets + entity month indexes) from KV records,
- * then rebuild the task active index (`thegame:index:task:active`) using record-derived completed ids so
- * dry-run matches the post-migration world even before collected sets are written.
+ * Rebuild UTC `MM-yy` Redis month buckets (`by-month` indexes) from KV records,
+ * then rebuild the task active index (`thegame:index:task:active`) using record-derived completed ids.
  */
 export async function migrateUtcMonthlyRedisIndexes(options: {
   dryRun: boolean;
@@ -580,7 +548,6 @@ export async function migrateUtcMonthlyRedisIndexes(options: {
 
   const items = reviveDates(await repoGetAllItems());
   const desiredItemMonth: Record<string, Set<string>> = {};
-  const desiredItemArchive: Record<string, Set<string>> = {};
   for (const it of items) {
     if (it.status === ItemStatus.LEGACY) continue;
     const dateForIndex = it.soldAt || it.createdAt;
@@ -589,10 +556,6 @@ export async function migrateUtcMonthlyRedisIndexes(options: {
     if (!mmyy) continue;
     if (!desiredItemMonth[mmyy]) desiredItemMonth[mmyy] = new Set();
     desiredItemMonth[mmyy].add(it.id);
-    if (isSoldStatus(it.status)) {
-      if (!desiredItemArchive[mmyy]) desiredItemArchive[mmyy] = new Set();
-      desiredItemArchive[mmyy].add(it.id);
-    }
   }
 
   const itemsMonthIndex = await rebuildRedisMonthSetBuckets({
@@ -604,14 +567,6 @@ export async function migrateUtcMonthlyRedisIndexes(options: {
     annotateSampleIds: true,
   });
 
-  const itemsArchiveCollection = await rebuildRedisMonthSetBuckets({
-    dryRun: options.dryRun,
-    desiredIdsByMonth: desiredItemArchive,
-    knownMonths,
-    redisKeyForMonth: (m) => buildArchiveCollectionIndexKey('items', m),
-    recordMonthsInArchiveMetaSet: true,
-    annotateSampleIds: true,
-  });
 
   let sales = await repoGetAllSales();
   sales = reviveDates(sales)
@@ -619,17 +574,11 @@ export async function migrateUtcMonthlyRedisIndexes(options: {
     .map((s) => normalizeSale(s));
 
   const desiredSaleMonth: Record<string, Set<string>> = {};
-  const desiredSaleArchive: Record<string, Set<string>> = {};
   for (const s of sales) {
     const mk = saleMonthIndexKeyUTC(s);
     if (mk) {
       if (!desiredSaleMonth[mk]) desiredSaleMonth[mk] = new Set();
       desiredSaleMonth[mk].add(s.id);
-    }
-    const ak = saleArchiveCollectionMonthKeyUTC(s);
-    if (ak) {
-      if (!desiredSaleArchive[ak]) desiredSaleArchive[ak] = new Set();
-      desiredSaleArchive[ak].add(s.id);
     }
   }
 
@@ -642,28 +591,14 @@ export async function migrateUtcMonthlyRedisIndexes(options: {
     annotateSampleIds: true,
   });
 
-  const salesArchiveCollection = await rebuildRedisMonthSetBuckets({
-    dryRun: options.dryRun,
-    desiredIdsByMonth: desiredSaleArchive,
-    knownMonths,
-    redisKeyForMonth: (m) => buildArchiveCollectionIndexKey('sales', m),
-    recordMonthsInArchiveMetaSet: true,
-    annotateSampleIds: true,
-  });
 
   const financials = reviveDates(await repoGetAllFinancials());
   const desiredFinMonth: Record<string, Set<string>> = {};
-  const desiredFinArchive: Record<string, Set<string>> = {};
   for (const f of financials) {
     const mk = financialMonthIndexKeyUTC(f);
     if (mk) {
       if (!desiredFinMonth[mk]) desiredFinMonth[mk] = new Set();
       desiredFinMonth[mk].add(f.id);
-    }
-    const ak = financialArchiveCollectionMonthKeyUTC(f);
-    if (ak) {
-      if (!desiredFinArchive[ak]) desiredFinArchive[ak] = new Set();
-      desiredFinArchive[ak].add(f.id);
     }
   }
 
@@ -672,15 +607,6 @@ export async function migrateUtcMonthlyRedisIndexes(options: {
     desiredIdsByMonth: desiredFinMonth,
     knownMonths,
     redisKeyForMonth: (m) => buildMonthIndexKey(EntityType.FINANCIAL, m),
-    recordMonthsInArchiveMetaSet: true,
-    annotateSampleIds: true,
-  });
-
-  const financialArchiveCollection = await rebuildRedisMonthSetBuckets({
-    dryRun: options.dryRun,
-    desiredIdsByMonth: desiredFinArchive,
-    knownMonths,
-    redisKeyForMonth: (m) => buildArchiveCollectionIndexKey('financials', m),
     recordMonthsInArchiveMetaSet: true,
     annotateSampleIds: true,
   });
@@ -702,11 +628,8 @@ export async function migrateUtcMonthlyRedisIndexes(options: {
     tasksActiveIndex,
     tasksMonthIndex,
     itemsMonthIndex,
-    itemsArchiveCollection,
     salesMonthIndex,
-    salesArchiveCollection,
     financialMonthIndex,
-    financialArchiveCollection,
   };
 }
 
@@ -754,7 +677,7 @@ export async function repairPrimaryTaskIndex(): Promise<RepairPrimaryTaskIndexRe
   };
 }
 /**
- * Rebuild ALL `thegame:index:tasks:collected:MM-YY` sets from all tasks marked as completed.
+ * Rebuild ALL `thegame:index:task:by-month:MM-YY` sets from all tasks marked as completed.
  * Month keys match `task.workflow` archive indexing ({@link resolveTaskCompletedArchiveMonthKeyUTC}).
  */
 export async function repairTaskCompletedIndex(options?: {
@@ -779,7 +702,7 @@ export async function repairTaskCompletedIndex(options?: {
     dryRun,
     desiredIdsByMonth,
     knownMonths: months,
-    redisKeyForMonth: (m) => buildArchiveCollectionIndexKey('tasks', m),
+    redisKeyForMonth: (m) => buildMonthIndexKey(EntityType.TASK, m),
     recordMonthsInArchiveMetaSet: true,
     annotateSampleIds: Boolean(options?.annotateSampleIds),
   });
@@ -811,11 +734,11 @@ export async function getTasksByParentId(parentId: string): Promise<Task[]> {
 // Phase 4: Unified & Optimized Tasks fetching (Active + Archive)
 export async function getTasksForMonth(year: number, month: number): Promise<Task[]> {
   const mmyy = formatArchiveMonthKeyUTCFromParts(year, month);
-  const archiveIndexKey = buildArchiveCollectionIndexKey('tasks', mmyy);
+  const monthIndexKey = buildMonthIndexKey(EntityType.TASK, mmyy);
 
   // Tasks are indexed by collected/done month
   const { kvSMembers } = await import('./kv');
-  const allIds = await kvSMembers(archiveIndexKey);
+  const allIds = await kvSMembers(monthIndexKey);
 
   if (!allIds || allIds.length === 0) return [];
 
@@ -951,17 +874,12 @@ export async function getLegacyItems(): Promise<Item[]> {
 // Phase 6: Unified & Optimized Items fetching (Active + Archive)
 export async function getItemsForMonth(year: number, month: number): Promise<Item[]> {
   const mmyy = formatArchiveMonthKeyUTCFromParts(year, month);
-  const activeIndexKey = buildMonthIndexKey(EntityType.ITEM, mmyy);
-  const archiveIndexKey = buildArchiveCollectionIndexKey('items', mmyy);
+  const ids = await kvSMembers(buildMonthIndexKey(EntityType.ITEM, mmyy));
 
-  // 1. Fetch and deduplicate IDs in a SINGLE Upstash request via SUNION
-  const { kvSUnion } = await import('./kv');
-  const allIds = await kvSUnion(activeIndexKey, archiveIndexKey);
-
-  if (!allIds || allIds.length === 0) return [];
+  if (!ids || ids.length === 0) return [];
 
   // 2. Map IDs to storage keys
-  const recordKeys = allIds.map(id => buildDataKey(EntityType.ITEM, id));
+  const recordKeys = ids.map(id => buildDataKey(EntityType.ITEM, id));
 
   // 3. Fetch ALL records in chunks of 500
   const chunks = chunkArray(recordKeys, 500);
@@ -1085,17 +1003,12 @@ const chunkArray = <T>(arr: T[], size: number): T[][] =>
 
 export async function getFinancialsForMonth(year: number, month: number): Promise<FinancialRecord[]> {
   const mmyy = formatArchiveMonthKeyUTCFromParts(year, month);
-  const activeIndexKey = buildMonthIndexKey(EntityType.FINANCIAL, mmyy);
-  const archiveIndexKey = buildArchiveCollectionIndexKey('financials', mmyy);
+  const ids = await kvSMembers(buildMonthIndexKey(EntityType.FINANCIAL, mmyy));
 
-  // 1. Fetch and deduplicate IDs in a SINGLE Upstash request via SUNION
-  const { kvSUnion } = await import('./kv');
-  const allIds = await kvSUnion(activeIndexKey, archiveIndexKey);
-
-  if (!allIds || allIds.length === 0) return [];
+  if (!ids || ids.length === 0) return [];
 
   // 2. Map IDs to storage keys
-  const recordKeys = allIds.map(id => buildDataKey(EntityType.FINANCIAL, id));
+  const recordKeys = ids.map(id => buildDataKey(EntityType.FINANCIAL, id));
 
   // 3. Fetch ALL records in chunks of 500 (Upstash safety limit)
   const chunks = chunkArray(recordKeys, 500);
@@ -1205,17 +1118,12 @@ export async function getAllSales(): Promise<Sale[]> {
 // Phase 5: Unified & Optimized Sales fetching (Active + Archive)
 export async function getSalesForMonth(year: number, month: number): Promise<Sale[]> {
   const mmyy = formatArchiveMonthKeyUTCFromParts(year, month);
-  const activeIndexKey = buildMonthIndexKey(EntityType.SALE, mmyy);
-  const archiveIndexKey = buildArchiveCollectionIndexKey('sales', mmyy);
+  const ids = await kvSMembers(buildMonthIndexKey(EntityType.SALE, mmyy));
 
-  // 1. Fetch and deduplicate IDs in a SINGLE Upstash request via SUNION
-  const { kvSUnion } = await import('./kv');
-  const allIds = await kvSUnion(activeIndexKey, archiveIndexKey);
-
-  if (!allIds || allIds.length === 0) return [];
+  if (!ids || ids.length === 0) return [];
 
   // 2. Map IDs to storage keys
-  const recordKeys = allIds.map(id => buildDataKey(EntityType.SALE, id));
+  const recordKeys = ids.map(id => buildDataKey(EntityType.SALE, id));
 
   // 3. Fetch ALL records in chunks of 500
   const chunks = chunkArray(recordKeys, 500);
@@ -1238,28 +1146,13 @@ export async function getSalesForMonth(year: number, month: number): Promise<Sal
  * Intended for summary rebuilds that mirror the live month index.
  */
 export async function getSalesFromMonthIndex(mmyy: string): Promise<Sale[]> {
-  const activeIndexKey = buildMonthIndexKey(EntityType.SALE, mmyy);
-  const archiveIndexKey = buildArchiveCollectionIndexKey('sales', mmyy);
-  const { kvSUnion } = await import('./kv');
-  const ids = await kvSUnion(activeIndexKey, archiveIndexKey);
-
-  if (!ids || ids.length === 0) return [];
-
-  const recordKeys = ids.map(id => buildDataKey(EntityType.SALE, id));
-  const chunks = chunkArray(recordKeys, 500);
-  const sales: Sale[] = [];
-
-  for (const chunk of chunks) {
-    const chunkResults = await kvMGet<Sale>(chunk);
-    sales.push(...chunkResults.filter((s): s is Sale => s !== null));
-  }
-
-  return reviveDates(sales).map(s => normalizeSale(s));
+  const parsed = parseMonthKeyToYearMonth(mmyy);
+  if (!parsed) return [];
+  return getSalesForMonth(parsed.year, parsed.month);
 }
 
 export async function getTasksFromMonthIndex(mmyy: string): Promise<Task[]> {
-  const activeIndexKey = buildMonthIndexKey(EntityType.TASK, mmyy);
-  const ids = await kvSMembers(activeIndexKey);
+  const ids = await kvSMembers(buildMonthIndexKey(EntityType.TASK, mmyy));
 
   if (!ids || ids.length === 0) return [];
 
@@ -1276,21 +1169,19 @@ export async function getTasksFromMonthIndex(mmyy: string): Promise<Task[]> {
 }
 
 export async function getFinancialsFromMonthIndex(mmyy: string): Promise<FinancialRecord[]> {
-  const activeIndexKey = buildMonthIndexKey(EntityType.FINANCIAL, mmyy);
-  const ids = await kvSMembers(activeIndexKey);
+  const parsed = parseMonthKeyToYearMonth(mmyy);
+  if (!parsed) return [];
+  return getFinancialsForMonth(parsed.year, parsed.month);
+}
 
-  if (!ids || ids.length === 0) return [];
-
-  const recordKeys = ids.map(id => buildDataKey(EntityType.FINANCIAL, id));
-  const chunks = chunkArray(recordKeys, 500);
-  const financials: FinancialRecord[] = [];
-
-  for (const chunk of chunks) {
-    const chunkResults = await kvMGet<FinancialRecord>(chunk);
-    financials.push(...chunkResults.filter((f): f is FinancialRecord => f !== null));
-  }
-
-  return reviveDates(financials);
+function parseMonthKeyToYearMonth(mmyy: string): { year: number; month: number } | null {
+  const [monthText, yearText] = mmyy.split('-');
+  if (!monthText || !yearText) return null;
+  const month = Number(monthText);
+  const yearSuffix = Number(yearText);
+  if (!Number.isInteger(month) || !Number.isInteger(yearSuffix)) return null;
+  if (month < 1 || month > 12 || yearText.length !== 2) return null;
+  return { year: 2000 + yearSuffix, month };
 }
 
 export async function getSaleById(id: string): Promise<Sale | null> {
@@ -1615,11 +1506,11 @@ export async function removeLogEntriesAcrossMonths(
 
 
 export async function deleteArchivedItem(id: string, mmyy: string): Promise<void> {
-  await kvSRem(buildArchiveCollectionIndexKey('items', mmyy), id);
+  await kvSRem(buildMonthIndexKey(EntityType.ITEM, mmyy), id);
 }
 
 export async function deleteArchivedTask(id: string, mmyy: string): Promise<void> {
-  await kvSRem(buildArchiveCollectionIndexKey('tasks', mmyy), id);
+  await kvSRem(buildMonthIndexKey(EntityType.TASK, mmyy), id);
 }
 
 export async function getArchivedTasksByMonth(mmyy: string): Promise<Task[]> {

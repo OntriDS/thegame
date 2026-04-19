@@ -27,7 +27,7 @@ import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
 import { formatForDisplay } from '@/lib/utils/date-display-utils';
 import { isSoldStatus } from '@/lib/utils/status-utils';
 import { getUTCNow, endOfMonthUTC, formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
-import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
+import { buildArchiveMonthsKey } from '@/data-store/keys';
 
 const STATE_FIELDS = ['status', 'stock', 'quantitySold'];
 

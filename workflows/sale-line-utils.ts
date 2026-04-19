@@ -8,7 +8,7 @@ import { upsertTask } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { clearEffect, hasEffect, markEffect } from '@/data-store/effects-registry';
-import { EffectKeys, buildArchiveCollectionIndexKey, buildArchiveMonthsKey, buildMonthIndexKey } from '@/data-store/keys';
+import { EffectKeys, buildArchiveMonthsKey, buildMonthIndexKey } from '@/data-store/keys';
 import { formatForDisplay } from '@/lib/utils/date-display-utils';
 import { getUTCNow, formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
 import { appendEntityLog, getMonthKeyFromTimestamp } from './entities-logging';
@@ -329,7 +329,6 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
     console.log(`[ensureSoldItemEntities] Ensuring ${itemLines.length} item sold entities for sale: ${sale.id}`);
 
     const { kvSAdd } = await import('@/lib/utils/kv');
-    const { buildArchiveMonthsKey, buildMonthIndexKey } = await import('@/data-store/keys');
 
     let changedLines = false;
     const newLines = [...(sale.lines || [])];
@@ -456,7 +455,6 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
           soldItemEntity.soldAt instanceof Date ? soldItemEntity.soldAt : getUTCNow()
         );
         await kvSAdd(buildMonthIndexKey(EntityType.ITEM, monthKey), soldItemEntity.id);
-        await kvSAdd(buildArchiveCollectionIndexKey('items', monthKey), soldItemEntity.id);
         await kvSAdd(buildArchiveMonthsKey(), monthKey);
 
         await ensureSaleItemLink(sale.id, soldItemEntity.id);

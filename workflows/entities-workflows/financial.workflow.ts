@@ -27,7 +27,7 @@ import {
 import { createCharacterFromFinancial } from '../character-creation-utils';
 import { upsertFinancial } from '@/data-store/datastore';
 import { getUTCNow, endOfMonthUTC, formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
-import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
+import { buildMonthIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { recalculateCharacterWallet } from '../financial-record-utils';
 import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync-server';
 const STATE_FIELDS = ['isNotPaid', 'isNotCharged'];
@@ -143,7 +143,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       if (!(await hasEffect(archiveIndexEffectKey))) {
         const monthKey = formatArchiveMonthKeyUTC(snapshotMonthDate);
         const { kvSAdd } = await import('@/lib/utils/kv');
-        const archiveIndexKey = buildArchiveCollectionIndexKey('financials', monthKey);
+        const archiveIndexKey = buildMonthIndexKey(EntityType.FINANCIAL, monthKey);
         await kvSAdd(archiveIndexKey, financial.id);
 
         const { buildArchiveMonthsKey } = await import('@/data-store/keys');
@@ -224,7 +224,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     if (!(await hasEffect(archiveIndexEffectKey))) {
       const monthKey = formatArchiveMonthKeyUTC(snapshotMonthDate);
       const { kvSAdd } = await import('@/lib/utils/kv');
-      const archiveIndexKey = buildArchiveCollectionIndexKey('financials', monthKey);
+      const archiveIndexKey = buildMonthIndexKey(EntityType.FINANCIAL, monthKey);
       await kvSAdd(archiveIndexKey, financial.id);
 
       const { buildArchiveMonthsKey } = await import('@/data-store/keys');
@@ -334,12 +334,12 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       const allMonths = await getAvailableArchiveMonths();
       for (const m of allMonths) {
         if (m !== newMonth) {
-          await kvSRem(buildArchiveCollectionIndexKey('financials', m), financial.id);
+          await kvSRem(buildMonthIndexKey(EntityType.FINANCIAL, m), financial.id);
         }
       }
 
       if (newMonth) {
-        await kvSAdd(buildArchiveCollectionIndexKey('financials', newMonth), financial.id);
+        await kvSAdd(buildMonthIndexKey(EntityType.FINANCIAL, newMonth), financial.id);
         await kvSAdd(buildArchiveMonthsKey(), newMonth);
 
         // ── Log Sync ──────────────────────────────────────────────────────────
@@ -504,7 +504,7 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
         }
         const monthKey = formatArchiveMonthKeyUTC(snapshotDate);
         const { kvSRem } = await import('@/lib/utils/kv');
-        const archiveIndexKey = buildArchiveCollectionIndexKey('financials', monthKey);
+        const archiveIndexKey = buildMonthIndexKey(EntityType.FINANCIAL, monthKey);
         await kvSRem(archiveIndexKey, recordId);
         await clearEffect(EffectKeys.sideEffect('financial', recordId, `financialSnapshot:${monthKey}`));
       }

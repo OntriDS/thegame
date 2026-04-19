@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { getTaskById } from '@/data-store/datastore';
 import { kvSMembers } from '@/lib/utils/kv';
-import { buildArchiveCollectionIndexKey } from '@/data-store/keys';
+import { buildMonthIndexKey } from '@/data-store/keys';
 import { formatArchiveMonthKeyUTCFromParts } from '@/lib/utils/utc-utils';
 import type { Task } from '@/types/entities';
+import { EntityType } from '@/types/enums';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
 
         const monthKey = formatArchiveMonthKeyUTCFromParts(year, month);
 
-        const collectedIndexKey = buildArchiveCollectionIndexKey('tasks', monthKey);
+        const collectedIndexKey = buildMonthIndexKey(EntityType.TASK, monthKey);
         const taskIds = await kvSMembers(collectedIndexKey);
 
         // The archive index IS the source of truth.

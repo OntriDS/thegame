@@ -30,7 +30,7 @@ import { updateFinancialRecordsFromSale, updateItemsFromSale, hasRevenueChanged,
 import { createCharacterFromSale } from '../character-creation-utils';
 // UTC STANDARDIZATION: Using new UTC utilities
 import { getUTCNow, endOfMonthUTC, toUTCISOString, formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
-import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
+import { buildMonthIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { getSaleLogDetails } from '@/lib/utils/sale-log-details';
 import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
 
@@ -446,18 +446,18 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   if (newMonth !== oldMonth || (!newMonth && oldMonth)) {
     const { kvSAdd, kvSRem } = await import('@/lib/utils/kv');
     const { getAvailableArchiveMonths } = await import('@/data-store/datastore');
-    const { buildArchiveMonthsKey } = await import('@/data-store/keys');
+    const { buildArchiveMonthsKey, buildMonthIndexKey } = await import('@/data-store/keys');
 
     // Remove this sale from every archive month except the computed target month
     const allMonths = await getAvailableArchiveMonths();
     for (const m of allMonths) {
-      if (m !== newMonth) {
-        await kvSRem(buildArchiveCollectionIndexKey('sales', m), sale.id);
+        if (m !== newMonth) {
+        await kvSRem(buildMonthIndexKey(EntityType.SALE, m), sale.id);
       }
     }
 
     if (newMonth) {
-      await kvSAdd(buildArchiveCollectionIndexKey('sales', newMonth), sale.id);
+      await kvSAdd(buildMonthIndexKey(EntityType.SALE, newMonth), sale.id);
       await kvSAdd(buildArchiveMonthsKey(), newMonth);
 
       // ── Log Sync ──────────────────────────────────────────────────────────

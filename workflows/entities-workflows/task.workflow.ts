@@ -5,7 +5,7 @@ import { CharacterRole, EntityType, LogEventType, TaskStatus, TaskType, FOUNDER_
 import type { CustomerCounterpartyRole, Task } from '@/types/entities';
 import { appendEntityLog, updateEntityLeanFields, removeLogEntriesAcrossMonths } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
-import { EffectKeys, buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
+import { EffectKeys, buildMonthIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import {
   getTaskById,
   getPlayerById,
@@ -544,7 +544,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     const { kvSAdd, kvSRem } = await import('@/lib/utils/kv');
     const { getAvailableArchiveMonths } = await import('@/data-store/datastore');
 
-    const monthIndex = (m: string) => buildArchiveCollectionIndexKey('tasks', m);
+    const monthIndex = (m: string) => buildMonthIndexKey(EntityType.TASK, m);
 
     // Sweep months we know about + previous/next bucket so ghosts are removed even when
     // thegame:archive:months is incomplete (common cause of wrong-month history rows).
@@ -645,7 +645,7 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
             snapshotDate instanceof Date ? snapshotDate : parseDateToUTC(snapshotDate as string | number);
           const monthKey = formatArchiveMonthKeyUTC(d);
           if (monthKey) {
-            await kvSRem(buildArchiveCollectionIndexKey('tasks', monthKey), task.id);
+            await kvSRem(buildMonthIndexKey(EntityType.TASK, monthKey), task.id);
           }
         }
       } catch (err) {
@@ -777,13 +777,13 @@ export async function uncompleteTask(taskId: string, previousTerminalTask?: Task
       const monthKey = formatArchiveMonthKeyUTC(snapshotDate);
 
       if (monthKey) {
-        await kvSRem(buildArchiveCollectionIndexKey('tasks', monthKey), task.id);
+        await kvSRem(buildMonthIndexKey(EntityType.TASK, monthKey), task.id);
         await clearEffect(EffectKeys.sideEffect('task', taskId, `taskSnapshot:${monthKey}`));
 
         // Also check standard date-based key just in case (fallback)
         const nowKey = formatArchiveMonthKeyUTC(getUTCNow());
         if (nowKey && nowKey !== monthKey) {
-          await kvSRem(buildArchiveCollectionIndexKey('tasks', nowKey), task.id);
+          await kvSRem(buildMonthIndexKey(EntityType.TASK, nowKey), task.id);
         }
       }
     } catch (err) {

@@ -132,8 +132,3 @@ export function buildLogMonthsIndexKey(entity: EntityType | string): string {
   return `${NAMESPACE}logs:index:months:${entity}`;
 }
 
-export function buildArchiveCollectionIndexKey(entity: string, mmyy: string): string {
-  const monthKey = normalizeMonthKey(mmyy);
-  return `${NAMESPACE}index:${entity}:collected:${monthKey}`;
-}
-

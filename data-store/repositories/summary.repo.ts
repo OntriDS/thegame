@@ -123,6 +123,33 @@ export class SummaryRepository {
     }
   }
 
+  static async setMonthlyAbsolute(monthYear: string, totals: SummaryTotals): Promise<void> {
+    const monthlyKey = this.getMonthlyKey(monthYear);
+    const pipeline = kv.pipeline();
+
+    pipeline.sadd(buildSummaryMonthsKey(), monthYear);
+    pipeline.hset(monthlyKey, {
+      revenue: totals.revenue,
+      costs: totals.costs,
+      profit: totals.profit,
+      salesRevenue: totals.salesRevenue,
+      salesVolume: totals.salesVolume,
+      itemsSold: totals.itemsSold,
+      taskCount: totals.taskCount,
+      jungleCoins: totals.jungleCoins,
+      inventoryValue: totals.inventoryValue,
+      inventoryCost: totals.inventoryCost,
+      'inventoryJ$': totals.inventoryJ$,
+    });
+
+    const commands = (pipeline as any).length ?? (pipeline as any).commands?.length ?? 0;
+    if (commands > 0) {
+      await pipeline.exec();
+    } else {
+      console.warn(`[SummaryRepository] setMonthlyAbsolute: Skipping empty pipeline for ${monthYear}`);
+    }
+  }
+
   /**
    * Resets a specific summary key (monthly or all-time)
    */
@@ -137,6 +164,29 @@ export class SummaryRepository {
   static async getSummary(monthYear?: string): Promise<SummaryTotals> {
     const key = monthYear ? this.getMonthlyKey(monthYear) : this.ALL_TIME_KEY;
     const data = await (await import('@/lib/utils/kv')).kv.hgetall(key) as any;
+
+    return {
+      revenue: Number(data?.revenue || 0),
+      costs: Number(data?.costs || 0),
+      profit: Number(data?.profit || 0),
+      salesRevenue: Number(data?.salesRevenue || 0),
+      salesVolume: Number(data?.salesVolume || 0),
+      itemsSold: Number(data?.itemsSold || 0),
+      taskCount: Number(data?.taskCount || 0),
+      jungleCoins: Number(data?.jungleCoins || 0),
+      inventoryValue: Number(data?.inventoryValue || 0),
+      inventoryCost: Number(data?.inventoryCost || 0),
+      inventoryJ$: Number(data?.inventoryJ$ || 0),
+    };
+  }
+
+  static async getRawSummary(monthYear: string): Promise<SummaryTotals | null> {
+    const key = this.getMonthlyKey(monthYear);
+    const data = await (await import('@/lib/utils/kv')).kv.hgetall(key) as any;
+
+    if (!data || Object.keys(data).length === 0) {
+      return null;
+    }
 
     return {
       revenue: Number(data?.revenue || 0),

@@ -3,7 +3,7 @@ import 'server-only';
 import { isValid } from 'date-fns';
 import { getAllTasks, getAvailableArchiveMonths, getTaskById } from '@/data-store/datastore';
 import { kvSMembers } from '@/lib/utils/kv';
-import { buildArchiveCollectionIndexKey, buildTaskActiveIndexKey } from '@/data-store/keys';
+import { buildMonthIndexKey, buildTaskActiveIndexKey } from '@/data-store/keys';
 import { formatArchiveMonthKeyUTCFromParts } from '@/lib/utils/utc-utils';
 import { isTaskActive, isTaskCompleted } from '@/lib/utils/task-active-utils';
 import { TaskStatus, EntityType } from '@/types/enums';
@@ -50,7 +50,7 @@ export async function auditTaskTimelineVsMonthIndex(month: number, year: number)
   const issues: IntegrityIssue[] = [];
   const total = { n: 0 };
 
-  const collectedIds = await kvSMembers(buildArchiveCollectionIndexKey('tasks', monthKey));
+  const collectedIds = await kvSMembers(buildMonthIndexKey(EntityType.TASK, monthKey));
 
   for (const id of collectedIds) {
     const task = await getTaskById(id);
@@ -102,14 +102,14 @@ export async function auditTaskTimelineVsMonthIndex(month: number, year: number)
 
 /**
  * Completed tasks (Done or Collected) must appear in at least one monthly index set.
- * Redis key shape remains `thegame:index:tasks:collected:MM-YY` until a key rename migration.
+ * Redis key shape remains canonical `thegame:index:task:by-month:MM-YY`.
  */
 export async function auditCompletedTasksMissingFromCompletedIndex(): Promise<IntegrityAuditResult> {
   const tasks = await getAllTasks();
   const months = await getAvailableArchiveMonths();
   const monthlyIdSet = new Set<string>();
   for (const mmyy of months) {
-    const key = buildArchiveCollectionIndexKey('tasks', mmyy);
+    const key = buildMonthIndexKey(EntityType.TASK, mmyy);
     const ids = await kvSMembers(key);
     for (const id of ids) monthlyIdSet.add(id);
   }

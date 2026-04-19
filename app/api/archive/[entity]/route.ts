@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
+import { EntityType } from '@/types/enums';
 import {
   getArchivedTasksByMonth,
   getArchivedSalesByMonth,
@@ -105,8 +106,8 @@ export async function POST(
 
     // Add to index instead of snapshotting
     const { kvSAdd } = await import('@/lib/utils/kv');
-    const { buildArchiveCollectionIndexKey } = await import('@/data-store/keys');
-    await kvSAdd(buildArchiveCollectionIndexKey('items', monthKey), normalizedSnapshot.id);
+    const { buildMonthIndexKey } = await import('@/data-store/keys');
+    await kvSAdd(buildMonthIndexKey(EntityType.ITEM, monthKey), normalizedSnapshot.id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

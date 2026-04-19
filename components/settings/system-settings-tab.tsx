@@ -29,6 +29,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { UtcArchiveIndexMigrationCard } from '@/components/settings/utc-archive-index-migration-card';
+import { UnifiedMonthIndexMigrationCard } from '@/components/settings/unified-month-index-migration-card';
 
 export function SystemSettingsTab() {
   const [status, setStatus] = useState<string>('');
@@ -337,6 +338,10 @@ export function SystemSettingsTab() {
 
                   <div className="border-t pt-4 space-y-4">
                     <UtcArchiveIndexMigrationCard />
+                  </div>
+
+                  <div className="border-t pt-4 space-y-4">
+                    <UnifiedMonthIndexMigrationCard />
                   </div>
 
                   <div className="border-t pt-4">

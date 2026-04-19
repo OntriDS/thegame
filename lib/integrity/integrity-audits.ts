@@ -18,7 +18,6 @@ import {
   buildMonthIndexKey,
   buildArchiveIndexKey,
   buildArchiveDataKey,
-  buildArchiveCollectionIndexKey
 } from '@/data-store/keys';
 import { getLinksFor } from '@/links/link-registry';
 import { EntityType, SaleStatus } from '@/types/enums';
@@ -93,7 +92,7 @@ export async function auditLinkConsistency(month: number, year: number): Promise
   const issues: IntegrityIssue[] = [];
   const total = { n: 0 };
 
-  const taskIds = await kvSMembers(buildArchiveCollectionIndexKey('tasks', mmyy));
+  const taskIds = await kvSMembers(buildMonthIndexKey(EntityType.TASK, mmyy));
   const saleIds = await kvSMembers(buildMonthIndexKey(EntityType.SALE, mmyy));
   const itemIds = await kvSMembers(buildMonthIndexKey(EntityType.ITEM, mmyy));
   const finIds = await kvSMembers(buildMonthIndexKey(EntityType.FINANCIAL, mmyy));

@@ -179,7 +179,7 @@ const TOOLS = [
     id: 'thegame.integrity.completedTasksMissingFromCompletedIndex',
     name: 'Completed tasks vs monthly index',
     description:
-      'Done or Collected tasks that are not in any monthly tasks index (Redis: thegame:index:tasks:collected:MM-YY). No month parameters.',
+      'Done or Collected tasks that are not in any monthly tasks index (Redis: thegame:index:task:by-month:MM-YY). No month parameters.',
     systemId: 'thegame',
     parameters: {
       type: 'object',
@@ -212,7 +212,7 @@ const TOOLS = [
     id: 'thegame.tasks.repairCompletedIndex',
     name: 'Repair completed tasks index',
     description:
-      'Rebuild all thegame:index:tasks:collected:MM-YY sets from all tasks marked as Done or Collected. Returns rebuilt months count and id samples.',
+      'Rebuild all thegame:index:task:by-month:MM-YY sets from all tasks marked as Done or Collected. Returns rebuilt months count and id samples.',
     systemId: 'thegame',
     parameters: {
       type: 'object',

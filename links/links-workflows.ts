@@ -404,7 +404,25 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
     }
   }
 
-  // Note: FINREC_TASK handled by financial-record-utils.ts ✅
+  // TASK_FINREC self-heal: ensure the task↔financial link exists whenever the
+  // financial carries a sourceTaskId ambassador. Happy path creates this link
+  // inside `createFinancialRecordFromTask`, but financials that were upserted
+  // outside that flow (imports, manual repairs, retries where createLink failed
+  // after upsertFinancial succeeded) can end up synced-but-unlinked. Running
+  // this on every financial upsert makes the next resave the repair trigger.
+  // createLink is idempotent, so this is a no-op when the link already exists.
+  if (fin.sourceTaskId) {
+    const sourceTask = await getTaskById(fin.sourceTaskId);
+    if (sourceTask) {
+      const l = makeLink(
+        LinkType.TASK_FINREC,
+        { type: EntityType.TASK, id: sourceTask.id },
+        { type: EntityType.FINANCIAL, id: fin.id }
+      );
+      await createLink(l);
+    }
+  }
+
   // FINREC_PLAYER: only created by shared points helpers if something awards with sourceType `financial` — `onFinancialUpsert` does not award points.
 }
 
