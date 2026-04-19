@@ -193,6 +193,30 @@ function normalizeCalendarBase(input: UTCalendarInput): Date {
 }
 
 /**
+ * Stable Redis archive bucket key `MM-yy` from a UTC instant, using **only** UTC calendar fields
+ * (`getUTCMonth` / `getUTCFullYear`). Use for all `thegame:index:*:collected:MM-yy` keys and related
+ * month indexes so writers and readers (API history, repair, datastore month queries) never diverge.
+ *
+ * Do not use `date-display-utils` `formatMonthKey` (user timezone) or date-fns `format()` (system local)
+ * for these keys — see `library/dev/digital-universe/systems-detailed-docs/utc-time-system.md`.
+ */
+export function formatArchiveMonthKeyUTC(input: UTCalendarInput): string {
+  try {
+    const d = normalizeCalendarBase(input);
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const yy = String(d.getUTCFullYear() % 100).padStart(2, '0');
+    return `${mm}-${yy}`;
+  } catch {
+    return '';
+  }
+}
+
+/** Same as {@link formatArchiveMonthKeyUTC} for API month navigation (`month` 1–12, e.g. April = 4). */
+export function formatArchiveMonthKeyUTCFromParts(year: number, month1To12: number): string {
+  return formatArchiveMonthKeyUTC(new Date(Date.UTC(year, month1To12 - 1, 15, 12, 0, 0, 0)));
+}
+
+/**
  * Get start of day in UTC (00:00:00).
  *
  * @param date - Base UTC date (or ISO string / ms from storage)

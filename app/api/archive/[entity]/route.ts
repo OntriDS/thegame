@@ -8,7 +8,7 @@ import {
   getPlayerArchiveEventsByMonth,
 } from '@/data-store/datastore';
 import type { Item } from '@/types/entities';
-import { formatMonthKey } from '@/lib/utils/date-utils';
+import { formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -101,7 +101,7 @@ export async function POST(
       updatedAt: snapshot.updatedAt ? new Date(snapshot.updatedAt) : soldAt,
     };
 
-    const monthKey = formatMonthKey(soldAt);
+    const monthKey = formatArchiveMonthKeyUTC(soldAt);
 
     // Add to index instead of snapshotting
     const { kvSAdd } = await import('@/lib/utils/kv');

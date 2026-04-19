@@ -400,8 +400,11 @@ export default function RecurrentTreeModalContent({
       station,
       progress,
       dueDate,
-      doneAt: localDoneAt,
-      collectedAt: finalStatus === TaskStatus.FAILED ? undefined : localCollectedAt,
+      doneAt:
+        finalStatus === TaskStatus.DONE || finalStatus === TaskStatus.FAILED
+          ? localDoneAt
+          : undefined,
+      collectedAt: finalStatus === TaskStatus.COLLECTED ? localCollectedAt : undefined,
       scheduledStart: finalScheduledStart,
       scheduledEnd: finalScheduledEnd,
       cost,
@@ -1178,6 +1181,16 @@ export default function RecurrentTreeModalContent({
                 if (newStatus === TaskStatus.FAILED) {
                   setIsCollected(false);
                   setLocalCollectedAt(undefined);
+                }
+                if (
+                  newStatus === TaskStatus.CREATED ||
+                  newStatus === TaskStatus.ON_HOLD ||
+                  newStatus === TaskStatus.IN_PROGRESS ||
+                  newStatus === TaskStatus.FINISHING
+                ) {
+                  setLocalDoneAt(undefined);
+                  setLocalCollectedAt(undefined);
+                  setIsCollected(false);
                 }
                 if (newStatus === TaskStatus.CREATED || newStatus === TaskStatus.ON_HOLD) {
                   setProgress(0);

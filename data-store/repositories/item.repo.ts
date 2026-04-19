@@ -4,7 +4,7 @@ import { buildDataKey, buildIndexKey, buildMonthIndexKey, buildEntityIndexKey, b
 import { EntityType, ItemType, ItemStatus } from '@/types/enums';
 import { isSoldStatus } from '@/lib/utils/status-utils';
 import type { Item } from '@/types/entities';
-import { formatMonthKey } from '@/lib/utils/date-utils';
+import { formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
 
 const ENTITY = EntityType.ITEM;
 
@@ -148,7 +148,7 @@ export async function upsertItem(item: Item): Promise<Item> {
   // Legacy items are intentionally EXCLUDED from month indexing so they stay fully hidden
   const dateForIndex = toSave.soldAt || toSave.createdAt;
   if (!isLegacy && dateForIndex) {
-    const currentMonthKey = formatMonthKey(dateForIndex);
+    const currentMonthKey = formatArchiveMonthKeyUTC(dateForIndex);
     await kvSAdd(buildMonthIndexKey(ENTITY, currentMonthKey), item.id);
     // Ensure this month appears in the global month selector (archive months set)
     await kvSAdd(buildArchiveMonthsKey(), currentMonthKey);
@@ -170,8 +170,8 @@ export async function upsertItem(item: Item): Promise<Item> {
     const currDateForIndex = toSave.soldAt || toSave.createdAt;
 
     if (prevDateForIndex && currDateForIndex) {
-      const prevMonthKey = formatMonthKey(prevDateForIndex);
-      const currMonthKey = formatMonthKey(currDateForIndex);
+      const prevMonthKey = formatArchiveMonthKeyUTC(prevDateForIndex);
+      const currMonthKey = formatArchiveMonthKeyUTC(currDateForIndex);
 
       if (prevMonthKey !== currMonthKey) {
         await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), item.id);
@@ -215,7 +215,7 @@ export async function deleteItem(id: string): Promise<void> {
   if (item) {
     const dateForIndex = item.soldAt || item.createdAt;
     if (dateForIndex) {
-      const prevMonthKey = formatMonthKey(dateForIndex);
+      const prevMonthKey = formatArchiveMonthKeyUTC(dateForIndex);
       await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), id);
     }
     // Clean up type index

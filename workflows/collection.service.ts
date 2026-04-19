@@ -6,8 +6,7 @@ import {
     upsertSale,
 } from '@/data-store/datastore';
 import { TaskStatus, SaleStatus, EntityType } from '@/types/enums';
-import { formatMonthKey } from '@/lib/utils/date-display-utils';
-import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
+import { getUTCNow, endOfMonthUTC, formatArchiveMonthKeyUTCFromParts } from '@/lib/utils/utc-utils';
 import { kvSAdd } from '@/lib/utils/kv';
 import { buildArchiveMonthsKey } from '@/data-store/keys';
 
@@ -61,7 +60,7 @@ export const CollectionService = {
     },
 
     async updateArchiveIndex(type: EntityType, month: number, year: number) {
-        const monthKey = formatMonthKey(new Date(Date.UTC(year, month - 1, 1)));
+        const monthKey = formatArchiveMonthKeyUTCFromParts(year, month);
         await kvSAdd(buildArchiveMonthsKey(), monthKey);
     }
 };

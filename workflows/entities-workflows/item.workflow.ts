@@ -24,9 +24,9 @@ import {
   upsertCharacter,
 } from '@/data-store/datastore';
 import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
-import { formatMonthKey, formatForDisplay } from '@/lib/utils/date-display-utils';
+import { formatForDisplay } from '@/lib/utils/date-display-utils';
 import { isSoldStatus } from '@/lib/utils/status-utils';
-import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
+import { getUTCNow, endOfMonthUTC, formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
 import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 
 const STATE_FIELDS = ['status', 'stock', 'quantitySold'];
@@ -106,8 +106,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     }
 
     const soldAt = item.soldAt || getUTCNow();
-    const archiveMonth = endOfMonthUTC(soldAt);
-    const monthKey = formatMonthKey(archiveMonth);
+    const monthKey = formatArchiveMonthKeyUTC(soldAt);
     const primarySite = item.stock?.[0]?.siteId || 'Home';
 
     // 2. CREATE THE SOLD BATCH CLONE FOR THE ARCHIVE (Sold Items Tab)
@@ -235,7 +234,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     if (isArchivable) {
       // Maintain month index (soldAt → createdAt)
       const currentTargetDate = item.soldAt || item.createdAt || getUTCNow();
-      const targetMonth = formatMonthKey(endOfMonthUTC(currentTargetDate));
+      const targetMonth = formatArchiveMonthKeyUTC(currentTargetDate);
 
       const { kvSAdd, kvSRem } = await import('@/lib/utils/kv');
       const { buildMonthIndexKey } = await import('@/data-store/keys');

@@ -26,8 +26,7 @@ import {
 } from '../update-propagation-utils';
 import { createCharacterFromFinancial } from '../character-creation-utils';
 import { upsertFinancial } from '@/data-store/datastore';
-import { formatMonthKey } from '@/lib/utils/date-display-utils';
-import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
+import { getUTCNow, endOfMonthUTC, formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
 import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { recalculateCharacterWallet } from '../financial-record-utils';
 import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync-server';
@@ -139,10 +138,10 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         snapshotMonthDate = endOfMonthUTC(safeHistoricalDate);
       }
 
-      const archiveIndexEffectKey = EffectKeys.sideEffect('financial', financial.id, `archiveIndex:${formatMonthKey(snapshotMonthDate)}`);
+      const archiveIndexEffectKey = EffectKeys.sideEffect('financial', financial.id, `archiveIndex:${formatArchiveMonthKeyUTC(snapshotMonthDate)}`);
 
       if (!(await hasEffect(archiveIndexEffectKey))) {
-        const monthKey = formatMonthKey(snapshotMonthDate);
+        const monthKey = formatArchiveMonthKeyUTC(snapshotMonthDate);
         const { kvSAdd } = await import('@/lib/utils/kv');
         const archiveIndexKey = buildArchiveCollectionIndexKey('financials', monthKey);
         await kvSAdd(archiveIndexKey, financial.id);
@@ -220,10 +219,10 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       snapshotMonthDate = endOfMonthUTC(safeHistoricalDate);
     }
 
-    const archiveIndexEffectKey = EffectKeys.sideEffect('financial', financial.id, `archiveIndex:${formatMonthKey(snapshotMonthDate)}`);
+    const archiveIndexEffectKey = EffectKeys.sideEffect('financial', financial.id, `archiveIndex:${formatArchiveMonthKeyUTC(snapshotMonthDate)}`);
 
     if (!(await hasEffect(archiveIndexEffectKey))) {
-      const monthKey = formatMonthKey(snapshotMonthDate);
+      const monthKey = formatArchiveMonthKeyUTC(snapshotMonthDate);
       const { kvSAdd } = await import('@/lib/utils/kv');
       const archiveIndexKey = buildArchiveCollectionIndexKey('financials', monthKey);
       await kvSAdd(archiveIndexKey, financial.id);
@@ -320,7 +319,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       } else if (f.createdAt) {
         snapshotDate = endOfMonthUTC(f.createdAt instanceof Date ? f.createdAt : new Date(f.createdAt as string));
       }
-      return formatMonthKey(snapshotDate);
+      return formatArchiveMonthKeyUTC(snapshotDate);
     };
 
     const newMonth = isNowArchived ? getArchiveMonth(financial) : null;
@@ -503,7 +502,7 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
         } else if (record.createdAt) {
           snapshotDate = endOfMonthUTC(record.createdAt instanceof Date ? record.createdAt : new Date(record.createdAt as string));
         }
-        const monthKey = formatMonthKey(snapshotDate);
+        const monthKey = formatArchiveMonthKeyUTC(snapshotDate);
         const { kvSRem } = await import('@/lib/utils/kv');
         const archiveIndexKey = buildArchiveCollectionIndexKey('financials', monthKey);
         await kvSRem(archiveIndexKey, recordId);

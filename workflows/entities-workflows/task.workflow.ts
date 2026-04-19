@@ -24,10 +24,10 @@ import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync
 import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
 import { kvSRem } from '@/lib/utils/kv';
 
-// UTC STANDARDIZATION: Using new UTC utilities
-import { formatMonthKey } from '@/lib/utils/date-display-utils';
-import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
+// UTC: archive Redis keys use formatArchiveMonthKeyUTC only (see utc-utils.ts + utc-time-system.md).
+import { getUTCNow, formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
 import { parseDateToUTC } from '@/lib/utils/date-parsers';
+import { getTaskArchiveMonthKeyUTC } from '@/lib/utils/task-archive-index-utils';
 
 import {
   updateFinancialRecordsFromTask,
@@ -256,12 +256,12 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       (previousTask!.status === TaskStatus.DONE || previousTask!.status === TaskStatus.COLLECTED) &&
       !isTerminalStatus(task.status)
     ) {
-      await uncompleteTask(task.id);
+      await uncompleteTask(task.id, previousTask);
     }
 
     // Failed → active: same rollback path as uncomplete
     if (previousTask!.status === TaskStatus.FAILED && !isTerminalStatus(task.status)) {
-      await uncompleteTask(task.id);
+      await uncompleteTask(task.id, previousTask);
     }
 
   }
@@ -537,20 +537,8 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       previousTask.status === TaskStatus.COLLECTED ||
       previousTask.status === TaskStatus.FAILED);
 
-  const getTaskArchiveMonth = (t: Task) => {
-    let raw: Date | string | undefined;
-    if (t.status === TaskStatus.COLLECTED) {
-      raw = t.collectedAt || t.doneAt || t.createdAt;
-    } else {
-      raw = t.doneAt || t.createdAt;
-    }
-    if (raw == null) return null;
-    const date = raw instanceof Date ? raw : parseDateToUTC(raw as string | number);
-    return formatMonthKey(endOfMonthUTC(date));
-  };
-
-  const newMonth = isNowArchived ? getTaskArchiveMonth(outputsTask) : null;
-  const oldMonth = wasArchived && previousTask ? getTaskArchiveMonth(previousTask) : null;
+  const newMonth = isNowArchived ? getTaskArchiveMonthKeyUTC(outputsTask) : null;
+  const oldMonth = wasArchived && previousTask ? getTaskArchiveMonthKeyUTC(previousTask) : null;
 
   if (isNowArchived || wasArchived) {
     const { kvSAdd, kvSRem } = await import('@/lib/utils/kv');
@@ -655,9 +643,10 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
         if (snapshotDate) {
           const d =
             snapshotDate instanceof Date ? snapshotDate : parseDateToUTC(snapshotDate as string | number);
-          const snapshotMonth = endOfMonthUTC(d);
-          const monthKey = formatMonthKey(snapshotMonth);
-          await kvSRem(buildArchiveCollectionIndexKey('tasks', monthKey), task.id);
+          const monthKey = formatArchiveMonthKeyUTC(d);
+          if (monthKey) {
+            await kvSRem(buildArchiveCollectionIndexKey('tasks', monthKey), task.id);
+          }
         }
       } catch (err) {
         console.error(`[removeTaskLogEntriesOnDelete] Failed to clean up archive index`, err);
@@ -708,15 +697,25 @@ async function removePlayerPointsFromTask(task: Task): Promise<void> {
  * This function handles when a task status changes back from Done
  * Reverses all side effects that were applied during completion
  */
-export async function uncompleteTask(taskId: string): Promise<void> {
+export async function uncompleteTask(taskId: string, previousTerminalTask?: Task): Promise<void> {
   try {
     // Get the task
     const task = await getTaskById(taskId);
 
     if (!task) return;
 
-    // Check if task was previously completed (has doneAt)
-    if (!task.doneAt) return;
+    const leftDoneOrCollected =
+      previousTerminalTask &&
+      (previousTerminalTask.status === TaskStatus.DONE ||
+        previousTerminalTask.status === TaskStatus.COLLECTED);
+    const leftFailed =
+      previousTerminalTask && previousTerminalTask.status === TaskStatus.FAILED;
+
+    // Persisted row may already have cleared doneAt when the user picked a pre-done status; use
+    // previousTerminalTask from the workflow when we know we left a terminal state.
+    if (!leftDoneOrCollected && !leftFailed) {
+      if (!task.doneAt && !task.collectedAt) return;
+    }
 
     if (!task.isNewItem && task.outputItemId) {
       const quantityToRemove = task.outputQuantity || 0;
@@ -766,19 +765,26 @@ export async function uncompleteTask(taskId: string): Promise<void> {
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'failedLogged'));
     // 3.5 Remove from archive index & clear snapshot effect
     try {
-      const snapshotRaw = task.doneAt || task.collectedAt || task.createdAt || getUTCNow();
+      const snapshotRaw =
+        (previousTerminalTask &&
+          (previousTerminalTask.collectedAt || previousTerminalTask.doneAt)) ||
+        task.collectedAt ||
+        task.doneAt ||
+        task.createdAt ||
+        getUTCNow();
       const snapshotDate =
         snapshotRaw instanceof Date ? snapshotRaw : parseDateToUTC(snapshotRaw as string | number);
-      const snapshotMonth = endOfMonthUTC(snapshotDate);
-      const monthKey = formatMonthKey(snapshotMonth);
+      const monthKey = formatArchiveMonthKeyUTC(snapshotDate);
 
-      await kvSRem(buildArchiveCollectionIndexKey('tasks', monthKey), task.id);
-      await clearEffect(EffectKeys.sideEffect('task', taskId, `taskSnapshot:${monthKey}`));
+      if (monthKey) {
+        await kvSRem(buildArchiveCollectionIndexKey('tasks', monthKey), task.id);
+        await clearEffect(EffectKeys.sideEffect('task', taskId, `taskSnapshot:${monthKey}`));
 
-      // Also check standard date-based key just in case (fallback)
-      const nowKey = formatMonthKey(endOfMonthUTC(getUTCNow()));
-      if (nowKey !== monthKey) {
-        await kvSRem(buildArchiveCollectionIndexKey('tasks', nowKey), task.id);
+        // Also check standard date-based key just in case (fallback)
+        const nowKey = formatArchiveMonthKeyUTC(getUTCNow());
+        if (nowKey && nowKey !== monthKey) {
+          await kvSRem(buildArchiveCollectionIndexKey('tasks', nowKey), task.id);
+        }
       }
     } catch (err) {
       console.error(`[uncompleteTask] Failed to remove from archive index:`, err);
@@ -809,7 +815,6 @@ async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date):
     // Import functions we need
     const { getAllTasks, upsertTask } = await import('@/data-store/datastore');
     const { hasEffect, markEffect } = await import('@/data-store/effects-registry');
-    const { formatMonthKey } = await import('@/lib/utils/date-display-utils');
     const { kvSAdd } = await import('@/lib/utils/kv');
     const { appendEntityLog } = await import('@/workflows/entities-logging');
 

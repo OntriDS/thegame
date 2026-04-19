@@ -138,7 +138,11 @@ export function formatMonthYear(utcDate: Date): string {
 }
 
 /**
- * Format UTC date as month key (MM-YY).
+ * Format UTC date as month key (MM-YY) for **UI / labels only**.
+ *
+ * **Do not** use for Redis archive keys (`thegame:index:*:collected:…`) or datastore month buckets —
+ * those must use {@link formatArchiveMonthKeyUTC} from `utc-utils.ts` so keys never depend on user
+ * timezone or server-local date-fns formatting.
  *
  * @param utcDate - UTC Date object
  * @returns Formatted string

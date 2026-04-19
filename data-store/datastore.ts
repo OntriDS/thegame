@@ -90,8 +90,15 @@ import {
 import { SummaryService } from './services/summary.service';
 import { SummaryRepository } from './repositories/summary.repo';
 // UTC STANDARDIZATION: Using new UTC utilities
-import { getCurrentMonthKey, formatMonthKey, reviveDates } from '@/lib/utils/date-utils';
-import { getUTCNow, toUTCISOString } from '@/lib/utils/utc-utils';
+import { reviveDates } from '@/lib/utils/date-utils';
+import {
+  getUTCNow,
+  toUTCISOString,
+  formatArchiveMonthKeyUTC,
+  formatArchiveMonthKeyUTCFromParts,
+  endOfMonthUTC,
+} from '@/lib/utils/utc-utils';
+import { resolveTaskCompletedArchiveMonthKeyUTC } from '@/lib/utils/task-archive-index-utils';
 import { kvDel, kvMGet, kvSAdd, kvSMembers, kvSRem } from './kv';
 import {
   buildDataKey,
@@ -297,24 +304,39 @@ export type RepairTaskActiveIndexResult = {
   addedToActive: string[];
   removedFromActive: string[];
   truncated: boolean;
+  dryRun?: boolean;
 };
 
 /**
- * Rebuild `thegame:index:task:active` from all tasks. Excludes ids present in any monthly collected set.
+ * Rebuild `thegame:index:task:active` from all tasks. Excludes ids present in any monthly collected set
+ * (or in `completedTaskIdsOverride`, e.g. record-derived completed ids during {@link migrateUtcMonthlyRedisIndexes} dry-run).
  */
-export async function repairTaskActiveIndex(): Promise<RepairTaskActiveIndexResult> {
+export async function repairTaskActiveIndex(options?: {
+  dryRun?: boolean;
+  /** When set, used as the “completed / collected index” id universe instead of scanning Redis month sets. */
+  completedTaskIdsOverride?: Set<string>;
+  /** When provided with `completedTaskIdsOverride`, skips loading all tasks again. */
+  tasks?: Task[];
+}): Promise<RepairTaskActiveIndexResult> {
+  const dryRun = options?.dryRun ?? false;
   const activeKey = buildTaskActiveIndexKey();
   const beforeMembers = await kvSMembers(activeKey);
   const beforeIds = new Set(beforeMembers);
 
-  const tasks = await repoGetAllTasks();
+  const tasks = options?.tasks ?? (await repoGetAllTasks());
   const collectedIdSet = new Set<string>();
-  const months = await getAvailableArchiveMonths();
-  for (const mmyy of months) {
-    const key = buildArchiveCollectionIndexKey('tasks', mmyy);
-    const memberIds = await kvSMembers(key);
-    for (const id of memberIds) {
+  if (options?.completedTaskIdsOverride) {
+    for (const id of options.completedTaskIdsOverride) {
       collectedIdSet.add(id);
+    }
+  } else {
+    const months = await getAvailableArchiveMonths();
+    for (const mmyy of months) {
+      const key = buildArchiveCollectionIndexKey('tasks', mmyy);
+      const memberIds = await kvSMembers(key);
+      for (const id of memberIds) {
+        collectedIdSet.add(id);
+      }
     }
   }
 
@@ -342,12 +364,14 @@ export async function repairTaskActiveIndex(): Promise<RepairTaskActiveIndexResu
     if (beforeIds.has(id)) unchangedCount += 1;
   }
 
-  await kvDel(activeKey);
-  const desiredArray = [...desiredIds];
-  for (let i = 0; i < desiredArray.length; i += 500) {
-    const slice = desiredArray.slice(i, i + 500);
-    if (slice.length > 0) {
-      await kvSAdd(activeKey, ...slice);
+  if (!dryRun) {
+    await kvDel(activeKey);
+    const desiredArray = [...desiredIds];
+    for (let i = 0; i < desiredArray.length; i += 500) {
+      const slice = desiredArray.slice(i, i + 500);
+      if (slice.length > 0) {
+        await kvSAdd(activeKey, ...slice);
+      }
     }
   }
 
@@ -371,6 +395,7 @@ export async function repairTaskActiveIndex(): Promise<RepairTaskActiveIndexResu
     addedToActive,
     removedFromActive,
     truncated: listTooLong,
+    dryRun,
   };
 }
 
@@ -384,7 +409,307 @@ export type RepairTaskCompletedIndexResult = {
   samplesAdded: string[];
   samplesRemoved: string[];
   truncated: boolean;
+  dryRun?: boolean;
 };
+
+export type MonthBucketsRebuildSummary = {
+  monthsRebuilt: number;
+  addedCount: number;
+  removedCount: number;
+  unchangedCount: number;
+  samplesAdded: string[];
+  samplesRemoved: string[];
+  truncated: boolean;
+};
+
+async function rebuildRedisMonthSetBuckets(params: {
+  dryRun: boolean;
+  desiredIdsByMonth: Record<string, Set<string>>;
+  knownMonths: string[];
+  redisKeyForMonth: (mmyy: string) => string;
+  recordMonthsInArchiveMetaSet: boolean;
+  /** When true, samples are `MM-yy:entityId` so multi-bucket migrations stay readable. */
+  annotateSampleIds?: boolean;
+}): Promise<MonthBucketsRebuildSummary> {
+  const annotate = Boolean(params.annotateSampleIds);
+  const allMonths = new Set<string>([...params.knownMonths, ...Object.keys(params.desiredIdsByMonth)]);
+  const monthSetKey = params.recordMonthsInArchiveMetaSet ? buildArchiveMonthsKey() : null;
+
+  const addedFull: string[] = [];
+  const removedFull: string[] = [];
+  let unchangedCount = 0;
+
+  for (const mmyy of allMonths) {
+    const key = params.redisKeyForMonth(mmyy);
+    const beforeMembers = await kvSMembers(key);
+    const beforeIds = new Set(beforeMembers);
+    const desiredIds = params.desiredIdsByMonth[mmyy] || new Set<string>();
+
+    for (const id of desiredIds) {
+      if (!beforeIds.has(id)) addedFull.push(annotate ? `${mmyy}:${id}` : id);
+      else unchangedCount += 1;
+    }
+    for (const id of beforeIds) {
+      if (!desiredIds.has(id)) removedFull.push(annotate ? `${mmyy}:${id}` : id);
+    }
+
+    if (!params.dryRun) {
+      await kvDel(key);
+      const desiredArray = [...desiredIds];
+      for (let i = 0; i < desiredArray.length; i += 500) {
+        const slice = desiredArray.slice(i, i + 500);
+        if (slice.length > 0) {
+          await kvSAdd(key, ...slice);
+        }
+      }
+      if (monthSetKey) {
+        await kvSAdd(monthSetKey, mmyy);
+      }
+    }
+  }
+
+  const listTooLong =
+    addedFull.length > REPAIR_ACTIVE_INDEX_LIST_CAP || removedFull.length > REPAIR_ACTIVE_INDEX_LIST_CAP;
+  const samplesAdded = listTooLong ? addedFull.slice(0, REPAIR_ACTIVE_INDEX_LIST_CAP) : [...addedFull];
+  const samplesRemoved = listTooLong ? removedFull.slice(0, REPAIR_ACTIVE_INDEX_LIST_CAP) : [...removedFull];
+
+  return {
+    monthsRebuilt: allMonths.size,
+    addedCount: addedFull.length,
+    removedCount: removedFull.length,
+    unchangedCount,
+    samplesAdded,
+    samplesRemoved,
+    truncated: listTooLong,
+  };
+}
+
+function saleMonthIndexKeyUTC(sale: Sale): string | null {
+  const raw =
+    (sale as { collectedAt?: unknown }).collectedAt ||
+    (sale as { doneAt?: unknown }).doneAt ||
+    sale.saleDate ||
+    sale.createdAt;
+  if (!raw) return null;
+  const d = raw instanceof Date ? raw : new Date(raw as string);
+  if (!Number.isFinite(d.getTime())) return null;
+  return formatArchiveMonthKeyUTC(d) || null;
+}
+
+function saleArchiveCollectionMonthKeyUTC(sale: Sale): string | null {
+  const archived = sale.status === SaleStatus.COLLECTED || !!sale.isCollected;
+  if (!archived) return null;
+  if (sale.collectedAt) {
+    const c = sale.collectedAt instanceof Date ? sale.collectedAt : new Date(sale.collectedAt as string);
+    if (Number.isFinite(c.getTime())) return formatArchiveMonthKeyUTC(c) || null;
+  }
+  const sDate = sale.saleDate ? new Date(sale.saleDate) : sale.createdAt ? new Date(sale.createdAt) : getUTCNow();
+  if (!Number.isFinite(sDate.getTime())) return null;
+  return formatArchiveMonthKeyUTC(endOfMonthUTC(sDate)) || null;
+}
+
+function financialMonthIndexKeyUTC(f: FinancialRecord): string | null {
+  if (!f.year || f.month == null || f.month < 1 || f.month > 12) return null;
+  return formatArchiveMonthKeyUTCFromParts(f.year, f.month);
+}
+
+function financialArchiveCollectionMonthKeyUTC(f: FinancialRecord): string | null {
+  if (f.isNotPaid || f.isNotCharged) return null;
+  let snapshotDate: Date;
+  const referenceDate = new Date(Date.UTC(f.year, (f.month || 1) - 1, 1));
+  if (Number.isFinite(referenceDate.getTime())) {
+    snapshotDate = endOfMonthUTC(referenceDate);
+  } else if (f.createdAt) {
+    snapshotDate = endOfMonthUTC(f.createdAt instanceof Date ? f.createdAt : new Date(f.createdAt as string));
+  } else {
+    snapshotDate = endOfMonthUTC(new Date(Date.UTC(f.year, 0, 1)));
+  }
+  return formatArchiveMonthKeyUTC(snapshotDate) || null;
+}
+
+export type MigrateUtcMonthlyRedisIndexesResult = {
+  dryRun: boolean;
+  durationMs: number;
+  tasksCompletedArchive: RepairTaskCompletedIndexResult;
+  tasksActiveIndex: RepairTaskActiveIndexResult;
+  tasksMonthIndex: MonthBucketsRebuildSummary;
+  itemsMonthIndex: MonthBucketsRebuildSummary;
+  itemsArchiveCollection: MonthBucketsRebuildSummary;
+  salesMonthIndex: MonthBucketsRebuildSummary;
+  salesArchiveCollection: MonthBucketsRebuildSummary;
+  financialMonthIndex: MonthBucketsRebuildSummary;
+  financialArchiveCollection: MonthBucketsRebuildSummary;
+};
+
+/**
+ * Rebuild UTC `MM-yy` Redis month buckets (archive collection sets + entity month indexes) from KV records,
+ * then rebuild the task active index (`thegame:index:task:active`) using record-derived completed ids so
+ * dry-run matches the post-migration world even before collected sets are written.
+ */
+export async function migrateUtcMonthlyRedisIndexes(options: {
+  dryRun: boolean;
+}): Promise<MigrateUtcMonthlyRedisIndexesResult> {
+  const t0 = Date.now();
+  const knownMonths = await getAvailableArchiveMonths();
+
+  const tasks = reviveDates(await repoGetAllTasks());
+
+  const tasksCompletedArchive = await repairTaskCompletedIndex({
+    dryRun: options.dryRun,
+    tasks,
+    annotateSampleIds: true,
+  });
+
+  const desiredTaskMonthByMonth: Record<string, Set<string>> = {};
+  for (const t of tasks) {
+    const raw = (t as { doneAt?: unknown }).doneAt || (t as { collectedAt?: unknown }).collectedAt || t.createdAt || getUTCNow();
+    const d = raw instanceof Date ? raw : new Date(raw as string);
+    const mmyy = formatArchiveMonthKeyUTC(Number.isFinite(d.getTime()) ? d : getUTCNow());
+    if (!desiredTaskMonthByMonth[mmyy]) desiredTaskMonthByMonth[mmyy] = new Set();
+    desiredTaskMonthByMonth[mmyy].add(t.id);
+  }
+
+  const tasksMonthIndex = await rebuildRedisMonthSetBuckets({
+    dryRun: options.dryRun,
+    desiredIdsByMonth: desiredTaskMonthByMonth,
+    knownMonths,
+    redisKeyForMonth: (m) => buildMonthIndexKey(EntityType.TASK, m),
+    recordMonthsInArchiveMetaSet: true,
+    annotateSampleIds: true,
+  });
+
+  const items = reviveDates(await repoGetAllItems());
+  const desiredItemMonth: Record<string, Set<string>> = {};
+  const desiredItemArchive: Record<string, Set<string>> = {};
+  for (const it of items) {
+    if (it.status === ItemStatus.LEGACY) continue;
+    const dateForIndex = it.soldAt || it.createdAt;
+    if (!dateForIndex) continue;
+    const mmyy = formatArchiveMonthKeyUTC(dateForIndex instanceof Date ? dateForIndex : new Date(dateForIndex as string));
+    if (!mmyy) continue;
+    if (!desiredItemMonth[mmyy]) desiredItemMonth[mmyy] = new Set();
+    desiredItemMonth[mmyy].add(it.id);
+    if (isSoldStatus(it.status)) {
+      if (!desiredItemArchive[mmyy]) desiredItemArchive[mmyy] = new Set();
+      desiredItemArchive[mmyy].add(it.id);
+    }
+  }
+
+  const itemsMonthIndex = await rebuildRedisMonthSetBuckets({
+    dryRun: options.dryRun,
+    desiredIdsByMonth: desiredItemMonth,
+    knownMonths,
+    redisKeyForMonth: (m) => buildMonthIndexKey(EntityType.ITEM, m),
+    recordMonthsInArchiveMetaSet: true,
+    annotateSampleIds: true,
+  });
+
+  const itemsArchiveCollection = await rebuildRedisMonthSetBuckets({
+    dryRun: options.dryRun,
+    desiredIdsByMonth: desiredItemArchive,
+    knownMonths,
+    redisKeyForMonth: (m) => buildArchiveCollectionIndexKey('items', m),
+    recordMonthsInArchiveMetaSet: true,
+    annotateSampleIds: true,
+  });
+
+  let sales = await repoGetAllSales();
+  sales = reviveDates(sales)
+    .filter((s): s is Sale => s != null)
+    .map((s) => normalizeSale(s));
+
+  const desiredSaleMonth: Record<string, Set<string>> = {};
+  const desiredSaleArchive: Record<string, Set<string>> = {};
+  for (const s of sales) {
+    const mk = saleMonthIndexKeyUTC(s);
+    if (mk) {
+      if (!desiredSaleMonth[mk]) desiredSaleMonth[mk] = new Set();
+      desiredSaleMonth[mk].add(s.id);
+    }
+    const ak = saleArchiveCollectionMonthKeyUTC(s);
+    if (ak) {
+      if (!desiredSaleArchive[ak]) desiredSaleArchive[ak] = new Set();
+      desiredSaleArchive[ak].add(s.id);
+    }
+  }
+
+  const salesMonthIndex = await rebuildRedisMonthSetBuckets({
+    dryRun: options.dryRun,
+    desiredIdsByMonth: desiredSaleMonth,
+    knownMonths,
+    redisKeyForMonth: (m) => buildMonthIndexKey(EntityType.SALE, m),
+    recordMonthsInArchiveMetaSet: true,
+    annotateSampleIds: true,
+  });
+
+  const salesArchiveCollection = await rebuildRedisMonthSetBuckets({
+    dryRun: options.dryRun,
+    desiredIdsByMonth: desiredSaleArchive,
+    knownMonths,
+    redisKeyForMonth: (m) => buildArchiveCollectionIndexKey('sales', m),
+    recordMonthsInArchiveMetaSet: true,
+    annotateSampleIds: true,
+  });
+
+  const financials = reviveDates(await repoGetAllFinancials());
+  const desiredFinMonth: Record<string, Set<string>> = {};
+  const desiredFinArchive: Record<string, Set<string>> = {};
+  for (const f of financials) {
+    const mk = financialMonthIndexKeyUTC(f);
+    if (mk) {
+      if (!desiredFinMonth[mk]) desiredFinMonth[mk] = new Set();
+      desiredFinMonth[mk].add(f.id);
+    }
+    const ak = financialArchiveCollectionMonthKeyUTC(f);
+    if (ak) {
+      if (!desiredFinArchive[ak]) desiredFinArchive[ak] = new Set();
+      desiredFinArchive[ak].add(f.id);
+    }
+  }
+
+  const financialMonthIndex = await rebuildRedisMonthSetBuckets({
+    dryRun: options.dryRun,
+    desiredIdsByMonth: desiredFinMonth,
+    knownMonths,
+    redisKeyForMonth: (m) => buildMonthIndexKey(EntityType.FINANCIAL, m),
+    recordMonthsInArchiveMetaSet: true,
+    annotateSampleIds: true,
+  });
+
+  const financialArchiveCollection = await rebuildRedisMonthSetBuckets({
+    dryRun: options.dryRun,
+    desiredIdsByMonth: desiredFinArchive,
+    knownMonths,
+    redisKeyForMonth: (m) => buildArchiveCollectionIndexKey('financials', m),
+    recordMonthsInArchiveMetaSet: true,
+    annotateSampleIds: true,
+  });
+
+  const completedTaskIds = new Set<string>();
+  for (const t of tasks) {
+    if (isTaskCompleted(t)) completedTaskIds.add(t.id);
+  }
+  const tasksActiveIndex = await repairTaskActiveIndex({
+    dryRun: options.dryRun,
+    completedTaskIdsOverride: completedTaskIds,
+    tasks,
+  });
+
+  return {
+    dryRun: options.dryRun,
+    durationMs: Date.now() - t0,
+    tasksCompletedArchive,
+    tasksActiveIndex,
+    tasksMonthIndex,
+    itemsMonthIndex,
+    itemsArchiveCollection,
+    salesMonthIndex,
+    salesArchiveCollection,
+    financialMonthIndex,
+    financialArchiveCollection,
+  };
+}
+
 export type RepairPrimaryTaskIndexResult = {
   scannedKeys: number;
   addedOrphans: number;
@@ -430,82 +755,51 @@ export async function repairPrimaryTaskIndex(): Promise<RepairPrimaryTaskIndexRe
 }
 /**
  * Rebuild ALL `thegame:index:tasks:collected:MM-YY` sets from all tasks marked as completed.
+ * Month keys match `task.workflow` archive indexing ({@link resolveTaskCompletedArchiveMonthKeyUTC}).
  */
-export async function repairTaskCompletedIndex(): Promise<RepairTaskCompletedIndexResult> {
-  const tasks = await repoGetAllTasks();
-  
+export async function repairTaskCompletedIndex(options?: {
+  dryRun?: boolean;
+  /** When provided, skips loading all tasks again (e.g. {@link migrateUtcMonthlyRedisIndexes}). */
+  tasks?: Task[];
+  annotateSampleIds?: boolean;
+}): Promise<RepairTaskCompletedIndexResult> {
+  const dryRun = options?.dryRun ?? false;
+  const tasks = options?.tasks ?? (await repoGetAllTasks());
+
   const desiredIdsByMonth: Record<string, Set<string>> = {};
-  
   for (const t of tasks) {
-    if (isTaskCompleted(t)) {
-      let date: Date | null = null;
-      if (t.collectedAt) date = new Date(t.collectedAt);
-      else if (t.doneAt) date = new Date(t.doneAt);
-      else if (t.dueDate) date = new Date(t.dueDate);
-      else if (t.scheduledStart) date = new Date(t.scheduledStart);
-      else if (t.updatedAt) date = new Date(t.updatedAt);
-      else if (t.createdAt) date = new Date(t.createdAt);
-      else date = new Date();
-      
-      if (isNaN(date.getTime())) date = new Date();
-      
-      const mmyy = formatMonthKey(date);
-      if (!desiredIdsByMonth[mmyy]) desiredIdsByMonth[mmyy] = new Set<string>();
-      desiredIdsByMonth[mmyy].add(t.id);
-    }
+    if (!isTaskCompleted(t)) continue;
+    const mmyy = resolveTaskCompletedArchiveMonthKeyUTC(t);
+    if (!desiredIdsByMonth[mmyy]) desiredIdsByMonth[mmyy] = new Set<string>();
+    desiredIdsByMonth[mmyy].add(t.id);
   }
 
   const months = await getAvailableArchiveMonths();
-  const allMonths = new Set<string>([...months, ...Object.keys(desiredIdsByMonth)]);
-  
-  const addedFull: string[] = [];
-  const removedFull: string[] = [];
-  let unchangedCount = 0;
+  const summary = await rebuildRedisMonthSetBuckets({
+    dryRun,
+    desiredIdsByMonth,
+    knownMonths: months,
+    redisKeyForMonth: (m) => buildArchiveCollectionIndexKey('tasks', m),
+    recordMonthsInArchiveMetaSet: true,
+    annotateSampleIds: Boolean(options?.annotateSampleIds),
+  });
+
   let totalCompletedTasks = 0;
-  
-  for (const mmyy of allMonths) {
-    const key = buildArchiveCollectionIndexKey('tasks', mmyy);
-    const beforeMembers = await kvSMembers(key);
-    const beforeIds = new Set(beforeMembers);
-    const desiredIds = desiredIdsByMonth[mmyy] || new Set<string>();
-    
-    totalCompletedTasks += desiredIds.size;
-    
-    for (const id of desiredIds) {
-      if (!beforeIds.has(id)) addedFull.push(id);
-      else unchangedCount += 1;
-    }
-    for (const id of beforeIds) {
-      if (!desiredIds.has(id)) removedFull.push(id);
-    }
-    
-    await kvDel(key);
-    const desiredArray = [...desiredIds];
-    for (let i = 0; i < desiredArray.length; i += 500) {
-      const slice = desiredArray.slice(i, i + 500);
-      if (slice.length > 0) {
-        await kvSAdd(key, ...slice);
-      }
-    }
-    
-    const monthSetKey = buildArchiveMonthsKey();
-    await kvSAdd(monthSetKey, mmyy);
+  for (const s of Object.values(desiredIdsByMonth)) {
+    totalCompletedTasks += s.size;
   }
-  
-  const listTooLong = addedFull.length > REPAIR_ACTIVE_INDEX_LIST_CAP || removedFull.length > REPAIR_ACTIVE_INDEX_LIST_CAP;
-  const samplesAdded = listTooLong ? addedFull.slice(0, REPAIR_ACTIVE_INDEX_LIST_CAP) : [...addedFull];
-  const samplesRemoved = listTooLong ? removedFull.slice(0, REPAIR_ACTIVE_INDEX_LIST_CAP) : [...removedFull];
-  
+
   return {
     totalCompletedTasks,
     totalScanned: tasks.length,
-    monthsRebuilt: allMonths.size,
-    addedCount: addedFull.length,
-    removedCount: removedFull.length,
-    unchangedCount,
-    samplesAdded,
-    samplesRemoved,
-    truncated: listTooLong,
+    monthsRebuilt: summary.monthsRebuilt,
+    addedCount: summary.addedCount,
+    removedCount: summary.removedCount,
+    unchangedCount: summary.unchangedCount,
+    samplesAdded: summary.samplesAdded,
+    samplesRemoved: summary.samplesRemoved,
+    truncated: summary.truncated,
+    dryRun,
   };
 }
 
@@ -516,7 +810,7 @@ export async function getTasksByParentId(parentId: string): Promise<Task[]> {
 
 // Phase 4: Unified & Optimized Tasks fetching (Active + Archive)
 export async function getTasksForMonth(year: number, month: number): Promise<Task[]> {
-  const mmyy = formatMonthKey(new Date(year, month - 1, 1));
+  const mmyy = formatArchiveMonthKeyUTCFromParts(year, month);
   const archiveIndexKey = buildArchiveCollectionIndexKey('tasks', mmyy);
 
   // Tasks are indexed by collected/done month
@@ -656,7 +950,7 @@ export async function getLegacyItems(): Promise<Item[]> {
 
 // Phase 6: Unified & Optimized Items fetching (Active + Archive)
 export async function getItemsForMonth(year: number, month: number): Promise<Item[]> {
-  const mmyy = formatMonthKey(new Date(year, month - 1, 1));
+  const mmyy = formatArchiveMonthKeyUTCFromParts(year, month);
   const activeIndexKey = buildMonthIndexKey(EntityType.ITEM, mmyy);
   const archiveIndexKey = buildArchiveCollectionIndexKey('items', mmyy);
 
@@ -790,7 +1084,7 @@ const chunkArray = <T>(arr: T[], size: number): T[][] =>
   arr.length ? [arr.slice(0, size), ...chunkArray(arr.slice(size), size)] : [];
 
 export async function getFinancialsForMonth(year: number, month: number): Promise<FinancialRecord[]> {
-  const mmyy = formatMonthKey(new Date(year, month - 1, 1));
+  const mmyy = formatArchiveMonthKeyUTCFromParts(year, month);
   const activeIndexKey = buildMonthIndexKey(EntityType.FINANCIAL, mmyy);
   const archiveIndexKey = buildArchiveCollectionIndexKey('financials', mmyy);
 
@@ -910,7 +1204,7 @@ export async function getAllSales(): Promise<Sale[]> {
 
 // Phase 5: Unified & Optimized Sales fetching (Active + Archive)
 export async function getSalesForMonth(year: number, month: number): Promise<Sale[]> {
-  const mmyy = formatMonthKey(new Date(year, month - 1, 1));
+  const mmyy = formatArchiveMonthKeyUTCFromParts(year, month);
   const activeIndexKey = buildMonthIndexKey(EntityType.SALE, mmyy);
   const archiveIndexKey = buildArchiveCollectionIndexKey('sales', mmyy);
 
@@ -1399,19 +1693,19 @@ export async function getAvailableMonths(): Promise<string[]> {
 }
 
 export async function getCurrentMonthArchivedTasks(): Promise<Task[]> {
-  return await getArchivedTasksByMonth(getCurrentMonthKey());
+  return await getArchivedTasksByMonth(formatArchiveMonthKeyUTC(getUTCNow()));
 }
 
 export async function getCurrentMonthArchivedItems(): Promise<Item[]> {
-  return await getArchivedItemsByMonth(getCurrentMonthKey());
+  return await getArchivedItemsByMonth(formatArchiveMonthKeyUTC(getUTCNow()));
 }
 
 export async function getCurrentMonthArchivedSales(): Promise<Sale[]> {
-  return await getArchivedSalesByMonth(getCurrentMonthKey());
+  return await getArchivedSalesByMonth(formatArchiveMonthKeyUTC(getUTCNow()));
 }
 
 export async function getCurrentMonthArchivedFinancials(): Promise<FinancialRecord[]> {
-  return await getArchivedFinancialRecordsByMonth(getCurrentMonthKey());
+  return await getArchivedFinancialRecordsByMonth(formatArchiveMonthKeyUTC(getUTCNow()));
 }
 
 function resolveMonthKeyDate(mmyy: string): Date {

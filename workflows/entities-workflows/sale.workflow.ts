@@ -29,8 +29,7 @@ import { resyncFinrecItemLinksAfterSoldItemClones } from '../financial-record-ut
 import { updateFinancialRecordsFromSale, updateItemsFromSale, hasRevenueChanged, hasCostChanged, hasLinesChanged } from '../update-propagation-utils';
 import { createCharacterFromSale } from '../character-creation-utils';
 // UTC STANDARDIZATION: Using new UTC utilities
-import { formatMonthKey } from '@/lib/utils/date-display-utils';
-import { getUTCNow, endOfMonthUTC, toUTCISOString } from '@/lib/utils/utc-utils';
+import { getUTCNow, endOfMonthUTC, toUTCISOString, formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
 import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { getSaleLogDetails } from '@/lib/utils/sale-log-details';
 import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
@@ -428,10 +427,17 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   const wasArchived = previousSale && (previousSale.status === SaleStatus.COLLECTED || previousSale.isCollected);
 
   const getArchiveMonth = (s: Sale) => {
-    // User requirement: collectedAt should be the last day of the sale's month
+    if (s.collectedAt) {
+      const c = s.collectedAt instanceof Date ? s.collectedAt : new Date(s.collectedAt as string);
+      if (Number.isFinite(c.getTime())) {
+        const k = formatArchiveMonthKeyUTC(c);
+        return k || null;
+      }
+    }
     const sDate = s.saleDate ? new Date(s.saleDate) : (s.createdAt ? new Date(s.createdAt) : getUTCNow());
-    const date = s.collectedAt ?? endOfMonthUTC(sDate);
-    return date ? formatMonthKey(endOfMonthUTC(date)) : null;
+    if (!Number.isFinite(sDate.getTime())) return null;
+    const k = formatArchiveMonthKeyUTC(endOfMonthUTC(sDate));
+    return k || null;
   };
 
   const newMonth = isNowArchived ? getArchiveMonth(sale) : null;

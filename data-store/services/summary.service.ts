@@ -3,6 +3,7 @@ import { FinancialRecord, Sale, Item, Task, ItemSaleLine, SummaryTotals } from '
 import { SaleStatus, ItemStatus, TaskStatus } from '@/types/enums';
 import { SummaryRepository } from '../repositories/summary.repo';
 import { formatMonthKey } from '@/lib/utils/date-utils';
+import { formatArchiveMonthKeyUTC, formatArchiveMonthKeyUTCFromParts } from '@/lib/utils/utc-utils';
 import {
   cashflowCountableCost,
   cashflowCountableJungleCoins,
@@ -17,7 +18,7 @@ export class SummaryService {
     newRecord: FinancialRecord,
     oldRecord?: FinancialRecord
   ): Promise<void> {
-    const monthYear = formatMonthKey(new Date(newRecord.year, newRecord.month - 1, 1));
+    const monthYear = formatArchiveMonthKeyUTCFromParts(newRecord.year, newRecord.month);
 
     const oldRev = oldRecord ? cashflowCountableRevenue(oldRecord) : 0;
     const newRev = cashflowCountableRevenue(newRecord);
@@ -43,7 +44,7 @@ export class SummaryService {
     oldSale?: Sale
   ): Promise<void> {
     const date = newSale.collectedAt || newSale.saleDate || new Date();
-    const monthYear = formatMonthKey(new Date(date));
+    const monthYear = formatArchiveMonthKeyUTC(new Date(date));
     let salesVolumeDelta = 0;
     let salesRevenueDelta = 0;
 
@@ -77,7 +78,7 @@ export class SummaryService {
     oldItem?: Item
   ): Promise<void> {
     const date = newItem.soldAt || newItem.updatedAt || new Date();
-    const monthYear = formatMonthKey(new Date(date));
+    const monthYear = formatArchiveMonthKeyUTC(new Date(date));
     let itemsSoldDelta = 0;
 
     const isSold = (status?: string) => {
@@ -109,7 +110,7 @@ export class SummaryService {
     oldTask?: Task
   ): Promise<void> {
     const date = newTask.collectedAt || newTask.doneAt || newTask.updatedAt || new Date();
-    const monthYear = formatMonthKey(new Date(date));
+    const monthYear = formatArchiveMonthKeyUTC(new Date(date));
     let taskCountDelta = 0;
 
     const isDone = (status?: string, isCollected?: boolean) => 
@@ -128,7 +129,7 @@ export class SummaryService {
 
   // Deletion Handlers
   static async handleFinancialDeletion(record: FinancialRecord) {
-    const monthYear = formatMonthKey(new Date(record.year, record.month - 1, 1));
+    const monthYear = formatArchiveMonthKeyUTCFromParts(record.year, record.month);
     await SummaryRepository.updateCounters({
       monthYear,
       revenueDelta: -cashflowCountableRevenue(record),
@@ -140,7 +141,7 @@ export class SummaryService {
   static async handleSaleDeletion(sale: Sale) {
     const date = sale.collectedAt || sale.saleDate || new Date();
     await SummaryRepository.updateCounters({
-      monthYear: formatMonthKey(new Date(date)),
+      monthYear: formatArchiveMonthKeyUTC(new Date(date)),
       salesVolumeDelta: -1,
       salesRevenueDelta: -(sale.totals.totalRevenue || 0)
     });
@@ -149,7 +150,7 @@ export class SummaryService {
   static async handleItemDeletion(item: Item) {
     const date = item.soldAt || new Date();
     await SummaryRepository.updateCounters({
-      monthYear: formatMonthKey(new Date(date)),
+      monthYear: formatArchiveMonthKeyUTC(new Date(date)),
       itemsSoldDelta: -(item.quantitySold || 0)
     });
   }
@@ -157,7 +158,7 @@ export class SummaryService {
   static async handleTaskDeletion(task: Task) {
     const date = task.collectedAt || task.doneAt || new Date();
     await SummaryRepository.updateCounters({
-      monthYear: formatMonthKey(new Date(date)),
+      monthYear: formatArchiveMonthKeyUTC(new Date(date)),
       taskCountDelta: -1
     });
   }

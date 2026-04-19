@@ -9,8 +9,8 @@ import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { clearEffect, hasEffect, markEffect } from '@/data-store/effects-registry';
 import { EffectKeys, buildArchiveCollectionIndexKey, buildArchiveMonthsKey, buildMonthIndexKey } from '@/data-store/keys';
-import { formatMonthKey, formatForDisplay } from '@/lib/utils/date-display-utils';
-import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
+import { formatForDisplay } from '@/lib/utils/date-display-utils';
+import { getUTCNow, formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
 import { appendEntityLog, getMonthKeyFromTimestamp } from './entities-logging';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
 
@@ -328,8 +328,6 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
 
     console.log(`[ensureSoldItemEntities] Ensuring ${itemLines.length} item sold entities for sale: ${sale.id}`);
 
-    const { endOfMonthUTC, getUTCNow: _utcNow } = await import('@/lib/utils/utc-utils');
-    const { formatMonthKey, formatForDisplay } = await import('@/lib/utils/date-display-utils');
     const { kvSAdd } = await import('@/lib/utils/kv');
     const { buildArchiveMonthsKey, buildMonthIndexKey } = await import('@/data-store/keys');
 
@@ -454,8 +452,9 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
 
         await upsertItem(soldItemEntity, { skipWorkflowEffects: true });
 
-        const archiveMonth = endOfMonthUTC(soldItemEntity.soldAt instanceof Date ? soldItemEntity.soldAt : getUTCNow());
-        const monthKey = formatMonthKey(archiveMonth);
+        const monthKey = formatArchiveMonthKeyUTC(
+          soldItemEntity.soldAt instanceof Date ? soldItemEntity.soldAt : getUTCNow()
+        );
         await kvSAdd(buildMonthIndexKey(EntityType.ITEM, monthKey), soldItemEntity.id);
         await kvSAdd(buildArchiveCollectionIndexKey('items', monthKey), soldItemEntity.id);
         await kvSAdd(buildArchiveMonthsKey(), monthKey);

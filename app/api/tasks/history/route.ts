@@ -3,7 +3,7 @@ import { requireAdminAuth } from '@/lib/api-auth';
 import { getTaskById } from '@/data-store/datastore';
 import { kvSMembers } from '@/lib/utils/kv';
 import { buildArchiveCollectionIndexKey } from '@/data-store/keys';
-import { formatMonthKey } from '@/lib/utils/date-utils';
+import { formatArchiveMonthKeyUTCFromParts } from '@/lib/utils/utc-utils';
 import type { Task } from '@/types/entities';
 
 export const dynamic = 'force-dynamic';
@@ -32,8 +32,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid month or year' }, { status: 400 });
         }
 
-        const date = new Date(year, month - 1, 1);
-        const monthKey = formatMonthKey(date);
+        const monthKey = formatArchiveMonthKeyUTCFromParts(year, month);
 
         const collectedIndexKey = buildArchiveCollectionIndexKey('tasks', monthKey);
         const taskIds = await kvSMembers(collectedIndexKey);

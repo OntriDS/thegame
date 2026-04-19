@@ -9,7 +9,6 @@ import { buildLogMonthKey, buildLogMonthsIndexKey, buildLogKey } from '@/data-st
 import type { Sale } from '@/types/entities';
 import { EntityType, LogEventType, SaleStatus } from '@/types/enums';
 import { getUTCNow } from '@/lib/utils/utc-utils';
-import { formatMonthKey } from '@/lib/utils/date-display-utils';
 import { v4 as uuid } from 'uuid';
 
 /**

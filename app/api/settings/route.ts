@@ -7,6 +7,7 @@ import {
   ClearCacheWorkflow,
   ExportDataWorkflow,
   ImportDataWorkflow,
+  UtcArchiveIndexMigrationWorkflow,
 } from '@/workflows/settings';
 
 // Force dynamic rendering since this route accesses request cookies for auth
@@ -66,6 +67,19 @@ export async function POST(request: NextRequest) {
           message: result.message,
           data: result.data
         }, { status: result.success ? 200 : 500 });
+      }
+
+      case 'utc-archive-index-migration': {
+        const dryRun = parameters?.dryRun !== false;
+        const result = await UtcArchiveIndexMigrationWorkflow.execute({ dryRun });
+        return NextResponse.json(
+          {
+            success: result.success,
+            message: result.message,
+            data: result.data,
+          },
+          { status: result.success ? 200 : 500 }
+        );
       }
 
       default:

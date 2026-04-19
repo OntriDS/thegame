@@ -3,7 +3,7 @@ import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey, buildMonthIndexKey, buildEntityIndexKey } from '../keys';
 import { EntityType } from '@/types/enums';
 import type { FinancialRecord, Contract } from '@/types/entities';
-import { formatMonthKey } from '@/lib/utils/date-utils';
+import { formatArchiveMonthKeyUTC, formatArchiveMonthKeyUTCFromParts } from '@/lib/utils/utc-utils';
 
 const ENTITY = EntityType.FINANCIAL;
 
@@ -68,8 +68,7 @@ export async function upsertFinancial(financial: FinancialRecord): Promise<Finan
 
   // Maintain month index using explicit year/month
   if (financial.year && financial.month) {
-    const monthDate = new Date(financial.year, (financial.month || 1) - 1, 1);
-    const currentMonthKey = formatMonthKey(monthDate);
+    const currentMonthKey = formatArchiveMonthKeyUTCFromParts(financial.year, financial.month || 1);
     await kvSAdd(buildMonthIndexKey(ENTITY, currentMonthKey), financial.id);
 
     const { buildArchiveMonthsKey } = await import('../keys');
@@ -102,8 +101,8 @@ export async function upsertFinancial(financial: FinancialRecord): Promise<Finan
 
   // Clean up old month index if month/year changed
   if (previousFinancial?.year && previousFinancial?.month && financial.year && financial.month) {
-    const prevMonthKey = formatMonthKey(new Date(previousFinancial.year, previousFinancial.month - 1, 1));
-    const currMonthKey = formatMonthKey(new Date(financial.year, financial.month - 1, 1));
+    const prevMonthKey = formatArchiveMonthKeyUTCFromParts(previousFinancial.year, previousFinancial.month);
+    const currMonthKey = formatArchiveMonthKeyUTCFromParts(financial.year, financial.month);
     if (prevMonthKey !== currMonthKey) {
       await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), financial.id);
     }
@@ -127,7 +126,7 @@ export async function deleteFinancial(id: string): Promise<void> {
     await kvSRem(sourceSaleIndexKey, id);
   }
   if (financial?.year && financial?.month) {
-    const prevMonthKey = formatMonthKey(new Date(financial.year, financial.month - 1, 1));
+    const prevMonthKey = formatArchiveMonthKeyUTCFromParts(financial.year, financial.month);
     await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), id);
   }
 

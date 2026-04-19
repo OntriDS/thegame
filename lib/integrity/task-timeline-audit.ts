@@ -4,7 +4,7 @@ import { isValid } from 'date-fns';
 import { getAllTasks, getAvailableArchiveMonths, getTaskById } from '@/data-store/datastore';
 import { kvSMembers } from '@/lib/utils/kv';
 import { buildArchiveCollectionIndexKey, buildTaskActiveIndexKey } from '@/data-store/keys';
-import { formatMonthKey } from '@/lib/utils/date-utils';
+import { formatArchiveMonthKeyUTCFromParts } from '@/lib/utils/utc-utils';
 import { isTaskActive, isTaskCompleted } from '@/lib/utils/task-active-utils';
 import { TaskStatus, EntityType } from '@/types/enums';
 import { INTEGRITY_ISSUES_CAP, type IntegrityAuditResult, type IntegrityIssue } from './types';
@@ -34,7 +34,7 @@ function toDate(value: unknown): Date | null {
   return null;
 }
 
-/** Local calendar month match (consistent with formatMonthKey on Date objects). */
+/** Calendar month match (uses local getters; audit compares to selected year/month). */
 function inCalendarMonth(d: Date | null | undefined, month: number, year: number): boolean {
   if (!d || !isValid(d)) return false;
   return d.getFullYear() === year && d.getMonth() + 1 === month;
@@ -46,8 +46,7 @@ function inCalendarMonth(d: Date | null | undefined, month: number, year: number
  */
 export async function auditTaskTimelineVsMonthIndex(month: number, year: number): Promise<IntegrityAuditResult> {
   const mmyy = toMMYY(month, year);
-  const date = new Date(year, month - 1, 1);
-  const monthKey = formatMonthKey(date);
+  const monthKey = formatArchiveMonthKeyUTCFromParts(year, month);
   const issues: IntegrityIssue[] = [];
   const total = { n: 0 };
 
