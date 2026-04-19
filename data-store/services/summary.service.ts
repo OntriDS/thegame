@@ -11,6 +11,42 @@ import {
 } from '@/lib/utils/financial-utils';
 
 export class SummaryService {
+  private static normalizeMonthKeyInput(monthKey: string): string {
+    const value = String(monthKey).trim();
+    if (!value) {
+      throw new Error('monthKey is required for targeted summary rebuild.');
+    }
+
+    const mmYyyyMatch = value.match(/^(\d{2})-(\d{4})$/);
+    const mmYyMatch = value.match(/^(\d{2})-(\d{2})$/);
+    const yyyyMmMatch = value.match(/^(\d{4})-(\d{2})$/);
+
+    if (!mmYyyyMatch && !mmYyMatch && !yyyyMmMatch) {
+      throw new Error('Invalid monthKey format. Expected MM-YY or MM-YYYY.');
+    }
+
+    const [monthText, yearText] = mmYyMatch
+      ? [mmYyMatch[1], `20${mmYyMatch[2]}`]
+      : mmYyyyMatch
+      ? [mmYyyyMatch[1], mmYyyyMatch[2]]
+      : [yyyyMmMatch ? yyyyMmMatch[2] : '', yyyyMmMatch ? yyyyMmMatch[1] : ''];
+
+    const month = Number(monthText);
+    const year = Number(yearText);
+
+    if (!Number.isFinite(month) || !Number.isFinite(year)) {
+      throw new Error('Invalid monthKey values.');
+    }
+    if (month < 1 || month > 12) {
+      throw new Error(`Invalid month in monthKey: ${monthText}`);
+    }
+    if (year < 2000 || year > 2100) {
+      throw new Error(`Invalid year in monthKey: ${yearText}`);
+    }
+
+    return formatArchiveMonthKeyUTCFromParts(year, month);
+  }
+
   /**
    * FINANCIALS: Updates Revenue, Costs, and Profit
    */
@@ -228,7 +264,7 @@ export class SummaryService {
     const { formatMonthKey } = await import('@/lib/utils/date-utils');
 
     // Normalize monthKey (handles MM-YYYY -> MM-YY conversion)
-    const normalizedMonthKey = formatMonthKey(monthKey);
+    const normalizedMonthKey = this.normalizeMonthKeyInput(monthKey);
     console.log(`[SummaryService] Rebuilding summary for: ${normalizedMonthKey} (Original: ${monthKey})`);
 
     // 1. If not bulk, we need to subtract current monthly values from All-Time first

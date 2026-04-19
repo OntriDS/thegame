@@ -227,7 +227,12 @@ const TOOLS = [
     systemId: 'thegame',
     parameters: {
       type: 'object',
-      properties: {},
+      properties: {
+        monthKey: {
+          type: 'string',
+          description: 'Optional month in MM-YY or MM-YYYY (for example 03-26 or 03-2026). Omit to rebuild all summaries.',
+        },
+      },
     },
   },
   {

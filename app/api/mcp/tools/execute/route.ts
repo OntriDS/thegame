@@ -272,7 +272,12 @@ export async function POST(req: NextRequest) {
       case 'thegame.sales.repairSummaries': {
         const monthKey = parameters.monthKey ? String(parameters.monthKey).trim() : undefined;
         if (monthKey) {
-          await SummaryService.rebuildSummaryForMonth(monthKey);
+          try {
+            await SummaryService.rebuildSummaryForMonth(monthKey);
+          } catch (err) {
+            const message = err instanceof Error ? err.message : 'Invalid monthKey';
+            return NextResponse.json({ success: false, error: message }, { status: 400 });
+          }
           return NextResponse.json({ success: true, message: `Rebuilt summary for ${monthKey}` });
         }
         const data = await SummaryService.rebuildAllSummaries();

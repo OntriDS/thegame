@@ -17,7 +17,6 @@ import { Plus, Calendar, DollarSign, Package, TrendingUp, Archive, Loader2 } fro
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import SalesModal from "@/components/modals/sales-modal";
 import { MonthSelector } from "@/components/ui/month-selector";
-import { Switch } from "@/components/ui/switch";
 import { CurrencyExchangeRates, DEFAULT_CURRENCY_EXCHANGE_RATES } from "@/lib/constants/financial-constants";
 import { SummaryTotals } from "@/types/entities";
 import { formatCurrency } from "@/lib/utils/financial-utils";
@@ -39,7 +38,6 @@ function SalesPageContent() {
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
-  const [showCollected, setShowCollected] = useState(false); // false=Active, true=Collected
   const [exchangeRates, setExchangeRates] = useState<CurrencyExchangeRates>(DEFAULT_CURRENCY_EXCHANGE_RATES);
 
   const handleDeepLinkSale = useCallback((sale: Sale) => {
@@ -73,15 +71,6 @@ function SalesPageContent() {
   useEffect(() => {
     let filtered = sales;
 
-    // Filter by Active vs Collected
-    if (showCollected) {
-      // Collected Sales: status === CHARGED && isCollected === true
-      filtered = filtered.filter(sale => sale.status === SaleStatus.CHARGED && sale.isCollected === true);
-    } else {
-      // Active Sales: status !== CHARGED || !isCollected
-      filtered = filtered.filter(sale => sale.status !== SaleStatus.CHARGED || sale.isCollected !== true);
-    }
-
     if (selectedType !== 'all') {
       filtered = filtered.filter(sale => sale.type === selectedType);
     }
@@ -98,7 +87,7 @@ function SalesPageContent() {
     filtered.sort((a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime());
 
     setFilteredSales(filtered);
-  }, [sales, selectedType, selectedStatus, selectedSite, showCollected]);
+  }, [sales, selectedType, selectedStatus, selectedSite]);
 
   const loadSales = async () => {
     try {
@@ -409,12 +398,9 @@ function SalesPageContent() {
       {/* Sales List */}
       <Card>
         <CardHeader>
-          <CardTitle>{showCollected ? 'Collected Sales' : 'Active Sales'}</CardTitle>
+          <CardTitle>Sales</CardTitle>
           <p className="text-sm text-muted-foreground">
-            {showCollected
-              ? 'Sales that have been charged and collected (ready for archive)'
-              : 'Active sales in progress or not yet collected'
-            }
+            All sales for the selected month
           </p>
         </CardHeader>
         <CardContent>
