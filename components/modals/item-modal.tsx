@@ -263,9 +263,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   }, [item, selectedItemId, existingItems]);
 
 
-  // Guard for one-time initialization of new items
-  const didInitRef = useRef(false);
-
   // Identity Vault: Persist ID across renders to prevent duplicate creation on multiple saves
   const draftId = useRef(item?.id || uuid());
 
@@ -276,6 +273,9 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
   const saveFormDataToStorage = useCallback(() => {
     if (!item) {
+      if (!name.trim()) {
+        return;
+      }
       const formData = {
         name,
         description,
@@ -304,6 +304,45 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     }
   }, [item, name, description, type, station, subItemType, collection, status, quantity, unitCost, price, keepInInventoryAfterSold, restockToTarget, year, mediaMain, mediaThumb, mediaGallery, sourceFileUrl, width, height, size, targetAmount, site, setPreference]);
 
+  const initializeBlankNewItemForm = useCallback(() => {
+    draftId.current = uuid();
+    const baseType = defaultItemType || ItemType.STICKER;
+    const lastStation = getLastUsedStation();
+    setName('');
+    setDescription('');
+    setType(baseType);
+    setStation(lastStation);
+    setSubItemType('');
+    setItemTypeSubType(`${baseType}:`);
+    setCollection(Collection.NO_COLLECTION);
+    setStatus(ItemStatus.FOR_SALE);
+    setQuantity(0);
+    setUnitCost(0);
+    setPrice(0);
+    setKeepInInventoryAfterSold(false);
+    setRestockToTarget(false);
+    setYear(new Date().getFullYear());
+    setMediaMain('');
+    setMediaThumb('');
+    setMediaGallery('');
+    setSourceFileUrl('');
+    setWidth('');
+    setHeight('');
+    setSize('');
+    setTargetAmount('');
+    setQuantitySold(0);
+    setSite(initialSiteId || DEFAULT_NONE_SITE);
+    setLocalSoldAt(undefined);
+    setSelectedItemId('');
+    setOwnerCharacterId(null);
+    setOwnerCharacterName('');
+  }, [defaultItemType, getLastUsedStation, initialSiteId]);
+
+  const prevModalSessionRef = useRef<{ open: boolean; hadItem: boolean }>({
+    open: false,
+    hadItem: false,
+  });
+
   useEffect(() => {
     const targetAmountNum = parseFloat(targetAmount);
     if ((!targetAmount || isNaN(targetAmountNum) || targetAmountNum <= 0) && restockToTarget) {
@@ -320,9 +359,12 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           const formData = JSON.parse(savedData);
           setName(formData.name || '');
           setDescription(formData.description || '');
-          setType(formData.type || defaultItemType || ItemType.STICKER);
+          const loadedType = formData.type || defaultItemType || ItemType.STICKER;
+          const loadedSub = formData.subItemType || '';
+          setType(loadedType);
           setStation(formData.station || DEFAULT_NEW_ITEM_STATION);
-          setSubItemType(formData.subItemType || '');
+          setSubItemType(loadedSub);
+          setItemTypeSubType(`${loadedType}:${loadedSub}`);
           setCollection(formData.collection || Collection.NO_COLLECTION);
           setStatus(formData.status || ItemStatus.FOR_SALE);
           setQuantity(formData.quantity || 0);
@@ -616,23 +658,26 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     }
   }, [open, saveFormDataToStorage]);
 
-  // Load form data when modal opens for new items
+  // New items open blank; press Arrow Up in the name field to load last-saved draft from preferences.
   useEffect(() => {
-    if (open && !item) {
-      loadFormDataFromStorage();
-      setSelectedItemId('');
-      setOwnerCharacterId(null);
-      setOwnerCharacterName('');
+    const prev = prevModalSessionRef.current;
+    const hadItem = !!item;
+    const justOpenedForNew = open && !item && !prev.open;
+    const switchedFromEditToNew = open && !item && prev.hadItem;
+
+    if (justOpenedForNew || switchedFromEditToNew) {
+      initializeBlankNewItemForm();
     }
-    // Reset init guard when modal closes (allows fresh init on next open)
+
+    prevModalSessionRef.current = { open, hadItem };
+
     if (!open) {
-      didInitRef.current = false;
       setOwnerCharacterId(null);
       setOwnerCharacterName('');
       setSelectedItemId('');
       setShowOwnerModal(false);
     }
-  }, [open, item, loadFormDataFromStorage]);
+  }, [open, item, initializeBlankNewItemForm]);
 
   const handleStationCategoryChange = (newStationCategory: string) => {
     const newStation = getStationFromCombined(newStationCategory) as Station;
@@ -731,23 +776,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
       setOwnerCharacterId(item.ownerCharacterId || null);
       setOwnerCharacterName('');
-
-      // Reset init guard when editing
-      didInitRef.current = false;
-    } else if (!didInitRef.current) {
-      // New item - initialize once only (don't reset again while user edits)
-      didInitRef.current = true;
-      // Generate new ID for new item session
-      draftId.current = uuid();
-      const lastStation = getLastUsedStation();
-      setStation(lastStation);
-      setLocalSoldAt(undefined);
-      setSelectedItemId('');
-      setOwnerCharacterId(null);
-      setOwnerCharacterName('');
-      // Other fields remain as-is or are loaded from persisted draft via loadFormDataFromStorage
     }
-  }, [item, defaultItemType, getLastUsedStation, initialSiteId]);
+  }, [item, defaultItemType, initialSiteId]);
 
   // Effect to handle auto-select of subtype when modal opens for new items
   useEffect(() => {
@@ -1034,12 +1064,13 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                 <ItemNameField
                   value={name}
                   onChange={setName}
-                  placeholder="Item name"
+                  placeholder="Item name (↑ loads last draft)"
                   items={existingItems}
                   selectedItemId={selectedItemId}
                   onItemSelect={handleItemSelect}
                   isNewItem={isNameFieldNewItem}
                   onNewItemToggle={setIsNameFieldNewItem}
+                  onLoadLastSavedForm={() => loadFormDataFromStorage()}
                   label="Item Name"
                   sites={sites}
                 />

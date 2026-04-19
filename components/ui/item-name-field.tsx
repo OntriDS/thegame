@@ -23,6 +23,8 @@ interface ItemNameFieldProps {
   onItemSelect?: (itemId: string) => void;
   isNewItem?: boolean;
   onNewItemToggle?: (isNew: boolean) => void;
+  /** New-item name input only: load last-saved item modal draft from preferences (parent handles). */
+  onLoadLastSavedForm?: () => void;
   label?: string;
   sites?: Site[];
   showPriceInOptions?: boolean;
@@ -40,6 +42,7 @@ export function ItemNameField({
   onItemSelect,
   isNewItem = false,
   onNewItemToggle,
+  onLoadLastSavedForm,
   label = "Item Name",
   sites = [],
   showPriceInOptions = true,
@@ -122,6 +125,12 @@ export function ItemNameField({
           id="item-name-field"
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowUp' && onLoadLastSavedForm) {
+              e.preventDefault();
+              onLoadLastSavedForm();
+            }
+          }}
           placeholder={placeholder}
           disabled={disabled}
           className="h-8 text-sm"
