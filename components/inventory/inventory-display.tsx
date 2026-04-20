@@ -22,6 +22,7 @@ import {
   MapPin,
   Pencil,
   Package,
+  Box,
   Settings,
   Package2,
   ChevronDown,
@@ -2226,7 +2227,27 @@ export function InventoryDisplay({
             const qty = item.quantitySold || 0;
             const unitPrice = item.price || 0;
             const total = item.value || (unitPrice * qty);
-            const TypeIcon = ITEM_TYPE_ICONS[item.type?.toLowerCase()] || ITEM_TYPE_ICONS['default'] || Package;
+            
+            // Subtype & Icon Resolution
+            const itemTypeBase = item.type?.toLowerCase();
+            let Icon = ITEM_TYPE_ICONS[itemTypeBase] || ITEM_TYPE_ICONS['default'] || Package;
+            let subtypeLabel: string = item.subItemType || item.type || '';
+
+            if (item.type === ItemType.DIGITAL) {
+              Icon = getDigitalSubtypeIcon(item.subItemType);
+              subtypeLabel = getDigitalSubtypeLabel(item.subItemType);
+            } else if (item.type === ItemType.ARTWORK) {
+              Icon = getArtworkSubtypeIcon(item.subItemType);
+              subtypeLabel = getArtworkSubtypeLabel(item.subItemType);
+            } else if (item.type === ItemType.PRINT) {
+              Icon = getPrintSubtypeIcon(item.subItemType);
+              subtypeLabel = getPrintSubtypeLabel(item.subItemType);
+            }
+
+            const collectionLabel = item.collection ? getCollectionLabel(item.collection) : null;
+            const dimsLabel = item.dimensions ? `${item.dimensions.width}x${item.dimensions.height} cm` : null;
+            const sizeLabel = item.size ? `Model: ${item.size}` : null;
+
             const hasMainMedia = !!item.media?.main;
             const hasGallery = !!item.media?.gallery?.length;
             const hasThumb = !!item.media?.thumb;
@@ -2239,56 +2260,75 @@ export function InventoryDisplay({
                 onClick={() => handleEditItem(item)}
               >
                 <div className="flex gap-4">
-                  {/* Left: Thumbnail/Icon */}
+                  {/* Left: Thumbnail/Icon (now subtype specific) */}
                   <div className="shrink-0 w-20 h-20 rounded-xl bg-secondary/30 border border-border/50 flex items-center justify-center overflow-hidden">
-                    <TypeIcon className="w-8 h-8 text-secondary-foreground/60" />
+                    <Icon className="w-8 h-8 text-secondary-foreground/60" />
                   </div>
 
                   {/* Right: Content */}
                   <div className="flex-1 min-w-0">
-                    {/* Top Row: Title + Price */}
-                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                    {/* Top Row: Title + Price (Larger) */}
+                    <div className="flex items-start justify-between gap-2 mb-1">
                       <p className="font-bold text-sm leading-tight truncate flex-1" title={item.name}>
                         {item.name}
                       </p>
                       <div className="flex flex-col items-end shrink-0">
-                        <p className="text-base font-bold text-foreground leading-none">
+                        <p className="text-xl font-black text-foreground leading-none">
                           ${total.toFixed(2)}
                         </p>
                         {unitPrice > 0 && (
-                          <span className="text-[10px] text-muted-foreground mt-0.5 whitespace-nowrap">
+                          <span className="text-[10px] text-muted-foreground mt-1 whitespace-nowrap">
                             ${unitPrice} × {qty} unit{qty !== 1 ? 's' : ''}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    {/* Middle Row: Tags + Site */}
-                    <div className="flex items-center justify-between gap-2 mb-3">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-bold text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded uppercase tracking-wider">
-                          {item.type?.toLowerCase()}
-                        </span>
-                        {item.year && (
-                          <span className="text-[10px] text-muted-foreground font-medium">
-                            {item.year}
-                          </span>
-                        )}
-                      </div>
-                      {siteName && (
-                        <span className="flex items-center gap-1.5 text-[10px] bg-muted/50 text-muted-foreground px-2 py-0.5 rounded border border-border/40 font-medium whitespace-nowrap">
-                          <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
-                          {siteName}
+                    {/* Middle Row: Subtype & Collection */}
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2">
+                      <span className="text-[10px] font-bold text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded uppercase tracking-wider">
+                        {subtypeLabel}
+                      </span>
+                      {collectionLabel && (
+                        <span className="text-[10px] text-muted-foreground/80 font-medium italic">
+                          {collectionLabel}
                         </span>
                       )}
                     </div>
 
-                    {/* Bottom Row: Media Flags */}
-                    <div className="flex items-center gap-1.5 flex-wrap pt-2.5 border-t border-border/40">
-                      <MediaFlag label="Main" ok={hasMainMedia} />
-                      <MediaFlag label="Gallery" ok={hasGallery} />
-                      <MediaFlag label="Thumb" ok={hasThumb} />
-                      <MediaFlag label="Source" ok={hasSource} />
+                    {/* Meta Row: Dimensions & Size */}
+                    {(dimsLabel || sizeLabel) && (
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-[11px] text-muted-foreground font-medium">
+                        {dimsLabel && (
+                          <span className="flex items-center gap-1">
+                            <Box className="w-3 h-3 opacity-60" />
+                            {dimsLabel}
+                          </span>
+                        )}
+                        {sizeLabel && (
+                          <span className="flex items-center gap-1">
+                            <Scan className="w-3 h-3 opacity-60" />
+                            {sizeLabel}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Bottom Row: Site + Media Flags */}
+                    <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-border/40">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <MediaFlag label="Main" ok={hasMainMedia} />
+                        <MediaFlag label="Gallery" ok={hasGallery} />
+                        <MediaFlag label="Thumb" ok={hasThumb} />
+                        <MediaFlag label="Source" ok={hasSource} />
+                      </div>
+                      
+                      {siteName && (
+                        <span className="flex items-center gap-1.5 text-[10px] bg-muted/50 text-muted-foreground px-2 py-0.5 rounded border border-border/40 font-medium whitespace-nowrap">
+                          <MapPin className="w-2.5 h-2.5 opacity-60" />
+                          {siteName}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2296,6 +2336,7 @@ export function InventoryDisplay({
             );
           })}
         </div>
+
 
 
         {showLegacyItems && legacyTotalItems > LEGACY_ITEMS_PAGE_SIZE && (

@@ -100,13 +100,7 @@ export async function validateSpawnOperation(template: Task): Promise<Validation
   const config = template.frequencyConfig;
 
   // 4. Check stop conditions
-  if (config.type === RecurrentFrequency.ONCE) {
-    return {
-      isValid: false,
-      errorCode: SpawnErrorCode.ONCE_FREQUENCY,
-      errorMessage: 'Cannot spawn from ONCE frequency'
-    };
-  }
+  // (removed ONCE frequency check to allow manual spawning)
 
   // Check stopsAfter times
   if (config.stopsAfter?.type === 'times') {

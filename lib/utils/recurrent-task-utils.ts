@@ -139,6 +139,11 @@ export async function spawnNextRecurrentInstance(
         nextDate = addDaysUTC(referenceDate, config.interval);
         break;
 
+      case RecurrentFrequency.ONCE:
+        // Use the reference date (template's dueDate or fallback) for exactly one instance
+        nextDate = new Date(referenceDate);
+        break;
+
       default:
         return null;
     }
