@@ -904,9 +904,8 @@ export function InventoryDisplay({
     </span>
   );
 
-  const StockEnergyRing = ({ qty, target }: { qty: number; target?: number }) => {
-    const size = 72;
-    const stroke = 5;
+  const StockEnergyRing = ({ qty, target, size = 64 }: { qty: number; target?: number; size?: number }) => {
+    const stroke = size < 50 ? 3 : 5;
     const radius = (size - stroke) / 2;
     const circumference = 2 * Math.PI * radius;
     const hasTarget = typeof target === 'number' && target > 0;
@@ -915,7 +914,7 @@ export function InventoryDisplay({
 
     return (
       <div className="flex flex-col items-center gap-1.5">
-        <span className="whitespace-nowrap text-[10px] font-medium uppercase leading-none tracking-normal text-zinc-500 dark:text-zinc-400">
+        <span className="whitespace-nowrap text-[7px] font-semibold uppercase leading-none tracking-tight text-zinc-500 dark:text-zinc-400">
           Stock units
         </span>
         <div className="relative" style={{ width: size, height: size }}>
@@ -923,7 +922,7 @@ export function InventoryDisplay({
             <circle
               cx={size / 2}
               cy={size / 2}
-              r={radius * 0.75}
+              r={radius * 1}
               stroke="currentColor"
               strokeWidth={stroke}
               className="text-zinc-600/50 dark:text-white/15"
@@ -942,7 +941,7 @@ export function InventoryDisplay({
             />
           </svg>
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center leading-none">
-            <span className="text-2xl font-bold tabular-nums tracking-tight text-zinc-900 dark:text-white">{qty}</span>
+            <span className={`${size < 50 ? 'text-lg' : size < 60 ? 'text-xl' : 'text-2xl'} font-bold tabular-nums tracking-tight text-zinc-900 dark:text-white`}>{qty}</span>
           </div>
         </div>
       </div>
@@ -2270,19 +2269,15 @@ export function InventoryDisplay({
                   <div className="flex-1 min-w-0">
                     {/* Top Row: Title + Price (Larger) */}
                     <div className="flex items-start justify-between gap-2 mb-1">
-                      <p className="font-bold text-sm leading-tight truncate flex-1" title={item.name}>
+                      <p className="font-bold text-base leading-tight truncate flex-1" title={item.name}>
                         {item.name}
                       </p>
-                      <div className="flex flex-col items-end shrink-0">
+                      <div className="flex items-end justify-end shrink-0">
                         {showPrice && (
-                          <p className="text-xl font-black text-foreground leading-none">
-                            ${total.toFixed(2)}
+                          <p className="text-sm font-medium text-foreground leading-none whitespace-nowrap text-right">
+                            {unitPrice > 0 ? `${formatCurrency(unitPrice)} × ${qty} unit${qty !== 1 ? 's' : ''} • ` : ''}
+                            <span className="font-bold text-base md:text-lg">{formatCurrency(total)}</span>
                           </p>
-                        )}
-                        {showPrice && unitPrice > 0 && (
-                          <span className="text-[10px] text-muted-foreground mt-1 whitespace-nowrap">
-                            ${unitPrice} × {qty} unit{qty !== 1 ? 's' : ''}
-                          </span>
                         )}
                       </div>
                     </div>
@@ -2304,21 +2299,29 @@ export function InventoryDisplay({
                       )}
                     </div>
 
-                    {/* Meta Row: Dimensions & Size */}
-                    {(dimsLabel || sizeLabel) && (
+                    {/* Station Row: Size (at beginning) & Station */}
+                    {(item.size || item.station) && (
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2">
+                        {item.size && (
+                          <span className="text-[10px] font-bold text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded uppercase tracking-wider">
+                            Size: {item.size}
+                          </span>
+                        )}
+                        {item.station && (
+                          <span className="text-[10px] font-bold text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded uppercase tracking-wider">
+                            {item.station}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Meta Row: Dimensions */}
+                    {dimsLabel && (
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-[11px] text-muted-foreground font-medium">
-                        {dimsLabel && (
-                          <span className="flex items-center gap-1">
-                            <Box className="w-3 h-3 opacity-60" />
-                            {dimsLabel}
-                          </span>
-                        )}
-                        {sizeLabel && (
-                          <span className="flex items-center gap-1">
-                            <Scan className="w-3 h-3 opacity-60" />
-                            {sizeLabel}
-                          </span>
-                        )}
+                        <span className="flex items-center gap-1">
+                          <Box className="w-3 h-3 opacity-60" />
+                          {dimsLabel}
+                        </span>
                       </div>
                     )}
 
@@ -2822,26 +2825,53 @@ export function InventoryDisplay({
                       </span>
                       <span className={`${PRINT_SUBTYPE_BADGE} shrink-0`}>{getPrintSubtypeLabel(print.subItemType)}</span>
                     </div>
-                    {dims ? (
-                      <span className="text-sm text-muted-foreground">{dims}</span>
-                    ) : (
-                      <span className="text-sm italic text-rose-500/80">No dimensions</span>
-                    )}
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm leading-snug text-muted-foreground">
-                      <span className={print.collection ? '' : 'text-rose-500/80'}>
-                        {print.collection ? getCollectionLabel(print.collection) : 'No collection'}
-                      </span>
-                      <span className="text-muted-foreground/35">·</span>
-                      <span className={print.year != null ? '' : 'text-rose-500/80'}>{print.year ?? 'missing'}</span>
-                      <span className="text-muted-foreground/35">·</span>
-                      <span className="max-w-full truncate" title={print.station}>
-                        {print.station || '—'}
-                      </span>
-                      <span className="text-muted-foreground/35">·</span>
-                      <span className="max-w-full truncate" title={siteName || undefined}>
-                        {siteName || 'No site'}
-                      </span>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        {dims ? (
+                          <span className="text-sm text-muted-foreground">{dims}</span>
+                        ) : (
+                          <span className="text-sm italic text-rose-500/80">No dimensions</span>
+                        )}
+                        {print.keepInInventoryAfterSold && (
+                          <>
+                            <span className="text-muted-foreground/35">·</span>
+                            <button
+                              type="button"
+                              className="text-[10px] uppercase font-bold text-green-600/70 dark:text-green-500/60 hover:text-green-700 dark:hover:text-green-400 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSaveItem({ ...print, keepInInventoryAfterSold: false });
+                              }}
+                              title="Keep in Inventory after Sold (Click to disable)"
+                            >
+                              Keep
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      
+                      {print.station && (
+                        <span className={`${PRINT_SUBTYPE_BADGE} shrink-0`}>{print.station}</span>
+                      )}
                     </div>
+                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 text-sm leading-snug text-muted-foreground">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                        <span className={print.collection ? '' : 'text-rose-500/80'}>
+                          {print.collection ? getCollectionLabel(print.collection) : 'No collection'}
+                        </span>
+                        <span className="text-muted-foreground/35">·</span>
+                        <span className={print.year != null ? '' : 'text-rose-500/80'}>{print.year ?? 'missing'}</span>
+                        <span className="text-muted-foreground/35">·</span>
+                        <span className="max-w-full truncate" title={siteName || undefined}>
+                          {siteName || 'No site'}
+                        </span>
+                      </div>
+                      
+                      {print.status && (
+                        <span className={`${PRINT_SUBTYPE_BADGE} shrink-0`}>{getItemStatusLabel(print.status)}</span>
+                      )}
+                    </div>
+
                     <div className="flex max-w-full flex-wrap justify-end gap-1.5 pt-0.5">
                       <PrintsMediaFlag label="Main" ok={!!print.media?.main} />
                       <PrintsMediaFlag label="Gallery" ok={!!print.media?.gallery?.length} />
@@ -2850,12 +2880,16 @@ export function InventoryDisplay({
                     </div>
                   </div>
 
-                  {/* Col 3: divider + stock ring + price (vertically centered as a stack) */}
-                  <div className="flex flex-col items-end justify-center gap-4 border-t border-border/60 pt-3 sm:min-w-[5.75rem] sm:border-t-0 sm:border-l sm:border-border/60 sm:pl-4 sm:pt-0">
-                    <StockEnergyRing qty={totalQty} target={target} />
-                    <span className="inline-flex items-center rounded-full border border-border bg-secondary/50 px-3 py-1 text-sm font-semibold text-foreground tabular-nums">
-                      {formatCurrency(print.price)}
-                    </span>
+                  {/* Col 3: divider + stock ring + price (vertically distributed) */}
+                  <div className="flex flex-col items-center justify-between gap-1 border-t border-border/60 pt-3 sm:min-w-[5.75rem] sm:border-t-0 sm:border-l sm:border-border/60 sm:pl-4 sm:pt-0">
+                    <div className="flex-1 flex items-center justify-center py-1">
+                      <StockEnergyRing qty={totalQty} target={target} size={48} />
+                    </div>
+                    <div className="flex items-center justify-end pb-0.5">
+                      <span className="inline-flex items-center rounded-full border border-border bg-secondary/70 px-3 py-1 text-md font-bold text-foreground tabular-nums shadow-sm">
+                        {formatCurrency(print.price)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               );

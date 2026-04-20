@@ -104,6 +104,7 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       name: task.outputItemName || `${task.outputItemType} from ${task.name}`,
       description: `Created from task: ${task.name}`,
       type: task.outputItemType as ItemType,
+      subItemType: task.outputItemSubType || undefined,
       collection: task.outputItemCollection || undefined,
       status: getDefaultItemStatus(
         task.outputItemType || '',
@@ -121,7 +122,7 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       quantitySold: 0,
       sourceTaskId: task.id, // Link item back to the task that created it
       ownerCharacterId: task.customerCharacterId || null, // Emissary: Pass customer as item owner
-      year: (task.collectedAt || task.doneAt || getUTCNow()).getFullYear(), // Use task's date
+      year: (task.collectedAt || task.doneAt || getUTCNow()).getUTCFullYear(), // Use task's date (UTC)
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
       media: {
@@ -228,6 +229,7 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       name: record.outputItemName || `${record.outputItemType} from ${record.name}`,
       description: `Created from record: ${record.name}`,
       type: record.outputItemType as ItemType,
+      subItemType: record.outputItemSubType || undefined,
       collection: record.outputItemCollection || undefined,
       status: getDefaultItemStatus(record.outputItemType || '', record.isSold || false, record.outputItemStatus),
       station: record.station,

@@ -1,13 +1,14 @@
 import type { Sale } from '@/types/entities';
 import { SaleType } from '@/types/enums';
+import { SalesStation } from '@/lib/storage/taxonomy';
 
 /** Lean payload fields persisted on SALE entity lifecycle log rows */
 export function getSaleLogDetails(sale: Sale) {
   const stationMap: Record<string, string> = {
-    [SaleType.DIRECT]: 'direct-sales',
-    [SaleType.BOOTH]: 'booth-sales',
-    [SaleType.NETWORK]: 'network',
-    [SaleType.ONLINE]: 'online-sales',
+    [SaleType.DIRECT]: SalesStation.DIRECT_SALES,
+    [SaleType.BOOTH]: SalesStation.BOOTH_SALES,
+    [SaleType.NETWORK]: SalesStation.NETWORK,
+    [SaleType.ONLINE]: SalesStation.ONLINE_SALES,
   };
 
   return {

@@ -38,13 +38,14 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     if (await hasEffect(effectKey)) return;
 
     // Log item creation with standard pattern + source tracking
-    const sourceType = item.sourceTaskId ? 'task' : item.sourceRecordId ? 'record' : 'direct';
-    const sourceId = item.sourceTaskId || item.sourceRecordId || undefined;
+    const totalQuantity = item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0;
+    
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.CREATED, {
       name: item.name,
       itemType: item.type,
-      subItemType: item.subItemType,
-      soldQuantity: item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0
+      subItemType: item.subItemType || '',
+      quantity: totalQuantity,
+      soldQuantity: 0 // It's newly created, not sold yet
     }, item.createdAt);
 
     await markEffect(effectKey);

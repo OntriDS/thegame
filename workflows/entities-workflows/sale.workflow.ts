@@ -192,13 +192,17 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   // Logic is centralized in updateFinancialRecordsFromSale (handles discovery/re-creation)
   await updateFinancialRecordsFromSale(sale, previousSale);
 
-  // 1.1 ENSURE FINANCIAL LOGS FOR DONE RECORDS
-  // Financial records that are DONE but missing their logs need to be healed
-  const relatedFinancials = await getFinancialsBySourceSaleId(sale.id);
-  for (const financial of relatedFinancials) {
-    const isDone = !financial.isNotPaid && !financial.isNotCharged;
-    if (isDone) {
-      await ensureFinancialDoneLog(financial.id);
+  // 1.1 ENSURE FINANCIAL LOGS FOR DONE RECORDS (Gated by payment status)
+  const nowPending = sale.isNotPaid || sale.isNotCharged;
+  const isCharged = sale.status !== SaleStatus.CANCELLED && (sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED) && !nowPending;
+
+  if (isCharged) {
+    const relatedFinancials = await getFinancialsBySourceSaleId(sale.id);
+    for (const financial of relatedFinancials) {
+      const isDone = !financial.isNotPaid && !financial.isNotCharged;
+      if (isDone) {
+        await ensureFinancialDoneLog(financial.id);
+      }
     }
   }
 
@@ -226,8 +230,6 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   }
 
   // 2. MILESTONE LOGGING (CHARGED & COLLECTED)
-  const nowPending = sale.isNotPaid || sale.isNotCharged;
-  const isCharged = sale.status !== SaleStatus.CANCELLED && (sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED) && !nowPending;
   const isCollected = sale.status === SaleStatus.COLLECTED || !!sale.isCollected;
 
   // Log CHARGED milestone (if applicable and not already logged)

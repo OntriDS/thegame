@@ -11,6 +11,7 @@ import {
   getEntityLogs,
   getEntityLogMonths,
   getMonthKeyFromTimestamp,
+  syncEntityLogTimestamp,
 } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
@@ -124,6 +125,13 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
     const isPending = financial.isNotPaid || financial.isNotCharged;
 
+    // Ensure doneAt is set if created as DONE
+    if (!isPending && !financial.doneAt) {
+      financial = { ...financial, doneAt: getUTCNow() };
+      const { upsertFinancial } = await import('@/data-store/datastore');
+      await upsertFinancial(financial, { skipWorkflowEffects: true });
+    }
+
     // Snapshot if created as DONE (not pending)
     if (!isPending) {
       let snapshotMonthDate: Date;
@@ -193,6 +201,13 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
   if (wasPending && !nowPending) {
     // Transitioned from PENDING to DONE (both paid and charged)
+    
+    // Explicitly set doneAt on transition if missing
+    if (!financial.doneAt) {
+      financial = { ...financial, doneAt: getUTCNow() };
+      await upsertFinancial(financial, { skipWorkflowEffects: true });
+    }
+
     const doneLoggedKey = EffectKeys.sideEffect('financial', financial.id, 'doneLogged');
     if (!(await hasEffect(doneLoggedKey))) {
       await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.DONE, {
@@ -284,6 +299,11 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
   // Lean identity fields changed — cascade patch ALL log entries across ALL months and events
   if (previousFinancial) {
+    const dateChanged = String(previousFinancial.doneAt) !== String(financial.doneAt);
+    if (dateChanged && financial.doneAt) {
+      await syncEntityLogTimestamp(EntityType.FINANCIAL, financial.id, LogEventType.DONE, financial.doneAt);
+    }
+
     const leanFieldsChanged =
       previousFinancial.name !== financial.name ||
       previousFinancial.type !== financial.type ||

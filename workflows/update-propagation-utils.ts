@@ -2,7 +2,7 @@
 // Comprehensive update propagation across ALL entity relationships
 
 import type { Task, Item, Sale, FinancialRecord, Character, Player } from '@/types/entities';
-import { EntityType, FOUNDER_CHARACTER_ID, TaskStatus, CharacterRole, LinkType, SaleType } from '@/types/enums';
+import { EntityType, FOUNDER_CHARACTER_ID, TaskStatus, CharacterRole, LinkType, SaleType, SaleStatus } from '@/types/enums';
 import { clearEffect, hasEffect, markEffect } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getFinancialsBySourceTaskId, getFinancialsBySourceSaleId, getFinancialById, upsertFinancial, removeFinancial } from '@/data-store/datastore';
@@ -285,7 +285,11 @@ export async function updateItemsCreatedByTask(
           };
 
           // Update stock quantity if it changed
-          if (task.outputQuantity !== previousTask.outputQuantity) {
+          // FIX: Skip delta calculation if the item was JUST created in this same workflow transaction
+          // otherwise we add the delta (e.g. +3) to the initial value (e.g. 4), resulting in 7.
+          const wasJustCreated = await hasEffect(EffectKeys.sideEffect('task', task.id, 'itemCreated'));
+
+          if (!wasJustCreated && task.outputQuantity !== previousTask.outputQuantity) {
             const quantityDiff = (task.outputQuantity || 0) - (previousTask.outputQuantity || 0);
             if (quantityDiff !== 0) {
               // Update the first stock point (or create one if none exists)
@@ -505,6 +509,28 @@ export async function updateFinancialRecordsFromSale(
 ): Promise<void> {
   try {
     console.log(`[updateFinancialRecordsFromSale] Updating financial records for sale: ${sale.name}`);
+    
+    // [STATUS GUARD] Only emit/update financial records when the sale is CHARGED or COLLECTED
+    const isCharged = sale.status !== SaleStatus.CANCELLED && 
+                     (sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED) && 
+                     !sale.isNotPaid && !sale.isNotCharged;
+    
+    const isCollected = sale.status === SaleStatus.COLLECTED || !!sale.isCollected;
+    const shouldHaveFinancials = isCharged || isCollected;
+
+    if (!shouldHaveFinancials) {
+      // If we are pending or cancelled, but records exist (from a previous charged state), we MUST remove them
+      const existingRecords = await getFinancialsBySourceSaleId(sale.id);
+      if (existingRecords.length > 0) {
+        console.log(`[updateFinancialRecordsFromSale] Sale is ${sale.status} (Not Charged); Removing ${existingRecords.length} existing records.`);
+        for (const record of existingRecords) {
+          await removeFinancial(record.id);
+        }
+        // Also clear any 'financialCreated' effects to allow re-creation later
+        await clearEffect(EffectKeys.sideEffect('sale', sale.id, 'financialCreated'));
+      }
+      return;
+    }
 
     const { createFinancialRecordFromBoothSale, createFinancialRecordFromSale } = await import('./financial-record-utils');
 

@@ -2,6 +2,7 @@
 // Business structure helper functions
 
 import { BUSINESS_STRUCTURE, COMPANY_AREAS, PERSONAL_AREAS } from '@/types/enums';
+import { SalesStation } from '@/lib/storage/taxonomy';
 import type { Area, Station } from '@/types/type-aliases';
 
 // Get all company areas
@@ -76,11 +77,11 @@ export function getSalesChannelFromSaleType(saleType: string): Station | null {
     .toUpperCase();
 
   const typeToChannel: Record<string, Station> = {
-    DIRECT: 'direct-sales' as Station,
-    BOOTH: 'booth-sales' as Station,
-    NETWORK: 'network' as Station,
-    ONLINE: 'online-sales' as Station,
-    NFT: 'online-sales' as Station,
+    DIRECT: SalesStation.DIRECT_SALES as Station,
+    BOOTH: SalesStation.BOOTH_SALES as Station,
+    NETWORK: SalesStation.NETWORK as Station,
+    ONLINE: SalesStation.ONLINE_SALES as Station,
+    NFT: SalesStation.ONLINE_SALES as Station,
   };
 
   return typeToChannel[key] ?? null;

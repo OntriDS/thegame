@@ -20,6 +20,7 @@ import { makeLink } from '@/links/links-workflows';
 import { createLink, getLinksFor, removeLink } from '@/links/link-registry';
 import { appendEntityLog } from './entities-logging';
 import { getFinancialTypeForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
+import { SalesStation } from '@/lib/storage/taxonomy';
 import type { Station } from '@/types/type-aliases';
 
 import { BITCOIN_SATOSHIS_PER_BTC, DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib/constants/financial-constants';
@@ -181,6 +182,7 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
       jungleCoinsValue: 0, // J$ no longer awarded as task rewards
       isCollected: false,
       collectedAt: undefined,
+      doneAt: dateToUse,
       createdAt: currentDate,
       updatedAt: currentDate,
       links: []
@@ -264,6 +266,7 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
       isNewItem: task.isNewItem,
       rewards: undefined,
       netCashflow: (task.revenue || 0) - (task.cost || 0),
+      doneAt: existingFinrec.doneAt || (task.doneAt ? task.doneAt as Date : (task.collectedAt ? task.collectedAt as Date : undefined)),
       updatedAt: getUTCNow()
     };
 
@@ -486,7 +489,7 @@ async function resolveSaleDerivedFinrecFields(
   const salesChannel =
     (hasChannel ? sale.salesChannel : null) ||
     getSalesChannelFromSaleType(String(sale.type)) ||
-    ('direct-sales' as Station);
+    (SalesStation.DIRECT_SALES as Station);
   const station = salesChannel;
 
   const { customerLabel, siteLabel } = await resolveSaleCustomerAndSiteLabels(sale);
@@ -536,6 +539,7 @@ async function upsertPrimarySaleFinrecFromSale(
     jungleCoinsValue: existing.jungleCoinsValue ?? 0,
     isCollected: existing.isCollected,
     collectedAt: existing.collectedAt,
+    doneAt: derived.dateToUse,
     updatedAt: now,
     customerCharacterId: sale.customerId ?? null,
     customerCharacterRole: sale.customerId ? CharacterRole.CUSTOMER : undefined,
@@ -697,6 +701,7 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       jungleCoinsValue: 0,
       isCollected: false,
       collectedAt: undefined,
+      doneAt: derived.dateToUse,
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
       links: [],
@@ -805,6 +810,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       status: (!sale.isNotPaid && !sale.isNotCharged || sale.isCollected) ? FinancialStatus.DONE : FinancialStatus.PENDING,
       isNotPaid: sale.isNotPaid || false,
       isNotCharged: sale.isNotCharged || false,
+      doneAt: split.date,
       updatedAt: getUTCNow(),
       createdAt: incomeRecord?.createdAt || getUTCNow(),
       links: incomeRecord?.links || [],
@@ -841,17 +847,18 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         description: `Impact Ledger: Commission split with partner`,
         year: split.date.getFullYear(),
         month: split.date.getMonth() + 1,
-        station: 'booth-sales' as Station,
+        station: SalesStation.BOOTH_SALES as Station,
         type: 'company',
         siteId: sale.siteId,
         sourceSaleId: sale.id,
-        salesChannel: 'booth-sales' as Station,
+        salesChannel: SalesStation.BOOTH_SALES as Station,
         revenue: split.myCommFromPartner,
         cost: split.partnerCommFromMe,
         netCashflow: split.myCommFromPartner - split.partnerCommFromMe,
         status: (!sale.isNotPaid && !sale.isNotCharged || sale.isCollected) ? FinancialStatus.DONE : FinancialStatus.PENDING,
         isNotPaid: sale.isNotPaid || false,
         isNotCharged: sale.isNotCharged || false,
+        doneAt: split.date,
         updatedAt: getUTCNow(),
         createdAt: payoutRecord?.createdAt || getUTCNow(),
         links: payoutRecord?.links || [],

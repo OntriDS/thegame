@@ -1042,4 +1042,38 @@ export async function removeLogEntriesAcrossMonths(
   return totalRemoved;
 }
 
+/**
+ * Precision repair: find a log entry by event type and update its timestamp.
+ * If the month changes, it handles the relocation to the correct monthly list.
+ */
+export async function syncEntityLogTimestamp(
+  entityType: EntityType,
+  entityId: string,
+  event: string,
+  newTimestamp: Date | string
+): Promise<boolean> {
+  const months = await getEntityLogMonths(entityType);
+  const eventUpper = event.toUpperCase();
+  const ts = newTimestamp instanceof Date ? newTimestamp.toISOString() : newTimestamp;
+
+  for (const monthKey of months) {
+    const list = await readMonthlyList(entityType, monthKey);
+    const item = list.find(e => 
+      e.entityId === entityId && 
+      String(e.event ?? '').toUpperCase() === eventUpper
+    );
+
+    if (item) {
+      const updatedEntry = {
+        ...item,
+        timestamp: ts,
+        lastUpdated: getUTCNow().toISOString()
+      };
+      await relocateLogEntryToCorrectMonth(entityType, monthKey, item.id, updatedEntry);
+      return true;
+    }
+  }
+  return false;
+}
+
 

@@ -130,18 +130,11 @@ export async function processItemEffects(item: Item): Promise<void> {
   // Get existing links for cleanup
   const existingLinks = await getLinksFor({ type: EntityType.ITEM, id: item.id });
 
-  // ITEM_TASK link
-  if (item.sourceTaskId) {
-    // Remove old ITEM_TASK links (in case sourceTaskId changed)
-    const oldTaskLinks = existingLinks.filter(l => l.linkType === LinkType.ITEM_TASK);
-    for (const oldLink of oldTaskLinks) {
-      if (oldLink.target.id !== item.sourceTaskId) {
-        await removeLink(oldLink.id);
-      }
-    }
-
-    const l = makeLink(LinkType.ITEM_TASK, { type: EntityType.ITEM, id: item.id }, { type: EntityType.TASK, id: item.sourceTaskId });
-    await createLink(l);
+  // ITEM_TASK links are no longer created here to follow original direction (Task -> Item).
+  // Clean up any stray ITEM_TASK links if needed, but TASK_ITEM is the canonical link.
+  const oldTaskLinks = existingLinks.filter(l => l.linkType === LinkType.ITEM_TASK);
+  for (const oldLink of oldTaskLinks) {
+    await removeLink(oldLink.id);
   }
 
   // ITEM_SITE links (for stock locations)
