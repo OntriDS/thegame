@@ -308,6 +308,7 @@ export enum InventoryTab {
 
 /** Lifecycle state of ONE Item /SKU */
 export enum ItemStatus {
+  IN_PROGRESS = 'in-progress',
   CREATED = 'created',
   FOR_SALE = 'for-sale',
   SOLD = 'sold',

@@ -638,6 +638,15 @@ export const ClientAPI = {
   },
 
   // ============================================================================
+  // LINKS REPAIR
+  // ============================================================================
+  healLinks: async (): Promise<{ success: boolean; repairedCount?: number; error?: string }> => {
+    const res = await fetch('/api/links/heal', { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to heal links');
+    return await res.json();
+  },
+
+  // ============================================================================
   // BUSINESSES - Character Infra
   // ============================================================================
   getBusinesses: async (): Promise<Business[]> => {

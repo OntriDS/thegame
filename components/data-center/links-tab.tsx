@@ -163,6 +163,25 @@ export function LinksTab({ onReload, isReloading }: LinksTabProps) {
             <RefreshCw className={`h-4 w-4 mr-2 ${isReloading ? 'animate-spin' : ''}`} />
             Reload
           </Button>
+          <Button
+            onClick={async () => {
+              try {
+                const res = await ClientAPI.healLinks();
+                if (res.success) {
+                  alert(`Successfully healed ${res.repairedCount} missing links.`);
+                  await loadLinks();
+                } else {
+                  alert(`Failed to heal links: ${res.error}`);
+                }
+              } catch (e: any) {
+                alert(`Error healing links: ${e.message}`);
+              }
+            }}
+            size="sm"
+            variant="default"
+          >
+            Heal Orphans
+          </Button>
         </div>
       </div>
 

@@ -258,7 +258,7 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
       outputItemId: line.outputItemId || null,
       isNewItem: (line.isNewItem ?? line.isNewOutputItem) ?? true,
       isSold: line.isSold || false,
-      outputItemStatus: (line.outputItemStatus as any) || (line.isSold ? ItemStatus.SOLD : 'Created' as any)
+      outputItemStatus: line.outputItemStatus || (line.isSold ? ItemStatus.SOLD : ItemStatus.CREATED)
     };
 
     // Save the task

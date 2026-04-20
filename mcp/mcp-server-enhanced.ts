@@ -9,6 +9,9 @@ import { Task, Item, Character, Player, Site, Sale } from '@/types/entities';
 import { ItemStatus, TaskType, TaskStatus, TaskPriority, ItemType, ItemCategory } from '@/types/enums';
 import { logger } from '@/lib/utils/logger';
 
+const DEFAULT_LIST_LIMIT = 50;
+const MAX_LIST_LIMIT = 200;
+
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
@@ -73,6 +76,20 @@ export interface MCPTool {
   inputSchema: any;
   handler: (args: any) => Promise<any>;
   metadata: ToolMetadata;
+}
+
+function parseStringArrayFilter(value: unknown): string[] | undefined | null {
+  if (value === undefined) return undefined;
+  if (typeof value === 'string') {
+    const parsed = value.trim();
+    return parsed ? [parsed] : [];
+  }
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === 'string' ? item.trim() : String(item || '').trim()))
+      .filter((item) => item.length > 0);
+  }
+  return null;
 }
 
 /**
@@ -309,6 +326,173 @@ export class EnhancedMCPServer {
         } catch (error) {
           this.recordUsage('get_tasks', false, Date.now() - startTime, (error as Error).message);
           throw new Error(`Failed to get tasks: ${(error as Error).message}`);
+        }
+      },
+    });
+
+    // Item operations
+    this.registerTool({
+      name: 'get_items_by_category',
+      description: 'Get items filtered by item type and/or sub-item type.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          types: {
+            anyOf: [
+              { type: 'string', description: 'Single ItemType value' },
+              { type: 'array', items: { type: 'string' }, description: 'One or more ItemType values' },
+            ],
+          },
+          subTypes: {
+            anyOf: [
+              { type: 'string', description: 'Single item subItemType value' },
+              { type: 'array', items: { type: 'string' }, description: 'One or more item subItemType values' },
+            ],
+          },
+          limit: { type: 'number', description: 'Maximum number of items to return' },
+          offset: { type: 'number', description: 'Pagination offset' },
+        },
+        required: ['limit'],
+      },
+      metadata: {
+        version: '1.1.0',
+        category: 'items',
+        capabilities: [
+          {
+            name: 'query',
+            description: 'Query items using optional type/subItemType filters.',
+            parameters: ['types', 'subTypes', 'limit', 'offset'],
+            returns: ['Item[]'],
+            requiresAuth: true,
+          },
+        ],
+        deprecated: false,
+        examples: [
+          {
+            name: 'Get artwork items',
+            description: 'Get all ARTWORK items',
+            input: { types: ['ARTWORK'], limit: 50 },
+            output: { items: [] },
+          },
+        ],
+        tags: ['read', 'items', 'query'],
+      },
+      handler: async (args) => {
+        const startTime = Date.now();
+        try {
+          const types = parseStringArrayFilter(args.types);
+          const subTypes = parseStringArrayFilter(args.subTypes);
+          const limit = Number(args.limit);
+          const offset = Number(args.offset);
+          if (types === null) {
+            throw new Error('`types` must be a string or string array.');
+          }
+          if (subTypes === null) {
+            throw new Error('`subTypes` must be a string or string array.');
+          }
+          const normalizedLimit = Number.isFinite(limit) && limit > 0 ? Math.min(Math.floor(limit), MAX_LIST_LIMIT) : DEFAULT_LIST_LIMIT;
+          const normalizedOffset = Number.isFinite(offset) && offset > 0 ? Math.floor(offset) : 0;
+
+          let items: any[] = [];
+          if (types !== undefined && subTypes !== undefined) {
+            if (types.length === 0 || subTypes.length === 0) {
+              items = [];
+            } else {
+              const byTypes = await DataStore.getItemsByType(types);
+              const bySubTypes = await DataStore.getItemsBySubType(subTypes);
+              const subTypeIdSet = new Set(bySubTypes.map((item) => item.id));
+              items = byTypes.filter((item) => subTypeIdSet.has(item.id));
+            }
+          } else if (types !== undefined) {
+            items = await DataStore.getItemsByType(types);
+          } else if (subTypes !== undefined) {
+            items = await DataStore.getItemsBySubType(subTypes);
+          } else {
+            items = await DataStore.getAllItems();
+          }
+
+          const slice = items.slice(
+            normalizedOffset,
+            normalizedOffset + normalizedLimit
+          );
+          const data = {
+            items: slice,
+            count: slice.length,
+            total: items.length,
+            offset: normalizedOffset,
+            limit: normalizedLimit,
+            hasMore: normalizedOffset + normalizedLimit < items.length,
+          };
+          this.recordUsage('get_items_by_category', true, Date.now() - startTime);
+          return data;
+        } catch (error) {
+          this.recordUsage('get_items_by_category', false, Date.now() - startTime, (error as Error).message);
+          throw new Error(`Failed to get items by category: ${(error as Error).message}`);
+        }
+      },
+    });
+
+    this.registerTool({
+      name: 'get_item_counts',
+      description: 'Get item counts by optional item type and/or sub-item type filters.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          types: {
+            anyOf: [
+              { type: 'string', description: 'Single ItemType value' },
+              { type: 'array', items: { type: 'string' }, description: 'One or more ItemType values' },
+            ],
+          },
+          subTypes: {
+            anyOf: [
+              { type: 'string', description: 'Single item subItemType value' },
+              { type: 'array', items: { type: 'string' }, description: 'One or more item subItemType values' },
+            ],
+          },
+        },
+      },
+      metadata: {
+        version: '1.1.0',
+        category: 'items',
+        capabilities: [
+          {
+            name: 'query',
+            description: 'Count items using optional type/subItemType filters.',
+            parameters: ['types', 'subTypes'],
+            returns: ['{ count: number }'],
+            requiresAuth: true,
+          },
+        ],
+        deprecated: false,
+        examples: [
+          {
+            name: 'Count artwork items',
+            description: 'Count all ARTWORK items',
+            input: { types: ['ARTWORK'] },
+            output: { count: 0 },
+          },
+        ],
+        tags: ['read', 'items', 'query', 'counts'],
+      },
+      handler: async (args) => {
+        const startTime = Date.now();
+        try {
+          const types = parseStringArrayFilter(args.types);
+          const subTypes = parseStringArrayFilter(args.subTypes);
+          if (types === null) {
+            throw new Error('`types` must be a string or string array.');
+          }
+          if (subTypes === null) {
+            throw new Error('`subTypes` must be a string or string array.');
+          }
+          const count = await DataStore.countItems(types, subTypes);
+          const data = { count };
+          this.recordUsage('get_item_counts', true, Date.now() - startTime);
+          return data;
+        } catch (error) {
+          this.recordUsage('get_item_counts', false, Date.now() - startTime, (error as Error).message);
+          throw new Error(`Failed to get item counts: ${(error as Error).message}`);
         }
       },
     });

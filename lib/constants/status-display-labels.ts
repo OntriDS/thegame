@@ -27,6 +27,7 @@ export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
 };
 
 export const ITEM_STATUS_LABEL: Record<ItemStatus, string> = {
+  [ItemStatus.IN_PROGRESS]: 'In Progress',
   [ItemStatus.CREATED]: 'Created',
   [ItemStatus.FOR_SALE]: 'For Sale',
   [ItemStatus.SOLD]: 'Sold',

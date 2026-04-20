@@ -30,6 +30,7 @@ export const devSprintStatusKeyMap: Record<DevSprintStatus, string> = {
 
 /** Item status keys (aligned with stored slug / enum value). */
 export const itemStatusKeyMap: Record<ItemStatus, string> = {
+  [ItemStatus.IN_PROGRESS]: ItemStatus.IN_PROGRESS,
   [ItemStatus.CREATED]: ItemStatus.CREATED,
   [ItemStatus.FOR_SALE]: ItemStatus.FOR_SALE,
   [ItemStatus.SOLD]: ItemStatus.SOLD,

@@ -3,7 +3,7 @@
 // Creates items from Tasks and Financial Records using emissary fields
 
 import type { Task, Item, FinancialRecord } from '@/types/entities';
-import { ItemStatus, ItemType, LinkType, EntityType } from '@/types/enums';
+import { ItemStatus, ItemType, LinkType, EntityType, TaskStatus } from '@/types/enums';
 import { upsertItem, removeItem, getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById } from '@/data-store/datastore';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 // links are created by processLinkEntity()
@@ -12,16 +12,31 @@ import { getUTCNow } from '@/lib/utils/utc-utils';
 
 /**
  * Determines the default item status based on item type and sale status
- * All newly created items start as CREATED, regardless of type
- * Their status will change based on business logic later
+ * If the task is in-progress/finishing, items start as IN_PROGRESS so active inventory
+ * can track long-running outputs. Otherwise default to CREATED unless sold/explicitly set.
  */
-export function getDefaultItemStatus(itemType: string, isSold: boolean = false): ItemStatus {
+const isValidItemStatus = (status?: string): status is ItemStatus => {
+  return Boolean(status) && Object.values(ItemStatus).includes(status as ItemStatus);
+};
+
+export function getDefaultItemStatus(
+  itemType: string,
+  isSold: boolean = false,
+  explicitOutputItemStatus?: ItemStatus,
+  taskStatus?: TaskStatus
+): ItemStatus {
+  if (taskStatus === TaskStatus.IN_PROGRESS || taskStatus === TaskStatus.FINISHING) {
+    return ItemStatus.IN_PROGRESS;
+  }
+
   if (isSold) {
     return ItemStatus.SOLD;
   }
 
-  // All newly created items start as CREATED, regardless of type
-  // Their status will change based on business logic later
+  if (explicitOutputItemStatus && isValidItemStatus(explicitOutputItemStatus)) {
+    return explicitOutputItemStatus;
+  }
+
   return ItemStatus.CREATED;
 }
 
@@ -90,7 +105,14 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       description: `Created from task: ${task.name}`,
       type: task.outputItemType as ItemType,
       collection: task.outputItemCollection || undefined,
-      status: getDefaultItemStatus(task.outputItemType || '', task.isSold || false),
+      status: getDefaultItemStatus(
+        task.outputItemType || '',
+        task.isSold || false,
+        task.status === TaskStatus.IN_PROGRESS || task.status === TaskStatus.FINISHING
+          ? task.outputItemStatus
+          : undefined,
+        task.status
+      ),
       station: task.station,
       unitCost: task.outputUnitCost || 0,
       additionalCost: 0,
@@ -207,7 +229,7 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       description: `Created from record: ${record.name}`,
       type: record.outputItemType as ItemType,
       collection: record.outputItemCollection || undefined,
-      status: getDefaultItemStatus(record.outputItemType || '', record.isSold || false),
+      status: getDefaultItemStatus(record.outputItemType || '', record.isSold || false, record.outputItemStatus),
       station: record.station,
       unitCost: record.outputUnitCost || 0,
       additionalCost: 0,

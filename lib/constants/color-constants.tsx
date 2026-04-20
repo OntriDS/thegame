@@ -45,6 +45,7 @@ export const TASK_STATUS_COLORS = {
 
 /** Item Status Colors - Light & Dark Mode with border contrast */
 export const ITEM_STATUS_COLORS = {
+  [ItemStatus.IN_PROGRESS]: { light: STATUS_COLOR_BASE.IN_PROGRESS, dark: STATUS_COLOR_BASE.IN_PROGRESS },
   [ItemStatus.CREATED]: { light: STATUS_COLOR_BASE.CREATED, dark: STATUS_COLOR_BASE.CREATED },
   [ItemStatus.FOR_SALE]: { light: STATUS_COLOR_BASE.FOR_SALE, dark: STATUS_COLOR_BASE.FOR_SALE },
   [ItemStatus.SOLD]: { light: STATUS_COLOR_BASE.SOLD, dark: STATUS_COLOR_BASE.SOLD },

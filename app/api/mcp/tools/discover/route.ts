@@ -77,6 +77,71 @@ const TOOLS = [
     },
   },
   {
+    id: 'get_items_by_category',
+    name: 'get_items_by_category',
+    description: 'List items filtered by item type and/or sub-item type. limit required (max 200).',
+    systemId: 'thegame',
+    parameters: {
+      type: 'object',
+      properties: {
+        types: {
+          anyOf: [
+            { type: 'string', description: 'Single ItemType value (eg. ARTWORK, DIGITAL)' },
+            {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'One or more ItemType values',
+            },
+          ],
+        },
+        subTypes: {
+          anyOf: [
+            { type: 'string', description: 'Single Item subType value' },
+            {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'One or more Item subType values',
+            },
+          ],
+        },
+        limit: { type: 'number' },
+        offset: { type: 'number' },
+      },
+      required: ['limit'],
+    },
+  },
+  {
+    id: 'get_item_counts',
+    name: 'get_item_counts',
+    description: 'Get matching item count by item type and/or sub-item type.',
+    systemId: 'thegame',
+    parameters: {
+      type: 'object',
+      properties: {
+        types: {
+          anyOf: [
+            { type: 'string', description: 'Single ItemType value (eg. ARTWORK, DIGITAL)' },
+            {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'One or more ItemType values',
+            },
+          ],
+        },
+        subTypes: {
+          anyOf: [
+            { type: 'string', description: 'Single Item subType value' },
+            {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'One or more Item subType values',
+            },
+          ],
+        },
+      },
+    },
+  },
+  {
     id: 'get_sites',
     name: 'get_sites',
     description: 'List sites. limit required (max 200).',

@@ -228,7 +228,12 @@ export default function MissionTreeModalContent({
       setOutputItemPriceString(String(existingTask.outputItemPrice || 0));
       setIsNewItem(existingTask.isNewItem || !Boolean(existingTask.outputItemId));
       setIsSold(existingTask.isSold || false);
-      setOutputItemStatus(existingTask.outputItemStatus || ItemStatus.FOR_SALE);
+      setOutputItemStatus(
+        existingTask.outputItemStatus ||
+        (existingTask.status === TaskStatus.IN_PROGRESS || existingTask.status === TaskStatus.FINISHING
+          ? ItemStatus.IN_PROGRESS
+          : ItemStatus.FOR_SALE)
+      );
       setSelectedItemId(existingTask.outputItemId || '');
       setCustomerCharacterId(existingTask.customerCharacterId || null);
       setIsNewCustomer(!Boolean(existingTask.customerCharacterId));

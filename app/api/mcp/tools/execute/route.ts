@@ -8,8 +8,11 @@ import {
   getAllPlayers,
   getAllFinancials,
   getAllItems,
+  getItemsByType,
+  getItemsBySubType,
   getAllSites,
   getAllCharacters,
+  countItems,
   repairPrimaryTaskIndex,
   repairTaskActiveIndex,
   repairTaskCompletedIndex,
@@ -124,6 +127,20 @@ function parseMonthYear(params: Record<string, unknown>): { month: number; year:
   if (month < 1 || month > 12) return null;
   if (year < 2000 || year > 2100) return null;
   return { month, year };
+}
+
+function parseStringArrayFilter(value: unknown): string[] | undefined | null {
+  if (value === undefined) return undefined;
+  if (typeof value === 'string') {
+    const parsed = value.trim();
+    return parsed ? [parsed] : [];
+  }
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === 'string' ? item.trim() : String(item || '').trim()))
+      .filter((item) => item.length > 0);
+  }
+  return null;
 }
 
 function isMonthScopedUTCRange(startRaw: string, endRaw: string): { year: number; month: number } | null {
@@ -291,6 +308,61 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
           success: true,
           data: { items: slice, count: slice.length, total: items.length, offset, limit, hasMore },
+        });
+      }
+      case 'get_items_by_category': {
+        const limit = clampLimit(parameters.limit);
+        const offset = clampOffset(parameters.offset);
+        const rawTypes = parseStringArrayFilter(parameters.types);
+        const rawSubTypes = parseStringArrayFilter(parameters.subTypes);
+
+        if (rawTypes === null) {
+          return NextResponse.json({ success: false, error: '`types` must be a string or string array.' }, { status: 400 });
+        }
+        if (rawSubTypes === null) {
+          return NextResponse.json({ success: false, error: '`subTypes` must be a string or string array.' }, { status: 400 });
+        }
+
+        let items: Awaited<ReturnType<typeof getAllItems>> = [];
+        if (rawTypes !== undefined && rawSubTypes !== undefined) {
+          if (rawTypes.length === 0 || rawSubTypes.length === 0) {
+            items = [];
+          } else {
+            const byTypes = await getItemsByType(rawTypes);
+            const bySubTypes = await getItemsBySubType(rawSubTypes);
+            const subTypeIdSet = new Set(bySubTypes.map((item) => item.id));
+            items = byTypes.filter((item) => subTypeIdSet.has(item.id));
+          }
+        } else if (rawTypes !== undefined) {
+          items = await getItemsByType(rawTypes);
+        } else if (rawSubTypes !== undefined) {
+          items = await getItemsBySubType(rawSubTypes);
+        } else {
+          items = await getAllItems();
+        }
+
+        const slice = items.slice(offset, offset + limit);
+        const hasMore = offset + limit < items.length;
+        return NextResponse.json({
+          success: true,
+          data: { items: slice, count: slice.length, total: items.length, offset, limit, hasMore },
+        });
+      }
+      case 'get_item_counts': {
+        const types = parseStringArrayFilter(parameters.types);
+        const subTypes = parseStringArrayFilter(parameters.subTypes);
+
+        if (types === null) {
+          return NextResponse.json({ success: false, error: '`types` must be a string or string array.' }, { status: 400 });
+        }
+        if (subTypes === null) {
+          return NextResponse.json({ success: false, error: '`subTypes` must be a string or string array.' }, { status: 400 });
+        }
+
+        const count = await countItems(types, subTypes);
+        return NextResponse.json({
+          success: true,
+          data: { count },
         });
       }
       case 'get_sites': {

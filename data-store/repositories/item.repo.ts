@@ -110,6 +110,95 @@ export async function getItemsByType(itemTypes: ItemType | ItemType[]): Promise<
   );
 }
 
+/**
+ * Get items by subItemType using an index
+ * OPTIMIZED: Only loads items matching specific sub-item type(s), not all items
+ */
+export async function getItemsBySubType(subItemTypes: string | string[]): Promise<Item[]> {
+  const subTypes = Array.isArray(subItemTypes) ? subItemTypes : [subItemTypes];
+  const allIds = new Set<string>();
+
+  for (const subType of subTypes) {
+    const subTypeIndexKey = buildEntityIndexKey(ENTITY, 'subItemType', subType);
+    const ids = await kvSMembers(subTypeIndexKey);
+    ids.forEach(id => allIds.add(id));
+  }
+
+  if (allIds.size === 0) return [];
+
+  const keys = Array.from(allIds).map(id => buildDataKey(ENTITY, id));
+  const items = await kvMGet<Item>(keys);
+
+  return items.filter((item): item is Item =>
+    item !== null &&
+    item !== undefined &&
+    item.subItemType !== undefined &&
+    subTypes.includes(item.subItemType)
+  );
+}
+
+function normalizeStringListFilter(values?: string | string[]): string[] | null {
+  if (values === undefined) return null;
+
+  if (Array.isArray(values)) {
+    const normalized = values.map((value) => String(value || '').trim()).filter((value) => value.length > 0);
+    return normalized;
+  }
+
+  const value = String(values || '').trim();
+  return value ? [value] : [];
+}
+
+/**
+ * Count items using indexed lookups
+ * - If both filters provided, returns intersection
+ * - If one filter is provided, returns that set size
+ * - If no filters are passed, returns full index count
+ * - If an explicit filter is provided but empty, returns 0
+ */
+export async function countItems(types?: string | string[], subTypes?: string | string[]): Promise<number> {
+  const normalizedTypes = normalizeStringListFilter(types);
+  const normalizedSubTypes = normalizeStringListFilter(subTypes);
+
+  if (types !== undefined && normalizedTypes && normalizedTypes.length === 0) return 0;
+  if (subTypes !== undefined && normalizedSubTypes && normalizedSubTypes.length === 0) return 0;
+
+  if (normalizedTypes === null && normalizedSubTypes === null) {
+    const allIds = await kvSMembers(buildIndexKey(ENTITY));
+    return allIds.length;
+  }
+
+  const collectIdsByField = async (field: 'type' | 'subItemType', values: string[]): Promise<Set<string>> => {
+    const idSet = new Set<string>();
+    for (const value of values) {
+      const indexKey = buildEntityIndexKey(ENTITY, field, value);
+      const ids = await kvSMembers(indexKey);
+      ids.forEach((id) => idSet.add(id));
+    }
+    return idSet;
+  };
+
+  const typeIdSet = normalizedTypes && normalizedTypes.length > 0
+    ? await collectIdsByField('type', normalizedTypes)
+    : null;
+  const subTypeIdSet = normalizedSubTypes && normalizedSubTypes.length > 0
+    ? await collectIdsByField('subItemType', normalizedSubTypes)
+    : null;
+
+  if (typeIdSet && subTypeIdSet) {
+    let result = 0;
+    for (const id of typeIdSet) {
+      if (subTypeIdSet.has(id)) result += 1;
+    }
+    return result;
+  }
+
+  if (typeIdSet) return typeIdSet.size;
+  if (subTypeIdSet) return subTypeIdSet.size;
+
+  return 0;
+}
+
 export async function upsertItem(item: Item): Promise<Item> {
   const key = buildDataKey(ENTITY, item.id);
   const indexKey = buildIndexKey(ENTITY);
@@ -162,6 +251,20 @@ export async function upsertItem(item: Item): Promise<Item> {
   if (previousItem && previousItem.type !== toSave.type) {
     const oldTypeIndexKey = buildEntityIndexKey(ENTITY, 'type', previousItem.type);
     await kvSRem(oldTypeIndexKey, item.id);
+  }
+
+  // Maintain subItemType index
+  if (toSave.subItemType) {
+    const subItemTypeIndexKey = buildEntityIndexKey(ENTITY, 'subItemType', toSave.subItemType);
+    await kvSAdd(subItemTypeIndexKey, item.id);
+  }
+
+  // Clean up old subItemType index if it changed or was removed
+  if (previousItem?.subItemType !== toSave.subItemType) {
+    if (previousItem?.subItemType) {
+      const oldSubItemTypeIndexKey = buildEntityIndexKey(ENTITY, 'subItemType', previousItem.subItemType);
+      await kvSRem(oldSubItemTypeIndexKey, item.id);
+    }
   }
 
   // Clean up old month index if month changed
@@ -221,6 +324,11 @@ export async function deleteItem(id: string): Promise<void> {
     // Clean up type index
     const typeIndexKey = buildEntityIndexKey(ENTITY, 'type', item.type);
     await kvSRem(typeIndexKey, id);
+
+    if (item.subItemType) {
+      const subItemTypeIndexKey = buildEntityIndexKey(ENTITY, 'subItemType', item.subItemType);
+      await kvSRem(subItemTypeIndexKey, id);
+    }
 
     if (item.sourceTaskId) {
       const sourceTaskIndexKey = buildEntityIndexKey(ENTITY, 'sourceTaskId', item.sourceTaskId);

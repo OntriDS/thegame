@@ -1,7 +1,7 @@
 // workflows/entities-workflows/task.workflow.ts
 // Task-specific workflow with state vs descriptive field detection
 
-import { CharacterRole, EntityType, LogEventType, TaskStatus, TaskType, FOUNDER_CHARACTER_ID } from '@/types/enums';
+import { CharacterRole, EntityType, LogEventType, TaskStatus, TaskType, FOUNDER_CHARACTER_ID, ItemStatus } from '@/types/enums';
 import type { CustomerCounterpartyRole, Task } from '@/types/entities';
 import { appendEntityLog, updateEntityLeanFields, removeLogEntriesAcrossMonths } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -12,7 +12,8 @@ import {
   getAllTasks,
   upsertTask,
   getItemById,
-  upsertItem
+  upsertItem,
+  getItemsBySourceTaskId
 } from '@/data-store/datastore';
 import { upsertTask as repoUpsertTask } from '@/data-store/repositories/task.repo';
 import { getLinksFor, removeLink } from '@/links/link-registry';
@@ -50,6 +51,36 @@ const resolveTaskOutputSite = (task: Task): string | null => {
   if (task.targetSiteId && task.targetSiteId !== 'none') return task.targetSiteId;
   if (task.siteId && task.siteId !== 'none') return task.siteId;
   return null;
+};
+
+/**
+ * When a task exits pre-creation lifecycle, promote any task-created
+ * in-progress items back to CREATED so the normal done/collected/failed
+ * behavior remains unchanged for item lifecycle state.
+ */
+const normalizeTaskCreatedItemStatus = async (currentTask: Task, previousTask: Task): Promise<void> => {
+  const wasPreprogress =
+    previousTask.status === TaskStatus.IN_PROGRESS ||
+    previousTask.status === TaskStatus.FINISHING;
+
+  const isNowTerminalForItemLifecycle =
+    currentTask.status === TaskStatus.DONE ||
+    currentTask.status === TaskStatus.COLLECTED ||
+    currentTask.status === TaskStatus.FAILED;
+
+  if (!wasPreprogress || !isNowTerminalForItemLifecycle) return;
+
+  const createdItems = await getItemsBySourceTaskId(currentTask.id);
+  for (const item of createdItems) {
+    if (item.status !== ItemStatus.IN_PROGRESS) continue;
+
+    const normalizedItem = {
+      ...item,
+      status: ItemStatus.CREATED,
+      updatedAt: getUTCNow()
+    };
+    await upsertItem(normalizedItem);
+  }
 };
 
 /**
@@ -387,15 +418,20 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       `${resolvedCounterparty.characterRole || 'null'}/${resolvedCounterparty.source}`
   );
 
-  // Side effects: Done, Collected, or Failed get items + financials; only Done/Collected stage points (not Failed)
+  // Side effects: In-progress / Finishing pre-create items, while Done / Collected / Failed still handle financials + points.
+  // (In-progress and Finishing remain active creation states for early item tracking.)
   const terminalForOutputs =
     outputsTask.status === TaskStatus.DONE ||
     outputsTask.status === TaskStatus.COLLECTED ||
     outputsTask.status === TaskStatus.FAILED;
+  const terminalForItemCreation =
+    terminalForOutputs ||
+    outputsTask.status === TaskStatus.IN_PROGRESS ||
+    outputsTask.status === TaskStatus.FINISHING;
   const terminalForPointsStaging =
     outputsTask.status === TaskStatus.DONE || outputsTask.status === TaskStatus.COLLECTED;
 
-  if (terminalForOutputs) {
+  if (terminalForItemCreation) {
     const sideEffects: Promise<void>[] = [];
 
     if (outputsTask.outputItemType && outputsTask.outputQuantity) {
@@ -412,7 +448,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       );
     }
 
-    if (terminalForPointsStaging && outputsTask.rewards?.points) {
+    if (terminalForOutputs && terminalForPointsStaging && outputsTask.rewards?.points) {
       sideEffects.push(
         (async () => {
           const stagingKey = EffectKeys.sideEffect('task', outputsTask.id, 'pointsStaged');
@@ -427,7 +463,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       );
     }
 
-    if (outputsTask.cost || outputsTask.revenue || outputsTask.rewards?.points) {
+    if (terminalForOutputs && (outputsTask.cost || outputsTask.revenue || outputsTask.rewards?.points)) {
       sideEffects.push(
         (async () => {
           const effectKey = EffectKeys.sideEffect('task', outputsTask.id, 'financialCreated');
@@ -455,6 +491,8 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
 
   // COMPREHENSIVE UPDATE PROPAGATION - when task properties change
   if (previousTask) {
+    await normalizeTaskCreatedItemStatus(outputsTask, previousTask);
+
     if (hasFinancialPropsChanged(resolvedTaskForPropagation, resolvedPreviousTaskForPropagation || previousTask)) {
       await updateFinancialRecordsFromTask(resolvedTaskForPropagation, resolvedPreviousTaskForPropagation || previousTask);
     }

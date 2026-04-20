@@ -132,6 +132,7 @@ export function ItemsLogTab({
 
     const normalizedStatus = status.toLowerCase();
     const statusMap: Record<string, ItemStatus> = {
+      'in progress': ItemStatus.IN_PROGRESS,
       'created': ItemStatus.CREATED,
       'for_sale': ItemStatus.FOR_SALE,
       'sold': ItemStatus.SOLD,

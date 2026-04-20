@@ -112,13 +112,13 @@ interface InventoryDisplayProps {
   onDeepLinkItemConsumed?: () => void;
 }
 
-export function InventoryDisplay({ 
-  sites, 
-  onRefresh, 
-  selectedSite, 
-  selectedStatus, 
-  selectedMonthKey, 
-  availableMonths, 
+export function InventoryDisplay({
+  sites,
+  onRefresh,
+  selectedSite,
+  selectedStatus,
+  selectedMonthKey,
+  availableMonths,
   onMonthChange,
   deepLinkItem,
   onDeepLinkItemConsumed,
@@ -180,7 +180,7 @@ export function InventoryDisplay({
 
   // Column selection state for location modal
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set(['own', 'consignment']));
-  
+
   // Sold Items Sort state
   const [soldItemsSortOption, setSoldItemsSortOption] = useState<'date-desc' | 'date-asc' | 'price-desc' | 'price-asc' | 'name-asc' | 'name-desc' | 'type-asc' | 'site-asc'>('date-desc');
   const [soldItemsSearchQuery, setSoldItemsSearchQuery] = useState('');
@@ -194,7 +194,7 @@ export function InventoryDisplay({
   const LEGACY_ITEMS_PAGE_SIZE = 50;
 
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
-  
+
   // Legacy Items UI Toggle
   const [showLegacyItems, setShowLegacyItems] = useState(false);
 
@@ -397,7 +397,7 @@ export function InventoryDisplay({
       clearTimeout(timeoutId);
       setIsSearchingSoldItems(false);
     };
-    }, [activeTab, isHydrated, selectedSite, soldItemsSearchQuery, showLegacyItems, soldItemsSortOption]);
+  }, [activeTab, isHydrated, selectedSite, soldItemsSearchQuery, showLegacyItems, soldItemsSortOption]);
 
 
   useEffect(() => {
@@ -618,18 +618,18 @@ export function InventoryDisplay({
     const q = query.trim().toLowerCase();
     const filtered = q
       ? list.filter(i => {
-          const collLabel = i.collection ? getCollectionLabel(i.collection).toLowerCase() : '';
-          const siteLabel = getPrimarySiteName(i).toLowerCase();
-          return (
-            i.name.toLowerCase().includes(q) ||
-            collLabel.includes(q) ||
-            String(i.collection ?? '').toLowerCase().includes(q) ||
-            siteLabel.includes(q) ||
-            (i.station || '').toLowerCase().includes(q) ||
-            (i.subItemType || '').toLowerCase().includes(q) ||
-            String(i.year ?? '').includes(q)
-          );
-        })
+        const collLabel = i.collection ? getCollectionLabel(i.collection).toLowerCase() : '';
+        const siteLabel = getPrimarySiteName(i).toLowerCase();
+        return (
+          i.name.toLowerCase().includes(q) ||
+          collLabel.includes(q) ||
+          String(i.collection ?? '').toLowerCase().includes(q) ||
+          siteLabel.includes(q) ||
+          (i.station || '').toLowerCase().includes(q) ||
+          (i.subItemType || '').toLowerCase().includes(q) ||
+          String(i.year ?? '').includes(q)
+        );
+      })
       : list;
 
     return [...filtered].sort((a, b) => {
@@ -804,11 +804,10 @@ export function InventoryDisplay({
 
   const MediaFlag = ({ label, ok }: { label: string; ok: boolean }) => (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
-        ok
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${ok
           ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
           : 'bg-rose-500/15 text-rose-500 border-rose-500/30'
-      }`}
+        }`}
     >
       {ok ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
       {label}
@@ -894,11 +893,10 @@ export function InventoryDisplay({
   /** Prints tab only: dark red “off” pills to match inventory print-card mock. */
   const PrintsMediaFlag = ({ label, ok }: { label: string; ok: boolean }) => (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-        ok
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${ok
           ? 'border border-emerald-500/35 bg-emerald-950/40 text-emerald-400'
           : 'border border-red-900/90 bg-red-950/90 text-red-400'
-      }`}
+        }`}
     >
       {ok ? <CheckCircle2 className="h-3 w-3 shrink-0" /> : <XCircle className="h-3 w-3 shrink-0" />}
       {label}
@@ -937,7 +935,7 @@ export function InventoryDisplay({
               stroke="currentColor"
               strokeWidth={stroke}
               strokeLinecap="round"
-              className="text-orange-500 transition-[stroke-dasharray] duration-300"
+              className="text-primary transition-[stroke-dasharray] duration-300"
               fill="none"
               strokeDasharray={`${dash} ${circumference}`}
             />
@@ -2095,90 +2093,89 @@ export function InventoryDisplay({
                 setSoldItemsSearchResults([]);
                 setSoldItemsSearchAllMatches([]);
               }}
-              className={`h-7 px-2 text-[10px] uppercase font-bold tracking-wider border transition-colors ${
-                showLegacyItems 
-                  ? "bg-primary/10 border-primary text-primary hover:bg-primary/20" 
+              className={`h-7 px-2 text-[10px] uppercase font-bold tracking-wider border transition-colors ${showLegacyItems
+                  ? "bg-primary/10 border-primary text-primary hover:bg-primary/20"
                   : "bg-muted/50 border-transparent text-muted-foreground hover:bg-muted"
-              }`}
+                }`}
             >
               {showLegacyItems ? 'Switch to Sold Items' : 'View Legacy Portfolio'}
             </Button>
           </div>
           <div className="flex items-center gap-2 ml-auto">
             <div className="relative w-64">
-                <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder={showLegacyItems ? 'Search legacy items...' : 'Search sold items...'}
-                  value={soldItemsSearchQuery}
-                  onChange={(e) => setSoldItemsSearchQuery(e.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Escape') {
-                      setSoldItemsSearchQuery('');
-                      setSoldItemsSearchResults([]);
-                      setSoldItemsSearchAllMatches([]);
-                    }
-                    if (event.key === 'Enter' && soldItemsSearchResults.length === 1) {
-                      handleOpenSoldItemFromSearch(soldItemsSearchResults[0]);
-                    }
+              <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder={showLegacyItems ? 'Search legacy items...' : 'Search sold items...'}
+                value={soldItemsSearchQuery}
+                onChange={(e) => setSoldItemsSearchQuery(e.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    setSoldItemsSearchQuery('');
+                    setSoldItemsSearchResults([]);
+                    setSoldItemsSearchAllMatches([]);
+                  }
+                  if (event.key === 'Enter' && soldItemsSearchResults.length === 1) {
+                    handleOpenSoldItemFromSearch(soldItemsSearchResults[0]);
+                  }
+                }}
+                className="h-7 w-64 pl-7 pr-7 text-[11px]"
+              />
+              {/*Search Items Results */}
+              {soldItemsSearchQuery && (
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:bg-muted"
+                  onClick={() => {
+                    setSoldItemsSearchQuery('');
+                    setSoldItemsSearchResults([]);
+                    setSoldItemsSearchAllMatches([]);
                   }}
-                  className="h-7 w-64 pl-7 pr-7 text-[11px]"
-                />
-                {/*Search Items Results */}
-                {soldItemsSearchQuery && (
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:bg-muted"
-                    onClick={() => {
-                      setSoldItemsSearchQuery('');
-                      setSoldItemsSearchResults([]);
-                      setSoldItemsSearchAllMatches([]);
-                    }}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-                {soldItemsSearchQuery.trim().length >= 2 ? (
-                  <div className="absolute z-30 mt-1 w-full rounded-md border bg-card shadow-lg">
-                    {isSearchingSoldItems ? (
-                      <div className="px-3 py-2 text-xs text-muted-foreground">
-                        {showLegacyItems ? 'Searching legacy items…' : 'Searching sold items…'}
-                      </div>
-                    ) : soldItemsSearchResults.length === 0 ? (
-                      <div className="px-3 py-2 text-xs text-muted-foreground">
-                        {showLegacyItems ? 'No legacy items match your search.' : 'No sold items match your search.'}
-                      </div>
-                    ) : (
-                      <div className="max-h-64 overflow-y-auto">
-                        {soldItemsSearchResults.map(item => {
-                          const monthSource = showLegacyItems
-                            ? item.updatedAt || item.createdAt
-                            : item.soldAt || item.updatedAt || item.createdAt;
-                          const monthLabel = monthSource ? formatMonthKey(monthSource) : 'Unknown month';
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {soldItemsSearchQuery.trim().length >= 2 ? (
+                <div className="absolute z-30 mt-1 w-full rounded-md border bg-card shadow-lg">
+                  {isSearchingSoldItems ? (
+                    <div className="px-3 py-2 text-xs text-muted-foreground">
+                      {showLegacyItems ? 'Searching legacy items…' : 'Searching sold items…'}
+                    </div>
+                  ) : soldItemsSearchResults.length === 0 ? (
+                    <div className="px-3 py-2 text-xs text-muted-foreground">
+                      {showLegacyItems ? 'No legacy items match your search.' : 'No sold items match your search.'}
+                    </div>
+                  ) : (
+                    <div className="max-h-64 overflow-y-auto">
+                      {soldItemsSearchResults.map(item => {
+                        const monthSource = showLegacyItems
+                          ? item.updatedAt || item.createdAt
+                          : item.soldAt || item.updatedAt || item.createdAt;
+                        const monthLabel = monthSource ? formatMonthKey(monthSource) : 'Unknown month';
 
-                          return (
-                            <button
-                              key={item.id}
-                              type="button"
-                              className="w-full text-left px-3 py-2 text-xs hover:bg-accent border-b last:border-b-0"
-                              onClick={() => handleOpenSoldItemFromSearch(item)}
-                            >
-                              <p className="font-medium truncate">{item.name}</p>
-                              <p className="text-[10px] text-muted-foreground">
-                                {item.type?.toLowerCase()} • {monthLabel}
-                              </p>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                ) : null}
-              </div>
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className="w-full text-left px-3 py-2 text-xs hover:bg-accent border-b last:border-b-0"
+                            onClick={() => handleOpenSoldItemFromSearch(item)}
+                          >
+                            <p className="font-medium truncate">{item.name}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {item.type?.toLowerCase()} • {monthLabel}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
             {/* Sorting Dropdown */}
             <div className="flex items-center gap-2 text-xs mr-2 border rounded-md px-2 py-0.5 bg-muted/40">
               <ArrowUpDown className="h-3 w-3 text-muted-foreground mr-1" />
-              <Select 
-                value={soldItemsSortOption} 
+              <Select
+                value={soldItemsSortOption}
                 onValueChange={(val) => {
                   setSoldItemsSortOption(val as any);
                   setPreference('inventory-sold-items-sort', val);
@@ -2223,61 +2220,83 @@ export function InventoryDisplay({
 
 
 
-        <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
           {isHydrated && visibleSoldItems.map(item => {
             const siteName = item.stock?.[0]?.siteId || '';
             const qty = item.quantitySold || 0;
             const unitPrice = item.price || 0;
             const total = item.value || (unitPrice * qty);
             const TypeIcon = ITEM_TYPE_ICONS[item.type?.toLowerCase()] || ITEM_TYPE_ICONS['default'] || Package;
+            const hasMainMedia = !!item.media?.main;
+            const hasGallery = !!item.media?.gallery?.length;
+            const hasThumb = !!item.media?.thumb;
+            const hasSource = !!item.sourceFileUrl;
 
             return (
               <div
                 key={item.id}
-                className="group relative bg-card border border-border rounded-xl p-4 hover:border-primary/50 hover:shadow-md cursor-pointer transition-all duration-200"
+                className="group relative bg-card border border-border/80 rounded-xl p-3 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 cursor-pointer transition-all duration-300"
                 onClick={() => handleEditItem(item)}
               >
-                {/* Header row: icon + name */}
-                <div className="flex items-start gap-3 mb-3">
-                  <div className="shrink-0 w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <TypeIcon className="w-4 h-4 text-primary" />
+                <div className="flex gap-4">
+                  {/* Left: Thumbnail/Icon */}
+                  <div className="shrink-0 w-20 h-20 rounded-xl bg-secondary/30 border border-border/50 flex items-center justify-center overflow-hidden">
+                    <TypeIcon className="w-8 h-8 text-secondary-foreground/60" />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-sm leading-snug truncate" title={item.name}>{item.name}</p>
-                    <p className="text-[11px] text-muted-foreground capitalize">{item.type?.toLowerCase()}</p>
+
+                  {/* Right: Content */}
+                  <div className="flex-1 min-w-0">
+                    {/* Top Row: Title + Price */}
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <p className="font-bold text-sm leading-tight truncate flex-1" title={item.name}>
+                        {item.name}
+                      </p>
+                      <div className="flex flex-col items-end shrink-0">
+                        <p className="text-base font-bold text-foreground leading-none">
+                          ${total.toFixed(2)}
+                        </p>
+                        {unitPrice > 0 && (
+                          <span className="text-[10px] text-muted-foreground mt-0.5 whitespace-nowrap">
+                            ${unitPrice} × {qty} unit{qty !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Middle Row: Tags + Site */}
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-bold text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded uppercase tracking-wider">
+                          {item.type?.toLowerCase()}
+                        </span>
+                        {item.year && (
+                          <span className="text-[10px] text-muted-foreground font-medium">
+                            {item.year}
+                          </span>
+                        )}
+                      </div>
+                      {siteName && (
+                        <span className="flex items-center gap-1.5 text-[10px] bg-muted/50 text-muted-foreground px-2 py-0.5 rounded border border-border/40 font-medium whitespace-nowrap">
+                          <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+                          {siteName}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Bottom Row: Media Flags */}
+                    <div className="flex items-center gap-1.5 flex-wrap pt-2.5 border-t border-border/40">
+                      <MediaFlag label="Main" ok={hasMainMedia} />
+                      <MediaFlag label="Gallery" ok={hasGallery} />
+                      <MediaFlag label="Thumb" ok={hasThumb} />
+                      <MediaFlag label="Source" ok={hasSource} />
+                    </div>
                   </div>
-                </div>
-
-                {/* Price */}
-                <div className="mb-3">
-                  {unitPrice > 0 ? (
-                    <>
-                      <p className="text-lg font-bold text-green-500 leading-none">${total.toFixed(2)}</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">${unitPrice} × {qty} unit{qty !== 1 ? 's' : ''}</p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">{qty} unit{qty !== 1 ? 's' : ''} sold</p>
-                  )}
-                </div>
-
-                {/* Footer: date + site */}
-                <div className="flex items-center justify-between gap-2">
-                  {item.soldAt ? (
-                    <span className="text-[11px] text-muted-foreground">
-                      {item.soldAt ? formatDisplayDate(item.soldAt) : '-'}
-                    </span>
-                  ) : <span />}
-                  {siteName && (
-                    <span className="flex items-center gap-1 text-[10px] bg-muted/60 text-muted-foreground px-1.5 py-0.5 rounded-full truncate max-w-[40%]">
-                      <MapPin className="w-2.5 h-2.5 shrink-0" />
-                      {siteName}
-                    </span>
-                  )}
                 </div>
               </div>
             );
           })}
         </div>
+
 
         {showLegacyItems && legacyTotalItems > LEGACY_ITEMS_PAGE_SIZE && (
           <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -2407,9 +2426,8 @@ export function InventoryDisplay({
                   <div className="min-w-0 flex-1 flex items-baseline gap-2">
                     <span className="text-base font-semibold leading-tight truncate">{item.name}</span>
                     <span
-                      className={`text-sm shrink-0 truncate max-w-[min(40%,7rem)] ${
-                        item.collection ? 'text-muted-foreground' : 'text-rose-500/80'
-                      }`}
+                      className={`text-sm shrink-0 truncate max-w-[min(40%,7rem)] ${item.collection ? 'text-muted-foreground' : 'text-rose-500/80'
+                        }`}
                     >
                       {item.collection ? getCollectionLabel(item.collection) : 'No collection'}
                     </span>
@@ -2424,9 +2442,8 @@ export function InventoryDisplay({
                   </span>
 
                   <span
-                    className={`hidden md:inline shrink-0 min-w-[2.25rem] text-right text-xs tabular-nums ${
-                      item.year != null ? 'text-muted-foreground' : 'text-rose-500/80'
-                    }`}
+                    className={`hidden md:inline shrink-0 min-w-[2.25rem] text-right text-xs tabular-nums ${item.year != null ? 'text-muted-foreground' : 'text-rose-500/80'
+                      }`}
                   >
                     {item.year ?? 'missing'}
                   </span>
@@ -2511,9 +2528,8 @@ export function InventoryDisplay({
                     <div className="flex flex-col gap-1 min-[380px]:flex-row min-[380px]:items-baseline min-[380px]:justify-between min-[380px]:gap-2">
                       <span className="truncate text-lg font-semibold leading-snug tracking-tight">{artwork.name}</span>
                       <span
-                        className={`shrink-0 truncate text-sm min-[380px]:max-w-[45%] min-[380px]:text-right ${
-                          artwork.collection ? 'text-muted-foreground' : 'text-rose-500/80'
-                        }`}
+                        className={`shrink-0 truncate text-sm min-[380px]:max-w-[45%] min-[380px]:text-right ${artwork.collection ? 'text-muted-foreground' : 'text-rose-500/80'
+                          }`}
                       >
                         {artwork.collection ? getCollectionLabel(artwork.collection) : 'No collection'}
                       </span>
@@ -2788,7 +2804,7 @@ export function InventoryDisplay({
                   {/* Col 3: divider + stock ring + price (vertically centered as a stack) */}
                   <div className="flex flex-col items-end justify-center gap-4 border-t border-border/60 pt-3 sm:min-w-[5.75rem] sm:border-t-0 sm:border-l sm:border-border/60 sm:pl-4 sm:pt-0">
                     <StockEnergyRing qty={totalQty} target={target} />
-                    <span className="inline-flex items-center rounded-full border border-orange-500/55 bg-zinc-950/95 px-3 py-1 text-sm font-semibold text-orange-500 shadow-[0_0_18px_-3px_rgba(249,115,22,0.45)] tabular-nums dark:bg-black/60">
+                    <span className="inline-flex items-center rounded-full border border-border bg-secondary/50 px-3 py-1 text-sm font-semibold text-foreground tabular-nums">
                       {formatCurrency(print.price)}
                     </span>
                   </div>

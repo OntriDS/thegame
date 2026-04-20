@@ -21,6 +21,8 @@ import {
   getItemsBySourceTaskId as repoGetItemsBySourceTaskId,
   getItemsBySourceRecordId as repoGetItemsBySourceRecordId,
   getItemsByType as repoGetItemsByType,
+  getItemsBySubType as repoGetItemsBySubType,
+  countItems as repoCountItems,
   getActiveItems as repoGetActiveItems,
   getLegacyItems as repoGetLegacyItems
 } from './repositories/item.repo';
@@ -914,6 +916,14 @@ export async function getItemsByType(itemTypes: string | string[]): Promise<Item
     ? itemTypes.map(t => t as ItemType)
     : (itemTypes as ItemType);
   return await repoGetItemsByType(types);
+}
+
+export async function getItemsBySubType(subItemTypes: string | string[]): Promise<Item[]> {
+  return await repoGetItemsBySubType(subItemTypes);
+}
+
+export async function countItems(types?: string | string[], subTypes?: string | string[]): Promise<number> {
+  return await repoCountItems(types, subTypes);
 }
 
 export async function removeItem(id: string): Promise<void> {

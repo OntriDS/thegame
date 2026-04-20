@@ -8,6 +8,9 @@ import { Task, Item, Character, Player, Site, Sale } from '@/types/entities';
 import { ItemStatus, TaskType, TaskStatus, TaskPriority, ItemType, ItemCategory } from '@/types/enums';
 import { logger } from '@/lib/utils/logger';
 
+const DEFAULT_LIST_LIMIT = 50;
+const MAX_LIST_LIMIT = 200;
+
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
@@ -72,6 +75,20 @@ export interface MCPTool {
   inputSchema: any;
   handler: (args: any) => Promise<any>;
   metadata?: ToolMetadata;
+}
+
+function parseStringArrayFilter(value: unknown): string[] | undefined | null {
+  if (value === undefined) return undefined;
+  if (typeof value === 'string') {
+    const parsed = value.trim();
+    return parsed ? [parsed] : [];
+  }
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === 'string' ? item.trim() : String(item || '').trim()))
+      .filter((item) => item.length > 0);
+  }
+  return null;
 }
 
 export class MCPServer {
@@ -263,6 +280,111 @@ export class MCPServer {
         }
         return items;
       }
+    });
+
+    this.registerTool({
+      name: 'get_items_by_category',
+      description: 'Get items filtered by item type and/or sub-item type.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          types: {
+            anyOf: [
+              { type: 'string', description: 'Single ItemType value' },
+              { type: 'array', items: { type: 'string' }, description: 'One or more ItemType values' },
+            ],
+          },
+          subTypes: {
+            anyOf: [
+              { type: 'string', description: 'Single item subItemType value' },
+              { type: 'array', items: { type: 'string' }, description: 'One or more item subItemType values' },
+            ],
+          },
+          limit: { type: 'number', description: 'Maximum number of items to return' },
+          offset: { type: 'number', description: 'Pagination offset' },
+        },
+        required: ['limit'],
+      },
+      handler: async (args) => {
+        const types = parseStringArrayFilter(args.types);
+        const subTypes = parseStringArrayFilter(args.subTypes);
+        if (types === null) {
+          throw new Error('`types` must be a string or string array.');
+        }
+        if (subTypes === null) {
+          throw new Error('`subTypes` must be a string or string array.');
+        }
+
+        const rawLimit = Number(args.limit);
+        const rawOffset = Number(args.offset);
+        const limit =
+          Number.isFinite(rawLimit) && rawLimit > 0
+            ? Math.min(Math.floor(rawLimit), MAX_LIST_LIMIT)
+            : DEFAULT_LIST_LIMIT;
+        const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0;
+        let items: Awaited<ReturnType<typeof DataStore.getAllItems>> = [];
+        if (types !== undefined && subTypes !== undefined) {
+          if (types.length === 0 || subTypes.length === 0) {
+            items = [];
+          } else {
+            const byTypes = await DataStore.getItemsByType(types);
+            const bySubTypes = await DataStore.getItemsBySubType(subTypes);
+            const subTypeIdSet = new Set(bySubTypes.map((item) => item.id));
+            items = byTypes.filter((item) => subTypeIdSet.has(item.id));
+          }
+        } else if (types !== undefined) {
+          items = await DataStore.getItemsByType(types);
+        } else if (subTypes !== undefined) {
+          items = await DataStore.getItemsBySubType(subTypes);
+        } else {
+          items = await DataStore.getAllItems();
+        }
+
+        const slice = items.slice(offset, offset + limit);
+
+        return {
+          items: slice,
+          count: slice.length,
+          total: items.length,
+          offset,
+          limit,
+          hasMore: offset + limit < items.length,
+        };
+      },
+    });
+
+    this.registerTool({
+      name: 'get_item_counts',
+      description: 'Get matching item count by item type and/or sub-item type.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          types: {
+            anyOf: [
+              { type: 'string', description: 'Single ItemType value' },
+              { type: 'array', items: { type: 'string' }, description: 'One or more ItemType values' },
+            ],
+          },
+          subTypes: {
+            anyOf: [
+              { type: 'string', description: 'Single item subItemType value' },
+              { type: 'array', items: { type: 'string' }, description: 'One or more item subItemType values' },
+            ],
+          },
+        },
+      },
+      handler: async (args) => {
+        const types = parseStringArrayFilter(args.types);
+        const subTypes = parseStringArrayFilter(args.subTypes);
+        if (types === null) {
+          throw new Error('`types` must be a string or string array.');
+        }
+        if (subTypes === null) {
+          throw new Error('`subTypes` must be a string or string array.');
+        }
+        const count = await DataStore.countItems(types, subTypes);
+        return { count };
+      },
     });
 
     this.registerTool({
