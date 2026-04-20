@@ -2489,10 +2489,7 @@ export function InventoryDisplay({
 
                   <div className="min-w-0 flex-1 flex items-baseline gap-2">
                     <span className="text-base font-semibold leading-tight truncate">{item.name}</span>
-                    <span
-                      className={`text-sm shrink-0 truncate max-w-[min(40%,7rem)] ${item.collection ? 'text-muted-foreground' : 'text-rose-500/80'
-                        }`}
-                    >
+                    <span className="text-sm shrink-0 truncate max-w-[min(40%,7rem)] text-muted-foreground">
                       {item.collection ? getCollectionLabel(item.collection) : 'No collection'}
                     </span>
                   </div>
@@ -2880,7 +2877,7 @@ export function InventoryDisplay({
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 text-sm leading-snug text-muted-foreground">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-                        <span className={print.collection ? '' : 'text-rose-500/80'}>
+                        <span className="text-muted-foreground">
                           {print.collection ? getCollectionLabel(print.collection) : 'No collection'}
                         </span>
                         <span className="text-muted-foreground/35">·</span>
