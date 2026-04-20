@@ -2275,7 +2275,7 @@ export function InventoryDisplay({
                         {item.name}
                       </p>
                       {showPrice && (
-                        <span className="inline-flex items-center rounded-full border border-border bg-secondary/70 px-3 py-1 text-mdfont-bold text-foreground tabular-nums shadow-sm whitespace-nowrap">
+                        <span className="inline-flex items-center rounded-full border border-border bg-secondary/70 px-3 py-1 text-md font-bold text-foreground tabular-nums shadow-sm whitespace-nowrap">
                           {formatCurrency(total)}
                         </span>
                       )}
