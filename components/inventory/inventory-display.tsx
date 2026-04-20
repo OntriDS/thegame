@@ -2227,6 +2227,7 @@ export function InventoryDisplay({
             const qty = item.quantitySold || 0;
             const unitPrice = item.price || 0;
             const total = item.value || (unitPrice * qty);
+            const showPrice = total > 0;
             
             // Subtype & Icon Resolution
             const itemTypeBase = item.type?.toLowerCase();
@@ -2273,10 +2274,12 @@ export function InventoryDisplay({
                         {item.name}
                       </p>
                       <div className="flex flex-col items-end shrink-0">
-                        <p className="text-xl font-black text-foreground leading-none">
-                          ${total.toFixed(2)}
-                        </p>
-                        {unitPrice > 0 && (
+                        {showPrice && (
+                          <p className="text-xl font-black text-foreground leading-none">
+                            ${total.toFixed(2)}
+                          </p>
+                        )}
+                        {showPrice && unitPrice > 0 && (
                           <span className="text-[10px] text-muted-foreground mt-1 whitespace-nowrap">
                             ${unitPrice} × {qty} unit{qty !== 1 ? 's' : ''}
                           </span>
@@ -2292,6 +2295,11 @@ export function InventoryDisplay({
                       {collectionLabel && (
                         <span className="text-[10px] text-muted-foreground/80 font-medium italic">
                           {collectionLabel}
+                        </span>
+                      )}
+                      {item.year != null && (
+                        <span className="text-[10px] text-muted-foreground/80 font-medium">
+                          Year: {item.year}
                         </span>
                       )}
                     </div>
