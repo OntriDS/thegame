@@ -93,6 +93,7 @@ function CharactersPageContent() {
         sortOrder: sortOption.endsWith('asc') ? 'asc' : 'desc',
         page: safePage,
         pageSize,
+        _t: Date.now(), // Force cache bust
       });
 
       if (requestId !== lastRequestId.current) return;

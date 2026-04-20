@@ -145,25 +145,9 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
             setContactEmail(character?.contactEmail || '');
           }
 
-          setDescription(character?.description || '');
+          setDescription(character.description || '');
           const normalizedRoles = normalizeCharacterRoles(character?.roles || []);
           let initialRoles = normalizedRoles;
-          if (character.id && !normalizedRoles.includes(CharacterRole.PARTNER)) {
-            try {
-              const characterLinks = await ClientAPI.getLinksFor({
-                type: EntityType.CHARACTER,
-                id: character.id,
-              });
-              const hasContractLink = characterLinks?.some(
-                (link: { linkType?: string }) => link?.linkType === LinkType.CONTRACT_CHARACTER
-              );
-              if (hasContractLink) {
-                initialRoles = normalizeCharacterRoles([...initialRoles, CharacterRole.PARTNER]);
-              }
-            } catch (error) {
-              console.warn('Could not resolve contract links for role inference:', error);
-            }
-          }
 
           setRoles(initialRoles);
           setPurchasedAmount(character?.purchasedAmount ?? 0);
@@ -274,7 +258,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
       const newCharacter: Character = {
         id: character?.id || draftId.current,
         name: name?.trim() || 'Unnamed Character',
-        description: description?.trim() || undefined,
+        description: description?.trim() || '',
         createdAt: character?.createdAt || new Date(),
         updatedAt: new Date(),
         isActive: character?.isActive ?? true,  // Character is active by default

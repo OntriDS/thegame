@@ -59,8 +59,10 @@ export default function CharacterSitesSubmodal({
             const allSites = await ClientAPI.getSites();
             setAllSiteOptions(allSites);
 
-            // Filter by link IDs only (Links System is source of truth)
-            const mySites = allSites.filter((site: Site) => siteIds.has(site.id));
+            // Link IDs combined with property ownership
+            const mySites = allSites.filter((site: Site) => 
+                site.ownerId === characterId || siteIds.has(site.id)
+            );
             setOwnedSites(mySites);
 
         } catch (error) {

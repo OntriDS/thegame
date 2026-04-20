@@ -183,7 +183,7 @@ export function InventoryDisplay({
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set(['own', 'consignment']));
 
   // Sold Items Sort state
-  const [soldItemsSortOption, setSoldItemsSortOption] = useState<'date-desc' | 'date-asc' | 'price-desc' | 'price-asc' | 'name-asc' | 'name-desc' | 'type-asc' | 'site-asc'>('date-desc');
+  const [soldItemsSortOption, setSoldItemsSortOption] = useState<'date-desc' | 'date-asc' | 'price-desc' | 'price-asc' | 'name-asc' | 'name-desc' | 'type-asc' | 'subtype-asc' | 'site-asc'>('date-desc');
   const [soldItemsSearchQuery, setSoldItemsSearchQuery] = useState('');
   const [soldItemsSearchResults, setSoldItemsSearchResults] = useState<Item[]>([]);
   const [soldItemsSearchAllMatches, setSoldItemsSearchAllMatches] = useState<Item[]>([]);
@@ -2062,6 +2062,8 @@ export function InventoryDisplay({
           return b.name.localeCompare(a.name);
         case 'type-asc':
           return (a.type || '').localeCompare(b.type || '');
+        case 'subtype-asc':
+          return (a.subItemType || '').localeCompare(b.subItemType || '');
         case 'site-asc':
           const siteA = a.stock?.[0]?.siteId || '';
           const siteB = b.stock?.[0]?.siteId || '';
@@ -2192,6 +2194,7 @@ export function InventoryDisplay({
                   <SelectItem value="name-asc">Name A-Z</SelectItem>
                   <SelectItem value="name-desc">Name Z-A</SelectItem>
                   <SelectItem value="type-asc">Item Type</SelectItem>
+                  <SelectItem value="subtype-asc">Item Subtype</SelectItem>
                   <SelectItem value="site-asc">Site</SelectItem>
                 </SelectContent>
               </Select>
@@ -2268,69 +2271,63 @@ export function InventoryDisplay({
                   </div>
 
                   {/* Right: Content */}
-                  <div className="flex-1 min-w-0">
-                    {/* Top Row: Title + Price Badge */}
-                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                  <div className="flex-1 min-w-0 flex flex-col">
+                    {/* Row 1: Title + Big Price Badge */}
+                    <div className="flex items-start justify-between gap-2 mb-1">
                       <p className="font-bold text-base leading-tight truncate flex-1" title={item.name}>
                         {item.name}
                       </p>
                       {showPrice && (
-                        <span className="inline-flex items-center rounded-full border border-border bg-secondary/70 px-3 py-1 text-md font-bold text-foreground tabular-nums shadow-sm whitespace-nowrap">
+                        <span className="inline-flex items-center rounded-full border border-border bg-secondary/80 px-2.5 py-0.5 text-md font-bold text-foreground tabular-nums shadow-sm whitespace-nowrap">
                           {formatCurrency(total)}
                         </span>
                       )}
                     </div>
 
-                    {/* Second Row: Subtype & Unit Calculation */}
+                    {/* Row 2: Subtype & Unit Calculation */}
                     <div className="flex items-center justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded uppercase tracking-wider">
+                       <span className="text-[9px] font-bold text-muted-foreground bg-secondary/80 px-1.5 py-0.5 rounded uppercase tracking-wider">
                           {subtypeLabel}
                         </span>
-                      </div>
-                      {showPrice && unitPrice > 0 && (
-                        <p className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-wider">
-                          {formatCurrency(unitPrice)} × {qty} unit{qty !== 1 ? 's' : ''}
-                        </p>
-                      )}
+                        {showPrice && unitPrice > 0 && (
+                          <p className="text-[10px] text-muted-foreground/60 font-black uppercase tracking-wider tabular-nums">
+                            {formatCurrency(unitPrice)} × {qty} <span className="text-[9px] font-bold opacity-70">UNIT{qty !== 1 ? 'S' : ''}</span>
+                          </p>
+                        )}
                     </div>
 
-                    {/* Third Row: Combined Metadata (Station, Dims, Collection, etc) */}
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-3 text-[11px] text-muted-foreground font-medium">
+                    {/* Row 3: Combined Metadata (Station, Dims, Collection, etc) */}
+                    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 mb-auto text-[10px] text-muted-foreground font-medium">
                       {item.station && (
-                        <span className="text-[10px] font-bold text-muted-foreground bg-secondary/40 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                        <span className="text-[9px] font-bold text-muted-foreground bg-secondary/40 px-1 py-0.5 rounded uppercase tracking-wider">
                           {item.station}
                         </span>
                       )}
-                      {(item.station && (dimsLabel || collectionLabel || item.year || item.size)) && (
-                        <span className="text-muted-foreground/35">·</span>
-                      )}
                       {dimsLabel && (
                         <>
-                          <span className="flex items-center gap-1">
+                          {(item.station) && <span className="text-muted-foreground/35">·</span>}
+                          <span className="flex items-center gap-1 font-bold text-foreground/70">
                             {dimsLabel}
                           </span>
-                          {(collectionLabel || item.year || item.size) && <span className="text-muted-foreground/35">·</span>}
                         </>
                       )}
                       {collectionLabel && (
                         <>
-                          <span>{collectionLabel}</span>
-                          {(item.year || item.size) && <span className="text-muted-foreground/35">·</span>}
+                          {(item.station || dimsLabel) && <span className="text-muted-foreground/35">·</span>}
+                          <span className="italic">{collectionLabel}</span>
                         </>
                       )}
                       {item.year != null && (
                         <>
+                          {(item.station || dimsLabel || collectionLabel) && <span className="text-muted-foreground/35">·</span>}
                           <span>{item.year}</span>
-                          {item.size && <span className="text-muted-foreground/35">·</span>}
                         </>
                       )}
-                      {item.size && <span>Model: {item.size}</span>}
                     </div>
 
-                    {/* Bottom Row: Site + Media Flags */}
-                    <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-border/40">
-                      <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Row 4: Site + Media Flags */}
+                    <div className="flex items-center justify-between gap-2 pt-2 mt-2 border-t border-border/40">
+                      <div className="flex items-center gap-1 flex-wrap">
                         <MediaFlag label="Main" ok={hasMainMedia} />
                         <MediaFlag label="Gallery" ok={hasGallery} />
                         <MediaFlag label="Thumb" ok={hasThumb} />
@@ -2338,7 +2335,7 @@ export function InventoryDisplay({
                       </div>
                       
                       {siteName && (
-                        <span className="flex items-center gap-1.5 text-[10px] bg-muted/50 text-muted-foreground px-2 py-0.5 rounded border border-border/40 font-medium whitespace-nowrap">
+                        <span className="flex items-center gap-1 text-[9px] bg-muted/40 text-muted-foreground/80 px-1.5 py-0.5 rounded border border-border/30 font-bold whitespace-nowrap uppercase tracking-tighter">
                           <MapPin className="w-2.5 h-2.5 opacity-60" />
                           {siteName}
                         </span>

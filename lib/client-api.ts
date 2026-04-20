@@ -40,6 +40,7 @@ export interface GetCharacterDirectoryParams {
   page?: number;
   pageSize?: number;
   filter?: 'special';
+  _t?: number;
 }
 
 export interface LegacyItemsPageResponse {
@@ -420,6 +421,10 @@ export const ClientAPI = {
     }
     if (typeof params.pageSize === 'number') {
       searchParams.set('pageSize', String(params.pageSize));
+    }
+
+    if (params._t) {
+      searchParams.set('_t', String(params._t));
     }
 
     const res = await fetch(`/api/characters?${searchParams.toString()}`);

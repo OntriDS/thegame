@@ -134,9 +134,13 @@ export async function GET(req: NextRequest) {
 
   const isLegacyTab = statusFilter === ItemStatus.LEGACY;
 
-  if (isLegacyTab) {
-    if (searchQuery) {
-      items = items.filter(item => (item.name || '').toLowerCase().includes(searchQuery));
+  // 5. Sorting and Pagination
+  if (true) { // Apply sorting to all requests
+    if (searchQuery && !isLegacyTab) {
+       items = items.filter(item => 
+        (item.name || '').toLowerCase().includes(searchQuery) ||
+        (item.description || '').toLowerCase().includes(searchQuery)
+      );
     }
 
     items = [...items].sort((a, b) => {
@@ -149,6 +153,8 @@ export async function GET(req: NextRequest) {
           return (b.name || '').localeCompare(a.name || '');
         case 'type-asc':
           return (a.type || '').localeCompare(b.type || '');
+        case 'subtype-asc':
+          return (a.subItemType || '').localeCompare(b.subItemType || '');
         case 'site-asc':
           return ((a.stock?.[0]?.siteId || '')).localeCompare((b.stock?.[0]?.siteId || ''));
         case 'price-asc':
@@ -163,9 +169,9 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    if (typeof page === 'number' && Number.isFinite(page) && typeof pageSize === 'number' && Number.isFinite(pageSize)) {
-      const normalizedPage = Math.max(1, page);
-      const normalizedPageSize = Math.max(1, Math.min(100, pageSize));
+    if (pageParam || pageSizeParam || isLegacyTab) {
+      const normalizedPage = Math.max(1, page || 1);
+      const normalizedPageSize = Math.max(1, Math.min(100, pageSize || 50));
       const total = items.length;
       const totalPages = Math.max(1, Math.ceil(total / normalizedPageSize));
       const pagedItems = items.slice(

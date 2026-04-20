@@ -71,11 +71,17 @@ export default function CharacterInventorySubmodal({
       });
 
       // Fetch items and sites
-      const allItems = await ClientAPI.getItems();
+      const allItems = await ClientAPI.getItems(undefined, undefined, undefined, 'all');
       const allSites = await ClientAPI.getSites();
 
-      const items = allItems.filter((item: Item) => itemIds.has(item.id));
-      const sites = allSites.filter((site: Site) => siteIds.has(site.id));
+      // Combine property-based ownership and link-based ownership
+      const items = allItems.filter((item: Item) => 
+        item.ownerCharacterId === characterId || itemIds.has(item.id)
+      );
+      
+      const sites = allSites.filter((site: Site) => 
+        site.ownerId === characterId || siteIds.has(site.id)
+      );
 
       setOwnedItems(items);
       setOwnedSites(sites);
