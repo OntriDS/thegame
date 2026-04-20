@@ -8,6 +8,7 @@ import { canGrantSpecialRole, getRoleGrantDenialReason } from '@/lib/game-mechan
 import { getAllCharacters, getCharacterById, upsertCharacter, getAllFinancials, getFinancialById } from '@/data-store/datastore';
 import type { Character } from '@/types/entities';
 import { getLinksFor } from '@/links/link-registry';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -156,7 +157,8 @@ const parseCharacterRoles = (rawRoles: unknown, label: string): CharacterRole[] 
       throw new Error(`${label} roles must contain role strings.`);
     }
 
-    const role = rawRole.trim();
+    // NORMALIZE: Ensure we compare and store lowercase roles
+    const role = rawRole.trim().toLowerCase();
     if (!role) continue;
 
     if (!VALID_CHARACTER_ROLES.has(role)) {
@@ -333,9 +335,9 @@ export async function POST(req: NextRequest) {
       roles: normalizedIncomingRoles,
       id: body.id || uuid(),
       links: body.links || [],
-      createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
-      updatedAt: new Date(),
-      lastActiveAt: body.lastActiveAt ? new Date(body.lastActiveAt) : new Date(),
+      createdAt: body.createdAt ? new Date(body.createdAt) : getUTCNow(),
+      updatedAt: getUTCNow(),
+      lastActiveAt: body.lastActiveAt ? new Date(body.lastActiveAt) : getUTCNow(),
     };
     const saved = await upsertCharacter(character);
     return NextResponse.json(saved);

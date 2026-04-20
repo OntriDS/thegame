@@ -27,6 +27,7 @@ import { ClientAPI } from '@/lib/client-api';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 import DatesSubmodal from './submodals/dates-submodal';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import OwnerSubmodal from './submodals/owner-submodal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
@@ -1007,9 +1008,9 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         targetAmount: targetAmount && !isNaN(parseFloat(targetAmount)) ? parseFloat(targetAmount) : undefined,
         ownerCharacterId: ownerCharacterId || null,
         // Preserve creation date if editing, otherwise new date
-        createdAt: (item || existingItems.find(i => i.id === selectedItemId))?.createdAt || new Date(),
-        updatedAt: new Date(),
-        soldAt: status === ItemStatus.SOLD ? (localSoldAt ?? item?.soldAt ?? new Date()) : undefined,
+        createdAt: (item || existingItems.find(i => i.id === selectedItemId))?.createdAt || getUTCNow(),
+        updatedAt: getUTCNow(),
+        soldAt: status === ItemStatus.SOLD ? (localSoldAt ?? item?.soldAt ?? getUTCNow()) : undefined,
         links: (item || existingItems.find(i => i.id === selectedItemId))?.links || [],  // preserve embedded mirror
       };
 

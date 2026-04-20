@@ -13,6 +13,7 @@
  */
 
 import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Account, Settlement, AISession, Business, Contract, SummaryTotals } from '@/types/entities';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 import type { AISystemPreset } from '@/lib/ai/system-presets';
 import { ItemStatus, type CharacterRole } from '@/types/enums';
 
@@ -161,7 +162,7 @@ export const ClientAPI = {
   // ============================================================================
   // ITEMS - Item management operations
   // ============================================================================
-  getItems: async (itemTypes?: string | string[], month?: number, year?: number, status?: string, siteId?: string): Promise<Item[]> => {
+  getItems: async (itemTypes?: string | string[], month?: number, year?: number, status?: string, siteId?: string, ownerId?: string): Promise<Item[]> => {
     let base = '/api/items';
     const params = new URLSearchParams();
     if (itemTypes) {
@@ -172,6 +173,7 @@ export const ClientAPI = {
     if (typeof year === 'number') params.append('year', String(year));
     if (status) params.append('status', status);
     if (siteId) params.append('siteId', siteId);
+    if (ownerId) params.append('ownerId', ownerId);
 
     const url = params.toString() ? `${base}?${params.toString()}` : base;
     const res = await fetch(url);

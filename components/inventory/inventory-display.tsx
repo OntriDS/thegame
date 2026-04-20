@@ -362,6 +362,8 @@ export function InventoryDisplay({
                   return (b.name || '').localeCompare(a.name || '');
                 case 'type-asc':
                   return (a.type || '').localeCompare(b.type || '');
+                case 'subtype-asc':
+                  return (a.subItemType || '').localeCompare(b.subItemType || '');
                 case 'site-asc':
                   return (a.stock?.[0]?.siteId || '').localeCompare(b.stock?.[0]?.siteId || '');
                 case 'price-asc':
@@ -783,6 +785,8 @@ export function InventoryDisplay({
         return Film;
       case DigitalSubType.DIGITIZATION:
         return Scan;
+      case DigitalSubType.THREE_D_MODEL:
+        return Box;
       default:
         return ImageIcon;
     }
@@ -798,6 +802,8 @@ export function InventoryDisplay({
         return 'Animation';
       case DigitalSubType.DIGITIZATION:
         return 'Digitization';
+      case DigitalSubType.THREE_D_MODEL:
+        return '3D Model';
       default:
         return 'Digital';
     }
@@ -2249,7 +2255,7 @@ export function InventoryDisplay({
 
             const collectionLabel = item.collection ? getCollectionLabel(item.collection) : null;
             const dimsLabel = (item.dimensions && (item.dimensions.width > 0 || item.dimensions.height > 0)) 
-              ? `${item.dimensions.width}x${item.dimensions.height} cm` 
+              ? `${item.dimensions.width}×${item.dimensions.height} cm` 
               : null;
             const sizeLabel = item.size ? `Model: ${item.size}` : null;
 
@@ -2272,31 +2278,31 @@ export function InventoryDisplay({
 
                   {/* Right: Content */}
                   <div className="flex-1 min-w-0 flex flex-col">
-                    {/* Row 1: Title + Big Price Badge */}
+                    {/* Row 1: Title + Big Price Badge (Adjusted size) */}
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <p className="font-bold text-base leading-tight truncate flex-1" title={item.name}>
                         {item.name}
                       </p>
                       {showPrice && (
-                        <span className="inline-flex items-center rounded-full border border-border bg-secondary/80 px-2.5 py-0.5 text-md font-bold text-foreground tabular-nums shadow-sm whitespace-nowrap">
+                        <span className="inline-flex items-center rounded-full border border-border bg-secondary/80 px-2 py-0.5 text-sm font-bold text-foreground tabular-nums shadow-sm whitespace-nowrap">
                           {formatCurrency(total)}
                         </span>
                       )}
                     </div>
 
-                    {/* Row 2: Subtype & Unit Calculation */}
+                    {/* Row 2: Subtype & Unit Calculation (Properly aligned) */}
                     <div className="flex items-center justify-between gap-2 mb-2">
-                       <span className="text-[9px] font-bold text-muted-foreground bg-secondary/80 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                        <span className="text-[9px] font-bold text-muted-foreground bg-secondary/80 px-1.5 py-0.5 rounded uppercase tracking-wider">
                           {subtypeLabel}
                         </span>
                         {showPrice && unitPrice > 0 && (
-                          <p className="text-[10px] text-muted-foreground/60 font-black uppercase tracking-wider tabular-nums">
-                            {formatCurrency(unitPrice)} × {qty} <span className="text-[9px] font-bold opacity-70">UNIT{qty !== 1 ? 'S' : ''}</span>
+                          <p className="text-[11px] text-muted-foreground/80 font-bold uppercase tracking-tight tabular-nums">
+                            {formatCurrency(unitPrice)} × {qty} <span className="text-[9px] opacity-70">U</span>
                           </p>
                         )}
                     </div>
 
-                    {/* Row 3: Combined Metadata (Station, Dims, Collection, etc) */}
+                    {/* Row 3: Combined Metadata (Station, Dims, Collection, Year) */}
                     <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 mb-auto text-[10px] text-muted-foreground font-medium">
                       {item.station && (
                         <span className="text-[9px] font-bold text-muted-foreground bg-secondary/40 px-1 py-0.5 rounded uppercase tracking-wider">
@@ -2321,6 +2327,12 @@ export function InventoryDisplay({
                         <>
                           {(item.station || dimsLabel || collectionLabel) && <span className="text-muted-foreground/35">·</span>}
                           <span>{item.year}</span>
+                        </>
+                      )}
+                      {sizeLabel && (
+                        <>
+                          {(item.station || dimsLabel || collectionLabel || item.year != null) && <span className="text-muted-foreground/35">·</span>}
+                          <span>{sizeLabel}</span>
                         </>
                       )}
                     </div>

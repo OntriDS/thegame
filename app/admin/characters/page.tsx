@@ -20,6 +20,7 @@ import { CharacterRole } from '@/types/enums';
 import { ROLE_COLORS } from '@/lib/constants/color-constants';
 import { ChevronLeft, ChevronRight, Mail, Phone, Plus, RefreshCw } from 'lucide-react';
 import { CharactersDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 
 type CharacterSortOption = 'name-asc' | 'name-desc' | 'role-asc' | 'role-desc';
 type SortByOption = {
@@ -93,7 +94,7 @@ function CharactersPageContent() {
         sortOrder: sortOption.endsWith('asc') ? 'asc' : 'desc',
         page: safePage,
         pageSize,
-        _t: Date.now(), // Force cache bust
+        _t: getUTCNow().getTime(), // Force cache bust
       });
 
       if (requestId !== lastRequestId.current) return;

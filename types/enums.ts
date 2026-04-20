@@ -353,7 +353,8 @@ export enum DigitalSubType {
   DIGITAL_ART = "digital-art",
   DIGITIZATION = "digitization",
   ANIMATION = "animation",
-  NFT = "nft"
+  NFT = "nft",
+  THREE_D_MODEL = "3d-model"
 }
 
 /** Artwork Item SubTypes */

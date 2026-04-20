@@ -10,17 +10,16 @@ const SPECIAL_ROLE_SET = new Set<CharacterRole>(
 );
 
 const normalizeCharacterRoleValue = (role: string): CharacterRole | undefined => {
-  const normalized = role.trim();
+  const normalized = role.trim().toLowerCase();
   return ROLE_LOOKUP.has(normalized) ? (normalized as CharacterRole) : undefined;
 };
 
 export function characterHasSpecialRole(
-  roles: readonly (CharacterRole | string | null | undefined)[] | undefined | null
+  roles: readonly (CharacterRole | string)[] | undefined | null
 ): boolean {
   if (!roles?.length) return false;
   return roles.some((rawRole) => {
-    if (typeof rawRole !== 'string') return false;
-    const role = normalizeCharacterRoleValue(rawRole);
+    const role = normalizeCharacterRole(rawRole);
     return !!role && SPECIAL_ROLE_SET.has(role);
   });
 }
@@ -44,13 +43,12 @@ export function normalizeCharacterRoles(
 
 export function filterRolesToSpecialOnly(
   roles: (CharacterRole | string)[] | undefined | null
-): string[] {
+): CharacterRole[] {
   if (!roles?.length) return [];
-  const seen = new Set<string>();
-  const out: string[] = [];
+  const seen = new Set<CharacterRole>();
+  const out: CharacterRole[] = [];
   for (const r of roles) {
-    if (typeof r !== 'string') continue;
-    const role = normalizeCharacterRoleValue(r);
+    const role = normalizeCharacterRole(r);
     if (!role || !SPECIAL_ROLE_SET.has(role) || seen.has(role)) {
       continue;
     }

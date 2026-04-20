@@ -31,6 +31,7 @@ export const SUBTYPE_LABEL: Record<string, string> = {
   [DigitalSubType.DIGITIZATION]: 'Digitization',
   [DigitalSubType.ANIMATION]: 'Animation',
   [DigitalSubType.NFT]: 'NFT',
+  [DigitalSubType.THREE_D_MODEL]: '3D Model',
   [ArtworkSubType.ACRYLIC_CANVAS]: 'Acrylic on Canvas',
   [ArtworkSubType.ACRYLIC_WOOD]: 'Acrylic on Wood',
   [ArtworkSubType.ASSEMBLAGE]: 'Assemblage',

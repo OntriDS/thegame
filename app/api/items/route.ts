@@ -2,7 +2,8 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { Item } from '@/types/entities';
-import { getAllItems, getItemsByType, upsertItem, getItemsForMonth, getActiveItems, getLegacyItems } from '@/data-store/datastore';
+import { getAllItems, getItemsByType, upsertItem, getItemsForMonth, getActiveItems, getLegacyItems, getItemsByOwnerId } from '@/data-store/datastore';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { ItemStatus } from '@/types/enums';
 import { isSoldStatus } from '@/lib/utils/status-utils';
@@ -26,6 +27,7 @@ export async function GET(req: NextRequest) {
   const pageSizeParam = searchParams.get('pageSize');
   const sortOption = searchParams.get('sort') || 'date-desc';
   const searchQuery = searchParams.get('search')?.trim().toLowerCase() || '';
+  const ownerId = searchParams.get('ownerId');
 
   const page = pageParam ? parseInt(pageParam, 10) : undefined;
   const pageSize = pageSizeParam ? parseInt(pageSizeParam, 10) : undefined;
@@ -48,9 +50,13 @@ export async function GET(req: NextRequest) {
 
   let items: Item[];
 
+  // Strategy 0: Owner-based fetching (High Priority for inventory)
+  if (ownerId) {
+    items = await getItemsByOwnerId(ownerId);
+  }
   // Strategy 1: Time-based fetching (Priority)
   // If we have a specific month, use the optimized month index
-  if (month && year) {
+  else if (month && year) {
     items = await getItemsForMonth(year, month);
   }
   // Strategy 2: Legacy fetching (Optimized)
@@ -201,8 +207,8 @@ export async function POST(req: NextRequest) {
       ...body,
       id: body.id || uuid(),
       links: body.links || [],
-      createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
-      updatedAt: new Date(),
+      createdAt: body.createdAt ? new Date(body.createdAt) : getUTCNow(),
+      updatedAt: getUTCNow(),
       lastRestockDate: body.lastRestockDate ? new Date(body.lastRestockDate) : undefined,
       soldAt: body.soldAt ? new Date(body.soldAt) : undefined,
     };

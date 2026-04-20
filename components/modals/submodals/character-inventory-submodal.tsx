@@ -70,20 +70,34 @@ export default function CharacterInventorySubmodal({
         }
       });
 
-      // Fetch items and sites
-      const allItems = await ClientAPI.getItems(undefined, undefined, undefined, 'all');
-      const allSites = await ClientAPI.getSites();
+      // Fetch items belonging to this character via index
+      // Strategy 0 in api/items/route.ts handles this efficiently
+      const itemsByOwner = await ClientAPI.getItems(undefined, undefined, undefined, undefined, undefined, characterId);
 
-      // Combine property-based ownership and link-based ownership
-      const items = allItems.filter((item: Item) => 
-        item.ownerCharacterId === characterId || itemIds.has(item.id)
-      );
+      // Fetch linked items for those not caught by the ownerCharacterId field
+      let linkedItems: Item[] = [];
+      if (itemIds.size > 0) {
+        // We still need to fetch these specifically if they aren't in itemsByOwner
+        // For simplicity and to avoid another global fetch, we check if they are already there
+        const alreadyFetchedIds = new Set(itemsByOwner.map(i => i.id));
+        const missingIds = Array.from(itemIds).filter(id => !alreadyFetchedIds.has(id));
+        
+        if (missingIds.length > 0) {
+          // Fetch missing individual items
+          const fetchedMissing = await Promise.all(
+            missingIds.map(id => ClientAPI.getItemById(id))
+          );
+          linkedItems = fetchedMissing.filter((i): i is Item => i !== null);
+        }
+      }
+
+      const allSites = await ClientAPI.getSites();
       
       const sites = allSites.filter((site: Site) => 
         site.ownerId === characterId || siteIds.has(site.id)
       );
 
-      setOwnedItems(items);
+      setOwnedItems([...itemsByOwner, ...linkedItems]);
       setOwnedSites(sites);
     } catch (error) {
       console.error('Failed to load inventory:', error);

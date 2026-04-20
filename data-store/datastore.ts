@@ -24,7 +24,8 @@ import {
   getItemsBySubType as repoGetItemsBySubType,
   countItems as repoCountItems,
   getActiveItems as repoGetActiveItems,
-  getLegacyItems as repoGetLegacyItems
+  getLegacyItems as repoGetLegacyItems,
+  getItemsByOwnerId as repoGetItemsByOwnerId
 } from './repositories/item.repo';
 import {
   upsertFinancial as repoUpsertFinancial,
@@ -870,6 +871,10 @@ export async function getActiveItems(): Promise<Item[]> {
 
 export async function getLegacyItems(): Promise<Item[]> {
   return await repoGetLegacyItems();
+}
+
+export async function getItemsByOwnerId(ownerId: string): Promise<Item[]> {
+  return await repoGetItemsByOwnerId(ownerId);
 }
 
 // Phase 6: Unified & Optimized Items fetching (Active + Archive)

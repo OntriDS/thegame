@@ -40,12 +40,11 @@ export async function createCharacterFromEntity(
     // The workflow only calls this when hasEffect('{entityType}:{id}:characterCreated') === false
     console.log(`[createCharacterFromEntity] Creating new character (Effect Registry confirmed no existing character)`);
     
-    const resolvedCustomerRole = customerRole || CharacterRole.CUSTOMER;
     const newCharacter: Character = {
-      id: `character-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `character-${getUTCNow().getTime()}-${Math.random().toString(36).substr(2, 9)}`,
       name: newCustomerName.trim(),
-      description: `${resolvedCustomerRole} character created from ${entityType}: ${entityName}`,
-      roles: [resolvedCustomerRole],
+      description: `${customerRole} character created from ${entityType}: ${entityName}`,
+      roles: [customerRole],
       inventory: [],
       achievementsCharacter: [],
       purchasedAmount: 0,

@@ -85,6 +85,20 @@ export async function getItemsBySourceRecordId(sourceRecordId: string): Promise<
 }
 
 /**
+ * Get items by ownerCharacterId using an index
+ * OPTIMIZED: For character inventory fetching
+ */
+export async function getItemsByOwnerId(ownerId: string): Promise<Item[]> {
+  const indexKey = buildEntityIndexKey(ENTITY, 'ownerCharacterId', ownerId);
+  const ids = await kvSMembers(indexKey);
+  if (ids.length === 0) return [];
+
+  const keys = ids.map(id => buildDataKey(ENTITY, id));
+  const items = await kvMGet<Item>(keys);
+  return items.filter((item): item is Item => item !== null && item !== undefined);
+}
+
+/**
  * Get items by type using an index
  * OPTIMIZED: Only loads items of specific type(s), not all items
  */
@@ -306,6 +320,18 @@ export async function upsertItem(item: Item): Promise<Item> {
     await kvSRem(oldSourceRecordIndexKey, item.id);
   }
 
+  // Maintain ownerCharacterId index
+  if (item.ownerCharacterId) {
+    const ownerIndexKey = buildEntityIndexKey(ENTITY, 'ownerCharacterId', item.ownerCharacterId);
+    await kvSAdd(ownerIndexKey, item.id);
+  }
+
+  // Clean up old ownerCharacterId index
+  if (previousItem?.ownerCharacterId && previousItem.ownerCharacterId !== item.ownerCharacterId) {
+    const oldOwnerIndexKey = buildEntityIndexKey(ENTITY, 'ownerCharacterId', previousItem.ownerCharacterId);
+    await kvSRem(oldOwnerIndexKey, item.id);
+  }
+
   return toSave;
 }
 
@@ -337,6 +363,10 @@ export async function deleteItem(id: string): Promise<void> {
     if (item.sourceRecordId) {
       const sourceRecordIndexKey = buildEntityIndexKey(ENTITY, 'sourceRecordId', item.sourceRecordId);
       await kvSRem(sourceRecordIndexKey, id);
+    }
+    if (item.ownerCharacterId) {
+      const ownerIndexKey = buildEntityIndexKey(ENTITY, 'ownerCharacterId', item.ownerCharacterId);
+      await kvSRem(ownerIndexKey, id);
     }
   }
 
