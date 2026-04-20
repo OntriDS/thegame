@@ -2245,7 +2245,9 @@ export function InventoryDisplay({
             }
 
             const collectionLabel = item.collection ? getCollectionLabel(item.collection) : null;
-            const dimsLabel = item.dimensions ? `${item.dimensions.width}x${item.dimensions.height} cm` : null;
+            const dimsLabel = (item.dimensions && (item.dimensions.width > 0 || item.dimensions.height > 0)) 
+              ? `${item.dimensions.width}x${item.dimensions.height} cm` 
+              : null;
             const sizeLabel = item.size ? `Model: ${item.size}` : null;
 
             const hasMainMedia = !!item.media?.main;
@@ -2267,63 +2269,64 @@ export function InventoryDisplay({
 
                   {/* Right: Content */}
                   <div className="flex-1 min-w-0">
-                    {/* Top Row: Title + Price (Larger) */}
-                    <div className="flex items-start justify-between gap-2 mb-1">
+                    {/* Top Row: Title + Price Badge */}
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
                       <p className="font-bold text-base leading-tight truncate flex-1" title={item.name}>
                         {item.name}
                       </p>
-                      <div className="flex items-end justify-end shrink-0">
-                        {showPrice && (
-                          <p className="text-sm font-medium text-foreground leading-none whitespace-nowrap text-right">
-                            {unitPrice > 0 ? `${formatCurrency(unitPrice)} × ${qty} unit${qty !== 1 ? 's' : ''} • ` : ''}
-                            <span className="font-bold text-base md:text-lg">{formatCurrency(total)}</span>
-                          </p>
-                        )}
-                      </div>
+                      {showPrice && (
+                        <span className="inline-flex items-center rounded-full border border-border bg-secondary/70 px-3 py-1 text-mdfont-bold text-foreground tabular-nums shadow-sm whitespace-nowrap">
+                          {formatCurrency(total)}
+                        </span>
+                      )}
                     </div>
 
-                    {/* Middle Row: Subtype & Collection */}
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2">
-                      <span className="text-[10px] font-bold text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded uppercase tracking-wider">
-                        {subtypeLabel}
-                      </span>
-                      {collectionLabel && (
-                        <span className="text-[10px] text-muted-foreground/80 font-medium italic">
-                          {collectionLabel}
+                    {/* Second Row: Subtype & Unit Calculation */}
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded uppercase tracking-wider">
+                          {subtypeLabel}
                         </span>
+                      </div>
+                      {showPrice && unitPrice > 0 && (
+                        <p className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-wider">
+                          {formatCurrency(unitPrice)} × {qty} unit{qty !== 1 ? 's' : ''}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Third Row: Combined Metadata (Station, Dims, Collection, etc) */}
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-3 text-[11px] text-muted-foreground font-medium">
+                      {item.station && (
+                        <span className="text-[10px] font-bold text-muted-foreground bg-secondary/40 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                          {item.station}
+                        </span>
+                      )}
+                      {(item.station && (dimsLabel || collectionLabel || item.year || item.size)) && (
+                        <span className="text-muted-foreground/35">·</span>
+                      )}
+                      {dimsLabel && (
+                        <>
+                          <span className="flex items-center gap-1">
+                            {dimsLabel}
+                          </span>
+                          {(collectionLabel || item.year || item.size) && <span className="text-muted-foreground/35">·</span>}
+                        </>
+                      )}
+                      {collectionLabel && (
+                        <>
+                          <span>{collectionLabel}</span>
+                          {(item.year || item.size) && <span className="text-muted-foreground/35">·</span>}
+                        </>
                       )}
                       {item.year != null && (
-                        <span className="text-[10px] text-muted-foreground/80 font-medium">
-                          Year: {item.year}
-                        </span>
+                        <>
+                          <span>{item.year}</span>
+                          {item.size && <span className="text-muted-foreground/35">·</span>}
+                        </>
                       )}
+                      {item.size && <span>Model: {item.size}</span>}
                     </div>
-
-                    {/* Station Row: Size (at beginning) & Station */}
-                    {(item.size || item.station) && (
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2">
-                        {item.size && (
-                          <span className="text-[10px] font-bold text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded uppercase tracking-wider">
-                            Size: {item.size}
-                          </span>
-                        )}
-                        {item.station && (
-                          <span className="text-[10px] font-bold text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded uppercase tracking-wider">
-                            {item.station}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Meta Row: Dimensions */}
-                    {dimsLabel && (
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-[11px] text-muted-foreground font-medium">
-                        <span className="flex items-center gap-1">
-                          <Box className="w-3 h-3 opacity-60" />
-                          {dimsLabel}
-                        </span>
-                      </div>
-                    )}
 
                     {/* Bottom Row: Site + Media Flags */}
                     <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-border/40">
@@ -2561,7 +2564,7 @@ export function InventoryDisplay({
               const Icon = getArtworkSubtypeIcon(artwork.subItemType);
               const totalQty = artwork.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0;
               const dims =
-                artwork.dimensions != null
+                (artwork.dimensions && (artwork.dimensions.width > 0 || artwork.dimensions.height > 0))
                   ? `${artwork.dimensions.width}×${artwork.dimensions.height} cm`
                   : null;
 
@@ -2592,7 +2595,12 @@ export function InventoryDisplay({
                       >
                         {getArtworkSubtypeLabel(artwork.subItemType)}
                       </span>
-                      {dims ? <span>{dims}</span> : <span className="italic text-muted-foreground/80">No dimensions</span>}
+                      {dims && (
+                        <>
+                          <span className="text-muted-foreground/35">·</span>
+                          <span>{dims}</span>
+                        </>
+                      )}
                       <span className="text-muted-foreground/35">·</span>
                       <span className={artwork.year != null ? '' : 'text-rose-500/80'}>{artwork.year ?? 'missing'}</span>
                       <span className="text-muted-foreground/35">·</span>
@@ -2799,7 +2807,7 @@ export function InventoryDisplay({
               const totalQty = print.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0;
               const target = print.targetAmount;
               const dims =
-                print.dimensions != null
+                (print.dimensions && (print.dimensions.width > 0 || print.dimensions.height > 0))
                   ? `${print.dimensions.width}×${print.dimensions.height} cm`
                   : null;
               const siteName = getPrimarySiteName(print);
@@ -2827,10 +2835,8 @@ export function InventoryDisplay({
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        {dims ? (
+                        {dims && (
                           <span className="text-sm text-muted-foreground">{dims}</span>
-                        ) : (
-                          <span className="text-sm italic text-rose-500/80">No dimensions</span>
                         )}
                         {print.keepInInventoryAfterSold && (
                           <>
