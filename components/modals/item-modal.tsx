@@ -659,7 +659,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     }
   }, [open, saveFormDataToStorage]);
 
-  // New items open blank; press Arrow Up in the name field to load last-saved draft from preferences.
+  // New items open blank; press Arrow Left in the name field to load last-saved draft from preferences.
   useEffect(() => {
     const prev = prevModalSessionRef.current;
     const hadItem = !!item;
@@ -1065,8 +1065,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                 <ItemNameField
                   value={name}
                   onChange={setName}
-                  placeholder="Item name (↑ loads last draft)"
-                  items={existingItems}
+                  placeholder="Item name (← loads last draft)"
+                    items={existingItems}
                   selectedItemId={selectedItemId}
                   onItemSelect={handleItemSelect}
                   isNewItem={isNameFieldNewItem}

@@ -126,7 +126,7 @@ export function ItemNameField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'ArrowUp' && onLoadLastSavedForm) {
+            if (e.key === 'ArrowLeft' && onLoadLastSavedForm) {
               e.preventDefault();
               onLoadLastSavedForm();
             }

@@ -2571,11 +2571,11 @@ export function InventoryDisplay({
             {artworkItems.map(artwork => {
               const accent = getArtworkSubtypeAccent(artwork.subItemType);
               const Icon = getArtworkSubtypeIcon(artwork.subItemType);
-              const totalQty = artwork.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0;
               const dims =
                 (artwork.dimensions && (artwork.dimensions.width > 0 || artwork.dimensions.height > 0))
                   ? `${artwork.dimensions.width}×${artwork.dimensions.height} cm`
                   : null;
+              const siteName = getPrimarySiteName(artwork);
 
               return (
                 <div
@@ -2589,15 +2589,12 @@ export function InventoryDisplay({
                     <Icon className="h-14 w-14 text-muted-foreground" aria-hidden />
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+                    {/* Row 1: Name */}
                     <div className="flex flex-col gap-1 min-[380px]:flex-row min-[380px]:items-baseline min-[380px]:justify-between min-[380px]:gap-2">
                       <span className="truncate text-lg font-semibold leading-snug tracking-tight">{artwork.name}</span>
-                      <span
-                        className={`shrink-0 truncate text-sm min-[380px]:max-w-[45%] min-[380px]:text-right ${artwork.collection ? 'text-muted-foreground' : 'text-rose-500/80'
-                          }`}
-                      >
-                        {artwork.collection ? getCollectionLabel(artwork.collection) : 'No collection'}
-                      </span>
                     </div>
+
+                    {/* Row 2: Sub Item Type (badge) / Dimensions / Year */}
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm leading-snug text-muted-foreground">
                       <span
                         className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-medium ${accent.pill}`}
@@ -2612,15 +2609,24 @@ export function InventoryDisplay({
                       )}
                       <span className="text-muted-foreground/35">·</span>
                       <span className={artwork.year != null ? '' : 'text-rose-500/80'}>{artwork.year ?? 'missing'}</span>
+                    </div>
+
+                    {/* Row 3: Site (badge) / Station / Collection */}
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs leading-snug text-muted-foreground">
+                      <span className="text-[9px] font-bold text-muted-foreground bg-secondary/80 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                        {siteName || 'No site'}
+                      </span>
                       <span className="text-muted-foreground/35">·</span>
                       <span className="max-w-full truncate" title={artwork.station}>
                         {artwork.station || '—'}
                       </span>
                       <span className="text-muted-foreground/35">·</span>
-                      <span className="max-w-full truncate" title={getPrimarySiteName(artwork) || undefined}>
-                        {getPrimarySiteName(artwork) || 'No site'}
+                      <span className="truncate">
+                        {artwork.collection ? getCollectionLabel(artwork.collection) : 'No collection'}
                       </span>
                     </div>
+
+                    {/* Row 4: Media Flags (Rest of the card as is) */}
                     <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                       <MediaFlag label="Main" ok={!!artwork.media?.main} />
                       <MediaFlag label="Gallery" ok={!!artwork.media?.gallery?.length} />
@@ -2628,9 +2634,12 @@ export function InventoryDisplay({
                       <MediaFlag label="Source" ok={!!artwork.sourceFileUrl} />
                     </div>
                   </div>
-                  <div className="flex shrink-0 flex-row items-center justify-between gap-3 border-t border-border/60 pt-3 tabular-nums sm:flex-col sm:items-end sm:justify-center sm:border-t-0 sm:border-l sm:pl-4 sm:pt-0">
-                    <span className="text-base font-bold">{totalQty}</span>
-                    <span className="text-sm text-muted-foreground">{formatCurrency(artwork.price)}</span>
+
+                  {/* Price: no decimals */}
+                  <div className="flex shrink-0 flex-row items-center justify-end gap-3 border-t border-border/60 pt-3 tabular-nums sm:flex-col sm:items-end sm:justify-center sm:border-t-0 sm:border-l sm:pl-4 sm:pt-0">
+                    <span className="text-2xl font-bold tracking-tighter text-foreground">
+                      ${Math.round(artwork.price)}
+                    </span>
                   </div>
                 </div>
               );
