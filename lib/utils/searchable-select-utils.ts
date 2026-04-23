@@ -148,7 +148,7 @@ export function createDistinctItemOptions(
     for (const item of items) {
         if (forSaleLinePicker) {
             if (item.status === ItemStatus.SOLD) continue;
-            if (item.status !== ItemStatus.FOR_SALE) continue;
+            if (item.status !== ItemStatus.FOR_SALE && item.status !== ItemStatus.CONSIGNMENT) continue;
         }
 
         const category = getCategoryForItemType(item.type);

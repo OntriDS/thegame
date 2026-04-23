@@ -377,22 +377,23 @@ export enum PrintSubType {
 export enum StickerSubType {
   BRILLIANT_WHITE = "brilliant-white",
   REFLECTIVE = "reflective",
-  MATE = "mate"
+  MATE = "mate",
+  DEPRECATED = "deprecated"
 }
 
 /** Merch Item SubTypes */
 export enum MerchSubType {
+  BACKPACK = "backpack",
+  BAG = "bag",
   MUG = "mug",
+  PRINTS_INT_GICLEE_BACKFRAMED = "prints-giclee-framed-int",
+  RASHGUARD = "rashguard",
+  SHOES = "shoes",
+  SPORTS_BRA = "sports-bra",
+  STICKERS_INT_KISSCUT = "stickers-kisscut-int",
   T_SHIRT = "t-shirt",
   T_SHIRT_ALLOVER = "t-shirt-allover",
   T_SHIRT_TANKTOP = "t-shirt-tanktop",
-  BAG = "bag",
-  BACKPACK = "backpack",
-  SHOES = "shoes",
-  RASHGUARD = "rashguard",
-  SPORTS_BRA = "sports-bra",
-  STICKERS_INT_KISSCUT = "stickers-int-kisscut",
-  PRINTS_INT_GICLEE_BACKFRAMED = "prints-int-giclee-backframed",
   OTHER_MERCHANDISE = "other-merchandise"
 }
 

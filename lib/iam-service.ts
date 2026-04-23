@@ -112,6 +112,12 @@ export interface AuthUser {
   isActive: boolean;
 }
 
+export interface M2MTokenVerification {
+  valid: boolean;
+  appId?: string;
+  error?: string;
+}
+
 interface CreateAccountDTO {
   name: string;
   email: string;
@@ -787,6 +793,35 @@ export class IAMService {
     } catch (error) {
       console.error('[IAM] JWT Verification failed:', error);
       return null;
+    }
+  }
+
+  async verifyM2MToken(token: string): Promise<M2MTokenVerification> {
+    const secret = process.env.ADMIN_SESSION_SECRET;
+    if (!secret) {
+      return { valid: false, error: 'ADMIN_SESSION_SECRET not configured' };
+    }
+
+    try {
+      const secretBytes = new TextEncoder().encode(secret);
+      const { payload } = await jwtVerify(token, secretBytes, {
+        algorithms: ['HS256'],
+        issuer: 'iam-service',
+      });
+
+      if (payload.type !== 'm2m') {
+        return { valid: false, error: 'Not an M2M token' };
+      }
+
+      const appId = typeof payload.appId === 'string' ? payload.appId.trim().toLowerCase() : '';
+      if (!appId) {
+        return { valid: false, error: 'M2M token is missing appId' };
+      }
+
+      return { valid: true, appId };
+    } catch (error) {
+      console.error('[IAM] M2M verification failed:', error);
+      return { valid: false, error: 'Invalid or expired M2M token' };
     }
   }
 

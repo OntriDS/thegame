@@ -1,0 +1,139 @@
+import { NextResponse, NextRequest } from 'next/server';
+import { iamService } from '@/lib/iam-service';
+import { ItemStatus } from '@/types/enums';
+import {
+  getActiveItems,
+  getItemById,
+  getLegacyItems,
+} from '@/data-store/repositories/item.repo';
+import type { Item } from '@/types/entities';
+
+function getPublicCdnOrigin(): string {
+  const raw =
+    process.env.NEXT_PUBLIC_R2_DOMAIN?.trim() ||
+    process.env.NEXT_PUBLIC_R2_PUBLIC_BASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_R2_PUBLIC_DOMAIN?.trim() ||
+    'https://media.akilesecosystem.com';
+  const withoutSlash = raw.replace(/\/+$/, '');
+  if (withoutSlash.startsWith('http://') || withoutSlash.startsWith('https://')) {
+    return withoutSlash;
+  }
+  return `https://${withoutSlash}`;
+}
+
+/**
+ * M2M Store Inventory API Endpoint
+ * Returns items where status === 'for-sale' or status === 'legacy'
+ * Requires M2M Bearer token authentication
+ */
+export async function GET(request: NextRequest) {
+  try {
+    // Verify M2M token
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Missing Bearer token' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7);
+    const verification = await iamService.verifyM2MToken(token);
+
+    if (!verification.valid) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid or expired M2M token' },
+        { status: 401 }
+      );
+    }
+
+    // Verify app ID (only akiles-ecosystem allowed)
+    if (verification.appId !== 'akiles-ecosystem') {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: Only akiles-ecosystem can access store inventory' },
+        { status: 403 }
+      );
+    }
+
+    const searchParams = new URL(request.url).searchParams;
+    const includeLegacy = searchParams.get('legacy') === 'true';
+    const itemId = searchParams.get('itemId')?.trim() || undefined;
+
+    if (itemId) {
+      const raw = await getItemById(itemId);
+      if (!raw) {
+        return NextResponse.json(
+          { success: false, error: 'Item not found' },
+          { status: 404 }
+        );
+      }
+      if (!itemVisibleInStore(raw, includeLegacy)) {
+        return NextResponse.json(
+          { success: false, error: 'Item is not available in the store' },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json({
+        success: true,
+        item: toStoreItemPayload(raw),
+      });
+    }
+
+    // List: same indexes as TheGame admin "active" / legacy; storefront shows `for-sale` (and legacy when requested).
+    const items = includeLegacy
+      ? await getLegacyItems()
+      : await getActiveItems();
+    const filtered = includeLegacy
+      ? items
+      : items.filter((i) => i.status === ItemStatus.FOR_SALE);
+
+    const storeItems = filtered.map((item) => toStoreItemPayload(item));
+
+    return NextResponse.json({
+      success: true,
+      items: storeItems,
+      count: storeItems.length,
+    });
+  } catch (error) {
+    console.error('[M2M Store Inventory] Error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+function itemVisibleInStore(item: Item, legacyMode: boolean): boolean {
+  if (legacyMode) {
+    return item.status === ItemStatus.LEGACY;
+  }
+  return item.status === ItemStatus.FOR_SALE;
+}
+
+function cdnUrlForObjectKey(key: string | undefined): string | undefined {
+  if (!key) return undefined;
+  const path = key.replace(/^\//, '');
+  return `${getPublicCdnOrigin()}/${path}`;
+}
+
+function toStoreItemPayload(item: Item) {
+  const cdn = cdnUrlForObjectKey;
+  return {
+    id: item.id,
+    name: item.name,
+    description: item.description,
+    type: item.type,
+    subItemType: item.subItemType,
+    collection: item.collection,
+    status: item.status,
+    station: item.station,
+    price: item.price,
+    year: item.year,
+    media: {
+      main: cdn(item.media?.main),
+      thumb: cdn(item.media?.thumb),
+      gallery: item.media?.gallery?.map((url) => cdn(url)) || [],
+    },
+    sourceFileUrl: item.sourceFileUrl || undefined,
+  };
+}
