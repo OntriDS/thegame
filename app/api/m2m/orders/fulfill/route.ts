@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
     const verification = await iamService.verifyM2MToken(token);
 
     if (!verification.valid) {
+      console.error(`[M2M Orders Fulfill] Invalid token: ${verification.error || 'Unknown error'}`);
       return NextResponse.json(
         { success: false, error: 'Invalid or expired M2M token' },
         { status: 401 },
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (verification.appId !== 'akiles-ecosystem') {
+      console.error(`[M2M Orders Fulfill] Forbidden appId: ${verification.appId}`);
       return NextResponse.json(
         { success: false, error: 'Forbidden: Only akiles-ecosystem can access sale fulfillment' },
         { status: 403 },
@@ -70,55 +72,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const terminalStatuses = new Set<SaleStatus>([SaleStatus.CHARGED, SaleStatus.COLLECTED, SaleStatus.CANCELLED]);
-
-    if (terminalStatuses.has(sale.status)) {
+    if (sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED) {
+      console.log(`[M2M Fulfill] Order ${orderId} already fulfilled. Skipping write.`);
       return NextResponse.json({
         success: true,
         orderId: sale.id,
         status: sale.status,
-        note: 'Sale already completed or terminal; idempotent fulfill skipped',
+        note: 'Already fulfilled',
       });
     }
 
     const requestedStatus = normalizeStatus(body.saleStatus);
-    if (requestedStatus !== SaleStatus.CHARGED && requestedStatus !== SaleStatus.COLLECTED) {
-      return NextResponse.json(
-        { success: false, error: `Unsupported saleStatus: ${normalizeString(body.saleStatus) || 'missing'}` },
-        { status: 400 },
-      );
-    }
-
     const commission = typeof body.commission === 'number' ? body.commission : 0;
 
     const nextSale = {
       ...sale,
       status: requestedStatus,
+      isCollected: sale.isCollected || false,
       isNotPaid: false,
       isNotCharged: false,
       chargedAt: getUTCNow(),
       totals: {
-        ...sale.totals,
-        totalCost: (sale.totals.totalCost || 0) + commission,
+        ...(sale.totals || {}),
+        totalCost: (sale.totals?.totalCost || 0) + commission,
       },
       metadata: {
-        ...sale.metadata,
+        ...(sale.metadata || {}),
         m2m: {
-          ...(sale.metadata?.m2m as Record<string, unknown>),
+          ...(sale.metadata?.m2m as Record<string, unknown> || {}),
           tokenTrans: normalizeString(body.tokenTrans) || null,
           reference: normalizeString(body.reference) || null,
-          saleStatus: requestedStatus,
-          commission,
-          source: 'akiles-ecosystem',
         },
       },
     };
 
-    console.log(`[M2M Orders Fulfill] Found sale ${sale.id}. Transitioning ${sale.status} -> ${requestedStatus}`);
-
+    console.log(`[M2M Fulfill] Saving sale ${orderId} as ${requestedStatus}. Commission: ${commission}`);
+    
     const saved = await upsertSale(nextSale);
-
-    console.log(`[M2M Orders Fulfill] Sale ${saved.id} upserted. Result status: ${saved.status}`);
 
     if (saved.customerId) {
       await ensureCounterpartyRoleDatastore(saved.customerId, CharacterRole.CUSTOMER);
