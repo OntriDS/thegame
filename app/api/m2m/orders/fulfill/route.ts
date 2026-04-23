@@ -11,6 +11,7 @@ type FulfillOrderRequest = {
   tokenTrans?: string;
   reference?: string;
   saleStatus?: string;
+  commission?: number;
 };
 
 function normalizeString(value: unknown): string | undefined {
@@ -88,12 +89,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const commission = typeof body.commission === 'number' ? body.commission : 0;
+
     const nextSale = {
       ...sale,
       status: requestedStatus,
       isNotPaid: false,
       isNotCharged: false,
       chargedAt: getUTCNow(),
+      totals: {
+        ...sale.totals,
+        totalCost: (sale.totals.totalCost || 0) + commission,
+      },
       metadata: {
         ...sale.metadata,
         m2m: {
@@ -101,6 +108,7 @@ export async function POST(request: NextRequest) {
           tokenTrans: normalizeString(body.tokenTrans) || null,
           reference: normalizeString(body.reference) || null,
           saleStatus: requestedStatus,
+          commission,
           source: 'akiles-ecosystem',
         },
       },

@@ -175,6 +175,14 @@ export class SummaryService {
   }
 
   static async handleSaleDeletion(sale: Sale) {
+    const isCountable = (status?: string) =>
+      status === SaleStatus.CHARGED || status === SaleStatus.COLLECTED;
+
+    if (!isCountable(sale.status)) {
+      // If it wasn't a completed sale, deleting it shouldn't affect the revenue/volume counters.
+      return;
+    }
+
     const date = sale.collectedAt || sale.saleDate || new Date();
     await SummaryRepository.updateCounters({
       monthYear: formatArchiveMonthKeyUTC(new Date(date)),
