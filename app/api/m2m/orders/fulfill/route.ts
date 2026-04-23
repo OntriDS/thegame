@@ -114,7 +114,11 @@ export async function POST(request: NextRequest) {
       },
     };
 
+    console.log(`[M2M Orders Fulfill] Found sale ${sale.id}. Transitioning ${sale.status} -> ${requestedStatus}`);
+
     const saved = await upsertSale(nextSale);
+
+    console.log(`[M2M Orders Fulfill] Sale ${saved.id} upserted. Result status: ${saved.status}`);
 
     if (saved.customerId) {
       await ensureCounterpartyRoleDatastore(saved.customerId, CharacterRole.CUSTOMER);
