@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
     const now = getUTCNow();
     const orderId = normalizeString(body.orderId) || uuid();
     const total = buildTotals(lines, body.total);
+    const characterId = normalizeString(body.characterId);
     const sale: Sale = {
       id: orderId,
       name: `Ecosystem Order ${orderId}`,
@@ -122,8 +123,8 @@ export async function POST(request: NextRequest) {
       type: SaleType.ONLINE,
       status: SaleStatus.PENDING,
       siteId: normalizeString(body.siteId) || 'site-akiles-ecosystem',
-      counterpartyName: normalizeString(body.counterpartyName) || `akiles-ecosystem-${orderId}`,
-      characterId: body.characterId ?? null,
+      counterpartyName: normalizeString(body.counterpartyName) || 'akiles-ecosystem',
+      characterId: characterId ?? null,
       salesChannel: 'online-sales' as Station,
       lines: lines as SaleLine[],
       totals: total,

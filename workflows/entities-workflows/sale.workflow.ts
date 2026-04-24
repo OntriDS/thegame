@@ -2,7 +2,7 @@
 // Sale-specific workflow with CHARGED, CANCELLED, COLLECTED events
 
 import { EntityType, LogEventType, FOUNDER_CHARACTER_ID, SaleStatus, SaleType } from '@/types/enums';
-import type { Sale } from '@/types/entities';
+import type { ItemSaleLine, Sale } from '@/types/entities';
 import {
   appendEntityLog,
   ensureItemSoldLogsFromSale,
@@ -10,7 +10,7 @@ import {
   removeLogEntriesAcrossMonths
 } from '../entities-logging';
 import { ensureFinancialDoneLog } from './financial.workflow';
-import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import {
@@ -196,6 +196,16 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   // 1.1 ENSURE FINANCIAL LOGS FOR DONE RECORDS (Gated by payment status)
   const nowPending = sale.isNotPaid || sale.isNotCharged;
   const isCharged = sale.status !== SaleStatus.CANCELLED && (sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED) && !nowPending;
+  const wasCharged =
+    !!previousSale &&
+    previousSale.status !== SaleStatus.CANCELLED &&
+    (previousSale.status === SaleStatus.CHARGED ||
+      previousSale.status === SaleStatus.COLLECTED ||
+      !!previousSale.isCollected) &&
+    !previousSale.isNotPaid &&
+    !previousSale.isNotCharged;
+  const isNowPending = sale.status === SaleStatus.PENDING || nowPending;
+  const chargeStateWasRolledBack = !!previousSale && wasCharged && isNowPending && previousSale.status !== sale.status;
 
   if (isCharged) {
     const relatedFinancials = await getFinancialsBySourceSaleId(sale.id);
@@ -326,7 +336,12 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
 
   // CANCELLED status change (only for existing sales)
   if (previousSale) {
-    if (previousSale.status !== sale.status && sale.status === SaleStatus.CANCELLED) {
+    if (chargeStateWasRolledBack) {
+      await rollbackChargedSaleToPending(sale, previousSale);
+      if (!(await entityHasLogEvent(EntityType.SALE, sale.id, 'pending'))) {
+        await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, getSaleLogDetails(sale), sale.saleDate || getUTCNow());
+      }
+    } else if (previousSale.status !== sale.status && sale.status === SaleStatus.CANCELLED) {
       await appendEntityLog(
         EntityType.SALE,
         sale.id,
@@ -640,6 +655,83 @@ async function removePlayerPointsFromSale(saleId: string, sale?: Sale | null): P
     await removePointsFromPlayer(playerId, pointsToRemove);
   } catch (error) {
     console.error(`[removePlayerPointsFromSale] ❌ Failed to remove player points for sale ${saleId}:`, error);
+  }
+}
+
+/**
+ * Roll back charged/collected sale side effects when a charged-like sale returns to pending.
+ * This removes sale-level milestones, sold-item clones, and charged-side effect flags so side effects can replay safely.
+ */
+async function rollbackChargedSaleToPending(sale: Sale, previousSale: Sale): Promise<void> {
+  try {
+    // Remove charged/collected sale milestones and keep non-lifecycle log history intact.
+    await removeLogEntriesAcrossMonths(EntityType.SALE, entry =>
+      entry.entityId === sale.id &&
+      (() => {
+        const event = String(entry.event || entry.status || '').toLowerCase();
+        return event === 'charged' || event === 'collected';
+      })()
+    );
+
+    // Remove sold-item clones created while charged (and their links/logs)
+    const soldCloneIds = new Set<string>();
+    const soldItemsBySource = await getItemsBySourceRecordId(sale.id);
+    for (const item of soldItemsBySource) {
+      if (item.id.includes('-sold-')) {
+        soldCloneIds.add(item.id);
+      }
+    }
+
+    for (const line of previousSale.lines ?? []) {
+      if (line.kind !== 'item' || !line.itemId) continue;
+      if (String(line.itemId).includes('-sold-')) {
+        soldCloneIds.add(String(line.itemId));
+      }
+    }
+
+    for (const itemId of soldCloneIds) {
+      await removeLogEntriesAcrossMonths(EntityType.ITEM, entry => entry.entityId === itemId);
+      await removeItem(itemId);
+    }
+
+    // Remove sold-item links for this sale so only canonical inventory links remain.
+    const saleLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
+    for (const link of saleLinks) {
+      const isSoldItemLink = link.source.type === EntityType.ITEM
+        ? String(link.source.id).includes('-sold-')
+        : link.target.type === EntityType.ITEM
+          ? String(link.target.id).includes('-sold-')
+          : false;
+      if (!isSoldItemLink) continue;
+
+      try {
+        await removeLink(link.id);
+      } catch (error) {
+        console.error(`[rollbackChargedSaleToPending] ❌ Failed to remove sold clone link ${link.id}:`, error);
+      }
+    }
+
+    // Remove charged-state effect flags so side effects can run again later if needed.
+    await clearEffect(EffectKeys.sideEffect('sale', sale.id, 'linesProcessed'));
+    await clearEffect(EffectKeys.sideEffect('sale', sale.id, 'saleDoneLogged'));
+    await clearEffect(EffectKeys.sideEffect('sale', sale.id, 'saleCollectedLogged'));
+    await clearEffect(EffectKeys.sideEffect('sale', sale.id, 'pointsStaged'));
+    await clearEffect(EffectKeys.sideEffect('sale', sale.id, 'pointsRewarded'));
+    await clearEffect(EffectKeys.sideEffect('sale', sale.id, 'financialCreated'));
+
+    const previousItemLines = previousSale.lines?.filter((line): line is ItemSaleLine => line.kind === 'item') ?? [];
+    for (const line of previousItemLines) {
+      const lineId = line.lineId || line.itemId;
+      if (!lineId) continue;
+      await clearEffect(EffectKeys.sideEffect('sale', sale.id, `stockDecremented:${lineId}`));
+      await clearEffect(EffectKeys.sideEffect('sale', sale.id, `soldItemEntity:${lineId}`));
+      await clearEffect(EffectKeys.sideEffect('sale', sale.id, `soldItemEntity:bundle:${lineId}`));
+    }
+
+    // Remove points that were granted by this charged state, if any.
+    await removePlayerPointsFromSale(sale.id, sale);
+  } catch (error) {
+    console.error(`[rollbackChargedSaleToPending] ❌ Failed for sale ${sale.id}:`, error);
   }
 }
 
