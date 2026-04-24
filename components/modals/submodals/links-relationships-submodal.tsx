@@ -182,8 +182,8 @@ export default function LinksRelationshipsModal({
                 <TabsTrigger value="sites">Sites ({groupedLinks.sites.length})</TabsTrigger>
               </TabsList>
 
-              <ScrollArea className="mt-4 min-h-0 flex-1 pr-3">
-                <TabsContent value="all" className="mt-0 space-y-2 pb-2">
+              <ScrollArea className="mt-4 flex h-full min-h-0 flex-1 pr-3">
+                <TabsContent value="all" className="mt-0 h-full space-y-2 pb-2">
                   {links.map(link => (
                     <LinkCard
                       key={link.id}
@@ -196,7 +196,7 @@ export default function LinksRelationshipsModal({
                 </TabsContent>
 
                 {Object.entries(groupedLinks).map(([type, typeLinks]) => (
-                  <TabsContent key={type} value={type} className="mt-0 space-y-2 pb-2">
+                  <TabsContent key={type} value={type} className="mt-0 h-full space-y-2 pb-2">
                     {typeLinks.length === 0 ? (
                       <div className="py-8 text-center text-muted-foreground">
                         No {type} relationships

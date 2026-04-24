@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { useThemeColors } from "@/lib/hooks/use-theme-colors";
 import { useEntityUpdates } from "@/lib/hooks/use-entity-updates";
 import { ClientAPI } from "@/lib/client-api";
-import { Sale } from "@/types/entities";
+import { Sale, Character } from "@/types/entities";
+import { getSaleCharacterId } from '@/lib/sale-character-id';
 import { SaleType, SaleStatus } from "@/types/enums";
 import { getSaleStatusLabel } from "@/lib/constants/status-display-labels";
 import { formatDateDDMMYYYY, getMonthName } from "@/lib/constants/date-constants";
@@ -27,6 +28,7 @@ function SalesPageContent() {
   const { activeBg } = useThemeColors();
   const [sales, setSales] = useState<Sale[]>([]);
   const [sites, setSites] = useState<any[]>([]);
+  const [characters, setCharacters] = useState<Character[]>([]);
   const [filteredSales, setFilteredSales] = useState<Sale[]>([]);
   const [selectedType, setSelectedType] = useState<SaleType | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<SaleStatus | 'all'>('all');
@@ -42,6 +44,24 @@ function SalesPageContent() {
     atomicSummary,
   } = useMonthlySummary();
   const [monthlySalesProfit, setMonthlySalesProfit] = useState<number>(0);
+  const characterById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const character of characters) {
+      if (character?.id && character?.name) {
+        map.set(character.id, character.name);
+      }
+    }
+    return map;
+  }, [characters]);
+  const siteById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const site of sites) {
+      if (site?.id && site?.name) {
+        map.set(site.id, site.name);
+      }
+    }
+    return map;
+  }, [sites]);
 
   const isCountableSaleForSummary = useCallback((sale: Sale) => {
     return (
@@ -50,6 +70,22 @@ function SalesPageContent() {
       (sale as { isCollected?: boolean }).isCollected === true
     );
   }, []);
+
+  const getSaleCounterpartyName = useCallback((sale: Sale): string => {
+    const primaryCharacterId = getSaleCharacterId(sale);
+    const linkedCharacterId =
+      primaryCharacterId ??
+      sale.links?.find((link: any) => link?.source?.type === 'sale' && link?.target?.type === 'character' && link?.target?.id)?.target?.id ??
+      sale.links?.find((link: any) => link?.source?.type === 'character' && link?.target?.type === 'sale' && link?.source?.id)?.source?.id ??
+      '';
+
+    const characterName = linkedCharacterId && characterById.get(String(linkedCharacterId));
+    if (characterName) {
+      return characterName;
+    }
+
+    return sale.counterpartyName || '';
+  }, [characterById]);
 
   const handleDeepLinkSale = useCallback((sale: Sale) => {
     setSelectedMonthKey(formatMonthKey(sale.saleDate));
@@ -93,16 +129,18 @@ function SalesPageContent() {
 
       // Fetch Full Detailed Sales (O(N) - BACKGROUND)
       setIsLoading(true);
-      const [salesData, sitesData, ratesData] = await Promise.all([
+      const [salesData, sitesData, ratesData, charactersData] = await Promise.all([
         ClientAPI.getSales(
           monthNum,
           yearNum
         ),
         ClientAPI.getSites(),
-        ClientAPI.getFinancialConversionRates()
+        ClientAPI.getFinancialConversionRates(),
+        ClientAPI.getCharacters()
       ]);
       setSales(salesData);
       setSites(sitesData);
+      setCharacters(charactersData);
       const safeRates = ratesData && typeof ratesData.colonesToUsd === 'number'
         ? { ...DEFAULT_CURRENCY_EXCHANGE_RATES, ...ratesData }
         : DEFAULT_CURRENCY_EXCHANGE_RATES;
@@ -406,8 +444,8 @@ function SalesPageContent() {
                         </div>
                         <div className="text-sm text-muted-foreground">
                           <p>Date: {formatDateDDMMYYYY(new Date(sale.saleDate))}</p>
-                          <p>Site: {sale.siteId}</p>
-                          {sale.counterpartyName && <p>Client: {sale.counterpartyName}</p>}
+                          <p>Site: {siteById.get(sale.siteId) || sale.siteId}</p>
+                            {getSaleCounterpartyName(sale) && <p>Customer: {getSaleCounterpartyName(sale)}</p>}
                         </div>
                       </div>
                       <div className="text-right">
