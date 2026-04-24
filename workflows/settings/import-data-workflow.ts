@@ -6,6 +6,7 @@ import { getUTCNow } from '@/lib/utils/utc-utils';
 import { buildDataKey, buildIndexKey, buildLogKey, buildLogMonthKey, buildLogMonthsIndexKey } from '@/data-store/keys';
 import { getMonthKeyFromTimestamp } from '../entities-logging';
 import { EntityType } from '@/types/enums';
+import type { Player } from '@/types/entities';
 import {
   upsertItem,
   upsertTask,
@@ -378,7 +379,18 @@ export class ImportDataWorkflow {
               importedCount++;
               break;
             case EntityType.PLAYER:
-              await upsertPlayer(entity, { skipWorkflowEffects: true, skipLinkEffects: true });
+              {
+                const incomingCharacterId = typeof entity.characterId === 'string' && entity.characterId.trim().length > 0
+                  ? entity.characterId.trim()
+                  : null;
+                const cleanEntity = { ...(entity as Player & { characterIds?: unknown }) };
+                delete cleanEntity.characterIds;
+                const normalizedEntity: Player = {
+                  ...cleanEntity,
+                  characterId: incomingCharacterId || null,
+                };
+                await upsertPlayer(normalizedEntity, { skipWorkflowEffects: true, skipLinkEffects: true });
+              }
               importedCount++;
               break;
             case EntityType.SITE:

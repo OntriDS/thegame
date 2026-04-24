@@ -28,6 +28,7 @@ import { formatForDisplay } from '@/lib/utils/date-display-utils';
 import { isSoldStatus } from '@/lib/utils/status-utils';
 import { getUTCNow, endOfMonthUTC, formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
 import { buildArchiveMonthsKey } from '@/data-store/keys';
+import { getItemCharacterId } from '@/lib/item-character-id';
 
 const STATE_FIELDS = ['status', 'stock', 'quantitySold'];
 
@@ -51,13 +52,13 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     await markEffect(effectKey);
 
     // Character creation from emissary fields - when newOwnerName is provided
-    if (item.newOwnerName && !item.ownerCharacterId) {
+    if (item.newOwnerName && !getItemCharacterId(item)) {
       const characterEffectKey = EffectKeys.sideEffect('item', item.id, 'characterCreated');
       if (!(await hasEffect(characterEffectKey))) {
         const createdCharacter = await createCharacterFromItem(item);
         if (createdCharacter) {
           // Update item with the created character ID
-          const updatedItem = { ...item, ownerCharacterId: createdCharacter.id };
+          const updatedItem = { ...item, characterId: createdCharacter.id };
           await upsertItem(updatedItem, { skipWorkflowEffects: true });
           await markEffect(characterEffectKey);
         }

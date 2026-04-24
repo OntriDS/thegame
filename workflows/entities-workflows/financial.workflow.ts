@@ -31,6 +31,7 @@ import { getUTCNow, endOfMonthUTC, formatArchiveMonthKeyUTC } from '@/lib/utils/
 import { buildMonthIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { recalculateCharacterWallet } from '../financial-record-utils';
 import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync-server';
+import { getFinancialCounterpartyId } from '@/lib/financial-record-counterparty-id';
 const STATE_FIELDS = ['isNotPaid', 'isNotCharged'];
 
 /**
@@ -68,13 +69,13 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
     // Character creation from emissary fields - when newCustomerName is provided
     // This MUST run first because it updates the financial record
-    if (financial.newCustomerName && !financial.customerCharacterId) {
+    if (financial.newCustomerName && !getFinancialCounterpartyId(financial)) {
       const characterEffectKey = EffectKeys.sideEffect('financial', financial.id, 'characterCreated');
       if (!(await hasEffect(characterEffectKey))) {
         const createdCharacter = await createCharacterFromFinancial(financial);
         if (createdCharacter) {
           // Update financial record with the created character ID
-          const updatedFinancial = { ...financial, customerCharacterId: createdCharacter.id };
+          const updatedFinancial = { ...financial, characterId: createdCharacter.id };
           await upsertFinancial(updatedFinancial, { skipWorkflowEffects: true });
           await markEffect(characterEffectKey);
         }
@@ -106,8 +107,9 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         (async () => {
           // Identify target character(s)
           // 1. Explicit Customer
-          if (financial.customerCharacterId) {
-            await recalculateCharacterWallet(financial.customerCharacterId);
+          const financialCounterpartyId = getFinancialCounterpartyId(financial);
+          if (financialCounterpartyId) {
+            await recalculateCharacterWallet(financialCounterpartyId);
           }
           // 2. Explicit Player
           if (financial.playerCharacterId) {
@@ -182,9 +184,9 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     }
 
     const latestNewFinancial = (await getFinancialById(financial.id)) || financial;
-    if (latestNewFinancial.customerCharacterId && latestNewFinancial.customerCharacterRole) {
+    if (latestNewFinancial.characterId && latestNewFinancial.customerCharacterRole) {
       await ensureCounterpartyRoleDatastore(
-        latestNewFinancial.customerCharacterId,
+        latestNewFinancial.characterId,
         latestNewFinancial.customerCharacterRole
       );
     }
@@ -198,6 +200,8 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
   // Payment status changes - PENDING (not paid or not charged) vs DONE (paid and charged)
   const wasPending = previousFinancial.isNotPaid || previousFinancial.isNotCharged;
   const nowPending = financial.isNotPaid || financial.isNotCharged;
+  const financialCounterpartyId = getFinancialCounterpartyId(financial);
+  const previousFinancialCounterpartyId = getFinancialCounterpartyId(previousFinancial);
 
   if (wasPending && !nowPending) {
     // Transitioned from PENDING to DONE (both paid and charged)
@@ -274,12 +278,12 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
     // Propagate J$ changes to Character Wallet Cache
     if (financial.jungleCoins !== previousFinancial.jungleCoins) {
-      if (financial.customerCharacterId) await recalculateCharacterWallet(financial.customerCharacterId);
+      if (financialCounterpartyId) await recalculateCharacterWallet(financialCounterpartyId);
       if (financial.playerCharacterId) await recalculateCharacterWallet(financial.playerCharacterId);
 
       // Also check previous record's owner if it changed!
-      if (previousFinancial.customerCharacterId && previousFinancial.customerCharacterId !== financial.customerCharacterId) {
-        await recalculateCharacterWallet(previousFinancial.customerCharacterId);
+      if (previousFinancialCounterpartyId && previousFinancialCounterpartyId !== financialCounterpartyId) {
+        await recalculateCharacterWallet(previousFinancialCounterpartyId);
       }
       if (previousFinancial.playerCharacterId && previousFinancial.playerCharacterId !== financial.playerCharacterId) {
         await recalculateCharacterWallet(previousFinancial.playerCharacterId);
@@ -288,13 +292,13 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
   }
 
-  const finCounterpartyPresent = Boolean(financial.customerCharacterId && financial.customerCharacterRole);
+  const finCounterpartyPresent = Boolean(financialCounterpartyId && financial.customerCharacterRole);
   const finCounterpartyChanged =
     !previousFinancial ||
-    previousFinancial.customerCharacterId !== financial.customerCharacterId ||
+    previousFinancialCounterpartyId !== financialCounterpartyId ||
     previousFinancial.customerCharacterRole !== financial.customerCharacterRole;
   if (finCounterpartyPresent && finCounterpartyChanged) {
-    await ensureCounterpartyRoleDatastore(financial.customerCharacterId, financial.customerCharacterRole);
+    await ensureCounterpartyRoleDatastore(financialCounterpartyId, financial.customerCharacterRole);
   }
 
   // Lean identity fields changed — cascade patch ALL log entries across ALL months and events

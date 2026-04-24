@@ -5,6 +5,7 @@ import { EntityType, ItemType, ItemStatus } from '@/types/enums';
 import { isSoldStatus } from '@/lib/utils/status-utils';
 import type { Item } from '@/types/entities';
 import { formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
+import { getItemCharacterId } from '@/lib/item-character-id';
 
 const ENTITY = EntityType.ITEM;
 
@@ -85,11 +86,11 @@ export async function getItemsBySourceRecordId(sourceRecordId: string): Promise<
 }
 
 /**
- * Get items by ownerCharacterId using an index
+ * Get items by characterId using an index
  * OPTIMIZED: For character inventory fetching
  */
-export async function getItemsByOwnerId(ownerId: string): Promise<Item[]> {
-  const indexKey = buildEntityIndexKey(ENTITY, 'ownerCharacterId', ownerId);
+export async function getItemsByCharacterId(characterId: string): Promise<Item[]> {
+  const indexKey = buildEntityIndexKey(ENTITY, 'characterId', characterId);
   const ids = await kvSMembers(indexKey);
   if (ids.length === 0) return [];
 
@@ -320,15 +321,18 @@ export async function upsertItem(item: Item): Promise<Item> {
     await kvSRem(oldSourceRecordIndexKey, item.id);
   }
 
-  // Maintain ownerCharacterId index
-  if (item.ownerCharacterId) {
-    const ownerIndexKey = buildEntityIndexKey(ENTITY, 'ownerCharacterId', item.ownerCharacterId);
+  const previousItemCharacterId = getItemCharacterId(previousItem);
+  const incomingCharacterId = getItemCharacterId(item);
+
+  // Maintain characterId index
+  if (incomingCharacterId) {
+    const ownerIndexKey = buildEntityIndexKey(ENTITY, 'characterId', incomingCharacterId);
     await kvSAdd(ownerIndexKey, item.id);
   }
 
-  // Clean up old ownerCharacterId index
-  if (previousItem?.ownerCharacterId && previousItem.ownerCharacterId !== item.ownerCharacterId) {
-    const oldOwnerIndexKey = buildEntityIndexKey(ENTITY, 'ownerCharacterId', previousItem.ownerCharacterId);
+  // Clean up old characterId index
+  if (previousItemCharacterId && previousItemCharacterId !== incomingCharacterId) {
+    const oldOwnerIndexKey = buildEntityIndexKey(ENTITY, 'characterId', previousItemCharacterId);
     await kvSRem(oldOwnerIndexKey, item.id);
   }
 
@@ -364,8 +368,9 @@ export async function deleteItem(id: string): Promise<void> {
       const sourceRecordIndexKey = buildEntityIndexKey(ENTITY, 'sourceRecordId', item.sourceRecordId);
       await kvSRem(sourceRecordIndexKey, id);
     }
-    if (item.ownerCharacterId) {
-      const ownerIndexKey = buildEntityIndexKey(ENTITY, 'ownerCharacterId', item.ownerCharacterId);
+    const itemCharacterId = getItemCharacterId(item);
+    if (itemCharacterId) {
+      const ownerIndexKey = buildEntityIndexKey(ENTITY, 'characterId', itemCharacterId);
       await kvSRem(ownerIndexKey, id);
     }
   }

@@ -27,6 +27,8 @@ import { BITCOIN_SATOSHIS_PER_BTC, DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib
 import { buildFinrecTitleFromSaleParts, resolveCanonicalSaleTimelineDate } from '@/lib/utils/sale-auto-name-utils';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { parseDateToUTC } from '@/lib/utils/date-parsers';
+import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution';
+import { getSaleCharacterId } from '@/lib/sale-character-id';
 
 /**
  * Get the current J$ Balance for an entity (Character or Player)
@@ -168,7 +170,7 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
       siteId: task.siteId,
       targetSiteId: task.targetSiteId,
       sourceTaskId: task.id, // AMBASSADOR field - points back to Task
-      customerCharacterId: task.customerCharacterId || null,
+      characterId: getTaskCounterpartyId(task),
       customerCharacterRole: task.customerCharacterRole || CharacterRole.CUSTOMER,
       cost: task.cost || 0,
       revenue: task.revenue || 0,
@@ -240,7 +242,7 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
       previousTask.station !== task.station ||
       previousTask.siteId !== task.siteId ||
       previousTask.targetSiteId !== task.targetSiteId ||
-      previousTask.customerCharacterId !== task.customerCharacterId ||
+      getTaskCounterpartyId(previousTask) !== getTaskCounterpartyId(task) ||
       previousTask.customerCharacterRole !== task.customerCharacterRole;
 
     if (!financialPropsChanged) {
@@ -258,7 +260,7 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
       station: task.station,
       siteId: task.siteId,
       targetSiteId: task.targetSiteId,
-      customerCharacterId: task.customerCharacterId || null,
+      characterId: getTaskCounterpartyId(task),
       customerCharacterRole: task.customerCharacterRole || CharacterRole.CUSTOMER,
       isNotPaid: task.isNotPaid,
       isNotCharged: task.isNotCharged,
@@ -334,8 +336,9 @@ function coerceSaleFinrecDate(sale: Sale, fallback: Date): Date {
 /** Customer / site strings for finrec titles only. Use "" when missing — no placeholders. */
 async function resolveSaleCustomerAndSiteLabels(sale: Sale): Promise<{ customerLabel: string; siteLabel: string }> {
   let customerLabel = (sale.counterpartyName && String(sale.counterpartyName).trim()) || '';
-  if (!customerLabel && sale.customerId) {
-    const ch = await getCharacterById(sale.customerId);
+  const saleCharacterId = getSaleCharacterId(sale);
+  if (!customerLabel && saleCharacterId) {
+    const ch = await getCharacterById(saleCharacterId);
     customerLabel = (ch?.name && String(ch.name).trim()) || '';
   }
 
@@ -441,7 +444,7 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
   const partnerCommFromMe = myItemsTotal * (1 - shareOfMyItems_Me);
 
   // Target Entity Resolution
-  let targetEntityId = sale.partnerId || sale.customerId;
+  let targetEntityId = sale.partnerId || getSaleCharacterId(sale);
   let targetEntityName = 'Partner';
   if (targetEntityId) {
     const { getBusinessById } = await import('@/data-store/repositories/character.repo');
@@ -516,7 +519,8 @@ async function upsertPrimarySaleFinrecFromSale(
 ): Promise<FinancialRecord> {
   const now = getUTCNow();
   const totalRevenue = Number(sale.totals?.totalRevenue ?? 0) || 0;
-  const totalCost = Number(sale.totals?.totalCost ?? 0) || 0;
+  const cost = Number(sale.totals?.totalCost ?? 0) || 0;
+  const netCashflow = totalRevenue - cost;
   const next: FinancialRecord = {
     ...existing,
     name: derived.finrecName,
@@ -529,20 +533,20 @@ async function upsertPrimarySaleFinrecFromSale(
     targetSiteId: existing.targetSiteId,
     sourceSaleId: sale.id,
     salesChannel: derived.salesChannel,
-    cost: totalCost,
+    cost,
     revenue: totalRevenue,
     jungleCoins: existing.jungleCoins ?? 0,
     isNotPaid: !!sale.isNotPaid,
     isNotCharged: !!sale.isNotCharged,
     rewards: undefined,
-    netCashflow: totalRevenue - totalCost,
+    netCashflow,
     jungleCoinsValue: existing.jungleCoinsValue ?? 0,
     isCollected: existing.isCollected,
     collectedAt: existing.collectedAt,
     doneAt: derived.dateToUse,
     updatedAt: now,
-    customerCharacterId: sale.customerId ?? null,
-    customerCharacterRole: sale.customerId ? CharacterRole.CUSTOMER : undefined,
+    characterId: getSaleCharacterId(sale),
+    customerCharacterRole: getSaleCharacterId(sale) ? CharacterRole.CUSTOMER : undefined,
   };
 
   const saved = await upsertFinancial(next, { forceSave: true });
@@ -675,10 +679,11 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       return saved;
     }
 
-    const currentDate = getUTCNow();
     const canonicalId = `finrec-${sale.id}`;
     const initialRevenue = Number(sale.totals?.totalRevenue ?? 0) || 0;
-    const initialCost = Number(sale.totals?.totalCost ?? 0) || 0;
+    const cost = Number(sale.totals?.totalCost ?? 0) || 0;
+    const netCashflow = initialRevenue - cost;
+    const saleCounterpartyId = getSaleCharacterId(sale);
     const newFinrec: FinancialRecord = {
       id: canonicalId,
       name: derived.finrecName,
@@ -691,13 +696,13 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       targetSiteId: undefined,
       sourceSaleId: sale.id,
       salesChannel: derived.salesChannel,
-      cost: initialCost,
+      cost,
       revenue: initialRevenue,
       jungleCoins: 0,
       isNotPaid: !!sale.isNotPaid,
       isNotCharged: !!sale.isNotCharged,
       rewards: undefined,
-      netCashflow: initialRevenue - initialCost,
+      netCashflow,
       jungleCoinsValue: 0,
       isCollected: false,
       collectedAt: undefined,
@@ -705,8 +710,8 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
       links: [],
-      customerCharacterId: sale.customerId ?? null,
-      customerCharacterRole: sale.customerId ? CharacterRole.CUSTOMER : undefined,
+      characterId: saleCounterpartyId,
+      customerCharacterRole: saleCounterpartyId ? CharacterRole.CUSTOMER : undefined,
     };
 
     console.log(`[createFinancialRecordFromSale] Creating finrec:`, newFinrec);
@@ -763,6 +768,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
 
     // [IDEMPOTENCY CHECK] Load existing records linked to this sale
     const existingRecords = await getFinancialsBySourceSaleId(sale.id);
+    const saleCounterpartyId = getSaleCharacterId(sale);
 
     const cleanupPayoutCharacterLinks = async (
       financialRecordId: string,
@@ -814,8 +820,8 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       updatedAt: getUTCNow(),
       createdAt: incomeRecord?.createdAt || getUTCNow(),
       links: incomeRecord?.links || [],
-      customerCharacterId: sale.customerId ?? null,
-      customerCharacterRole: sale.customerId ? CharacterRole.CUSTOMER : undefined,
+    characterId: saleCounterpartyId,
+      customerCharacterRole: saleCounterpartyId ? CharacterRole.CUSTOMER : undefined,
     } as FinancialRecord;
 
     await upsertFinancial(incomeData, { forceSave: true });
@@ -862,7 +868,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         updatedAt: getUTCNow(),
         createdAt: payoutRecord?.createdAt || getUTCNow(),
         links: payoutRecord?.links || [],
-        customerCharacterId: payoutCounterpartyId,
+        characterId: payoutCounterpartyId,
         customerCharacterRole: payoutCounterpartyId ? CharacterRole.BENEFICIARY : undefined,
       } as FinancialRecord;
 
@@ -902,7 +908,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         cost: 0, 
         netCashflow: 0, 
         status: FinancialStatus.DONE,
-        customerCharacterId: null,
+        characterId: null,
         customerCharacterRole: undefined,
         updatedAt: getUTCNow() 
       };

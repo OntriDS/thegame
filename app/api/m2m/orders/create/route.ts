@@ -17,7 +17,7 @@ type CreateOrderRequest = {
   total?: number;
   status?: string;
   siteId?: string;
-  customerId?: string | null;
+  characterId?: string | null;
   counterpartyName?: string;
 };
 
@@ -121,9 +121,9 @@ export async function POST(request: NextRequest) {
       saleDate: startOfDayUTC(now),
       type: SaleType.ONLINE,
       status: SaleStatus.PENDING,
-      siteId: normalizeString(body.siteId) || 'online-sales',
-      counterpartyName: normalizeString(body.counterpartyName) || `akiles-${orderId}`,
-      customerId: body.customerId ?? null,
+      siteId: normalizeString(body.siteId) || 'akilesecosystem.com',
+      counterpartyName: normalizeString(body.counterpartyName) || `akiles-ecosystem-${orderId}`,
+      characterId: body.characterId ?? null,
       salesChannel: 'online-sales' as Station,
       lines: lines as SaleLine[],
       totals: total,

@@ -276,8 +276,8 @@ export interface Item extends BaseEntity {
   // Ambassador Fields (Links System - references to other entities)
   sourceTaskId?: string | null;    // e.g. related to "Order Stickers"
   sourceRecordId?: string | null;  // e.g. related to "Buy Fan" record
-  ownerCharacterId?: string | null;  // Character who owns this item (customer, team member, etc.)
-  //sku?: string;                 // optional – acts as business-friendly id
+  characterId?: string | null;     // Character who owns this item
+  //sku?: string;                  // optional – acts as business-friendly id
 
   // Emissary Fields
   newOwnerName?: string;           // EMISSARY: Name for new owner character creation
@@ -339,7 +339,7 @@ export interface Task extends BaseEntity {
   sourceSaleId?: string | null;     // Sale that generated this task (for service sales)
 
   // Emissary Fields (Conditional entity creation - pass to created entities)
-  customerCharacterId?: string | null;  // Customer for service tasks - passed to created items
+  characterId?: string | null;          // Counterparty ID (customer/beneficiary) for this task
   playerCharacterId?: string | null;    // AMBASSADOR: Player character who owns this task
   newCustomerName?: string;             // EMISSARY: Name for new customer character creation
   customerCharacterRole?: CustomerCounterpartyRole; // EMISSARY: counterparty role for new/selected character
@@ -399,7 +399,7 @@ export interface FinancialRecord extends BaseEntity {
   // Ambassador Fields (Links System)
   siteId?: string | null;           // Site where financial activity occurred (optional)
   targetSiteId?: string | null;     // Target site/client (optional)
-  customerCharacterId?: string | null; // Customer character for this financial record
+  characterId?: string | null; // Counterparty character for this financial record
   playerCharacterId?: string | null;   // Player character who owns this record
   sourceTaskId?: string | null;     // Task that generated this financial record (optional)
   sourceSaleId?: string | null;     // Sale that generated this financial record (optional)
@@ -656,7 +656,7 @@ export interface Sale extends BaseEntity {
   // Ambassador Fields (Links System)
   siteId: string;                   // Site where sale occurred
   counterpartyName?: string;        // client/store/partner name
-  customerId?: string | null;       // Character who is the customer (for tracking purchases)
+  characterId?: string | null;      // Customer / counterparty character (for tracking purchases)
   partnerId?: string | null;        // Character acting as Partner (Booth-Sales)
   playerCharacterId?: string | null; // Player character who owns this sale
   salesChannel?: Station | null;    // Sales channel station (e.g., 'Direct-Sales', 'Network', 'Feria Sales')
@@ -820,8 +820,8 @@ export interface Player extends BaseEntity {
   intellectualFunctions?: PlayerIntellectualMap;  // { CREATIVITY: 8, PLANNING: 9, ... } - V0.2
   attributes?: PlayerAttributesMap;      // { CHARISMA: 5, LOGIC: 9, ... } - V0.2
 
-  // 4. CHARACTER MANAGEMENT - One-to-many relationship (Ambassador Fields)
-  characterIds: string[];        // 🏛️ Characters linked to this player
+  // 4. CHARACTER MANAGEMENT - Primary player character reference (Ambassador Fields)
+  characterId?: string | null;   // 🏛️ Main character managed by this player
 
   // 5. BADGES & ACHIEVEMENTS - Player-specific accomplishments
   badges: PlayerBadge[];           // Role-based recognition badges (user-created)

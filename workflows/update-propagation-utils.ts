@@ -13,6 +13,7 @@ import { getAllCharacters, upsertCharacter } from '@/data-store/datastore';
 import { resolveToPlayerIdMaybeCharacter } from './points-rewards-utils';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { getLinksFor } from '@/links/link-registry';
+import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution';
 
 const normalizeDate = (value: Date | string | null | undefined): Date => {
   const parsed = parseDateOrNull(value);
@@ -100,7 +101,7 @@ export async function updateFinancialRecordsFromTask(
         task.revenue !== previousTask.revenue ||
         task.isNotPaid !== previousTask.isNotPaid ||
         task.isNotCharged !== previousTask.isNotCharged ||
-        task.customerCharacterId !== previousTask.customerCharacterId ||
+        getTaskCounterpartyId(task) !== getTaskCounterpartyId(previousTask) ||
         task.customerCharacterRole !== previousTask.customerCharacterRole ||
         task.name !== previousTask.name ||
         task.station !== previousTask.station;
@@ -123,7 +124,7 @@ export async function updateFinancialRecordsFromTask(
           revenue: task.revenue,
           isNotPaid: task.isNotPaid,
           isNotCharged: task.isNotCharged,
-          customerCharacterId: task.customerCharacterId || null,
+          characterId: getTaskCounterpartyId(task),
           customerCharacterRole: task.customerCharacterRole || CharacterRole.CUSTOMER,
           name: task.name,
           station: task.station,
@@ -187,7 +188,7 @@ export async function updateTasksFromFinancialRecord(
         record.revenue !== previousRecord.revenue ||
         record.isNotPaid !== previousRecord.isNotPaid ||
         record.isNotCharged !== previousRecord.isNotCharged ||
-        record.customerCharacterId !== previousRecord.customerCharacterId ||
+        getTaskCounterpartyId(record as unknown as Task) !== getTaskCounterpartyId(previousRecord as unknown as Task) ||
         record.customerCharacterRole !== previousRecord.customerCharacterRole ||
         record.name !== previousRecord.name ||
         record.station !== previousRecord.station;
@@ -201,7 +202,7 @@ export async function updateTasksFromFinancialRecord(
           revenue: record.revenue,
           isNotPaid: record.isNotPaid,
           isNotCharged: record.isNotCharged,
-          customerCharacterId: record.customerCharacterId || null,
+          characterId: getTaskCounterpartyId(record as unknown as Task),
           customerCharacterRole: record.customerCharacterRole || CharacterRole.CUSTOMER,
           name: record.name,
           station: record.station,
@@ -780,7 +781,7 @@ export function hasFinancialPropsChanged(newEntity: any, oldEntity: any): boolea
     newEntity.isNotCharged !== oldEntity.isNotCharged ||
     newEntity.name !== oldEntity.name ||
     newEntity.station !== oldEntity.station ||
-    newEntity.customerCharacterId !== oldEntity.customerCharacterId ||
+    getTaskCounterpartyId(newEntity as any) !== getTaskCounterpartyId(oldEntity as any) ||
     newEntity.customerCharacterRole !== oldEntity.customerCharacterRole
   );
 }

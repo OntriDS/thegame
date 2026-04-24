@@ -10,6 +10,10 @@ import { getCharacterById, getBusinessById } from '@/data-store/repositories/cha
 import { getTaskById } from '@/data-store/repositories/task.repo';
 import { v4 as uuid } from 'uuid';
 import { appendEntityLog } from '@/workflows/entities-logging';
+import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution';
+import { getItemCharacterId } from '@/lib/item-character-id';
+import { getFinancialCounterpartyId } from '@/lib/financial-record-counterparty-id';
+import { getSaleCharacterId } from '@/lib/sale-character-id';
 
 export function makeLink(linkType: LinkType, source: { type: EntityType; id: string }, target: { type: EntityType; id: string }): Link {
   return {
@@ -52,14 +56,12 @@ export async function processLinkEntity(entity: any, entityType: EntityType): Pr
 }
 
 /**
- * Keep TASK_CHARACTER links aligned with task.customerCharacterId (customer or beneficiary).
+ * Keep TASK_CHARACTER links aligned with task.characterId (customer or beneficiary).
  * Removes stale links when the counterparty changes or is cleared; creates the link when missing.
  */
 export async function syncTaskCharacterCounterpartyLinks(task: Task): Promise<void> {
   const desiredId =
-    task.customerCharacterId && String(task.customerCharacterId).trim() !== ''
-      ? String(task.customerCharacterId).trim()
-      : null;
+    getTaskCounterpartyId(task);
 
   const existingLinks = await getLinksFor({ type: EntityType.TASK, id: task.id });
   const taskCharacterLinks = existingLinks.filter((l) => l.linkType === LinkType.TASK_CHARACTER);
@@ -153,16 +155,17 @@ export async function processItemEffects(item: Item): Promise<void> {
   }
 
   // ITEM_CHARACTER link
-  if (item.ownerCharacterId) {
+  const itemCharacterId = getItemCharacterId(item);
+  if (itemCharacterId) {
     const l = makeLink(
       LinkType.ITEM_CHARACTER,
       { type: EntityType.ITEM, id: item.id },
-      { type: EntityType.CHARACTER, id: item.ownerCharacterId }
+      { type: EntityType.CHARACTER, id: itemCharacterId }
     );
     const wasCreated = await createLink(l);
 
     if (wasCreated) {
-      const character = await getCharacterById(item.ownerCharacterId);
+      const character = await getCharacterById(itemCharacterId);
       let sourceTaskName: string | undefined;
 
       // Get source task name if available
@@ -174,7 +177,7 @@ export async function processItemEffects(item: Item): Promise<void> {
       }
 
       // Log in character log (customer owns item)
-      await appendEntityLog(EntityType.CHARACTER, item.ownerCharacterId, LogEventType.OWNS_ITEM, {
+      await appendEntityLog(EntityType.CHARACTER, itemCharacterId, LogEventType.OWNS_ITEM, {
         name: character?.name || 'Unknown Character',
         roles: character?.roles || [],
         itemId: item.id,
@@ -196,6 +199,7 @@ export async function processItemEffects(item: Item): Promise<void> {
 }
 
 export async function processSaleEffects(sale: Sale): Promise<void> {
+  const saleCounterpartyCharId = getSaleCharacterId(sale);
   const existingLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
 
   // Helper: resolve an ID to a Character ID.
@@ -246,7 +250,7 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
   // Build the full set of allowed character target IDs,
   // resolving any business IDs to their linkedCharacterId.
   const allowedCharacterIds = new Set<string>();
-  if (sale.customerId) allowedCharacterIds.add(sale.customerId);
+  if (saleCounterpartyCharId) allowedCharacterIds.add(saleCounterpartyCharId);
   if (sale.partnerId) {
     const charId = await resolveToCharacterId(sale.partnerId);
     if (charId) allowedCharacterIds.add(charId);
@@ -263,17 +267,17 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     await createLink(l);
   }
 
-  // --- SALE_CHARACTER for customerId ---
-  if (sale.customerId) {
+  // --- SALE_CHARACTER for customer / counterparty character ---
+  if (saleCounterpartyCharId) {
     const l = makeLink(
       LinkType.SALE_CHARACTER,
       { type: EntityType.SALE, id: sale.id },
-      { type: EntityType.CHARACTER, id: sale.customerId }
+      { type: EntityType.CHARACTER, id: saleCounterpartyCharId }
     );
     const wasCreated = await createLink(l);
     if (wasCreated) {
-      const character = await getCharacterById(sale.customerId);
-      await appendEntityLog(EntityType.CHARACTER, sale.customerId, LogEventType.PURCHASED, {
+      const character = await getCharacterById(saleCounterpartyCharId);
+      await appendEntityLog(EntityType.CHARACTER, saleCounterpartyCharId, LogEventType.PURCHASED, {
         name: character?.name || 'Unknown Character',
         roles: character?.roles || [],
         saleId: sale.id,
@@ -335,6 +339,7 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
 }
 
 export async function processFinancialEffects(fin: FinancialRecord): Promise<void> {
+  const financialCounterpartyId = getFinancialCounterpartyId(fin);
   // Get existing links for cleanup
   const existingLinks = await getLinksFor({ type: EntityType.FINANCIAL, id: fin.id });
 
@@ -344,19 +349,19 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
   }
 
   // FINREC_CHARACTER link
-  if (fin.customerCharacterId) {
+  if (financialCounterpartyId) {
     const l = makeLink(
       LinkType.FINREC_CHARACTER,
       { type: EntityType.FINANCIAL, id: fin.id },
-      { type: EntityType.CHARACTER, id: fin.customerCharacterId }
+      { type: EntityType.CHARACTER, id: financialCounterpartyId }
     );
     const wasCreated = await createLink(l);
 
     if (wasCreated) {
-      const character = await getCharacterById(fin.customerCharacterId);
+      const character = await getCharacterById(financialCounterpartyId);
 
       // Log in character log (customer transacted)
-      await appendEntityLog(EntityType.CHARACTER, fin.customerCharacterId, LogEventType.TRANSACTED, {
+      await appendEntityLog(EntityType.CHARACTER, financialCounterpartyId, LogEventType.TRANSACTED, {
         name: character?.name || 'Unknown Character',
         roles: character?.roles || [],
         financialId: fin.id,
@@ -442,16 +447,17 @@ export async function processCharacterEffects(character: Character): Promise<voi
 }
 
 export async function processPlayerEffects(player: Player): Promise<void> {
-  // PLAYER_CHARACTER links (array of characters)
-  if (player.characterIds && player.characterIds.length > 0) {
-    for (const characterId of player.characterIds) {
-      const link = makeLink(
-        LinkType.PLAYER_CHARACTER,
-        { type: EntityType.PLAYER, id: player.id },
-        { type: EntityType.CHARACTER, id: characterId }
-      );
-      await createLink(link);
-    }
+  // PLAYER_CHARACTER links (single primary character)
+  if (player.characterId) {
+    const characterId = String(player.characterId).trim();
+    if (!characterId) return;
+
+    const link = makeLink(
+      LinkType.PLAYER_CHARACTER,
+      { type: EntityType.PLAYER, id: player.id },
+      { type: EntityType.CHARACTER, id: characterId }
+    );
+    await createLink(link);
   }
 
   // Note: PLAYER_SITE links not implemented - Player doesn't have siteId field

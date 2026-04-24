@@ -26,8 +26,8 @@ export type SalesModalNetworkContentProps = Pick<
   | 'toggleAdvanced'
   | 'siteId'
   | 'setSiteId'
-  | 'customerId'
-  | 'setCustomerId'
+  | 'characterId'
+  | 'setCharacterId'
   | 'isNewCustomer'
   | 'setIsNewCustomer'
   | 'newCustomerName'
@@ -72,8 +72,8 @@ export default function SalesModalNetworkContent({
   toggleAdvanced,
   siteId,
   setSiteId,
-  customerId,
-  setCustomerId,
+  characterId,
+  setCharacterId,
   isNewCustomer,
   setIsNewCustomer,
   newCustomerName,
@@ -167,8 +167,8 @@ export default function SalesModalNetworkContent({
                   />
                 ) : (
                   <SearchableSelect
-                    value={customerId || ''}
-                    onValueChange={setCustomerId}
+                    value={characterId || ''}
+                    onValueChange={setCharacterId}
                     options={customerOptions}
                     autoGroupByCategory={true}
                     placeholder="Select customer"

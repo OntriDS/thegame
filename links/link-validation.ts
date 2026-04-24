@@ -12,6 +12,7 @@ import { getAccountById } from '@/data-store/repositories/account.repo';
 import { kvGet } from '@/lib/utils/kv';
 import { buildDataKey } from '@/data-store/keys';
 import { getLinksFor } from './link-registry';
+import { getSaleCharacterId } from '@/lib/sale-character-id';
 
 /**
  * Link validation result interface
@@ -415,7 +416,7 @@ export async function validateBusinessRules(
         const saleWithChar = await getSaleById(source.id);
         if (saleWithChar) {
           const ok =
-            saleWithChar.customerId === target.id ||
+            getSaleCharacterId(saleWithChar) === target.id ||
             saleWithChar.partnerId === target.id;
           if (!ok) {
             warnings.push(

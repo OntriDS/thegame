@@ -5,6 +5,7 @@ import type { Task, CustomerCounterpartyRole } from '@/types/entities';
 import { CharacterRole, EntityType, LinkType } from '@/types/enums';
 import { getSaleById } from '@/data-store/datastore';
 import { getLinksFor } from '@/links/link-registry';
+import { getSaleCharacterId } from '@/lib/sale-character-id';
 
 export type CounterpartyResolutionSource = 'task-field' | 'task-character-link' | 'sale-fallback' | 'none';
 
@@ -28,7 +29,7 @@ const normalizeId = (value: unknown): string | null => {
 };
 
 async function resolveByTaskFields(task: Task): Promise<ResolvedTaskCounterparty | null> {
-  const characterId = normalizeId(task.customerCharacterId);
+  const characterId = getTaskCounterpartyId(task);
   if (!characterId) return null;
 
   const characterRole = normalizeRole(task.customerCharacterRole) ?? CharacterRole.CUSTOMER;
@@ -57,7 +58,7 @@ async function resolveBySaleFallback(sourceSaleId: string | null | undefined): P
   if (!sourceSaleId) return null;
 
   const sale = await getSaleById(sourceSaleId);
-  const saleCustomerId = normalizeId(sale?.customerId);
+  const saleCustomerId = getSaleCharacterId(sale);
   if (!saleCustomerId) return null;
 
   return {
@@ -80,8 +81,17 @@ export async function resolveCounterpartyForTask(task: Task): Promise<ResolvedTa
   return { characterId: null, characterRole: null, source: 'none' };
 }
 
+export const getTaskCounterpartyId = (task?: Task | null): string | null => {
+  if (!task) return null;
+  return normalizeId(task.characterId);
+};
+
 export function withResolvedTaskCounterparty(task: Task, resolution: ResolvedTaskCounterparty): Task {
-  if (task.customerCharacterId === resolution.characterId && task.customerCharacterRole === resolution.characterRole) {
+  const currentCharacterId = getTaskCounterpartyId(task);
+  if (
+    currentCharacterId === resolution.characterId &&
+    task.customerCharacterRole === resolution.characterRole
+  ) {
     return task;
   }
 
@@ -92,7 +102,7 @@ export function withResolvedTaskCounterparty(task: Task, resolution: ResolvedTas
 
   return {
     ...task,
-    customerCharacterId: resolution.characterId,
+    characterId: resolution.characterId,
     customerCharacterRole: characterRole
   };
 }

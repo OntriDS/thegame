@@ -74,7 +74,7 @@ export default function CharacterInventorySubmodal({
       // Strategy 0 in api/items/route.ts handles this efficiently
       const itemsByOwner = await ClientAPI.getItems(undefined, undefined, undefined, undefined, undefined, characterId);
 
-      // Fetch linked items for those not caught by the ownerCharacterId field
+      // Fetch linked items for those not caught by the characterId field
       let linkedItems: Item[] = [];
       if (itemIds.size > 0) {
         // We still need to fetch these specifically if they aren't in itemsByOwner

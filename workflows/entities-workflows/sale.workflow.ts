@@ -33,6 +33,7 @@ import { getUTCNow, endOfMonthUTC, toUTCISOString, formatArchiveMonthKeyUTC } fr
 import { buildMonthIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { getSaleLogDetails } from '@/lib/utils/sale-log-details';
 import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
+import { getSaleCharacterId } from '@/lib/sale-character-id';
 
 const STATE_FIELDS = ['status', 'isNotPaid', 'isNotCharged', 'isCollected', 'postedAt', 'doneAt', 'cancelledAt'];
 
@@ -169,13 +170,13 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   }
 
   // Character creation from emissary fields - when newCustomerName is provided
-  if (effectiveSale.newCustomerName && !effectiveSale.customerId) {
+  if (effectiveSale.newCustomerName && !getSaleCharacterId(effectiveSale)) {
     const characterEffectKey = EffectKeys.sideEffect('sale', effectiveSale.id, 'characterCreated');
     if (!(await hasEffect(characterEffectKey))) {
       const createdCharacter = await createCharacterFromSale(effectiveSale);
       if (createdCharacter) {
         // Update sale with the created character ID
-        effectiveSale = { ...effectiveSale, customerId: createdCharacter.id };
+        effectiveSale = { ...effectiveSale, characterId: createdCharacter.id };
         await upsertSale(effectiveSale, { skipWorkflowEffects: true, skipLinkEffects: true });
         await markEffect(characterEffectKey);
         sale = effectiveSale;
@@ -355,7 +356,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       hasCostChanged(sale, previousSale) ||
       sale.boothFee !== previousSale.boothFee ||
       sale.partnerId !== previousSale.partnerId ||
-      sale.customerId !== previousSale.customerId ||
+      getSaleCharacterId(sale) !== getSaleCharacterId(previousSale) ||
       sale.name !== previousSale.name ||
       sale.siteId !== previousSale.siteId ||
       sale.salesChannel !== previousSale.salesChannel ||

@@ -244,7 +244,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         const hasHistoricalDescription = l.description?.includes("[Partner:");
         const hasPartnerVault = Boolean(
           (l as any).metadata?.partnerId ||
-          (l as any).metadata?.customerCharacterId,
+          (l as any).metadata?.customerCharacterId ||
+          (l as any).metadata?.characterId,
         );
 
         return (
@@ -274,6 +275,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
           partnerId:
             line.metadata?.partnerId ||
             line.metadata?.customerCharacterId ||
+            line.metadata?.characterId ||
             "",
         };
       });
@@ -843,7 +845,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         isNotCharged: isNotCharged,
         siteId: siteId,
         salesChannel: "Booth-Sales" as Station,
-        customerId: null,
+        characterId: null,
         partnerId:
           viewMode === "Partner" && selectedPartnerId
             ? selectedPartnerId

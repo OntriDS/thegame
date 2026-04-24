@@ -52,9 +52,10 @@ export async function POST(req: NextRequest) {
   if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const body = (await req.json()) as Sale;
+    const body = (await req.json()) as Sale & { customerId?: unknown };
+    const { customerId: _dropLegacySaleCustomerId, ...bodyRest } = body;
     const sale = {
-      ...body,
+      ...bodyRest,
       id: body.id || uuid(),
       links: body.links || [],
       createdAt: body.createdAt ? parseDateToUTC(body.createdAt) : getUTCNow(),

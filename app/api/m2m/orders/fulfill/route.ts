@@ -4,6 +4,7 @@ import { CharacterRole, SaleStatus } from '@/types/enums';
 import { getSaleById, upsertSale } from '@/data-store/datastore';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync-server';
+import { getSaleCharacterId } from '@/lib/sale-character-id';
 
 type FulfillOrderRequest = {
   orderId?: string;
@@ -110,8 +111,9 @@ export async function POST(request: NextRequest) {
     
     const saved = await upsertSale(nextSale);
 
-    if (saved.customerId) {
-      await ensureCounterpartyRoleDatastore(saved.customerId, CharacterRole.CUSTOMER);
+    const saleCounterparty = getSaleCharacterId(saved);
+    if (saleCounterparty) {
+      await ensureCounterpartyRoleDatastore(saleCounterparty, CharacterRole.CUSTOMER);
     }
 
     return NextResponse.json({ success: true, orderId: saved.id, status: saved.status });

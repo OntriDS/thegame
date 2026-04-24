@@ -19,13 +19,20 @@ export async function POST(req: NextRequest) {
   
   try {
     const body = (await req.json()) as Player;
+    const cleanBody = { ...(body as Player & { characterIds?: unknown }) };
+    delete cleanBody.characterIds;
+    const incomingCharacterId = typeof body.characterId === 'string'
+      ? body.characterId.trim()
+      : null;
+
     const player = {
-      ...body,
-      id: body.id || uuid(),
-      links: body.links || [],
-      createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
+      ...(cleanBody as Player),
+      id: cleanBody.id || uuid(),
+      characterId: incomingCharacterId || null,
+      links: cleanBody.links || [],
+      createdAt: cleanBody.createdAt ? new Date(cleanBody.createdAt) : new Date(),
       updatedAt: new Date(),
-      lastActiveAt: body.lastActiveAt ? new Date(body.lastActiveAt) : new Date()
+      lastActiveAt: cleanBody.lastActiveAt ? new Date(cleanBody.lastActiveAt) : new Date()
     };
     const saved = await upsertPlayer(player);
     return NextResponse.json(saved);

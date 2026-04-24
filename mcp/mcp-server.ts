@@ -192,7 +192,7 @@ export class MCPServer {
           siteId: null,
           targetSiteId: null,
           sourceSaleId: null,
-          customerCharacterId: null,
+          characterId: null,
           outputItemType: undefined,
           outputItemSubType: undefined,
           outputQuantity: undefined,

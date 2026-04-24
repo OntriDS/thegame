@@ -18,7 +18,9 @@ export async function getAllPlayers(): Promise<Player[]> {
 
 export async function getPlayerById(id: string): Promise<Player | null> {
   const key = buildDataKey(ENTITY, id);
-  return await kvGet<Player>(key);
+  const player = await kvGet<Player>(key);
+  if (!player) return null;
+  return player;
 }
 
 export async function upsertPlayer(player: Player): Promise<Player> {

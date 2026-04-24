@@ -43,7 +43,7 @@ import {
   uncascadeStatusFromInstances,
   getUndoneInstancesCount
 } from '@/lib/utils/recurrent-task-utils';
-import { resolveCounterpartyForTask, withResolvedTaskCounterparty } from '../task-counterparty-resolution';
+import { resolveCounterpartyForTask, withResolvedTaskCounterparty, getTaskCounterpartyId } from '../task-counterparty-resolution';
 
 const STATE_FIELDS = ['status', 'progress', 'doneAt', 'collectedAt', 'siteId', 'targetSiteId'];
 
@@ -381,7 +381,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   // Tasks are not physical entities; skip MOVED logging even if site references change.
 
   // Character creation from emissary fields - when newCustomerName is provided
-  if (task.newCustomerName && !taskForCounterparty.customerCharacterId) {
+  if (task.newCustomerName && !getTaskCounterpartyId(taskForCounterparty)) {
     const effectKey = EffectKeys.sideEffect('task', task.id, 'characterCreated');
     if (!(await hasEffect(effectKey))) {
       const normalizedCustomerCharacterRole =
@@ -392,7 +392,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         // Update task with the created character ID
         const updatedTask = {
           ...taskForCounterparty,
-          customerCharacterId: createdCharacter.id,
+          characterId: createdCharacter.id,
           customerCharacterRole: normalizedCustomerCharacterRole as CustomerCounterpartyRole
         };
         await upsertTask(updatedTask, { skipWorkflowEffects: true });
@@ -471,7 +471,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
             const createdFinancial = await createFinancialRecordFromTask(resolvedTaskForPropagation);
             if (createdFinancial) {
               console.log(
-                `[onTaskUpsert] financialCreated resolvedCounterparty=${resolvedTaskForPropagation.customerCharacterId || 'null'}/` +
+                `[onTaskUpsert] financialCreated resolvedCounterparty=${resolvedTaskForPropagation.characterId || 'null'}/` +
                   `${resolvedTaskForPropagation.customerCharacterRole || 'null'}/${resolvedCounterparty.source}`
               );
               await markEffect(effectKey);
@@ -532,14 +532,14 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     }
   }
 
-  const counterpartyPresent = Boolean(resolvedTaskForPropagation.customerCharacterId && resolvedTaskForPropagation.customerCharacterRole);
+  const counterpartyPresent = Boolean(resolvedTaskForPropagation.characterId && resolvedTaskForPropagation.customerCharacterRole);
   const counterpartyChanged =
     !resolvedPreviousTaskForPropagation ||
-    resolvedPreviousTaskForPropagation.customerCharacterId !== resolvedTaskForPropagation.customerCharacterId ||
+    resolvedPreviousTaskForPropagation.characterId !== resolvedTaskForPropagation.characterId ||
     resolvedPreviousTaskForPropagation.customerCharacterRole !== resolvedTaskForPropagation.customerCharacterRole;
   if (counterpartyPresent && counterpartyChanged) {
     await ensureCounterpartyRoleDatastore(
-      resolvedTaskForPropagation.customerCharacterId,
+      resolvedTaskForPropagation.characterId,
       resolvedTaskForPropagation.customerCharacterRole
     );
   }

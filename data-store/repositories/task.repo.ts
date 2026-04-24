@@ -14,7 +14,7 @@ export async function getTaskById(id: string): Promise<Task | null> {
   if (typeof raw === 'string') {
     try {
       const parsed = JSON.parse(raw) as Task;
-      return parsed ?? null;
+      return parsed;
     } catch {
       return null;
     }
@@ -39,7 +39,12 @@ export async function getAllTasks(): Promise<Task[]> {
     .map(t => {
       if (t === null || t === undefined) return null;
       if (typeof t === 'string') {
-        try { return JSON.parse(t) as Task; } catch { return null; }
+        try {
+          const parsed = JSON.parse(t) as Task;
+          return parsed;
+        } catch {
+          return null;
+        }
       }
       return t as Task;
     })
@@ -62,7 +67,12 @@ export async function getTasksByParentId(parentId: string): Promise<Task[]> {
     .map(t => {
       if (t === null || t === undefined) return null;
       if (typeof t === 'string') {
-        try { return JSON.parse(t) as Task; } catch { return null; }
+        try {
+          const parsed = JSON.parse(t) as Task;
+          return parsed;
+        } catch {
+          return null;
+        }
       }
       return t as Task;
     })

@@ -23,6 +23,7 @@ import { CM_TO_M2_CONVERSION, PRICE_STEP, YEAR_MIN, YEAR_MAX } from '@/lib/const
 import { v4 as uuid } from 'uuid';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { Package, Trash2, User, Network, CalendarIcon } from 'lucide-react';
+import { getItemCharacterId } from '@/lib/item-character-id';
 import { ClientAPI } from '@/lib/client-api';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
@@ -93,7 +94,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [showDatesModal, setShowDatesModal] = useState(false);
   const [showOwnerModal, setShowOwnerModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [ownerCharacterId, setOwnerCharacterId] = useState<string | null>(null);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
   const [ownerCharacterName, setOwnerCharacterName] = useState<string>('');
   const [showQuickSellModal, setShowQuickSellModal] = useState(false);
   const [quickSellItem, setQuickSellItem] = useState<Item | null>(null);
@@ -335,7 +336,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     setSite(initialSiteId || DEFAULT_NONE_SITE);
     setLocalSoldAt(undefined);
     setSelectedItemId('');
-    setOwnerCharacterId(null);
+    setOwnerId(null);
     setOwnerCharacterName('');
   }, [defaultItemType, getLastUsedStation, initialSiteId]);
 
@@ -673,7 +674,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     prevModalSessionRef.current = { open, hadItem };
 
     if (!open) {
-      setOwnerCharacterId(null);
+      setOwnerId(null);
       setOwnerCharacterName('');
       setSelectedItemId('');
       setShowOwnerModal(false);
@@ -775,7 +776,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setTargetAmount(item.targetAmount?.toString() || '');
       setQuantitySold(item.quantitySold || 0);
 
-      setOwnerCharacterId(item.ownerCharacterId || null);
+      setOwnerId(getItemCharacterId(item) || null);
       setOwnerCharacterName('');
     }
   }, [item, defaultItemType, initialSiteId]);
@@ -810,13 +811,13 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     }
   }, [item, open, defaultItemType, getPreference]);
 
-  // Load owner character name when ownerCharacterId changes
+  // Load owner character name when ownerId changes
   useEffect(() => {
     const loadOwnerCharacter = async () => {
-      if (ownerCharacterId) {
+      if (ownerId) {
         try {
           const characters = await ClientAPI.getCharacters();
-          const owner = characters.find(c => c.id === ownerCharacterId);
+          const owner = characters.find(c => c.id === ownerId);
           setOwnerCharacterName(owner?.name || 'Unknown');
         } catch (error) {
           console.error('Failed to load owner character:', error);
@@ -827,11 +828,11 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       }
     };
     loadOwnerCharacter();
-  }, [ownerCharacterId]);
+  }, [ownerId]);
 
   // Handle setting owner character
   const handleSetOwner = (characterId: string | null) => {
-    setOwnerCharacterId(characterId);
+    setOwnerId(characterId);
   };
 
   // Handle item selection from SearchableSelect
@@ -882,7 +883,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setTargetAmount(selectedItem.targetAmount?.toString() || '');
         setQuantitySold(selectedItem.quantitySold || 0);
         setLocalSoldAt(selectedItem.soldAt ? new Date(selectedItem.soldAt) : undefined);
-        setOwnerCharacterId(selectedItem.ownerCharacterId || null);
+        setOwnerId(getItemCharacterId(selectedItem) || null);
       }
     }
   };
@@ -1006,7 +1007,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         dimensions,
         size: parsedSize,
         targetAmount: targetAmount && !isNaN(parseFloat(targetAmount)) ? parseFloat(targetAmount) : undefined,
-        ownerCharacterId: ownerCharacterId || null,
+        characterId: ownerId || null,
         // Preserve creation date if editing, otherwise new date
         createdAt: (item || existingItems.find(i => i.id === selectedItemId))?.createdAt || getUTCNow(),
         updatedAt: getUTCNow(),
@@ -1027,7 +1028,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
       // Links are loaded on-demand when user clicks "View Links" button
       if (isCreatingNewItem) {
-        setOwnerCharacterId(null);
+        setOwnerId(null);
         setOwnerCharacterName('');
       }
       onOpenChange(false);
@@ -1466,7 +1467,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                 className="h-8 text-xs"
               >
                 <User className="w-3 h-3 mr-1" />
-                {ownerCharacterId ? `Owner: ${ownerCharacterName}` : 'Set Owner'}
+                {ownerId ? `Owner: ${ownerCharacterName}` : 'Set Owner'}
               </Button>
             </div>
 
@@ -1638,9 +1639,9 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           entityName={ownerEntityName}
           linkType={LinkType.ITEM_CHARACTER}
           isDraft={isDraftItem}
-          currentOwnerId={ownerCharacterId}
+          currentOwnerId={ownerId}
           onDraftOwnerChange={(ownerId) => {
-            setOwnerCharacterId(ownerId);
+            setOwnerId(ownerId);
             if (ownerId) {
               ClientAPI.getCharacters().then((characters) => {
                 const owner = characters.find(c => c.id === ownerId);
@@ -1660,18 +1661,18 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                 const isReverse = link.target.type === EntityType.ITEM && link.target.id === ownerEntityIdForLinks && link.source.type === EntityType.CHARACTER;
                 return isCanonical || isReverse;
               });
-              const ownerId = ownerLink?.source.type === EntityType.CHARACTER
+              const nextOwnerId = ownerLink?.source.type === EntityType.CHARACTER
                 ? ownerLink.source.id
                 : ownerLink?.target.type === EntityType.CHARACTER
                   ? ownerLink.target.id
                   : null;
-              if (ownerId) {
-                setOwnerCharacterId(ownerId);
+              if (nextOwnerId) {
+                setOwnerId(nextOwnerId);
                 const characters = await ClientAPI.getCharacters();
-                const owner = characters.find(c => c.id === ownerId);
+                const owner = characters.find(c => c.id === nextOwnerId);
                 setOwnerCharacterName(owner?.name || 'Unknown');
               } else {
-                setOwnerCharacterId(null);
+                setOwnerId(null);
                 setOwnerCharacterName('');
               }
             };

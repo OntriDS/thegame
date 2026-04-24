@@ -32,8 +32,8 @@ export interface SalesModalDirectContentCommonProps {
   toggleAdvanced: () => void;
   siteId: string;
   setSiteId: (value: string) => void;
-  customerId: string | null;
-  setCustomerId: (value: string | null) => void;
+  characterId: string | null;
+  setCharacterId: (value: string | null) => void;
   isNewCustomer: boolean;
   setIsNewCustomer: (value: boolean) => void;
   newCustomerName: string;
@@ -99,8 +99,8 @@ export default function SalesModalDirectContent({
   toggleAdvanced,
   siteId,
   setSiteId,
-  customerId,
-  setCustomerId,
+  characterId,
+  setCharacterId,
   isNewCustomer,
   setIsNewCustomer,
   newCustomerName,
@@ -259,8 +259,8 @@ export default function SalesModalDirectContent({
                     />
                   ) : (
                     <SearchableSelect
-                      value={customerId || ''}
-                      onValueChange={setCustomerId}
+                      value={characterId || ''}
+                      onValueChange={setCharacterId}
                       options={customerOptions}
                       autoGroupByCategory={true}
                       placeholder="Select customer"
@@ -548,8 +548,8 @@ export default function SalesModalDirectContent({
                     />
                   ) : (
                     <SearchableSelect
-                      value={customerId || ''}
-                      onValueChange={setCustomerId}
+                      value={characterId || ''}
+                      onValueChange={setCharacterId}
                       options={customerOptions}
                       autoGroupByCategory={true}
                       placeholder="Select customer"

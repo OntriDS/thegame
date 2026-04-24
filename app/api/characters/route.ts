@@ -9,6 +9,7 @@ import { getAllCharacters, getCharacterById, upsertCharacter, getAllFinancials, 
 import type { Character } from '@/types/entities';
 import { getLinksFor } from '@/links/link-registry';
 import { getUTCNow } from '@/lib/utils/utc-utils';
+import { getFinancialCounterpartyId } from '@/lib/financial-record-counterparty-id';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,7 +76,7 @@ const buildDirectoryAmountTotals = async (characterIds: string[]): Promise<Map<s
   // Charged amount: based on customer-character relations from Financial records
   const financials = await getAllFinancials();
   for (const record of financials) {
-    const customerCharacterId = record.customerCharacterId;
+    const customerCharacterId = getFinancialCounterpartyId(record);
     if (!customerCharacterId || !idSet.has(customerCharacterId)) continue;
     if (!isCustomerRole(record.customerCharacterRole)) continue;
 

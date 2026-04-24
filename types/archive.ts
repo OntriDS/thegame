@@ -115,7 +115,7 @@ export interface SaleSnapshot extends BaseSnapshot {
     collectedAt: Date;
     collectedByCharacterId?: string;
     siteId?: string;
-    customerId?: string;
+    characterId?: string;
     lines: any[]; // SaleLine data
     // ... other sale fields
   };

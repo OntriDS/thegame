@@ -9,6 +9,9 @@ import { hasEffect, markEffect } from '@/data-store/effects-registry';
 // links are created by processLinkEntity()
 import { v4 as uuid } from 'uuid';
 import { getUTCNow } from '@/lib/utils/utc-utils';
+import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution';
+import { getItemCharacterId } from '@/lib/item-character-id';
+import { getFinancialCounterpartyId } from '@/lib/financial-record-counterparty-id';
 
 /**
  * Determines the default item status based on item type and sale status
@@ -121,7 +124,7 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       value: 0,
       quantitySold: 0,
       sourceTaskId: task.id, // Link item back to the task that created it
-      ownerCharacterId: task.customerCharacterId || null, // Emissary: Pass customer as item owner
+      characterId: getTaskCounterpartyId(task), // Emissary: Pass customer as item owner
       year: (task.collectedAt || task.doneAt || getUTCNow()).getUTCFullYear(), // Use task's date (UTC)
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
@@ -168,7 +171,7 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
     const isValidSite = (siteId: string | null | undefined) =>
       Boolean(siteId && siteId !== 'None' && siteId !== 'none');
 
-    const resolvedOwnerCharacterId = record.customerCharacterId || null;
+    const resolvedOwnerCharacterId = getFinancialCounterpartyId(record);
 
     if (record.outputItemId && !record.isNewItem) {
       console.log(`[createItemFromRecord] Existing item detected (outputItemId=${record.outputItemId}) - updating stock`);
@@ -199,7 +202,7 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
           ...existingItem,
           stock: updatedStock,
           updatedAt: getUTCNow(),
-          ownerCharacterId: existingItem.ownerCharacterId || resolvedOwnerCharacterId || null,
+          characterId: getItemCharacterId(existingItem) || resolvedOwnerCharacterId || null,
         };
 
         const savedItem = await upsertItem(updatedItem);
@@ -239,7 +242,7 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       value: 0,
       quantitySold: 0,
       sourceRecordId: record.id, // Link item back to the record that created it
-      ownerCharacterId: resolvedOwnerCharacterId,
+      characterId: resolvedOwnerCharacterId,
       year: record.year, // Use record's year
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),

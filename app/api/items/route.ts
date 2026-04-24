@@ -2,7 +2,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { Item } from '@/types/entities';
-import { getAllItems, getItemsByType, upsertItem, getItemsForMonth, getActiveItems, getLegacyItems, getItemsByOwnerId } from '@/data-store/datastore';
+import { getAllItems, getItemsByType, upsertItem, getItemsForMonth, getActiveItems, getLegacyItems, getItemsByCharacterId } from '@/data-store/datastore';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { ItemStatus } from '@/types/enums';
@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
 
   // Strategy 0: Owner-based fetching (High Priority for inventory)
   if (ownerId) {
-    items = await getItemsByOwnerId(ownerId);
+    items = await getItemsByCharacterId(ownerId);
   }
   // Strategy 1: Time-based fetching (Priority)
   // If we have a specific month, use the optimized month index
@@ -202,17 +202,27 @@ export async function POST(req: NextRequest) {
   if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const body = (await req.json()) as Item;
+    const body = (await req.json()) as unknown as Item;
+    const normalizeCharacterId = (value: unknown): string | null => {
+      if (typeof value !== 'string') return null;
+      const trimmed = value.trim();
+      return trimmed === '' ? null : trimmed;
+    };
+
+    const cleanBody = { ...(body as unknown as Record<string, unknown>) } as Record<string, unknown>;
+    delete cleanBody.ownerCharacterId;
+    const characterId = normalizeCharacterId(body.characterId);
     const item = {
-      ...body,
+      ...(cleanBody as unknown as Item),
       id: body.id || uuid(),
       links: body.links || [],
       createdAt: body.createdAt ? new Date(body.createdAt) : getUTCNow(),
       updatedAt: getUTCNow(),
       lastRestockDate: body.lastRestockDate ? new Date(body.lastRestockDate) : undefined,
       soldAt: body.soldAt ? new Date(body.soldAt) : undefined,
+      characterId: characterId,
     };
-    const saved = await upsertItem(item);
+    const saved = await upsertItem(item as unknown as Item);
     return NextResponse.json(saved);
   } catch (error) {
     console.error('[API] Error saving item:', error);

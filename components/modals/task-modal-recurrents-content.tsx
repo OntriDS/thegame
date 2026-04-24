@@ -236,8 +236,11 @@ export default function RecurrentTreeModalContent({
           : ItemStatus.FOR_SALE)
       );
       setSelectedItemId(existingTask.outputItemId || '');
-      setCustomerCharacterId(existingTask.customerCharacterId || null);
-      setIsNewCustomer(!Boolean(existingTask.customerCharacterId));
+      const existingTaskCounterpartyId =
+        existingTask.characterId ??
+        null;
+      setCustomerCharacterId(existingTaskCounterpartyId);
+      setIsNewCustomer(!Boolean(existingTaskCounterpartyId));
       setNewCustomerName(existingTask.newCustomerName || '');
       setCustomerCharacterRole(existingTask.customerCharacterRole || CharacterRole.CUSTOMER);
       setPlayerCharacterId(existingTask.playerCharacterId || FOUNDER_CHARACTER_ID);
@@ -434,7 +437,7 @@ export default function RecurrentTreeModalContent({
         },
       },
       parentId,
-      customerCharacterId: isNewCustomer ? null : customerCharacterId,
+      characterId: isNewCustomer ? null : customerCharacterId,
       newCustomerName: isNewCustomer ? newCustomerName.trim() || undefined : undefined,
       customerCharacterRole,
       playerCharacterId: finalPlayerCharacterId,
@@ -519,7 +522,7 @@ export default function RecurrentTreeModalContent({
     try {
       const newTask = buildTaskFromForm();
       await onSave(newTask);
-      await ensureCounterpartyRole(newTask.customerCharacterId, newTask.customerCharacterRole);
+      await ensureCounterpartyRole(newTask.characterId, newTask.customerCharacterRole);
       dispatchEntityUpdated(entityTypeToKind(EntityType.TASK));
       onOpenChange(false);
     } catch (error) {
@@ -535,7 +538,7 @@ export default function RecurrentTreeModalContent({
     try {
       const newTask = buildTaskFromForm(cascadeData.newStatus);
       await onSave(newTask);
-      await ensureCounterpartyRole(newTask.customerCharacterId, newTask.customerCharacterRole);
+      await ensureCounterpartyRole(newTask.characterId, newTask.customerCharacterRole);
       dispatchEntityUpdated(entityTypeToKind(EntityType.TASK));
       onOpenChange(false);
     } catch (error) {
@@ -560,7 +563,7 @@ export default function RecurrentTreeModalContent({
         _skipCascade: true,
       } as Task & { _skipCascade?: boolean };
       await onSave(newTask as Task);
-      await ensureCounterpartyRole(newTask.customerCharacterId, newTask.customerCharacterRole);
+      await ensureCounterpartyRole(newTask.characterId, newTask.customerCharacterRole);
       dispatchEntityUpdated(entityTypeToKind(EntityType.TASK));
       onOpenChange(false);
     } catch (error) {

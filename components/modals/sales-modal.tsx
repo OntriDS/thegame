@@ -41,6 +41,7 @@ import SalesModalOnlineContent from './sales-modal-online-content';
 import SalesModalBoothContent, { type BoothSalesViewHandle as SalesModalBoothContentHandle } from './sales-modal-booth-content';
 import DatesSubmodal from './submodals/dates-submodal';
 import { ensureCounterpartyRole as syncCounterpartyRole } from '@/lib/utils/character-role-sync';
+import { getSaleCharacterId } from '@/lib/sale-character-id';
 import {
   collectItemSaleLines,
   extractSaleItemTargetIds,
@@ -135,7 +136,7 @@ export default function SalesModal({
   const [lines, setLines] = useState<SaleLine[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
 
-  const [customerId, setCustomerId] = useState<string | null>('');
+  const [characterId, setCharacterId] = useState<string | null>('');
   const [isNewCustomer, setIsNewCustomer] = useState(true);
   const [newCustomerName, setNewCustomerName] = useState('');
   const [playerPoints, setPlayerPoints] = useState({ xp: 0, rp: 0, fp: 0, hp: 0 });
@@ -420,8 +421,8 @@ export default function SalesModal({
       setStatus(sale.status);
       setSiteId(sale.siteId ?? '');
       setCounterpartyName(sale.counterpartyName || '');
-      setCustomerId(sale.customerId || '');
-      setIsNewCustomer(!sale.customerId); // Toggle to "Existing" if customer exists
+      setCharacterId(getSaleCharacterId(sale) || '');
+      setIsNewCustomer(!getSaleCharacterId(sale)); // Toggle to "Existing" if customer exists
       setNewCustomerName(''); // Clear new customer name
       setIsNotPaid(sale.isNotPaid || false);
       setIsNotCharged(sale.isNotCharged || false);
@@ -749,7 +750,7 @@ export default function SalesModal({
       setIsSaving(true);
       try {
         await onSave(overrideSale, force);
-        await syncCounterpartyRole(overrideSale.customerId, CharacterRole.CUSTOMER);
+        await syncCounterpartyRole(getSaleCharacterId(overrideSale), CharacterRole.CUSTOMER);
         // Dispatch events AFTER successful save
         dispatchEntityUpdated(entityTypeToKind(EntityType.SALE));
         onOpenChange(false);
@@ -972,7 +973,7 @@ export default function SalesModal({
       status,
       siteId,
       counterpartyName: counterpartyName.trim() || undefined,
-      customerId: isNewCustomer ? null : customerId,  // Ambassador: Existing customer
+      characterId: isNewCustomer ? null : characterId,  // Ambassador: Existing customer
       newCustomerName: isNewCustomer ? newCustomerName : undefined,  // EMISSARY: Name for new customer character creation
       playerCharacterId: playerCharacterId,
       rewards: hasEmissarySalePoints
@@ -1009,7 +1010,7 @@ export default function SalesModal({
     try {
       // Emit pure sale entity - Links System handles all relationships automatically
       await onSave(saleData);
-      await syncCounterpartyRole(saleData.customerId, CharacterRole.CUSTOMER);
+      await syncCounterpartyRole(saleData.characterId, CharacterRole.CUSTOMER);
 
       // Dispatch events AFTER successful save
       dispatchEntityUpdated(entityTypeToKind(EntityType.SALE));
@@ -1267,8 +1268,8 @@ export default function SalesModal({
     toggleAdvanced,
     siteId,
     setSiteId,
-    customerId,
-    setCustomerId,
+    characterId,
+    setCharacterId,
     isNewCustomer,
     setIsNewCustomer,
     newCustomerName,
@@ -1767,7 +1768,7 @@ export default function SalesModal({
 
           try {
             await onSave(pendingDuplicateSale, true);
-            await syncCounterpartyRole(pendingDuplicateSale.customerId, CharacterRole.CUSTOMER);
+            await syncCounterpartyRole(getSaleCharacterId(pendingDuplicateSale), CharacterRole.CUSTOMER);
             dispatchEntityUpdated(entityTypeToKind(EntityType.SALE));
             setShowDuplicateModal(false);
             onOpenChange(false);

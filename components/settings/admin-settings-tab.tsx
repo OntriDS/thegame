@@ -2,7 +2,7 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, DollarSign, Package, User } from 'lucide-react';
+import { Settings, Package, User, DollarSign } from 'lucide-react';
 
 export function AdminSettingsTab() {
   return (
@@ -30,14 +30,12 @@ export function AdminSettingsTab() {
         <TabsContent value="tasks" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Task Management Settings</CardTitle>
+              <CardTitle>Task administration</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Task management settings will be configured here</p>
-                <p className="text-sm">Automation rules, templates, and workflow preferences</p>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                Character counterparty field is <code className="text-xs">Task.characterId</code>. No data migrations in use.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -48,11 +46,10 @@ export function AdminSettingsTab() {
               <CardTitle>Financial Settings</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Financial management settings will be configured here</p>
-                <p className="text-sm">Currency preferences, tax settings, and reporting options</p>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                Financial counterparty field is <code className="text-xs">FinancialRecord.characterId</code>. Sales use{' '}
+                <code className="text-xs">Sale.characterId</code> for the customer / counterparty character. No KV field migrations in use.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -60,14 +57,12 @@ export function AdminSettingsTab() {
         <TabsContent value="inventories" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Inventory Settings</CardTitle>
+              <CardTitle>Inventory administration</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Inventory management settings will be configured here</p>
-                <p className="text-sm">Stock management, alerts, and automation preferences</p>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                Item owner field is <code className="text-xs">Item.characterId</code>. No data migrations in use.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -75,14 +70,10 @@ export function AdminSettingsTab() {
         <TabsContent value="player" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Character Management Settings</CardTitle>
+              <CardTitle>Character Settings</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Character management settings will be configured here</p>
-                <p className="text-sm">Character profiles, roles, permissions, and activity tracking</p>
-              </div>
+              <p className="text-sm text-muted-foreground">Player and character settings (no one-off data migrations in use).</p>
             </CardContent>
           </Card>
         </TabsContent>

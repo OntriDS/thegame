@@ -42,12 +42,26 @@ export async function POST(request: NextRequest) {
 
     const body = (await request.json()) as CancelOrderRequest;
     const orderId = normalizeString(body.orderId) || normalizeString(body.ern);
+    const shouldHardDelete = body.deleteGhost === true;
 
     if (!orderId) {
       return NextResponse.json(
         { success: false, error: 'Invalid request: orderId (or ern) is required' },
         { status: 400 },
       );
+    }
+
+    if (shouldHardDelete) {
+      const sale = await getSaleById(orderId);
+      if (!sale) {
+        console.log(`[M2M Order Cancel] Ghost delete already processed or missing: ${orderId}`);
+        return NextResponse.json({ success: true, orderId, action: 'NOOP' });
+      }
+
+      // Hard delete (completely remove from DB and cleanup all linked entities/logs)
+      await removeSale(orderId);
+      console.log(`[M2M Order Cancel] Hard-deleted ghost order: ${orderId}`);
+      return NextResponse.json({ success: true, orderId, action: 'DELETED' });
     }
 
     const sale = await getSaleById(orderId);
@@ -70,26 +84,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (body.deleteGhost === true) {
-      // Hard delete (completely remove from DB)
-      await removeSale(orderId);
-      console.log(`[M2M Order Cancel] Hard-deleted ghost order: ${orderId}`);
-      return NextResponse.json({ success: true, orderId, action: 'DELETED' });
-    } else {
-      // Soft cancel (update status)
-      const nextSale = {
-        ...sale,
-        status: SaleStatus.CANCELLED,
-        metadata: {
-          ...sale.metadata,
-          cancelReason: body.reason || 'Checkout abandoned or failed in ecosystem',
-          cancelledAt: new Date().toISOString(),
-        }
-      };
-      await upsertSale(nextSale);
-      console.log(`[M2M Order Cancel] Soft-cancelled order: ${orderId}`);
-      return NextResponse.json({ success: true, orderId, action: 'CANCELLED' });
-    }
+    // Soft cancel (update status)
+    const nextSale = {
+      ...sale,
+      status: SaleStatus.CANCELLED,
+      metadata: {
+        ...sale.metadata,
+        cancelReason: body.reason || 'Checkout abandoned or failed in ecosystem',
+        cancelledAt: new Date().toISOString(),
+      }
+    };
+    await upsertSale(nextSale);
+    console.log(`[M2M Order Cancel] Soft-cancelled order: ${orderId}`);
+    return NextResponse.json({ success: true, orderId, action: 'CANCELLED' });
   } catch (error) {
     console.error('[M2M Order Cancel] Error:', error);
     return NextResponse.json(

@@ -9,6 +9,12 @@ import { requireAdminAuth } from '@/lib/api-auth';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { parseDateToUTC } from '@/lib/utils/date-parsers';
 
+const normalizeCharacterId = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+};
+
 // Force dynamic rendering - this route accesses cookies
 export const dynamic = 'force-dynamic';
 
@@ -57,8 +63,13 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { skipDuplicateCheck, ...taskData } = body;
-    const taskBody = taskData as Task;
+    const { skipDuplicateCheck, ...taskData } = body as { skipDuplicateCheck?: boolean } & Record<string, unknown>;
+    const taskBody = taskData as unknown as Task;
+    const incomingTaskCharacterId = normalizeCharacterId((taskBody as { characterId?: string | null }).characterId);
+    const characterId = incomingTaskCharacterId;
+
+    const cleanTaskBody = { ...(taskBody as unknown as Record<string, unknown>) } as Record<string, unknown>;
+    delete cleanTaskBody.customerCharacterId;
 
     // Normalize frequencyConfig.customDays to parsed UTC instants (preserve client civil day)
     let normalizedFrequencyConfig = taskBody.frequencyConfig;
@@ -105,17 +116,18 @@ export async function POST(req: NextRequest) {
     }
 
     const task = {
-      ...taskBody,
+      ...cleanTaskBody,
       id,
       parentId,
       links: taskBody.links || [],
-      createdAt: taskBody.createdAt ? parseDateToUTC(taskBody.createdAt) : getUTCNow(),
+      characterId: characterId || null,
+      createdAt: taskBody.createdAt ? parseDateToUTC(taskBody.createdAt as Date | string | number | null | undefined) : getUTCNow(),
       updatedAt: getUTCNow(),
       dueDate: taskBody.dueDate ? parseDateToUTC(taskBody.dueDate) : undefined,
       doneAt: taskBody.doneAt ? parseDateToUTC(taskBody.doneAt) : (taskBody.status === TaskStatus.DONE ? getUTCNow() : undefined),
       collectedAt: taskBody.collectedAt ? parseDateToUTC(taskBody.collectedAt) : undefined,
       frequencyConfig: normalizedFrequencyConfig
-    };
+    } as unknown as Task;
     const saved = await upsertTask(task, { skipDuplicateCheck });
     return NextResponse.json(saved);
   } catch (error) {

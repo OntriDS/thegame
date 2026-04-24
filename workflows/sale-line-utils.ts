@@ -13,6 +13,8 @@ import { formatForDisplay } from '@/lib/utils/date-display-utils';
 import { getUTCNow, formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
 import { appendEntityLog, getMonthKeyFromTimestamp } from './entities-logging';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
+import { getItemCharacterId } from '@/lib/item-character-id';
+import { getSaleCharacterId } from '@/lib/sale-character-id';
 
 /**
  * Process all sale lines in a sale
@@ -241,7 +243,7 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
       siteId: sale.siteId,
       targetSiteId: line.taskTargetSiteId || undefined,
       sourceSaleId: sale.id, // Link task back to sale
-      customerCharacterId: sale.customerId || null,
+      characterId: getSaleCharacterId(sale),
       playerCharacterId: sale.playerCharacterId || null,
       newCustomerName: sale.newCustomerName || undefined,
       // Additional fields from service line
@@ -444,7 +446,7 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
           price: working.unitPrice,
           value: (working.unitPrice || 0) * (working.quantity || 0),
           sourceRecordId: sale.id,
-          ownerCharacterId: sale.customerId || item.ownerCharacterId || null,
+          characterId: getSaleCharacterId(sale) || getItemCharacterId(item) || null,
           updatedAt: getUTCNow(),
           description: `Sold in ${sale.counterpartyName || 'Sale'} (${formatForDisplay(refDate)})`
         };
@@ -477,6 +479,31 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
         );
         continue;
       }
+
+      const soldCloneForLog = await getItemById(resolvedCloneId);
+      if (!soldCloneForLog) {
+        console.warn(
+          `[ensureSoldItemEntities] Sold clone not found while logging (line ${lineId}, sale ${sale.id}, clone ${resolvedCloneId})`
+        );
+        continue;
+      }
+
+      const parsedSoldTimestamp = soldCloneForLog.soldAt
+        ? new Date(soldCloneForLog.soldAt)
+        : null;
+      const logTimestamp =
+        parsedSoldTimestamp && Number.isFinite(parsedSoldTimestamp.getTime())
+          ? parsedSoldTimestamp
+          : getUTCNow();
+
+      // Ensure the Sold clone has an explicit SOLD lifecycle log for the sold-items tab.
+      // We append by idempotent event dedupe (same entity + event in month) to avoid duplicates.
+      await appendEntityLog(EntityType.ITEM, resolvedCloneId, LogEventType.SOLD, {
+        name: soldCloneForLog.name || 'Unknown Item',
+        itemType: soldCloneForLog.type,
+        subItemType: soldCloneForLog.subItemType,
+        soldQuantity: working.quantity || 0,
+      }, logTimestamp);
 
       if (working.itemId !== resolvedCloneId) {
         newLines[i] = { ...working, itemId: resolvedCloneId };

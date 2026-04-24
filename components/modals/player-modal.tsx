@@ -95,15 +95,29 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             const resolveCharactersForPlayer = (allChars: Character[], p: Player): Character[] => {
               const byId = new Map(allChars.map((c) => [c.id, c]));
               const ordered: Character[] = [];
-              for (const id of p.characterIds || []) {
-                const c = byId.get(id);
+              const primaryId = p.characterId?.trim();
+              if (primaryId) {
+                const c = byId.get(primaryId);
                 if (c) ordered.push(c);
               }
-              for (const c of allChars) {
-                if (c.playerId === p.id && !ordered.some((o) => o.id === c.id)) {
-                  ordered.push(c);
+
+              if (ordered.length === 0) {
+                for (const c of allChars) {
+                  if (c.playerId === p.id) {
+                    ordered.push(c);
+                    break;
+                  }
                 }
               }
+
+              if (!primaryId) {
+                for (const c of allChars) {
+                  if (c.playerId === p.id && !ordered.some((o) => o.id === c.id)) {
+                    ordered.push(c);
+                  }
+                }
+              }
+
               return ordered;
             };
 

@@ -54,6 +54,7 @@ import { VALIDATION_CONSTANTS } from '@/lib/constants/financial-constants';
 import ConfirmationModal from './submodals/confirmation-submodal';
 import { MonthYearSelector } from '@/components/ui/month-year-selector';
 import { ensureCounterpartyRole } from '@/lib/utils/character-role-sync';
+import { getFinancialCounterpartyId } from '@/lib/financial-record-counterparty-id';
 
 
 // FinancialsModal: UI-only form for financial record data collection and validation
@@ -114,7 +115,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     status: FinancialStatus.DONE as FinancialStatus,  // Status field with default
     site: '',
     targetSite: '',
-    customerCharacterId: null as string | null,
+    characterId: null as string | null,
     customerCharacterRole: toCustomerCounterpartyRole(CharacterRole.CUSTOMER),
     isNewCustomer: true,
     newCustomerName: '',
@@ -246,9 +247,9 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
             : record.status || FinancialStatus.DONE,
         site: record.siteId || '',
         targetSite: record.targetSiteId || '',
-        customerCharacterId: record.customerCharacterId || null,
+        characterId: getFinancialCounterpartyId(record),
         customerCharacterRole: toCustomerCounterpartyRole(record.customerCharacterRole),
-        isNewCustomer: !record.customerCharacterId, // Toggle based on whether customer exists
+        isNewCustomer: !getFinancialCounterpartyId(record), // Toggle based on whether customer exists
         newCustomerName: '',
         outputItemType: (record.outputItemType as ItemType) || '',
         outputQuantity: record.outputQuantity ?? 1,
@@ -308,7 +309,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         status: FinancialStatus.DONE,  // Default status for new records
         site: '',
         targetSite: '',
-        customerCharacterId: null,
+        characterId: null,
         customerCharacterRole: toCustomerCounterpartyRole(CharacterRole.CUSTOMER),
         isNewCustomer: true,
         newCustomerName: '',
@@ -520,7 +521,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       type: isCompany ? 'company' : 'personal',
       siteId: formData.site || null,
       targetSiteId: formData.targetSite || null,
-      customerCharacterId: formData.isNewCustomer ? null : formData.customerCharacterId,  // Ambassador: Existing customer
+      characterId: formData.isNewCustomer ? null : formData.characterId,  // Ambassador: Existing customer
       newCustomerName: formData.isNewCustomer ? formData.newCustomerName : undefined,  // EMISSARY: Name for new customer character creation
       customerCharacterRole: formData.customerCharacterRole,
       playerCharacterId: playerCharacterId,
@@ -559,7 +560,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     try {
       // Emit pure record entity - Links System handles all relationships automatically
       await onSave(recordData);
-      await ensureCounterpartyRole(recordData.customerCharacterId, recordData.customerCharacterRole);
+      await ensureCounterpartyRole(recordData.characterId, recordData.customerCharacterRole);
 
       // Dispatch UI update events AFTER successful save
       dispatchEntityUpdated(entityTypeToKind(EntityType.FINANCIAL));
@@ -810,8 +811,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                       />
                     ) : (
                       <SearchableSelect
-                        value={formData.customerCharacterId || ''}
-                        onValueChange={(value) => setFormData({ ...formData, customerCharacterId: value })}
+                        value={formData.characterId || ''}
+                        onValueChange={(value) => setFormData({ ...formData, characterId: value })}
                         options={getCustomerCharacterOptions()}
                         placeholder={formData.customerCharacterRole === CharacterRole.CUSTOMER ? 'Select customer' : 'Select beneficiary'}
                         autoGroupByCategory={true}
@@ -820,7 +821,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                           ...formData,
                           isNewCustomer: true,
                           newCustomerName: query,
-                          customerCharacterId: null
+                          characterId: null
                         })}
                       />
                     )}

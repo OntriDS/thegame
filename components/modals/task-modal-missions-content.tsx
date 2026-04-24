@@ -235,8 +235,10 @@ export default function MissionTreeModalContent({
           : ItemStatus.FOR_SALE)
       );
       setSelectedItemId(existingTask.outputItemId || '');
-      setCustomerCharacterId(existingTask.customerCharacterId || null);
-      setIsNewCustomer(!Boolean(existingTask.customerCharacterId));
+      const existingTaskCounterpartyId =
+        existingTask.characterId ?? null;
+      setCustomerCharacterId(existingTaskCounterpartyId);
+      setIsNewCustomer(!Boolean(existingTaskCounterpartyId));
       setNewCustomerName(existingTask.newCustomerName || '');
       setCustomerCharacterRole(existingTask.customerCharacterRole || CharacterRole.CUSTOMER);
       setPlayerCharacterId(existingTask.playerCharacterId || FOUNDER_CHARACTER_ID);
@@ -449,7 +451,7 @@ export default function MissionTreeModalContent({
         },
       },
       parentId,
-      customerCharacterId: isNewCustomer ? null : customerCharacterId,
+      characterId: isNewCustomer ? null : customerCharacterId,
       newCustomerName: isNewCustomer ? newCustomerName.trim() || undefined : undefined,
       customerCharacterRole,
       playerCharacterId: finalPlayerCharacterId,
@@ -479,7 +481,7 @@ export default function MissionTreeModalContent({
     try {
       const newTask = buildTaskFromForm();
       await onSave(newTask);
-      await ensureCounterpartyRole(newTask.customerCharacterId, newTask.customerCharacterRole);
+      await ensureCounterpartyRole(newTask.characterId, newTask.customerCharacterRole);
       dispatchEntityUpdated(entityTypeToKind(EntityType.TASK));
       onOpenChange(false);
     } catch (error) {
