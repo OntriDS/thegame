@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
       saleDate: startOfDayUTC(now),
       type: SaleType.ONLINE,
       status: SaleStatus.PENDING,
-      siteId: normalizeString(body.siteId) || 'akilesecosystem.com',
+      siteId: normalizeString(body.siteId) || 'site-akiles-ecosystem',
       counterpartyName: normalizeString(body.counterpartyName) || `akiles-ecosystem-${orderId}`,
       characterId: body.characterId ?? null,
       salesChannel: 'online-sales' as Station,
