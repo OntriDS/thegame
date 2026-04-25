@@ -55,8 +55,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const searchParams = new URL(request.url).searchParams;
-    const includeLegacy = searchParams.get('legacy') === 'true';
+    const searchParams = request.nextUrl.searchParams;
+    const status = searchParams.get('status') || 'for-sale';
+    const isLegacyRequest = status === 'legacy';
     const itemId = searchParams.get('itemId')?.trim() || undefined;
 
     if (itemId) {
@@ -67,32 +68,45 @@ export async function GET(request: NextRequest) {
           { status: 404 }
         );
       }
-      if (!itemVisibleInStore(raw, includeLegacy)) {
-        return NextResponse.json(
-          { success: false, error: 'Item is not available in the store' },
+      
+      // Ensure the item status matches the request mode
+      const isItemLegacy = raw.status === ItemStatus.LEGACY;
+      if (isLegacyRequest !== isItemLegacy) {
+         return NextResponse.json(
+          { success: false, error: 'Item is not available in this section' },
           { status: 404 }
         );
       }
+
       return NextResponse.json({
         success: true,
         item: toStoreItemPayload(raw),
       });
     }
 
-    // List: same indexes as TheGame admin "active" / legacy; storefront shows `for-sale` (and legacy when requested).
-    const items = includeLegacy
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '50', 10);
+
+    // 1. Determine which index to hit
+    const items = isLegacyRequest
       ? await getLegacyItems()
       : await getActiveItems();
-    const filtered = includeLegacy
+    
+    // 2. Filter if necessary (Store mode needs to exclude DRAFTs, Legacy is already pure)
+    const filteredItems = isLegacyRequest
       ? items
       : items.filter((i) => i.status === ItemStatus.FOR_SALE);
 
-    const storeItems = filtered.map((item) => toStoreItemPayload(item));
+    const startIndex = (page - 1) * limit;
+    const paginatedItems = filteredItems.slice(startIndex, startIndex + limit);
+    const storeItems = paginatedItems.map((item) => toStoreItemPayload(item));
 
     return NextResponse.json({
       success: true,
       items: storeItems,
-      count: storeItems.length,
+      count: filteredItems.length,
+      page,
+      totalPages: Math.ceil(filteredItems.length / limit)
     });
   } catch (error) {
     console.error('[M2M Store Inventory] Error:', error);
@@ -112,6 +126,13 @@ function itemVisibleInStore(item: Item, legacyMode: boolean): boolean {
 
 function cdnUrlForObjectKey(key: string | undefined): string | undefined {
   if (!key) return undefined;
+  
+  // If it's already a full URL, sanitize the domain and return it directly
+  if (key.startsWith('http://') || key.startsWith('https://')) {
+    return key.replace('akiles-ecosystem-media.r2.dev', 'media.akilesecosystem.com');
+  }
+  
+  // If it's a relative path, prepend the custom domain
   const path = key.replace(/^\//, '');
   return `${getPublicCdnOrigin()}/${path}`;
 }
