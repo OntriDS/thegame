@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { iamService } from '@/lib/iam-service';
-import { ItemStatus } from '@/types/enums';
+import { ItemStatus, ItemType } from '@/types/enums';
 import {
   getActiveItems,
   getItemById,
@@ -86,16 +86,43 @@ export async function GET(request: NextRequest) {
 
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
+    const category = searchParams.get('category')?.trim() || undefined;
+    const collection = searchParams.get('collection')?.trim() || undefined;
+    const search = searchParams.get('search')?.trim().toLowerCase() || undefined;
 
     // 1. Determine which index to hit
     const items = isLegacyRequest
       ? await getLegacyItems()
       : await getActiveItems();
     
-    // 2. Filter if necessary (Store mode needs to exclude DRAFTs, Legacy is already pure)
-    const filteredItems = isLegacyRequest
+    // 2. Filter by status (Store mode needs to exclude DRAFTs, Legacy is already pure)
+    // AND Exclude internal logistic items (Bundle, Material, Equipment)
+    let filteredItems = isLegacyRequest
       ? items
-      : items.filter((i) => i.status === ItemStatus.FOR_SALE);
+      : items.filter((i) => 
+          i.status === ItemStatus.FOR_SALE && 
+          i.type !== ItemType.BUNDLE &&
+          i.type !== ItemType.MATERIAL &&
+          i.type !== ItemType.EQUIPMENT
+        );
+
+    // 3. Filter by Category (ItemType)
+    if (category) {
+      filteredItems = filteredItems.filter((i) => i.type === category);
+    }
+
+    // 4. Filter by Collection
+    if (collection) {
+      filteredItems = filteredItems.filter((i) => i.collection === collection);
+    }
+
+    // 5. Filter by Search (Name or Description)
+    if (search) {
+      filteredItems = filteredItems.filter((i) => 
+        i.name.toLowerCase().includes(search) || 
+        i.description?.toLowerCase().includes(search)
+      );
+    }
 
     const startIndex = (page - 1) * limit;
     const paginatedItems = filteredItems.slice(startIndex, startIndex + limit);
@@ -146,6 +173,8 @@ function toStoreItemPayload(item: Item) {
     type: item.type,
     subItemType: item.subItemType,
     collection: item.collection,
+    dimensions: item.dimensions,
+    size: item.size,
     status: item.status,
     station: item.station,
     price: item.price,
