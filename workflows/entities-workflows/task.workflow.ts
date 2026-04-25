@@ -112,15 +112,16 @@ const getSafeTaskNameForLogging = (task: Task): string => {
  * Map TaskStatus to LogEventType for status changes
  * Created and Done/Collected are handled separately in workflow
  */
-const getStatusEvent = (taskStatus: TaskStatus): LogEventType => {
+const getStatusEvent = (taskStatus: TaskStatus): LogEventType | null => {
   const statusEventMap: Record<string, LogEventType> = {
+    [TaskStatus.CREATED]: LogEventType.CREATED,
     [TaskStatus.ON_HOLD]: LogEventType.ON_HOLD,
     [TaskStatus.IN_PROGRESS]: LogEventType.IN_PROGRESS,
     [TaskStatus.FINISHING]: LogEventType.FINISHING,
     [TaskStatus.FAILED]: LogEventType.FAILED,
   };
 
-  return statusEventMap[taskStatus] || LogEventType.UPDATED;
+  return statusEventMap[taskStatus] || null;
 };
 
 /**
@@ -265,18 +266,19 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
 
     // Skip generic status log for Done, Collected, Failed (FAILED logged in normalizeTaskFailedState)
     const skipForSpecialStatuses = [TaskStatus.DONE, TaskStatus.COLLECTED, TaskStatus.FAILED];
-    if (!skipForSpecialStatuses.includes(task.status)) {
+    if (!skipForSpecialStatuses.includes(task.status) && task.status !== TaskStatus.NONE) {
       // Log status change with actual status as event type
       const statusEvent = getStatusEvent(task.status);
-
-      await appendEntityLog(EntityType.TASK, task.id, statusEvent, {
-        name: getSafeTaskNameForLogging(task),
-        taskType: task.type,
-        station: task.station,
-        oldStatus: previousTask.status,
-        newStatus: task.status,
-        transition: `${previousTask.status} → ${task.status}`
-      });
+      if (statusEvent !== null) {
+        await appendEntityLog(EntityType.TASK, task.id, statusEvent, {
+          name: getSafeTaskNameForLogging(task),
+          taskType: task.type,
+          station: task.station,
+          oldStatus: previousTask.status,
+          newStatus: task.status,
+          transition: `${previousTask.status} → ${task.status}`
+        });
+      }
     }
 
     const isTerminalStatus = (s: TaskStatus) =>

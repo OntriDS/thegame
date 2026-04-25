@@ -41,7 +41,7 @@ import { kv } from '@/lib/utils/kv';
 // Helpers
 // ============================================================================
 
-function getCurrentMonthKey(): string {
+export function getCurrentMonthKey(): string {
   const now = getUTCNow();
   const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
   const yy = String(now.getUTCFullYear()).slice(-2);
@@ -173,8 +173,8 @@ function parseEntry(raw: string | any): any {
   return raw;
 }
 
-/** Read full monthly list as parsed objects */
-async function readMonthlyList(entityType: EntityType, monthKey: string): Promise<any[]> {
+/** Read full monthly list as parsed objects (exported for maintenance/migrations). */
+export async function readMonthlyList(entityType: EntityType, monthKey: string): Promise<any[]> {
   const listKey = buildLogMonthKey(entityType, monthKey);
   const raw = await kvLRange(listKey, 0, -1);
   return raw.map(parseEntry).map(normalizeLogEntry);
@@ -183,8 +183,9 @@ async function readMonthlyList(entityType: EntityType, monthKey: string): Promis
 /**
  * Rebuild a monthly list (DEL + LPUSH). Used for rare edit/delete ops.
  * If `entries` is empty, the month key is removed — restore from KV backup if that was unintended.
+ * Exported for maintenance/migrations.
  */
-async function rebuildMonthlyList(entityType: EntityType, monthKey: string, entries: any[]): Promise<void> {
+export async function rebuildMonthlyList(entityType: EntityType, monthKey: string, entries: any[]): Promise<void> {
   const listKey = buildLogMonthKey(entityType, monthKey);
   await kvDel(listKey);
   if (entries.length > 0) {

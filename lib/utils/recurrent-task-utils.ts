@@ -24,6 +24,23 @@ import {
 import { validateSpawnOperation, getSafetyLimitDate, SpawnErrorCode } from './recurrent-validation';
 import { toUTC } from './utc-utils';
 
+const getTaskStatusLifecycleEvent = (status: string): LogEventType | null => {
+  const normalizeStatusKey = (value: string): string =>
+    value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+
+  const statusEventMap: Partial<Record<string, LogEventType>> = {
+    created: LogEventType.CREATED,
+    on_hold: LogEventType.ON_HOLD,
+    in_progress: LogEventType.IN_PROGRESS,
+    finishing: LogEventType.FINISHING,
+    done: LogEventType.DONE,
+    collected: LogEventType.COLLECTED,
+    failed: LogEventType.FAILED,
+  };
+
+  return statusEventMap[normalizeStatusKey(status)] || null;
+};
+
 // ============================================================================
 // SECTION: JIT MODEL - Just-In-Time Instance Spawning
 // ============================================================================
@@ -539,14 +556,18 @@ export async function cascadeStatusToInstances(
       await upsertTask(updated, { skipWorkflowEffects: true });
 
       // Log status change for each instance with cascade context
-      await appendEntityLog(EntityType.TASK, updated.id, LogEventType.UPDATED, {
-        oldStatus: instances.find(i => i.id === updated.id)?.status, // Get old status from memory
-        newStatus: newStatus,
-        name: updated.name,
-        cascadedFrom: templateId,
-        transition: `${instances.find(i => i.id === updated.id)?.status} → ${newStatus}`,
-        changedAt: new Date().toISOString()
-      });
+      const oldStatus = instances.find(i => i.id === updated.id)?.status;
+      const cascadeStatusEvent = getTaskStatusLifecycleEvent(newStatus);
+      if (cascadeStatusEvent) {
+        await appendEntityLog(EntityType.TASK, updated.id, cascadeStatusEvent, {
+          oldStatus,
+          newStatus: newStatus,
+          name: updated.name,
+          cascadedFrom: templateId,
+          transition: `${oldStatus} → ${newStatus}`,
+          changedAt: new Date().toISOString()
+        });
+      }
     })
   );
 
@@ -599,14 +620,18 @@ export async function uncascadeStatusFromInstances(
       await upsertTask(updated, { skipWorkflowEffects: true });
 
       // Log status reversal for each instance with uncascade context
-      await appendEntityLog(EntityType.TASK, updated.id, LogEventType.UPDATED, {
-        oldStatus: instances.find(i => i.id === updated.id)?.status,
-        newStatus: revertToStatus,
-        name: updated.name,
-        uncascadedFrom: templateId,
-        transition: `${instances.find(i => i.id === updated.id)?.status} → ${revertToStatus}`,
-        changedAt: new Date().toISOString()
-      });
+      const oldStatus = instances.find(i => i.id === updated.id)?.status;
+      const uncascadeStatusEvent = getTaskStatusLifecycleEvent(revertToStatus);
+      if (uncascadeStatusEvent) {
+        await appendEntityLog(EntityType.TASK, updated.id, uncascadeStatusEvent, {
+          oldStatus,
+          newStatus: revertToStatus,
+          name: updated.name,
+          uncascadedFrom: templateId,
+          transition: `${oldStatus} → ${revertToStatus}`,
+          changedAt: new Date().toISOString()
+        });
+      }
     })
   );
 

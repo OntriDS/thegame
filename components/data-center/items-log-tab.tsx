@@ -219,6 +219,10 @@ export function ItemsLogTab({
                     switch (eventKind) {
                       case LogEventType.CREATED.toLowerCase():
                         return 'Created';
+                      case LogEventType.GIFTED.toLowerCase():
+                        return 'Gifted';
+                      case LogEventType.DAMAGED.toLowerCase():
+                        return 'Damaged';
                       case LogEventType.SOLD.toLowerCase():
                         return 'Sold';
                       case LogEventType.MOVED.toLowerCase():
@@ -242,6 +246,10 @@ export function ItemsLogTab({
                     switch (eventKind) {
                       case LogEventType.CREATED.toLowerCase():
                         return getItemStatusBadgeColor(ItemStatus.CREATED);
+                      case LogEventType.GIFTED.toLowerCase():
+                        return getItemStatusBadgeColor(ItemStatus.GIFTED);
+                      case LogEventType.DAMAGED.toLowerCase():
+                        return getItemStatusBadgeColor(ItemStatus.DAMAGED);
                       case LogEventType.SOLD.toLowerCase():
                         return getItemStatusBadgeColor(ItemStatus.SOLD);
                       case LogEventType.COLLECTED.toLowerCase():

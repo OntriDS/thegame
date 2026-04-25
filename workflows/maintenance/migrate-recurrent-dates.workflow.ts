@@ -1,6 +1,5 @@
 import { getAllTasks, upsertTask } from '@/data-store/datastore';
-import { TaskType, EntityType, LogEventType } from '@/types/enums';
-import { appendEntityLog } from '@/workflows/entities-logging';
+import { TaskType } from '@/types/enums';
 
 /**
  * Migration Workflow: Recurrent Dates Standardization
@@ -35,14 +34,6 @@ export async function migrateRecurrentDates(): Promise<{ updated: number, total:
                 skipWorkflowEffects: true, 
                 skipLinkEffects: true,
                 skipDuplicateCheck: true 
-            });
-            
-            // Log the migration event
-            await appendEntityLog(EntityType.TASK, template.id, LogEventType.UPDATED, {
-                migration: 'recurrent-dates-v1',
-                recurrenceStart: updatedTemplate.recurrenceStart,
-                recurrenceEnd: updatedTemplate.recurrenceEnd,
-                reason: 'Standardizing recurrent boundaries (JIT Model)'
             });
             
             updatedCount++;

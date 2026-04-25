@@ -11,7 +11,7 @@ import { EntityType } from '@/types/enums';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
 import { useState } from 'react';
 import { processLogData } from '@/lib/utils/logging-utils';
-import { SaleType, SaleStatus } from '@/types/enums';
+import { SaleType, LogEventType } from '@/types/enums';
 import { FINANCIAL_ENTRY_ICONS, FINANCIAL_ABBREVIATIONS } from '@/lib/constants/icon-maps';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { LogViewFilter } from '@/components/log-management/log-view-filter';
@@ -52,6 +52,19 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
   const processedSalesLog = processLogData(salesLog, 'newest');
   const baseEntries = processedSalesLog?.entries || [];
 
+  const normalizeLogStatus = (value: unknown): string => {
+    if (!value || typeof value !== 'string') return '';
+    return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  };
+
+  const formatLogStatus = (status: string): string => {
+    if (!status) return 'Unknown';
+    return status
+      .split('_')
+      .map(part => (part ? part.charAt(0).toUpperCase() + part.slice(1) : part))
+      .join(' ');
+  };
+
   // Apply sorting to entries
   const sortedEntries = sortLogEntries(baseEntries, logOrder);
 
@@ -72,7 +85,7 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
   };
 
   const getLifecycleBadgeColor = (eventOrStatus: string) => {
-    const normalized = eventOrStatus.toLowerCase();
+    const normalized = normalizeLogStatus(eventOrStatus);
     switch (normalized) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700';
@@ -157,12 +170,13 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
             <p className="text-muted-foreground text-center py-4">No sales log entries found</p>
           ) : (
             visibleEntries.map((entry: any, index: number) => {
-              // Handle BULK_IMPORT and BULK_EXPORT entries
+        // Handle BULK_IMPORT and BULK_EXPORT entries
               const eventRaw = entry.event || entry.status || '';
-              const statusRaw = String(eventRaw).toUpperCase();
+              const statusRaw = String(eventRaw);
+              const statusKind = normalizeLogStatus(statusRaw);
               
-              if (statusRaw === 'BULK_IMPORT' || statusRaw === 'BULK_EXPORT') {
-                const operation = statusRaw === 'BULK_IMPORT' ? 'Bulk Import' : 'Bulk Export';
+              if (statusKind === LogEventType.BULK_IMPORT.toLowerCase() || statusKind === LogEventType.BULK_EXPORT.toLowerCase()) {
+                const operation = statusKind === LogEventType.BULK_IMPORT.toLowerCase() ? 'Bulk Import' : 'Bulk Export';
                 const count = entry.count || 0;
                 const source = entry.source || 'unknown';
                 const mode = entry.importMode || entry.exportFormat || '';
@@ -194,7 +208,9 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
               }
               
               // Lean logs use `event` (e.g. CREATED, CHARGED, COLLECTED); some rows may use `status`
-              const lifecycleLabel: string = entry.event || entry.status || 'Unknown';
+              const lifecycleRaw: string = entry.event || entry.status || 'Unknown';
+              const lifecycleKind = normalizeLogStatus(lifecycleRaw);
+              const lifecycleLabel = formatLogStatus(lifecycleKind);
               // Use displayName from normalization, fallback to entry data
               const name: string = entry.displayName || entry.name || entry.saleName || entry.message || '—';
               const type: string = entry.type || entry.saleType || '—';
@@ -227,7 +243,7 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 text-sm">
                       {/* Lifecycle event badge */}
-                      <div className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold transition-colors ${getLifecycleBadgeColor(lifecycleLabel)}`}>
+                      <div className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold transition-colors ${getLifecycleBadgeColor(lifecycleKind)}`}>
                         {lifecycleLabel}
                       </div>
                       

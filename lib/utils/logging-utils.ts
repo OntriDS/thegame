@@ -34,10 +34,10 @@ export interface LogStructure {
   schemaVersion?: string; // Phase 0: Add schema version for forward migrations
 }
 
-/**
- * Check if an entity already has a log entry for a specific status
- * This ensures idempotency - prevents duplicate logging
- */
+// Log input: full LogStructure or a minimal { entries } object
+export type LogLike = LogStructure | { entries: LogEntry[] };
+
+// Check if an entity already has a log entry for a specific status (idempotency for logging)
 export function isEntityLogged(
   entries: LogEntry[],
   entityId: string,
@@ -82,6 +82,7 @@ export function sortEntriesByTimestamp(
   entries: LogEntry[],
   order: 'newest' | 'oldest' = 'newest'
 ): LogEntry[] {
+  const safeEntries = Array.isArray(entries) ? entries : [];
   const parseToDate = (ts?: string): Date => {
     if (!ts || typeof ts !== 'string') return new Date(0);
     // If already in DD-MM-YYYY, convert safely
@@ -97,17 +98,14 @@ export function sortEntriesByTimestamp(
     return new Date(0);
   };
 
-  return [...entries].sort((a, b) => {
+  return [...safeEntries].sort((a, b) => {
     const dateA = parseToDate(a.timestamp);
     const dateB = parseToDate(b.timestamp);
     return order === 'newest' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
   });
 }
 
-/**
- * Normalize a single entry timestamp to DD-MM-YYYY.
- * If missing/invalid, falls back to data.createdAt/updatedAt or today.
- */
+// Normalize a single entry timestamp to DD-MM-YYYY; falls back to data.createdAt or data.updatedAt or today
 export function normalizeTimestamp(entry: LogEntry): string {
   const toDDMMYYYY = (d: Date) => formatDateDDMMYYYY(d);
 
@@ -135,7 +133,8 @@ export function normalizeTimestamp(entry: LogEntry): string {
 
 /** Normalize all entries' timestamps to DD-MM-YYYY. */
 export function normalizeEntriesTimestamps(entries: LogEntry[]): LogEntry[] {
-  return entries.map(e => ({ ...e, timestamp: normalizeTimestamp(e) }));
+  const safeEntries = Array.isArray(entries) ? entries : [];
+  return safeEntries.map(e => ({ ...e, timestamp: normalizeTimestamp(e) }));
 }
 
 // ============================================================================
@@ -145,7 +144,7 @@ export function normalizeEntriesTimestamps(entries: LogEntry[]): LogEntry[] {
 /**
  * Client-side deduplication for log entries
  */
-export function deduplicateLogEntries(log: LogStructure | { entries: LogEntry[] }): LogStructure | { entries: LogEntry[] } {
+export function deduplicateLogEntries(log: LogLike): LogLike {
   if (!log || !log.entries) return log;
 
   const map = new Map<string, any>();
@@ -180,6 +179,8 @@ export function deduplicateLogEntries(log: LogStructure | { entries: LogEntry[] 
 export function sortLogEntries(entries: LogEntry[], order: 'newest' | 'oldest' = 'newest'): LogEntry[] {
   if (!entries || !Array.isArray(entries)) return [];
 
+  const safeEntries = [...entries];
+
   const toMs = (value: LogEntry): number => {
     const ts: string | number | undefined = value?.timestamp ?? value?.date;
     if (!ts) return 0;
@@ -198,7 +199,7 @@ export function sortLogEntries(entries: LogEntry[], order: 'newest' | 'oldest' =
     return isNaN(d.getTime()) ? 0 : d.getTime();
   };
 
-  return [...entries].sort((a, b) => {
+  return safeEntries.sort((a, b) => {
     const aMs = toMs(a);
     const bMs = toMs(b);
 
@@ -217,42 +218,100 @@ export function sortLogEntries(entries: LogEntry[], order: 'newest' | 'oldest' =
   });
 }
 
-function getEventOrder(entry: LogEntry): number {
-  const eventOrder: Record<string, number> = {
-    'created': 0,
-    'pending': 1,
-    'moved': 2,
-    'updated': 3,
-    'done': 4,
-    'sold': 5,
-    'collected': 6,
-    'cancelled': 7,
-  };
+export function getEventOrder(entry: LogEntry): number {
+  const eventOrder = new Map<string, number>([
+    // Universal
+    ['created', 1],
+    ['bulk_import', 2],
+    ['bulk_export', 3],
 
-  const event = (entry.event || entry.status || '').toLowerCase();
-  return eventOrder[event] ?? 999;
+    // Item lifecycle
+    ['sold', 10],
+    ['gifted', 11],
+    ['damaged', 12],
+
+    // Task lifecycle
+    ['on_hold', 20],
+    ['in_progress', 21],
+    ['finishing', 22],
+    ['done', 23],
+    ['collected', 24],
+    ['failed', 25],
+
+    // Sale / Financial lifecycle
+    ['pending', 30],
+    ['charged', 31],
+    ['cancelled', 32],
+
+    // Site lifecycle
+    ['activated', 40],
+    ['deactivated', 41],
+
+    // Character / Player / Business lifecycle-ish events
+    ['role_changed', 50],
+    ['owns_item', 51],
+    ['requested_task', 52],
+    ['purchased', 53],
+    ['transacted', 54],
+    ['business_linked', 55],
+    ['level_up', 56],
+    ['points_changed', 57],
+    ['win_points', 58],
+    ['lost_points', 59]
+  ]);
+
+  const rawEvent = entry.event || entry.status || '';
+  const normalizedEvent = String(rawEvent).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  const order = eventOrder.get(normalizedEvent);
+  if (typeof order === 'number') return order;
+  return 999;
 }
 
-/**
- * Derive a normalized event kind for an entry.
- * Prefers `event`, falls back to `status` or `type`.
- */
+// Derive a normalized event kind (prefers event, then status, then type).
 export function getEntryEventKind(entry: Partial<LogEntry>): string {
   const kind = (entry?.event ?? entry?.status ?? entry?.type ?? 'unknown');
-  return String(kind).toLowerCase();
+  const normalizedKind = String(kind).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  return normalizedKind || 'unknown';
 }
 
 /**
  * Build a map of entityId -> latest state event kind (for badges).
- * State events considered: created, pending, updated, done, collected, cancelled, moved, sold
+ * State events considered for latest-status calculations.
  */
 export function buildLatestStatusMap(entries: LogEntry[]): Record<string, string> {
+  const safeEntries = Array.isArray(entries) ? entries : [];
   const stateEventSet = new Set([
-    'created', 'pending', 'updated', 'done', 'collected', 'cancelled', 'moved', 'sold'
+    'created',
+    'pending',
+    'done',
+    'collected',
+    'failed',
+    'sold',
+    'on_hold',
+    'in_progress',
+    'finishing',
+    'cancelled',
+    'charged',
+    'activated',
+    'deactivated',
+    'role_changed',
+    'owns_item',
+    'requested_task',
+    'purchased',
+    'transacted',
+    'business_linked',
+    'gifted',
+    'damaged',
+    'bulk_import',
+    'bulk_export',
+    'level_up',
+    'points_changed',
+    'win_points',
+    'lost_points'
   ]);
   const latest: Record<string, { when: number; kind: string }> = {};
 
-  for (const e of entries || []) {
+  for (const e of safeEntries) {
     const entityId = e.entityId || e.id;
     if (!entityId) continue;
     const kind = getEntryEventKind(e);
@@ -283,8 +342,9 @@ export function extractEntryName(entry: LogEntry): string | undefined {
 
 /** Build entityId -> latest known display name map */
 export function buildLatestNameMap(entries: LogEntry[]): Record<string, string> {
+  const safeEntries = Array.isArray(entries) ? entries : [];
   const latestName: Record<string, { when: number; name: string }> = {};
-  for (const e of entries || []) {
+  for (const e of safeEntries) {
     const entityId = e.entityId || e.id;
     if (!entityId) continue;
     const name = extractEntryName(e);
@@ -330,10 +390,13 @@ export function getLogEntryCounts(entries: LogEntry[]): { [key: string]: number 
   return counts;
 }
 
-/**
- * Format log entry for display
- */
-export function formatLogEntry(entry: LogEntry): LogEntry & { formattedDate: string; formattedTime: string; displayDate: string } {
+export type FormattedLogEntry = LogEntry & {
+  formattedDate: string;
+  formattedTime: string;
+  displayDate: string;
+};
+
+export function formatLogEntry(entry: LogEntry): FormattedLogEntry {
   const raw = entry?.timestamp ?? entry?.date ?? '';
 
   // Default: show the stored string as-is for DD-MM-YYYY (previous behavior)
@@ -352,21 +415,20 @@ export function formatLogEntry(entry: LogEntry): LogEntry & { formattedDate: str
     }
   }
 
+  const displayDate = formattedTime ? `${formattedDate} ${formattedTime}` : formattedDate;
+
   return {
     ...entry,
     formattedDate,
     formattedTime,
-    displayDate: formattedTime ? `${formattedDate} ${formattedTime}` : formattedDate
+    displayDate
   };
 }
 
-/**
- * Process and prepare log data for display
- */
-export function processLogData(log: LogStructure | { entries: LogEntry[] }, order: 'newest' | 'oldest' = 'newest', typeFilter?: string): any {
+export function processLogData(log: LogLike, order: 'newest' | 'oldest' = 'newest', typeFilter?: string): any {
   if (!log || !log.entries) return { entries: [], counts: {} };
 
-  let processedEntries = [...log.entries];
+  let processedEntries = [...(Array.isArray(log.entries) ? log.entries : [])];
 
   // Compute latest status per entity for deterministic badge usage by consumers
   const latestStatusMap = buildLatestStatusMap(processedEntries);

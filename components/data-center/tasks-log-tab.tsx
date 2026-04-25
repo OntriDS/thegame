@@ -40,6 +40,19 @@ export function TasksLogTab({ tasksLog, onReload, isReloading }: TasksLifecycleT
   const { getPreference } = useUserPreferences();
   const { filter, setFilter, getVisibleEntries } = useLogViewFilter({ entityType: EntityType.TASK });
 
+  const normalizeLogStatus = (value: unknown): string => {
+    if (!value || typeof value !== 'string') return '';
+    return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  };
+
+  const formatLogStatus = (status: string): string => {
+    if (!status) return 'Unknown';
+    return status
+      .split('_')
+      .map(part => (part ? part.charAt(0).toUpperCase() + part.slice(1) : part))
+      .join(' ');
+  };
+
   // Process tasks log data (basic processing, not sorting)
   const processedTasksLog = processLogData(tasksLog, 'newest');
 
@@ -111,7 +124,8 @@ export function TasksLogTab({ tasksLog, onReload, isReloading }: TasksLifecycleT
 
   const getStatusBadgeColor = (status: string) => {
     // First check if it's already a TaskStatus enum value
-    const taskStatus = Object.values(TaskStatus).find(ts => ts === status);
+    const normalizedStatus = normalizeLogStatus(status);
+    const taskStatus = Object.values(TaskStatus).find(ts => normalizeLogStatus(ts) === normalizedStatus);
     
     if (taskStatus && TASK_STATUS_COLORS[taskStatus]) {
       const color = isDarkMode ? TASK_STATUS_COLORS[taskStatus].dark : TASK_STATUS_COLORS[taskStatus].light;
@@ -119,20 +133,16 @@ export function TasksLogTab({ tasksLog, onReload, isReloading }: TasksLifecycleT
     }
     
     // Map lowercase/string statuses to TaskStatus enum values
-    const normalizedStatus = status.toLowerCase();
-    
+
     const statusMap: Record<string, TaskStatus> = {
       'created': TaskStatus.CREATED,
       'on_hold': TaskStatus.ON_HOLD,
-      'on hold': TaskStatus.ON_HOLD,
       'in_progress': TaskStatus.IN_PROGRESS,
-      'in progress': TaskStatus.IN_PROGRESS,
       'finishing': TaskStatus.FINISHING,
       'done': TaskStatus.DONE,
       'collected': TaskStatus.COLLECTED,
       'failed': TaskStatus.FAILED,
       'renamed': TaskStatus.CREATED, // Use created color for renamed
-      'updated': TaskStatus.IN_PROGRESS, // Use in progress color for updated
     };
     
     const mappedStatus = statusMap[normalizedStatus];
@@ -219,7 +229,8 @@ export function TasksLogTab({ tasksLog, onReload, isReloading }: TasksLifecycleT
               ) : (
                 visibleEntries.map((entry: any, index: number) => {
                   // Extract data from the rich logging structure
-                  const status: string = entry.event || 'Unknown';
+                const statusRaw: string = entry.event || 'Unknown';
+                const status: string = normalizeLogStatus(statusRaw);
                   // Use displayName from normalization, fallback to entry data
                   const name: string = entry.displayName || entry.name || entry.taskName || entry.message || '—';
                   const description: string = entry.description || '';
@@ -243,31 +254,24 @@ export function TasksLogTab({ tasksLog, onReload, isReloading }: TasksLifecycleT
                   if (status === 'renamed' && entry.oldValue && entry.newValue) {
                     statusBadge = 'Renamed';
                     renameInfo = `Changed from: "${entry.oldValue}"`;
-                  } else if (status === LogEventType.UPDATED) {
-                    statusBadge = 'Updated';
-                    // Check if it's a field update or status change
-                    if (entry.field && entry.oldValue !== undefined && entry.newValue !== undefined) {
-                      renameInfo = `${entry.field}: "${entry.oldValue}" → "${entry.newValue}"`;
-                    } else if (entry.newStatus) {
-                      renameInfo = entry.oldStatus ? `Changed from: "${entry.oldStatus}"` : '';
-                      statusBadge = entry.newStatus || 'Status Changed';
-                    }
-                  } else if (status === LogEventType.CREATED) {
+                  } else if (status === LogEventType.CREATED.toLowerCase()) {
                     statusBadge = 'Created';
-                  } else if (status.toLowerCase() === LogEventType.DONE.toLowerCase()) {
+                  } else if (status === LogEventType.DONE.toLowerCase()) {
                     statusBadge = 'Done';
-                  } else if (status === LogEventType.COLLECTED) {
+                  } else if (status === LogEventType.COLLECTED.toLowerCase()) {
                     statusBadge = 'Collected';
-                  } else if (status === 'BULK_IMPORT') {
+                  } else if (status === LogEventType.BULK_IMPORT.toLowerCase()) {
                     statusBadge = 'Bulk Import';
                     const count = entry.count || 0;
                     const source = entry.source || 'backup folder';
                     const importMode = entry.importMode;
                     renameInfo = `${count} tasks from ${source} (${importMode || 'merge'} mode)`;
-                  } else if (status === 'BULK_EXPORT') {
+                  } else if (status === LogEventType.BULK_EXPORT.toLowerCase()) {
                     statusBadge = 'Bulk Export';
                     const count = entry.count || 0;
                     renameInfo = `${count} tasks to backup folder`;
+                  } else if (status !== 'unknown' && status !== '') {
+                    statusBadge = formatLogStatus(status);
                   }
                   
                   // No financial info in tasks log - that's in financials log

@@ -68,15 +68,29 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     return;
   }
 
-  // Status changes - UPDATED event (when not sold)
+  const statusAwareEventMap: Partial<Record<ItemStatus, LogEventType>> = {
+    [ItemStatus.CREATED]: LogEventType.CREATED,
+    [ItemStatus.GIFTED]: LogEventType.GIFTED,
+    [ItemStatus.DAMAGED]: LogEventType.DAMAGED,
+    [ItemStatus.SOLD]: LogEventType.SOLD
+  };
+
   if (previousItem.status !== item.status) {
-    if (!isSoldStatus(item.status)) {
-      await appendEntityLog(EntityType.ITEM, item.id, LogEventType.UPDATED, {
-        name: item.name,
-        itemType: item.type,
-        subItemType: item.subItemType,
-        soldQuantity: 1
-      }, item.updatedAt || getUTCNow());
+    const nextStatus = item.status as ItemStatus;
+    const nextStatusEvent = statusAwareEventMap[nextStatus];
+    if (nextStatusEvent) {
+      await appendEntityLog(
+        EntityType.ITEM,
+        item.id,
+        nextStatusEvent,
+        {
+          name: item.name,
+          itemType: item.type,
+          subItemType: item.subItemType,
+          soldQuantity: item.quantitySold || 0
+        },
+        item.updatedAt || getUTCNow()
+      );
     }
   }
 

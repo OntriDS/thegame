@@ -783,6 +783,8 @@ export enum LogEventType {
   // Item-specific events
   SOLD = 'SOLD',
   MOVED = 'MOVED',
+  GIFTED = 'GIFTED',
+  DAMAGED = 'DAMAGED',
 
   // Player-specific events
   LEVEL_UP = 'LEVEL_UP',
