@@ -2,7 +2,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { Item } from '@/types/entities';
-import { getAllItems, getItemsByType, upsertItem, getItemsForMonth, getActiveItems, getLegacyItems, getItemsByCharacterId } from '@/data-store/datastore';
+import { getAllItems, getItemsByType, upsertItem, bulkUpsertItems, getItemsForMonth, getActiveItems, getLegacyItems, getItemsByCharacterId } from '@/data-store/datastore';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { ItemStatus } from '@/types/enums';
@@ -202,32 +202,48 @@ export async function POST(req: NextRequest) {
   if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const body = (await req.json()) as unknown as Item;
+    const body = await req.json();
+    
     const normalizeCharacterId = (value: unknown): string | null => {
       if (typeof value !== 'string') return null;
       const trimmed = value.trim();
       return trimmed === '' ? null : trimmed;
     };
 
-    const cleanBody = { ...(body as unknown as Record<string, unknown>) } as Record<string, unknown>;
-    delete cleanBody.ownerCharacterId;
-    const characterId = normalizeCharacterId(body.characterId);
-    const item = {
-      ...(cleanBody as unknown as Item),
-      id: body.id || uuid(),
-      links: body.links || [],
-      createdAt: body.createdAt ? new Date(body.createdAt) : getUTCNow(),
-      updatedAt: getUTCNow(),
-      lastRestockDate: body.lastRestockDate ? new Date(body.lastRestockDate) : undefined,
-      soldAt: body.soldAt ? new Date(body.soldAt) : undefined,
-      characterId: characterId,
+    const processItem = (rawItem: any): Item => {
+      const cleanBody = { ...(rawItem as Record<string, unknown>) } as Record<string, unknown>;
+      delete cleanBody.ownerCharacterId;
+      const characterId = normalizeCharacterId(rawItem.characterId);
+      
+      return {
+        ...(cleanBody as unknown as Item),
+        id: rawItem.id || uuid(),
+        links: rawItem.links || [],
+        createdAt: rawItem.createdAt ? new Date(rawItem.createdAt) : getUTCNow(),
+        updatedAt: getUTCNow(),
+        lastRestockDate: rawItem.lastRestockDate ? new Date(rawItem.lastRestockDate) : undefined,
+        soldAt: rawItem.soldAt ? new Date(rawItem.soldAt) : undefined,
+        characterId: characterId,
+      } as Item;
     };
-    const saved = await upsertItem(item as unknown as Item);
+
+    // Support Bulk Upsert
+    if (Array.isArray(body)) {
+      console.log(`[API] Bulk upserting ${body.length} items`);
+      const itemsToSave = body.map(rawItem => processItem(rawItem));
+      const savedItems = await bulkUpsertItems(itemsToSave);
+      return NextResponse.json({ success: true, count: savedItems.length, items: savedItems });
+    }
+
+    // Standard Single Upsert
+    const item = processItem(body);
+    const saved = await upsertItem(item);
     return NextResponse.json(saved);
+
   } catch (error) {
-    console.error('[API] Error saving item:', error);
+    console.error('[API] Error saving item(s):', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to save item' },
+      { error: error instanceof Error ? error.message : 'Failed to save item(s)' },
       { status: 500 }
     );
   }

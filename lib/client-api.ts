@@ -219,13 +219,13 @@ export const ClientAPI = {
     return await res.json();
   },
 
-  upsertItem: async (item: Item): Promise<Item> => {
+  upsertItem: async (item: Item | Item[]): Promise<any> => {
     const res = await fetch('/api/items', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(item)
     });
-    if (!res.ok) throw new Error('Failed to save item');
+    if (!res.ok) throw new Error('Failed to save item(s)');
     return await res.json();
   },
 

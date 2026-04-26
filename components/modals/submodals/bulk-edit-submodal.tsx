@@ -98,34 +98,52 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
 
     try {
       const itemsToUpdate = items.filter(item => selectedItems.has(item.id));
+      const preparedUpdates: Item[] = [];
 
-      // Update each selected item
+      // Prepare each item update locally
       for (const item of itemsToUpdate) {
         let newValue: any = value;
+        let updatedItem: Item = { ...item };
 
         // Convert value based on field type
         if (field === 'price' || field === 'unitCost') {
           newValue = parseFloat(value) || 0;
+          updatedItem = { ...item, [field]: newValue };
         } else if (field === 'status') {
           newValue = value as ItemStatus;
+          updatedItem = { ...item, status: newValue };
         } else if (field === 'collection') {
           newValue = value === 'none' ? undefined : value as Collection;
+          updatedItem = { ...item, collection: newValue };
         } else if (field === 'station') {
           // IMPORTANT: Extract just the station name from the combined 'area:station' value
           newValue = getStationFromCombined(value) as Station;
-          const updatedItem = { ...item, station: newValue };
-          await ClientAPI.upsertItem(updatedItem);
+          updatedItem = { ...item, station: newValue };
         } else if (field === EntityType.SITE) {
-          // Handle site change using the unified stock system
-          const currentQuantity = ClientAPI.getItemTotalQuantity(item.id, items);
-          const newSiteId = value as any; // Site enum
-          const updatedItem = await ClientAPI.updateStockAtSite(item.id, newSiteId, currentQuantity);
+          // OPTIMIZED: Update stock array locally to avoid individual network fetches
+          const currentQuantity = item.stock.reduce((sum, sp) => sum + sp.quantity, 0);
+          const newSiteId = value;
+          
+          const stockIndex = item.stock.findIndex(sp => sp.siteId === newSiteId);
+          const updatedStock = [...item.stock];
+
+          if (stockIndex >= 0) {
+            updatedStock[stockIndex] = { siteId: newSiteId, quantity: currentQuantity };
+          } else {
+            updatedStock.push({ siteId: newSiteId, quantity: currentQuantity });
+          }
+          
+          updatedItem = { ...item, stock: updatedStock };
         } else {
           // Handle other field updates
-          const updatedItem = { ...item, [field]: newValue };
-          await ClientAPI.upsertItem(updatedItem);
+          updatedItem = { ...item, [field]: value };
         }
+
+        preparedUpdates.push(updatedItem);
       }
+
+      // Send ONE single bulk request
+      await ClientAPI.upsertItem(preparedUpdates);
 
       // Dispatch events
       if (typeof window !== 'undefined') {
