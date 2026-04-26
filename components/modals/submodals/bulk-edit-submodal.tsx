@@ -20,11 +20,10 @@ import { Item } from '@/types/entities';
 import { PRICE_STEP, DEFAULT_MIN_VALUE, MODAL_MAX_HEIGHT, MODAL_MAX_WIDTH } from '@/lib/constants/app-constants';
 import { MapPin, Package, Trash2 } from 'lucide-react';
 
-import { getAllSiteNames } from '@/lib/utils/site-options-utils';
+import { getAllSiteNames, getSiteNameFromId } from '@/lib/utils/site-options-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { getCollectionLabel } from '@/lib/constants/collection-labels';
 import DeleteModal from './delete-submodal';
-import { normalizeItemTypeString } from '@/lib/item-taxonomy-normalize';
 
 interface BulkEditModalProps {
   open: boolean;
@@ -65,8 +64,8 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
       if (open) {
         try {
           const allItems = await ClientAPI.getItems(itemType, undefined, undefined, 'all');
-          const resolvedType = normalizeItemTypeString(itemType) ?? itemType;
-          const filteredItems = allItems.filter(item => normalizeItemTypeString(item.type) === resolvedType);
+          // Simple direct filter - no normalization 'masks'
+          const filteredItems = allItems.filter(item => item.type === itemType);
           setItems(filteredItems);
           setSelectedItems(new Set());
           setSelectAll(false);
@@ -112,8 +111,8 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
         } else if (field === 'collection') {
           newValue = value === 'none' ? undefined : value as Collection;
         } else if (field === 'station') {
-          // Handle station change
-          newValue = value as Station;
+          // IMPORTANT: Extract just the station name from the combined 'area:station' value
+          newValue = getStationFromCombined(value) as Station;
           const updatedItem = { ...item, station: newValue };
           await ClientAPI.upsertItem(updatedItem);
         } else if (field === EntityType.SITE) {
@@ -194,16 +193,16 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
           />
         );
 
-      case 'site':
+      case EntityType.SITE:
         return (
           <Select value={value} onValueChange={setValue}>
             <SelectTrigger>
               <SelectValue placeholder="Select site" />
             </SelectTrigger>
             <SelectContent>
-              {getAllSiteNames(sites).map(site => (
-                <SelectItem key={site} value={site}>
-                  {site}
+              {sites.map(site => (
+                <SelectItem key={site.id} value={site.id}>
+                  {site.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -369,9 +368,13 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
                       <span className="font-medium">{item.name}</span>
                       <span className="text-sm text-muted-foreground">
                         {item.subItemType && `${item.subItemType} • `}
-                        {item.collection && `${item.collection} • `}
-                        {item.stock[0]?.siteId && <><MapPin className="inline h-3 w-3" /> {item.stock[0].siteId} • </>}
-                        {item.status && `${item.status} • `}
+                        {item.collection && `${getCollectionLabel(item.collection)} • `}
+                        {item.stock?.[0]?.siteId && (
+                          <>
+                            <MapPin className="inline h-3 w-3" /> {getSiteNameFromId(item.stock[0].siteId, sites)} •{' '}
+                          </>
+                        )}
+                        {item.status && `${getItemStatusLabel(item.status)} • `}
                         Qty: {item.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0}
                       </span>
                     </div>
