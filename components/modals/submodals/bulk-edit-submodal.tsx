@@ -24,6 +24,7 @@ import { getAllSiteNames } from '@/lib/utils/site-options-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { getCollectionLabel } from '@/lib/constants/collection-labels';
 import DeleteModal from './delete-submodal';
+import { normalizeItemTypeString } from '@/lib/item-taxonomy-normalize';
 
 interface BulkEditModalProps {
   open: boolean;
@@ -63,8 +64,9 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
     const loadItems = async () => {
       if (open) {
         try {
-          const allItems = await ClientAPI.getItems();
-          const filteredItems = allItems.filter(item => item.type === itemType);
+          const allItems = await ClientAPI.getItems(itemType, undefined, undefined, 'all');
+          const resolvedType = normalizeItemTypeString(itemType) ?? itemType;
+          const filteredItems = allItems.filter(item => normalizeItemTypeString(item.type) === resolvedType);
           setItems(filteredItems);
           setSelectedItems(new Set());
           setSelectAll(false);

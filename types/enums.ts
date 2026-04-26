@@ -1,3 +1,4 @@
+
 // types/enums.ts
 // All enums and constants - single source of truth for application state
 
@@ -520,7 +521,6 @@ export const CHARACTER_ROLE_TYPES = {
     CharacterRole.DESIGNER,
     CharacterRole.MAKER,
     CharacterRole.SELLER,
-    CharacterRole.COLLABORATOR,
     CharacterRole.BOSS,
     CharacterRole.ASSISTANT,
     CharacterRole.STUDENT,
@@ -536,7 +536,8 @@ export const CHARACTER_ROLE_TYPES = {
     CharacterRole.PARTNER,
     CharacterRole.AI_AGENT,
     CharacterRole.CUSTOMER,
-    CharacterRole.BENEFICIARY
+    CharacterRole.BENEFICIARY,
+    CharacterRole.COLLABORATOR
   ]
 } as const;
 

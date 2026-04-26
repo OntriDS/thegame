@@ -8,6 +8,7 @@ import { formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
 import { getItemCharacterId } from '@/lib/item-character-id';
 
 const ENTITY = EntityType.ITEM;
+const FEATURED_ITEM_IDS_KEY = 'store:featured_ids';
 
 /**
  * Get all items - SPECIAL CASE ONLY
@@ -55,6 +56,50 @@ export async function getLegacyItems(): Promise<Item[]> {
 export async function getItemById(id: string): Promise<Item | null> {
   const key = buildDataKey(ENTITY, id);
   return await kvGet<Item>(key);
+}
+
+export async function updateItem(id: string, updates: Partial<Item>): Promise<Item | null> {
+  const existing = await getItemById(id);
+  if (!existing) {
+    return null;
+  }
+
+  const next: Item = {
+    ...existing,
+    ...updates,
+    name: updates.name ?? existing.name,
+    status: updates.status ?? existing.status,
+    description: updates.description ?? existing.description,
+    price: updates.price ?? existing.price,
+    updatedAt: new Date(),
+  };
+
+  return await upsertItem(next);
+}
+
+function normalizeFeaturedItemIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((id) => (typeof id === 'string' ? id.trim() : ''))
+    .filter((id) => id.length > 0);
+}
+
+/**
+ * Get featured item IDs.
+ * Returns an ordered list, or [] when no featured IDs have been configured.
+ */
+export async function getFeaturedItemIds(): Promise<string[]> {
+  const ids = await kvGet<unknown>(FEATURED_ITEM_IDS_KEY);
+  return normalizeFeaturedItemIds(ids);
+}
+
+/**
+ * Set featured item IDs in order.
+ */
+export async function setFeaturedItemIds(ids: string[]): Promise<void> {
+  const normalizedIds = normalizeFeaturedItemIds(ids);
+  await kvSet(FEATURED_ITEM_IDS_KEY, normalizedIds);
 }
 
 /**

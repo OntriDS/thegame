@@ -5,8 +5,15 @@ import {
   getActiveItems,
   getItemById,
   getLegacyItems,
+  getItemsByType,
+  upsertItem,
+  updateItem,
 } from '@/data-store/repositories/item.repo';
 import type { Item } from '@/types/entities';
+import { getUTCNow } from '@/lib/utils/utc-utils';
+
+const NEW_ITEM_MEDIA_PLACEHOLDER = 'items/system/placeholder/no-image-main.png';
+const NEW_ITEM_STATUS: ItemStatus = (ItemStatus as { DRAFT?: ItemStatus }).DRAFT ?? ItemStatus.CREATED;
 
 function getPublicCdnOrigin(): string {
   const raw =
@@ -26,39 +33,264 @@ function getPublicCdnOrigin(): string {
  * Returns items where status === 'for-sale' or status === 'legacy'
  * Requires M2M Bearer token authentication
  */
+async function verifyM2MRequest(request: NextRequest): Promise<NextResponse | null> {
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return NextResponse.json(
+      { success: false, error: 'Unauthorized: Missing Bearer token' },
+      { status: 401 },
+    );
+  }
+
+  const token = authHeader.substring(7);
+  const verification = await iamService.verifyM2MToken(token);
+  if (!verification.valid) {
+    return NextResponse.json(
+      { success: false, error: 'Invalid or expired M2M token' },
+      { status: 401 },
+    );
+  }
+
+  if (verification.appId !== 'akiles-ecosystem') {
+    return NextResponse.json(
+      { success: false, error: 'Forbidden: Only akiles-ecosystem can access store inventory' },
+      { status: 403 },
+    );
+  }
+
+  return null;
+}
+
+function parseCatalogUpdateBody(body: unknown) {
+  if (typeof body !== 'object' || body === null) {
+    throw new Error('Request body must be a JSON object');
+  }
+
+  const payload = body as {
+    id?: unknown;
+    name?: unknown;
+    description?: unknown;
+    price?: unknown;
+    status?: unknown;
+    media?: unknown;
+  };
+
+  const id = typeof payload.id === 'string' ? payload.id.trim() : '';
+  if (!id) {
+    throw new Error('id must be a non-empty string');
+  }
+
+  const hasPatchField =
+    Object.prototype.hasOwnProperty.call(payload, 'name') ||
+    Object.prototype.hasOwnProperty.call(payload, 'description') ||
+    Object.prototype.hasOwnProperty.call(payload, 'price') ||
+    Object.prototype.hasOwnProperty.call(payload, 'status') ||
+    Object.prototype.hasOwnProperty.call(payload, 'media');
+
+  if (!hasPatchField) {
+    throw new Error('At least one updatable field is required');
+  }
+
+  const next: {
+    id: string;
+    name?: string;
+    description?: string;
+    price?: number;
+    status?: ItemStatus;
+    media?: { main?: string; thumb?: string; gallery?: string[] };
+  } = {
+    id,
+  };
+
+  if ('name' in payload && payload.name !== undefined) {
+    if (typeof payload.name !== 'string') {
+      throw new Error('name must be a string');
+    }
+    const name = payload.name.trim();
+    if (!name) {
+      throw new Error('name must be a non-empty string');
+    }
+    next.name = name;
+  }
+
+  if ('description' in payload && payload.description !== undefined) {
+    if (typeof payload.description !== 'string') {
+      throw new Error('description must be a string');
+    }
+    next.description = payload.description;
+  }
+
+  if ('price' in payload && payload.price !== undefined) {
+    if (typeof payload.price !== 'number' || Number.isNaN(payload.price) || payload.price < 0) {
+      throw new Error('price must be a non-negative number');
+    }
+    next.price = payload.price;
+  }
+
+  if ('status' in payload && payload.status !== undefined) {
+    if (!Object.values(ItemStatus).includes(payload.status as ItemStatus)) {
+      throw new Error('status must be a valid ItemStatus value');
+    }
+    next.status = payload.status as ItemStatus;
+  }
+
+  if ('media' in payload && payload.media !== undefined) {
+    if (typeof payload.media !== 'object' || payload.media === null) {
+      throw new Error('media must be an object');
+    }
+
+    const mediaPayload = payload.media as Record<string, unknown>;
+    const mediaKeys = Object.keys(mediaPayload);
+    if (mediaKeys.length === 0) {
+      throw new Error('media must include at least one field');
+    }
+    const allowedMediaKeys = new Set(['main', 'thumb', 'gallery']);
+    if (mediaKeys.some((key) => !allowedMediaKeys.has(key))) {
+      throw new Error('media contains unsupported fields');
+    }
+
+    const typedMediaPayload = mediaPayload as {
+      main?: unknown;
+      thumb?: unknown;
+      gallery?: unknown;
+    };
+
+    const mediaPatch: { main?: string; thumb?: string; gallery?: string[] } = {};
+
+    if ('main' in typedMediaPayload && typedMediaPayload.main !== undefined) {
+      if (typeof typedMediaPayload.main !== 'string' || !typedMediaPayload.main.trim()) {
+        throw new Error('media.main must be a non-empty string');
+      }
+      mediaPatch.main = typedMediaPayload.main.trim();
+    }
+
+    if ('thumb' in typedMediaPayload && typedMediaPayload.thumb !== undefined) {
+      if (typeof typedMediaPayload.thumb !== 'string' || !typedMediaPayload.thumb.trim()) {
+        throw new Error('media.thumb must be a non-empty string');
+      }
+      mediaPatch.thumb = typedMediaPayload.thumb.trim();
+    }
+
+    if ('gallery' in typedMediaPayload && typedMediaPayload.gallery !== undefined) {
+      if (!Array.isArray(typedMediaPayload.gallery)) {
+        throw new Error('media.gallery must be an array');
+      }
+      mediaPatch.gallery = typedMediaPayload.gallery.map((entry, index) => {
+        if (typeof entry !== 'string' || !entry.trim()) {
+          throw new Error(`media.gallery[${index}] must be a non-empty string`);
+        }
+        return entry.trim();
+      });
+    }
+
+    if (Object.keys(mediaPatch).length > 0) {
+      next.media = mediaPatch;
+    }
+  }
+
+  return next;
+}
+
+function parseCatalogCreateBody(body: unknown) {
+  if (typeof body !== 'object' || body === null) {
+    throw new Error('Request body must be a JSON object');
+  }
+
+  const payload = body as {
+    name?: unknown;
+    type?: unknown;
+    price?: unknown;
+    description?: unknown;
+  };
+
+  if (typeof payload.name !== 'string') {
+    throw new Error('name must be a string');
+  }
+  const name = payload.name.trim();
+  if (!name) {
+    throw new Error('name must be a non-empty string');
+  }
+
+  if (typeof payload.type !== 'string') {
+    throw new Error('type must be a string');
+  }
+  const type = payload.type.trim();
+  if (!type) {
+    throw new Error('type must be a non-empty string');
+  }
+  if (!Object.values(ItemType).includes(type as ItemType)) {
+    throw new Error('type must be a valid ItemType value');
+  }
+
+  if (typeof payload.price !== 'number' || Number.isNaN(payload.price) || payload.price < 0) {
+    throw new Error('price must be a non-negative number');
+  }
+
+  if (payload.description !== undefined && typeof payload.description !== 'string') {
+    throw new Error('description must be a string');
+  }
+
+  return {
+    name,
+    type: type as ItemType,
+    price: payload.price,
+    description: payload.description,
+  } as {
+    name: string;
+    type: ItemType;
+    price: number;
+    description?: string;
+  };
+}
+
+function buildDraftItem(input: {
+  name: string;
+  type: ItemType;
+  price: number;
+  description?: string;
+}): Item {
+  const now = getUTCNow();
+  return {
+    id: crypto.randomUUID(),
+    name: input.name,
+    type: input.type,
+    status: NEW_ITEM_STATUS,
+    station: 'strategy',
+    stock: [],
+    unitCost: 0,
+    additionalCost: 0,
+    price: input.price,
+    value: 0,
+    quantitySold: 0,
+    links: [],
+    media: {
+      main: NEW_ITEM_MEDIA_PLACEHOLDER,
+    },
+    createdAt: now,
+    updatedAt: now,
+    ...(input.description !== undefined ? { description: input.description } : {}),
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
-    // Verify M2M token
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized: Missing Bearer token' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    const verification = await iamService.verifyM2MToken(token);
-
-    if (!verification.valid) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid or expired M2M token' },
-        { status: 401 }
-      );
-    }
-
-    // Verify app ID (only akiles-ecosystem allowed)
-    if (verification.appId !== 'akiles-ecosystem') {
-      return NextResponse.json(
-        { success: false, error: 'Forbidden: Only akiles-ecosystem can access store inventory' },
-        { status: 403 }
-      );
+    const authFailure = await verifyM2MRequest(request);
+    if (authFailure) {
+      return authFailure;
     }
 
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status') || 'for-sale';
-    const isLegacyRequest = status === 'legacy';
+    const statusFilter = status.toLowerCase().trim();
+    const isLegacyRequest = statusFilter === 'legacy';
     const itemId = searchParams.get('itemId')?.trim() || undefined;
+
+    if (!['all', 'legacy', 'for-sale'].includes(statusFilter)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid status filter' },
+        { status: 400 },
+      );
+    }
 
     if (itemId) {
       const raw = await getItemById(itemId);
@@ -68,13 +300,20 @@ export async function GET(request: NextRequest) {
           { status: 404 }
         );
       }
-      
+
       // Ensure the item status matches the request mode
       const isItemLegacy = raw.status === ItemStatus.LEGACY;
-      if (isLegacyRequest !== isItemLegacy) {
+      if (statusFilter === 'legacy' && !isItemLegacy) {
          return NextResponse.json(
           { success: false, error: 'Item is not available in this section' },
           { status: 404 }
+        );
+      }
+
+      if (statusFilter === 'for-sale' && raw.status !== ItemStatus.FOR_SALE) {
+        return NextResponse.json(
+          { success: false, error: 'Item is not available in this section' },
+          { status: 404 },
         );
       }
 
@@ -90,23 +329,41 @@ export async function GET(request: NextRequest) {
     const collection = searchParams.get('collection')?.trim() || undefined;
     const search = searchParams.get('search')?.trim().toLowerCase() || undefined;
 
-    // 1. Determine which index to hit
-    const items = isLegacyRequest
-      ? await getLegacyItems()
-      : await getActiveItems();
-    
-    // 2. Filter by status (Store mode needs to exclude DRAFTs, Legacy is already pure)
-    // AND Exclude internal logistic items (Bundle, Material, Equipment)
-    let filteredItems = isLegacyRequest
-      ? items
-      : items.filter((i) => 
-          i.status === ItemStatus.FOR_SALE && 
-          i.type !== ItemType.BUNDLE &&
-          i.type !== ItemType.MATERIAL &&
-          i.type !== ItemType.EQUIPMENT
-        );
+    // 1. Determine which index to hit - OPTIMIZED
+    let items: Item[] = [];
+    if (category) {
+      // UTILIZE Redis Sets index for specific type to prevent loading entire DB
+      items = await getItemsByType(category as ItemType);
+    } else if (statusFilter === 'legacy') {
+      items = await getLegacyItems();
+    } else if (statusFilter === 'all') {
+      const [activeItems, legacyItems] = await Promise.all([getActiveItems(), getLegacyItems()]);
+      items = [...activeItems, ...legacyItems];
+    } else {
+      items = await getActiveItems();
+    }
 
-    // 3. Filter by Category (ItemType)
+    // 2. Filter by status mode
+    let filteredItems: Item[] = [];
+    if (statusFilter === 'legacy') {
+      filteredItems = items.filter(i => i.status === ItemStatus.LEGACY);
+    } else if (statusFilter === 'all') {
+      const unique = new Map<string, Item>();
+      for (const item of items) {
+        unique.set(item.id, item);
+      }
+      filteredItems = Array.from(unique.values());
+    } else {
+      // 'for-sale' mode: filter and exclude bundles/materials/equipment
+      filteredItems = items.filter((i) =>
+        i.status === ItemStatus.FOR_SALE &&
+        i.type !== ItemType.BUNDLE &&
+        i.type !== ItemType.MATERIAL &&
+        i.type !== ItemType.EQUIPMENT
+      );
+    }
+
+    // 3. Filter by Category (ItemType) - redundant if category was used in Step 1, but keeps logic consistent
     if (category) {
       filteredItems = filteredItems.filter((i) => i.type === category);
     }
@@ -116,11 +373,11 @@ export async function GET(request: NextRequest) {
       filteredItems = filteredItems.filter((i) => i.collection === collection);
     }
 
-    // 5. Filter by Search (Name or Description)
+    // 5. Filter by Search (Name or Collection) - UPDATED per instructions
     if (search) {
       filteredItems = filteredItems.filter((i) => 
         i.name.toLowerCase().includes(search) || 
-        i.description?.toLowerCase().includes(search)
+        i.collection?.toLowerCase().includes(search)
       );
     }
 
@@ -140,6 +397,132 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const authFailure = await verifyM2MRequest(request);
+    if (authFailure) {
+      return authFailure;
+    }
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Request body must be valid JSON' },
+        { status: 400 },
+      );
+    }
+
+    const parsed = parseCatalogCreateBody(body);
+    const draftItem = buildDraftItem(parsed);
+    const saved = await upsertItem(draftItem);
+
+    return NextResponse.json({
+      success: true,
+      item: toStoreItemPayload(saved),
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message.includes('Request body must') ||
+        error.message.includes('must be a JSON object') ||
+        error.message.includes('must be a string') ||
+        error.message.includes('must be a non-empty string') ||
+        error.message.includes('must be a non-negative number') ||
+        error.message.includes('must be a valid ItemType') ||
+        error.message.includes('description must be a string'))
+    ) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
+
+    console.error('[M2M Store Inventory POST] Error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const authFailure = await verifyM2MRequest(request);
+    if (authFailure) {
+      return authFailure;
+    }
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Request body must be valid JSON' },
+        { status: 400 },
+      );
+    }
+
+    const parsed = parseCatalogUpdateBody(body);
+    const current = await getItemById(parsed.id);
+    if (!current) {
+      return NextResponse.json(
+        { success: false, error: 'Item not found' },
+        { status: 404 },
+      );
+    }
+
+    const mediaPayload = (parsed as { media?: { main?: string; thumb?: string; gallery?: string[] } }).media;
+    const mergedMedia =
+      mediaPayload
+        ? {
+            ...(current.media || {}),
+            ...mediaPayload,
+            ...(mediaPayload.gallery !== undefined ? { gallery: mediaPayload.gallery } : {}),
+          }
+        : undefined;
+
+    const updated = await updateItem(parsed.id, {
+      ...(parsed.name !== undefined ? { name: parsed.name } : {}),
+      ...(parsed.description !== undefined ? { description: parsed.description } : {}),
+      ...(parsed.price !== undefined ? { price: parsed.price } : {}),
+      ...(parsed.status !== undefined ? { status: parsed.status } : {}),
+      ...(mergedMedia ? { media: mergedMedia } : {}),
+    });
+
+    if (!updated) {
+      return NextResponse.json(
+        { success: false, error: 'Item not found' },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      item: toStoreItemPayload(updated),
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message.includes('Request body must') ||
+        error.message.includes('must be a') ||
+        error.message.includes('At least one updatable field') ||
+        error.message.includes('media must') ||
+        error.message.includes('media contains unsupported fields'))
+    ) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
+
+    if (error instanceof Error && error.message.includes('id must be a non-empty string')) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
+
+    console.error('[M2M Store Inventory PATCH] Error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 },
     );
   }
 }
