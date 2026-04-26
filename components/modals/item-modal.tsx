@@ -33,6 +33,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import OwnerSubmodal from './submodals/owner-submodal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { LinkType } from '@/types/enums';
+import { getCollectionLabel } from '@/lib/constants/collection-labels';
 import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
 
 interface ItemModalProps {
@@ -1000,7 +1001,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         type,
         station,
         subItemType: subItemType || undefined,
-        collection: collection === Collection.NO_COLLECTION ? undefined : collection as Collection,
+        collection: collection as Collection,
         status,
         unitCost,
         additionalCost: 0,
@@ -1213,14 +1214,14 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
               <div>
                 <Label htmlFor="collection" className="text-xs">Collection</Label>
-                <Select value={collection} onValueChange={(value) => setCollection(value as Collection | 'none')}>
+                <Select value={collection} onValueChange={(value) => setCollection(value as Collection)}>
                   <SelectTrigger className="h-8 text-sm mt-1">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={Collection.NO_COLLECTION}>None</SelectItem>
-                    {Object.values(Collection).filter(c => c !== Collection.NO_COLLECTION).map(collection => (
-                      <SelectItem key={collection} value={collection}>{collection}</SelectItem>
+                    <SelectItem value={Collection.NO_COLLECTION}>No Collection</SelectItem>
+                    {Object.values(Collection).filter(c => c !== Collection.NO_COLLECTION).map(col => (
+                      <SelectItem key={col} value={col}>{getCollectionLabel(col)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

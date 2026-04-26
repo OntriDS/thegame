@@ -1392,7 +1392,7 @@ export function InventoryDisplay({
           key = ClientAPI.getItemModelKey(sticker);
           break;
         default: // collection
-          key = sticker.collection || 'Uncategorized';
+          key = sticker.collection || Collection.NO_COLLECTION;
       }
 
       if (!acc[key]) acc[key] = [];
@@ -1577,12 +1577,12 @@ export function InventoryDisplay({
                         const parts = groupKey.split('|');
                         if (parts.length === 4) {
                           const [itemType, subItemType, name, collection] = parts;
-                          return `${itemType} | ${subItemType} | ${collection} : ${name}`;
+                          return `${itemType} | ${subItemType} | ${getCollectionLabel(collection)} : ${name}`;
                         }
                         return groupKey;
                       })()
                     ) : (
-                      groupKey
+                      getCollectionLabel(groupKey)
                     )}
                   </h4>
                   <div className="flex items-center gap-3">

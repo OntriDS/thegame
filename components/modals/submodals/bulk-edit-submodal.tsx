@@ -113,7 +113,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
           newValue = value as ItemStatus;
           updatedItem = { ...item, status: newValue };
         } else if (field === 'collection') {
-          newValue = value === 'none' ? undefined : value as Collection;
+          newValue = value === 'none' ? Collection.NO_COLLECTION : value as Collection;
           updatedItem = { ...item, collection: newValue };
         } else if (field === 'station') {
           // IMPORTANT: Extract just the station name from the combined 'area:station' value

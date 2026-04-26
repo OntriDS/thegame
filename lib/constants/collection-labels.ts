@@ -21,7 +21,7 @@ export const COLLECTION_LABEL: Record<Collection, string> = {
 };
 
 export function getCollectionLabel(value: Collection | string | undefined | null): string {
-  if (!value) return '';
+  if (!value || value === 'none' || value === 'null' || value === 'undefined') return 'No Collection';
   if (value in COLLECTION_LABEL) return COLLECTION_LABEL[value as Collection];
   return String(value);
 }
