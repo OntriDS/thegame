@@ -179,7 +179,20 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       const trimmed = raw.trim();
       if (!trimmed) return '';
       if (!autoPrefixR2 || !r2Prefix) return trimmed;
+      
+      // If it already starts with the current prefix, we are good
       if (trimmed.startsWith(r2Prefix)) return trimmed;
+      
+      // Prevent double-prefixing if it looks like it already has a valid R2 station prefix.
+      // We derive this list from the actual STATION_CATEGORIES defined in enums.ts
+      const allStations = Object.values(STATION_CATEGORIES).flat() as string[];
+      
+      const firstPart = trimmed.split('/')[0].toLowerCase();
+      if (allStations.includes(firstPart)) {
+        // If it starts with a known station, assume it's already a full path
+        return trimmed;
+      }
+      
       return `${r2Prefix}/${trimmed}`;
     },
     [autoPrefixR2, r2Prefix]
