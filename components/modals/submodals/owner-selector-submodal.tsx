@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Character } from '@/types/entities';
 import { CharacterRole } from '@/types/enums';
-import { Search, User, X } from 'lucide-react';
+import { Search, User, X, CheckCircle2 } from 'lucide-react';
 
 interface OwnerSelectorModalProps {
   open: boolean;
@@ -109,7 +109,11 @@ export default function OwnerSelectorModal({
     
     return matchesSearch;
   }).sort((a, b) => {
-    // Get the index of the highest priority role for each character
+    // 1. Put selected character on top
+    if (a.id === selectedId) return -1;
+    if (b.id === selectedId) return 1;
+
+    // 2. Sort by role priority
     const getMinRoleIndex = (c: Character) => {
       if (!c.roles) return Infinity;
       const indices = c.roles
@@ -125,7 +129,7 @@ export default function OwnerSelectorModal({
       return indexA - indexB;
     }
     
-    // Secondary sort by name
+    // 3. Secondary sort by name
     return a.name.localeCompare(b.name);
   });
 
@@ -197,19 +201,32 @@ export default function OwnerSelectorModal({
                 {filteredCharacters.map((character) => (
                   <div
                     key={character.id}
-                    className={`p-3 cursor-pointer transition-colors ${
+                    className={`p-3 cursor-pointer transition-all relative ${
                       selectedId === character.id
-                        ? 'bg-primary/10 border-l-4 border-l-primary'
+                        ? 'bg-emerald-500/10 border-l-4 border-l-emerald-500'
                         : 'hover:bg-muted'
                     }`}
                     onClick={() => setSelectedId(character.id)}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <User className="h-4 w-4 text-primary" />
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                        selectedId === character.id ? 'bg-emerald-500 text-white' : 'bg-primary/10 text-primary'
+                      }`}>
+                        {selectedId === character.id ? (
+                          <CheckCircle2 className="h-4 w-4" />
+                        ) : (
+                          <User className="h-4 w-4" />
+                        )}
                       </div>
-                      <div>
-                        <div className="font-bold text-sm">{character.name}</div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <div className="font-bold text-sm">{character.name}</div>
+                          {selectedId === character.id && (
+                            <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-500 h-4 text-[9px] px-1.5 font-bold uppercase">
+                              Selected
+                            </Badge>
+                          )}
+                        </div>
                         <div className="flex gap-1 mt-0.5">
                           {character.roles?.filter(r => ALLOWED_OWNER_ROLES.includes(r)).map(r => (
                             <span key={r} className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">

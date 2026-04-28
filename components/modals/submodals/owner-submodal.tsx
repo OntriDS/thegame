@@ -198,11 +198,6 @@ export default function OwnerSubmodal({
         <div className="flex items-center gap-2 mb-1">
           <p className="font-medium truncate">{character.name}</p>
         </div>
-        {character.description && (
-          <p className="text-xs text-muted-foreground line-clamp-1 mb-1">
-            {character.description}
-          </p>
-        )}
         {character.roles && character.roles.length > 0 && (
           <Badge variant="secondary" className="text-xs">
             {character.roles[0]}
@@ -239,12 +234,6 @@ export default function OwnerSubmodal({
           <div className="flex items-center gap-2 mb-1">
             <p className="font-medium truncate">{character.name}</p>
           </div>
-
-          {character.description && (
-            <p className="text-sm text-muted-foreground line-clamp-1 mb-2">
-              {character.description}
-            </p>
-          )}
 
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             {character.roles && character.roles.length > 0 && (

@@ -77,7 +77,7 @@ export async function PATCH(request: NextRequest) {
     if (authFailure) return authFailure;
 
     const body = await request.json();
-    const { id, status, progress, description, characterId, siteId, priority, cost, revenue } = body;
+    const { id, status, progress, description, characterId, siteId, priority, cost, revenue, ownerId } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -95,7 +95,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Templates cannot be edited directly (except maybe status, but user says templates are not suppose to be editable)
-    if (task.type === TaskType.RECURRENT_TEMPLATE && (description || cost || revenue || priority)) {
+    if (task.type === TaskType.RECURRENT_TEMPLATE && (description || cost || revenue || priority || ownerId)) {
        return NextResponse.json(
         { success: false, error: 'Recurrent templates are not editable. Edit instances instead.' },
         { status: 403 },
@@ -112,6 +112,7 @@ export async function PATCH(request: NextRequest) {
       ...(priority !== undefined ? { priority } : {}),
       ...(cost !== undefined ? { cost: Number(cost) } : {}),
       ...(revenue !== undefined ? { revenue: Number(revenue) } : {}),
+      ...(ownerId !== undefined ? { ownerId } : {}),
       updatedAt: new Date(),
     };
 
