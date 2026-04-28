@@ -156,10 +156,25 @@ export async function spawnNextRecurrentInstance(
         nextDate = addDaysUTC(referenceDate, config.interval);
         break;
 
-      case RecurrentFrequency.ONCE:
-        // Use the reference date (template's dueDate or fallback) for exactly one instance
-        nextDate = new Date(referenceDate);
+      case RecurrentFrequency.ONCE: {
+        const todayLocal = fromRecurrentUTC(new Date());
+        if (template.lastSpawnedDate) {
+          // If already spawned, move to the next day after lastSpawn, but jump to today if it was long ago
+          const lastSpawned = fromRecurrentUTC(template.lastSpawnedDate);
+          const nextDay = addDaysUTC(lastSpawned, 1);
+          nextDate = nextDay.getTime() > todayLocal.getTime() ? nextDay : toRecurrentUTC(todayLocal);
+        } else {
+          // First spawn
+          if (template.dueDate) {
+            nextDate = fromRecurrentUTC(template.dueDate);
+          } else {
+            // No due date: use today or recurrenceStart, whichever is later
+            const start = template.recurrenceStart ? fromRecurrentUTC(template.recurrenceStart) : todayLocal;
+            nextDate = start.getTime() > todayLocal.getTime() ? toRecurrentUTC(start) : toRecurrentUTC(todayLocal);
+          }
+        }
         break;
+      }
 
       default:
         return null;

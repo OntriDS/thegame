@@ -18,6 +18,23 @@ function normalizeDate(value?: Date | string | null): Date | null {
 }
 
 function getBaseStart(task: Task): Date | null {
+  const isOnce = task.frequencyConfig?.type === RecurrentFrequency.ONCE;
+  const todayLocal = fromRecurrentUTC(new Date());
+
+  if (isOnce) {
+    if (task.lastSpawnedDate) {
+      const lastSpawned = fromRecurrentUTC(task.lastSpawnedDate);
+      const nextDay = addDaysUTC(lastSpawned, 1);
+      return nextDay.getTime() > todayLocal.getTime() ? nextDay : todayLocal;
+    }
+    
+    if (task.dueDate) return fromRecurrentUTC(new Date(task.dueDate));
+    
+    // No due date: use today or recurrenceStart, whichever is later
+    const start = task.recurrenceStart ? fromRecurrentUTC(new Date(task.recurrenceStart)) : todayLocal;
+    return start.getTime() > todayLocal.getTime() ? start : todayLocal;
+  }
+
   // JIT Model: Start from the explicit recurrence boundary if provided
   const boundaryStart = task.recurrenceStart ? new Date(task.recurrenceStart) : null;
   if (boundaryStart) return fromRecurrentUTC(boundaryStart);
