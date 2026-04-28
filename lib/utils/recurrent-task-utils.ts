@@ -233,7 +233,7 @@ export async function spawnNextRecurrentInstance(
     doneAt: undefined,
     collectedAt: undefined,
     isCollected: false,
-    ownerId: template.ownerId || FOUNDER_CHARACTER_ID,
+    ownerId: template.ownerId,
   };
 
   return instance;
@@ -326,7 +326,7 @@ export function createRecurrentGroup(
     updatedAt: new Date(),
     isCollected: false,
     links: [], // initialize links array
-    ownerId: FOUNDER_CHARACTER_ID,
+    ownerId: null,
   };
 }
 
@@ -361,7 +361,7 @@ export function createRecurrentTemplate(
     updatedAt: new Date(),
     isCollected: false,
     links: [], // initialize links array
-    ownerId: FOUNDER_CHARACTER_ID,
+    ownerId: null,
   };
 }
 
@@ -394,7 +394,7 @@ export function spawnRecurrentInstance(
     doneAt: undefined,
     collectedAt: undefined,
     isCollected: false,
-    ownerId: template.ownerId || FOUNDER_CHARACTER_ID,
+    ownerId: template.ownerId,
   };
 }
 

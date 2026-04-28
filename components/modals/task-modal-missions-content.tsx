@@ -302,10 +302,16 @@ export default function MissionTreeModalContent({
     setNewCustomerName('');
     setCustomerCharacterRole(CharacterRole.CUSTOMER);
     setPlayerCharacterId(FOUNDER_CHARACTER_ID);
-    setOwnerId(null);
+    setOwnerId(FOUNDER_CHARACTER_ID);
     setRewards({ points: { xp: 0, rp: 0, fp: 0, hp: 0 } });
     setParentId(null);
   }, [getLastUsedStation, getLastUsedType]);
+
+  useEffect(() => {
+    if (status === TaskStatus.NONE) {
+      setOwnerId(null);
+    }
+  }, [status]);
 
   useEffect(() => {
     if (!open) {
@@ -460,7 +466,7 @@ export default function MissionTreeModalContent({
       newCustomerName: isNewCustomer ? newCustomerName.trim() || undefined : undefined,
       customerCharacterRole,
       playerCharacterId: finalPlayerCharacterId,
-      ownerId: ownerId || FOUNDER_CHARACTER_ID,
+      ownerId: status === TaskStatus.NONE ? null : ownerId,
       order: determineOrder(),
       isCollected:
         finalStatus === TaskStatus.FAILED ? false : finalStatus === TaskStatus.COLLECTED || isCollected,
@@ -1271,6 +1277,7 @@ export default function MissionTreeModalContent({
         onOpenChange={setShowOwnerSelector}
         onSelect={setOwnerId}
         currentOwnerId={ownerId}
+        status={status}
       />
 
       {/* Validation Modal */}

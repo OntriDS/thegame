@@ -7,14 +7,15 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Character } from '@/types/entities';
-import { CharacterRole } from '@/types/enums';
-import { Search, User, X, CheckCircle2 } from 'lucide-react';
+import { CharacterRole, TaskStatus } from '@/types/enums';
+import { Search, User, X, CheckCircle2, UserMinus } from 'lucide-react';
 
 interface OwnerSelectorModalProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSelect: (characterId: string | null) => void;
   currentOwnerId?: string | null;
+  status?: TaskStatus;
 }
 
 const ALLOWED_OWNER_ROLES = [
@@ -31,7 +32,8 @@ export default function OwnerSelectorModal({
   open, 
   onOpenChange, 
   onSelect, 
-  currentOwnerId 
+  currentOwnerId,
+  status
 }: OwnerSelectorModalProps) {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -198,6 +200,41 @@ export default function OwnerSelectorModal({
               </div>
             ) : (
               <div className="divide-y">
+                {/* Special "No Owner" Option */}
+                <div
+                  className={`p-3 cursor-pointer transition-all relative ${
+                    selectedId === null
+                      ? 'bg-emerald-500/10 border-l-4 border-l-emerald-500'
+                      : 'hover:bg-muted'
+                  }`}
+                  onClick={() => setSelectedId(null)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                      selectedId === null ? 'bg-emerald-500 text-white' : 'bg-destructive/10 text-destructive'
+                    }`}>
+                      {selectedId === null ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        <UserMinus className="h-4 w-4" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <div className="font-bold text-sm text-destructive">No Owner / Unassigned</div>
+                        {selectedId === null && (
+                          <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-500 h-4 text-[9px] px-1.5 font-bold uppercase">
+                            Selected
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        Task will have no assigned owner
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {filteredCharacters.map((character) => (
                   <div
                     key={character.id}
@@ -243,15 +280,7 @@ export default function OwnerSelectorModal({
           </ScrollArea>
         </div>
 
-        <DialogFooter className="flex items-center justify-between mt-4">
-          <Button
-            variant="ghost"
-            onClick={handleRemove}
-            className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-          >
-            <X className="h-3 w-3 mr-1" />
-            Remove Owner
-          </Button>
+        <DialogFooter className="flex items-center justify-end mt-4">
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -262,8 +291,7 @@ export default function OwnerSelectorModal({
             </Button>
             <Button
               onClick={handleSelect}
-              className="h-8 text-xs px-4"
-              disabled={!selectedId}
+              className="h-8 text-xs px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
             >
               Assign
             </Button>
