@@ -1357,7 +1357,6 @@ export default function RecurrentTreeModalContent({
         onOpenChange={setShowOwnerSelector}
         onSelect={setOwnerId}
         currentOwnerId={ownerId}
-        status={status}
       />
 
       <SmartSchedulerSubmodal

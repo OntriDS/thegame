@@ -15,7 +15,6 @@ interface OwnerSelectorModalProps {
   onOpenChange: (v: boolean) => void;
   onSelect: (characterId: string | null) => void;
   currentOwnerId?: string | null;
-  status?: TaskStatus;
 }
 
 const ALLOWED_OWNER_ROLES = [
@@ -32,8 +31,7 @@ export default function OwnerSelectorModal({
   open, 
   onOpenChange, 
   onSelect, 
-  currentOwnerId,
-  status
+  currentOwnerId
 }: OwnerSelectorModalProps) {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -243,7 +241,7 @@ export default function OwnerSelectorModal({
                         ? 'bg-emerald-500/10 border-l-4 border-l-emerald-500'
                         : 'hover:bg-muted'
                     }`}
-                    onClick={() => setSelectedId(character.id)}
+                    onClick={() => setSelectedId(selectedId === character.id ? null : character.id)}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${

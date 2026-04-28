@@ -1277,7 +1277,6 @@ export default function MissionTreeModalContent({
         onOpenChange={setShowOwnerSelector}
         onSelect={setOwnerId}
         currentOwnerId={ownerId}
-        status={status}
       />
 
       {/* Validation Modal */}
