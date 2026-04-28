@@ -341,6 +341,7 @@ export interface Task extends BaseEntity {
   // Emissary Fields (Conditional entity creation - pass to created entities)
   characterId?: string | null;          // Counterparty ID (customer/beneficiary) for this task
   playerCharacterId?: string | null;    // AMBASSADOR: Player character who owns this task
+  ownerId?: string | null;              // AMBASSADOR: Team member (Character) assigned to execute this task
   newCustomerName?: string;             // EMISSARY: Name for new customer character creation
   customerCharacterRole?: CustomerCounterpartyRole; // EMISSARY: counterparty role for new/selected character
 

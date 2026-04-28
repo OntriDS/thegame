@@ -31,6 +31,7 @@ import { ORDER_INCREMENT, PROGRESS_MAX, PROGRESS_STEP, PRICE_STEP } from '@/lib/
 import { computeNextSiblingOrder } from '@/lib/utils/task-order-utils';
 import { Calendar as CalendarIcon, Network, User } from 'lucide-react';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
+import OwnerSelectorModal from './submodals/owner-selector-submodal';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 import DatesSubmodal from './submodals/dates-submodal';
@@ -139,6 +140,8 @@ export default function MissionTreeModalContent({
   const [customerCharacterRole, setCustomerCharacterRole] = useState<CharacterRole>(CharacterRole.CUSTOMER);
   const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(FOUNDER_CHARACTER_ID);
   const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [showOwnerSelector, setShowOwnerSelector] = useState(false);
   const [showScheduler, setShowScheduler] = useState(false);
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
@@ -242,6 +245,7 @@ export default function MissionTreeModalContent({
       setNewCustomerName(existingTask.newCustomerName || '');
       setCustomerCharacterRole(existingTask.customerCharacterRole || CharacterRole.CUSTOMER);
       setPlayerCharacterId(existingTask.playerCharacterId || FOUNDER_CHARACTER_ID);
+      setOwnerId(existingTask.ownerId || null);
       setRewards({
         points: {
           xp: existingTask.rewards?.points?.xp || 0,
@@ -298,6 +302,7 @@ export default function MissionTreeModalContent({
     setNewCustomerName('');
     setCustomerCharacterRole(CharacterRole.CUSTOMER);
     setPlayerCharacterId(FOUNDER_CHARACTER_ID);
+    setOwnerId(null);
     setRewards({ points: { xp: 0, rp: 0, fp: 0, hp: 0 } });
     setParentId(null);
   }, [getLastUsedStation, getLastUsedType]);
@@ -455,6 +460,7 @@ export default function MissionTreeModalContent({
       newCustomerName: isNewCustomer ? newCustomerName.trim() || undefined : undefined,
       customerCharacterRole,
       playerCharacterId: finalPlayerCharacterId,
+      ownerId: ownerId || FOUNDER_CHARACTER_ID,
       order: determineOrder(),
       isCollected:
         finalStatus === TaskStatus.FAILED ? false : finalStatus === TaskStatus.COLLECTED || isCollected,
@@ -1066,6 +1072,15 @@ export default function MissionTreeModalContent({
             <User className="w-3 h-3 mr-1" />
             Player
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowOwnerSelector(true)}
+            className="h-8 text-xs"
+          >
+            <User className="w-3 h-3 mr-1" />
+            Owner
+          </Button>
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
@@ -1248,6 +1263,14 @@ export default function MissionTreeModalContent({
         onOpenChange={setShowPlayerCharacterSelector}
         onSelect={handlePlayerCharacterSelect}
         currentPlayerCharacterId={playerCharacterId}
+      />
+
+      {/* Owner Selector Modal */}
+      <OwnerSelectorModal
+        open={showOwnerSelector}
+        onOpenChange={setShowOwnerSelector}
+        onSelect={setOwnerId}
+        currentOwnerId={ownerId}
       />
 
       {/* Validation Modal */}

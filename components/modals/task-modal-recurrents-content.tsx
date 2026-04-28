@@ -54,6 +54,7 @@ import ArchiveCollectionConfirmationModal from './submodals/archive-collection-c
 import ConfirmationModal from './submodals/confirmation-submodal';
 import CascadeStatusConfirmationModal from './submodals/cascade-status-confirmation-submodal';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
+import OwnerSelectorModal from './submodals/owner-selector-submodal';
 import { TaskModalFooter } from './task-modal';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
@@ -145,6 +146,8 @@ export default function RecurrentTreeModalContent({
   const [showDatesModal, setShowDatesModal] = useState(false);
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
   const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [showOwnerSelector, setShowOwnerSelector] = useState(false);
   const [showArchiveCollectionModal, setShowArchiveCollectionModal] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{
     status: TaskStatus;
@@ -244,6 +247,7 @@ export default function RecurrentTreeModalContent({
       setNewCustomerName(existingTask.newCustomerName || '');
       setCustomerCharacterRole(existingTask.customerCharacterRole || CharacterRole.CUSTOMER);
       setPlayerCharacterId(existingTask.playerCharacterId || FOUNDER_CHARACTER_ID);
+      setOwnerId(existingTask.ownerId || null);
       setRewards({
         points: {
           xp: existingTask.rewards?.points?.xp || 0,
@@ -306,6 +310,7 @@ export default function RecurrentTreeModalContent({
     setNewCustomerName('');
     setCustomerCharacterRole(CharacterRole.CUSTOMER);
     setPlayerCharacterId(FOUNDER_CHARACTER_ID);
+    setOwnerId(null);
     setRewards({ points: { xp: 0, rp: 0, fp: 0, hp: 0 } });
     setFrequencyConfig({
       type: RecurrentFrequency.ONCE,
@@ -441,6 +446,7 @@ export default function RecurrentTreeModalContent({
       newCustomerName: isNewCustomer ? newCustomerName.trim() || undefined : undefined,
       customerCharacterRole,
       playerCharacterId: finalPlayerCharacterId,
+      ownerId: ownerId || FOUNDER_CHARACTER_ID,
       order: determineOrder(),
       isCollected:
         finalStatus === TaskStatus.FAILED ? false : finalStatus === TaskStatus.COLLECTED || isCollected,
@@ -1157,6 +1163,15 @@ export default function RecurrentTreeModalContent({
             <User className="w-3 h-3 mr-1" />
             Player
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowOwnerSelector(true)}
+            className="h-8 text-xs"
+          >
+            <User className="w-3 h-3 mr-1" />
+            Owner
+          </Button>
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
@@ -1329,6 +1344,13 @@ export default function RecurrentTreeModalContent({
         onOpenChange={setShowPlayerCharacterSelector}
         onSelect={handlePlayerCharacterSelect}
         currentPlayerCharacterId={playerCharacterId}
+      />
+
+      <OwnerSelectorModal
+        open={showOwnerSelector}
+        onOpenChange={setShowOwnerSelector}
+        onSelect={setOwnerId}
+        currentOwnerId={ownerId}
       />
 
       <SmartSchedulerSubmodal

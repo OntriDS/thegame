@@ -23,7 +23,7 @@ interface ItemNameFieldProps {
   onItemSelect?: (itemId: string) => void;
   isNewItem?: boolean;
   onNewItemToggle?: (isNew: boolean) => void;
-  /** New-item name input only: load last-saved item modal draft from preferences (parent handles). */
+  /** New-item name input only: F8 loads last-saved item modal draft from preferences (parent handles). */
   onLoadLastSavedForm?: () => void;
   label?: string;
   sites?: Site[];
@@ -99,6 +99,13 @@ export function ItemNameField({
     [items, showPriceInOptions, showQuantityInOptions, sites]
   );
 
+  const nameInputPlaceholder = useMemo(() => {
+    const base = placeholder ?? 'Item name';
+    if (!onLoadLastSavedForm) return base;
+    if (/f8/i.test(base)) return base;
+    return `${base} · F8: restore last draft`;
+  }, [onLoadLastSavedForm, placeholder]);
+
   return (
     <div className={`space-y-2 ${className || ''}`}>
       <Label htmlFor="item-name-field" className="text-xs">{label}</Label>
@@ -126,12 +133,12 @@ export function ItemNameField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'ArrowLeft' && onLoadLastSavedForm) {
-              e.preventDefault();
-              onLoadLastSavedForm();
-            }
+            if (!onLoadLastSavedForm) return;
+            if (e.key !== 'F8' || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+            e.preventDefault();
+            onLoadLastSavedForm();
           }}
-          placeholder={placeholder}
+          placeholder={nameInputPlaceholder}
           disabled={disabled}
           className="h-8 text-sm"
         />

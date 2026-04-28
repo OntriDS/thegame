@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { iamService } from '@/lib/iam-service';
-import { ItemStatus, ItemType } from '@/types/enums';
+import { ItemStatus, ItemType, Collection } from '@/types/enums';
+import type { SubItemType } from '@/types/type-aliases';
 import {
   getActiveItems,
   getItemById,
@@ -73,6 +74,10 @@ function parseCatalogUpdateBody(body: unknown) {
     price?: unknown;
     status?: unknown;
     media?: unknown;
+    collection?: unknown;
+    type?: unknown;
+    subItemType?: unknown;
+    year?: unknown;
   };
 
   const id = typeof payload.id === 'string' ? payload.id.trim() : '';
@@ -85,7 +90,11 @@ function parseCatalogUpdateBody(body: unknown) {
     Object.prototype.hasOwnProperty.call(payload, 'description') ||
     Object.prototype.hasOwnProperty.call(payload, 'price') ||
     Object.prototype.hasOwnProperty.call(payload, 'status') ||
-    Object.prototype.hasOwnProperty.call(payload, 'media');
+    Object.prototype.hasOwnProperty.call(payload, 'media') ||
+    Object.prototype.hasOwnProperty.call(payload, 'collection') ||
+    Object.prototype.hasOwnProperty.call(payload, 'type') ||
+    Object.prototype.hasOwnProperty.call(payload, 'subItemType') ||
+    Object.prototype.hasOwnProperty.call(payload, 'year');
 
   if (!hasPatchField) {
     throw new Error('At least one updatable field is required');
@@ -98,6 +107,10 @@ function parseCatalogUpdateBody(body: unknown) {
     price?: number;
     status?: ItemStatus;
     media?: { main?: string; thumb?: string; gallery?: string[] };
+    collection?: Collection;
+    type?: ItemType;
+    subItemType?: SubItemType;
+    year?: number;
   } = {
     id,
   };
@@ -188,6 +201,35 @@ function parseCatalogUpdateBody(body: unknown) {
     }
   }
 
+  if ('collection' in payload && payload.collection !== undefined) {
+    if (typeof payload.collection !== 'string') {
+      throw new Error('collection must be a string');
+    }
+    next.collection = payload.collection.trim() as Collection;
+  }
+
+  if ('type' in payload && payload.type !== undefined) {
+    if (!Object.values(ItemType).includes(payload.type as ItemType)) {
+      throw new Error('type must be a valid ItemType value');
+    }
+    next.type = payload.type as ItemType;
+  }
+
+  if ('subItemType' in payload && payload.subItemType !== undefined) {
+    if (typeof payload.subItemType !== 'string') {
+      throw new Error('subItemType must be a string');
+    }
+    next.subItemType = payload.subItemType.trim() as SubItemType;
+  }
+
+  if ('year' in payload && payload.year !== undefined) {
+    const yearNum = Number(payload.year);
+    if (!Number.isFinite(yearNum)) {
+      throw new Error('year must be a number');
+    }
+    next.year = yearNum;
+  }
+
   return next;
 }
 
@@ -201,6 +243,9 @@ function parseCatalogCreateBody(body: unknown) {
     type?: unknown;
     price?: unknown;
     description?: unknown;
+    collection?: unknown;
+    subItemType?: unknown;
+    year?: unknown;
   };
 
   if (typeof payload.name !== 'string') {
@@ -234,12 +279,18 @@ function parseCatalogCreateBody(body: unknown) {
     name,
     type: type as ItemType,
     price: payload.price,
-    description: payload.description,
+    description: payload.description as string | undefined,
+    collection: typeof payload.collection === 'string' ? (payload.collection.trim() as Collection) : undefined,
+    subItemType: typeof payload.subItemType === 'string' ? (payload.subItemType.trim() as SubItemType) : undefined,
+    year: typeof payload.year === 'number' ? payload.year : (typeof payload.year === 'string' ? parseInt(payload.year, 10) : undefined),
   } as {
     name: string;
     type: ItemType;
     price: number;
     description?: string;
+    collection?: Collection;
+    subItemType?: SubItemType;
+    year?: number;
   };
 }
 
@@ -248,6 +299,9 @@ function buildDraftItem(input: {
   type: ItemType;
   price: number;
   description?: string;
+  collection?: Collection;
+  subItemType?: SubItemType;
+  year?: number;
 }): Item {
   const now = getUTCNow();
   return {
@@ -269,6 +323,9 @@ function buildDraftItem(input: {
     createdAt: now,
     updatedAt: now,
     ...(input.description !== undefined ? { description: input.description } : {}),
+    ...(input.collection !== undefined ? { collection: input.collection } : {}),
+    ...(input.subItemType !== undefined ? { subItemType: input.subItemType } : {}),
+    ...(input.year !== undefined ? { year: input.year } : {}),
   };
 }
 
@@ -489,6 +546,10 @@ export async function PATCH(request: NextRequest) {
       ...(parsed.description !== undefined ? { description: parsed.description } : {}),
       ...(parsed.price !== undefined ? { price: parsed.price } : {}),
       ...(parsed.status !== undefined ? { status: parsed.status } : {}),
+      ...(parsed.collection !== undefined ? { collection: parsed.collection as Collection } : {}),
+      ...(parsed.type !== undefined ? { type: parsed.type } : {}),
+      ...(parsed.subItemType !== undefined ? { subItemType: parsed.subItemType as SubItemType } : {}),
+      ...(parsed.year !== undefined ? { year: parsed.year } : {}),
       ...(mergedMedia ? { media: mergedMedia } : {}),
     });
 
@@ -562,6 +623,8 @@ function toStoreItemPayload(item: Item) {
     station: item.station,
     price: item.price,
     year: item.year,
+    createdAt: item.createdAt,
+    stock: item.stock || [],
     media: {
       main: cdn(item.media?.main),
       thumb: cdn(item.media?.thumb),

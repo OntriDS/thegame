@@ -136,13 +136,6 @@ export default function PlayerCharacterSelectorModal({
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {character.roles?.map((role) => (
-                          <Badge key={role} variant="secondary" className="text-xs">
-                            {role}
-                          </Badge>
-                        ))}
-                      </div>
                     </div>
                   </div>
                 ))}

@@ -61,6 +61,29 @@ export async function requireAdminAuth(req: NextRequest): Promise<boolean> {
   }
 }
 
+/**
+ * Allows both Admin users and authorized M2M applications
+ */
+export async function requireAdminOrM2MAuth(req: NextRequest): Promise<boolean> {
+  try {
+    const token = extractAuthToken(req);
+    if (!token) return false;
+
+    // 1. Try JWT (User)
+    const user = await iamService.verifyJWT(token);
+    if (user?.isActive && isGameAdmin(user.roles)) return true;
+
+    // 2. Try M2M
+    const m2m = await iamService.verifyM2MToken(token);
+    if (m2m.valid && m2m.appId && getProvisioningM2MApps().includes(m2m.appId)) return true;
+
+    return false;
+  } catch (error) {
+    console.error('[API Auth] Error verifying Admin/M2M authentication:', error);
+    return false;
+  }
+}
+
 export async function requireFounderAdminAuth(req: NextRequest): Promise<boolean> {
   try {
     const token = extractAuthToken(req);

@@ -2,7 +2,7 @@
 // Recurrent task management utilities
 
 import { Task } from '@/types/entities';
-import { TaskType, RecurrentFrequency, TaskStatus, EntityType, LogEventType } from '@/types/enums';
+import { TaskType, RecurrentFrequency, TaskStatus, TaskPriority, EntityType, LogEventType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import { getAllTasks, upsertTask, getTasksByParentId, getTaskById } from '@/data-store/datastore';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { appendEntityLog } from '@/workflows/entities-logging';
@@ -233,6 +233,7 @@ export async function spawnNextRecurrentInstance(
     doneAt: undefined,
     collectedAt: undefined,
     isCollected: false,
+    ownerId: template.ownerId || FOUNDER_CHARACTER_ID,
   };
 
   return instance;
@@ -311,7 +312,7 @@ export function createRecurrentGroup(
     description,
     type: TaskType.RECURRENT_GROUP,
     status: TaskStatus.CREATED,
-    priority: 'Normal' as any,
+    priority: TaskPriority.NORMAL,
     station: station as any,
     progress: 0,
     order: 0,
@@ -324,7 +325,8 @@ export function createRecurrentGroup(
     createdAt: new Date(),
     updatedAt: new Date(),
     isCollected: false,
-    links: [] // initialize links array
+    links: [], // initialize links array
+    ownerId: FOUNDER_CHARACTER_ID,
   };
 }
 
@@ -344,7 +346,7 @@ export function createRecurrentTemplate(
     description,
     type: TaskType.RECURRENT_TEMPLATE,
     status: TaskStatus.CREATED,
-    priority: 'Normal' as any,
+    priority: TaskPriority.NORMAL,
     station: station as any,
     progress: 0,
     order: 0,
@@ -358,7 +360,8 @@ export function createRecurrentTemplate(
     createdAt: new Date(),
     updatedAt: new Date(),
     isCollected: false,
-    links: [] // initialize links array
+    links: [], // initialize links array
+    ownerId: FOUNDER_CHARACTER_ID,
   };
 }
 
@@ -391,6 +394,7 @@ export function spawnRecurrentInstance(
     doneAt: undefined,
     collectedAt: undefined,
     isCollected: false,
+    ownerId: template.ownerId || FOUNDER_CHARACTER_ID,
   };
 }
 

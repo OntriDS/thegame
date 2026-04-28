@@ -674,7 +674,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     }
   }, [open, saveFormDataToStorage]);
 
-  // New items open blank; press Arrow Left in the name field to load last-saved draft from preferences.
+  // New items open blank; in the name field press F8 to load last-saved draft from preferences.
   useEffect(() => {
     const prev = prevModalSessionRef.current;
     const hadItem = !!item;
@@ -1080,8 +1080,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                 <ItemNameField
                   value={name}
                   onChange={setName}
-                  placeholder="Item name (← loads last draft)"
-                    items={existingItems}
+                  placeholder="Item name"
+                  items={existingItems}
                   selectedItemId={selectedItemId}
                   onItemSelect={handleItemSelect}
                   isNewItem={isNameFieldNewItem}
@@ -1346,37 +1346,22 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label htmlFor="mediaThumb" className="text-xs">
-                          Thumb r2 key (.jpg)
-                        </Label>
-                        <Input
-                          id="mediaThumb"
-                          value={mediaThumb}
-                          onChange={(e) => setMediaThumb(e.target.value)}
-                          placeholder={r2ThumbPlaceholder}
-                          className="h-8 text-sm mt-1"
-                          onKeyDown={makeR2ArrowFillHandler(setMediaThumb, 'thumb')}
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="sourceFileUrl" className="text-xs">
-                          Source file url
-                        </Label>
-                        <Input
-                          id="sourceFileUrl"
-                          value={sourceFileUrl}
-                          onChange={(e) => setSourceFileUrl(e.target.value)}
-                          placeholder="https://drive.google.com/..."
-                          className="h-8 text-sm mt-1"
-                        />
-                      </div>
+                    <div>
+                      <Label htmlFor="mediaThumb" className="text-xs">
+                        Thumb r2 key (.jpg)
+                      </Label>
+                      <Input
+                        id="mediaThumb"
+                        value={mediaThumb}
+                        onChange={(e) => setMediaThumb(e.target.value)}
+                        placeholder={r2ThumbPlaceholder}
+                        className="h-8 text-sm mt-1"
+                        onKeyDown={makeR2ArrowFillHandler(setMediaThumb, 'thumb')}
+                      />
                     </div>
                   </div>
 
-                  {/* Right: description + dimensions + model size */}
+                  {/* Right: description + dimensions/model size row + source URL */}
                   <div className="space-y-3">
                     <div>
                       <Label htmlFor="description" className="text-xs">
@@ -1391,51 +1376,75 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                       />
                     </div>
 
-                    {showDimensions && (
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label htmlFor="width" className="text-xs">
-                            Width (cm)
-                          </Label>
-                          <NumericInput
-                            id="width"
-                            value={width ? parseFloat(width) : 0}
-                            onChange={(value) => setWidth(value.toString())}
-                            min={0}
-                            step={0.1}
-                            className="h-8 text-sm mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="height" className="text-xs">
-                            Height (cm)
-                          </Label>
-                          <NumericInput
-                            id="height"
-                            value={height ? parseFloat(height) : 0}
-                            onChange={(value) => setHeight(value.toString())}
-                            min={0}
-                            step={0.1}
-                            className="h-8 text-sm mt-1"
-                          />
-                        </div>
+                    {(showDimensions || showModelSize) && (
+                      <div
+                        className={
+                          showDimensions && showModelSize
+                            ? 'grid grid-cols-3 gap-2'
+                            : showDimensions
+                              ? 'grid grid-cols-2 gap-2'
+                              : 'grid grid-cols-1 gap-2'
+                        }
+                      >
+                        {showDimensions && (
+                          <>
+                            <div>
+                              <Label htmlFor="width" className="text-xs">
+                                Width (cm)
+                              </Label>
+                              <NumericInput
+                                id="width"
+                                value={width ? parseFloat(width) : 0}
+                                onChange={(value) => setWidth(value.toString())}
+                                min={0}
+                                step={0.1}
+                                className="h-8 text-sm mt-1"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="height" className="text-xs">
+                                Height (cm)
+                              </Label>
+                              <NumericInput
+                                id="height"
+                                value={height ? parseFloat(height) : 0}
+                                onChange={(value) => setHeight(value.toString())}
+                                min={0}
+                                step={0.1}
+                                className="h-8 text-sm mt-1"
+                              />
+                            </div>
+                          </>
+                        )}
+                        {showModelSize && (
+                          <div>
+                            <Label htmlFor="size" className="text-xs">
+                              Model Size
+                            </Label>
+                            <Input
+                              id="size"
+                              value={size}
+                              onChange={(e) => setSize(e.target.value)}
+                              placeholder="M, L, XL, 7.5"
+                              className="h-8 text-sm mt-1"
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
 
-                    {showModelSize && (
-                      <div>
-                        <Label htmlFor="size" className="text-xs">
-                          Model Size
-                        </Label>
-                        <Input
-                          id="size"
-                          value={size}
-                          onChange={(e) => setSize(e.target.value)}
-                          placeholder="M, L, XL, 7.5"
-                          className="h-8 text-sm mt-1"
-                        />
-                      </div>
-                    )}
+                    <div>
+                      <Label htmlFor="sourceFileUrl" className="text-xs">
+                        Source file url
+                      </Label>
+                      <Input
+                        id="sourceFileUrl"
+                        value={sourceFileUrl}
+                        onChange={(e) => setSourceFileUrl(e.target.value)}
+                        placeholder="https://drive.google.com/..."
+                        className="h-8 text-sm mt-1"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
