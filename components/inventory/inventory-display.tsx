@@ -1287,7 +1287,10 @@ export function InventoryDisplay({
     return (
       <div
         className="cursor-pointer hover:bg-blue-50 px-1 py-0.5 rounded transition-colors w-full text-center"
-        onClick={() => handleInlineEdit(item.id, field)}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleInlineEdit(item.id, field);
+        }}
         title={`Click to edit ${field}`}
       >
         {type === 'select' && options.length > 0 ?
@@ -1636,7 +1639,11 @@ export function InventoryDisplay({
                   {/* Clean 1-column grid layout */}
                   <div className="grid grid-cols-1 gap-4">
                     {groupStickers.map(sticker => (
-                      <div key={sticker.id} className="bg-card border rounded-lg p-3 hover:bg-accent/50 transition-colors">
+                      <div 
+                        key={sticker.id} 
+                        className="bg-card border rounded-lg p-3 hover:bg-accent/50 transition-colors cursor-pointer"
+                        onClick={() => handleEditItem(sticker, stickersViewBy === 'location' ? groupKey : undefined)}
+                      >
                         {/* Row 1: Name | Area | Station | Location | Qty | Size | Price | Status | Actions - 8 columns */}
                         <div className="flex items-center gap-4 mb-2">
                           {/* Column 1: Name */}
@@ -1722,17 +1729,8 @@ export function InventoryDisplay({
                             </div>
                           </div>
 
-                          {/* Column 9: Actions */}
-                          <div className="flex justify-center gap-1 flex-shrink-0 w-16">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 px-2 text-xs"
-                              onClick={() => handleEditItem(sticker, stickersViewBy === 'location' ? groupKey : undefined)}
-                            >
-                              Edit
-                            </Button>
-                          </div>
+                          {/* Column 9: Spacer for alignment */}
+                          <div className="flex-shrink-0 w-16" />
                         </div>
 
                         {/* Row 2: Collection | Subtype | Area | Station | Size | Price | Status | Move - 8 columns */}

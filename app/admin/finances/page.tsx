@@ -637,10 +637,11 @@ function FinancesPageContent() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="assets">Assets</TabsTrigger>
           <TabsTrigger value="company">Company</TabsTrigger>
           <TabsTrigger value="personal">Personal</TabsTrigger>
+          <TabsTrigger value="treasury">J$ Treasury</TabsTrigger>
           <TabsTrigger value="partnerships">Business Relationships</TabsTrigger>
         </TabsList>
 
@@ -810,68 +811,6 @@ function FinancesPageContent() {
                         <div className="font-semibold text-right border-t pt-1">${((companyAssets.companyJ$ || 0) * exchangeRates.j$ToUSD).toLocaleString()}</div>
                       </div>
                     </div>
-
-                    {/* Company J$ Treasury Section */}
-                    {treasuryData && (
-                      <Card className="border border-border/50 bg-card/50 backdrop-blur-sm">
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-base font-semibold flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-foreground/70" />
-                            Company J$ Treasury
-                          </CardTitle>
-                          <CardDescription className="text-xs">
-                            J$ bought back from players
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <div className="text-xs text-muted-foreground mb-1">Total J$ Bought Back</div>
-                              <div className="text-xl font-semibold text-foreground">
-                                {treasuryData.totalJ$BoughtBack.toFixed(2)} J$
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-xs text-muted-foreground mb-1">Total USD Spent</div>
-                              <div className="text-xl font-semibold text-foreground">
-                                ${treasuryData.totalUSDCost.toFixed(2)}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {treasuryData.buybackCount} buyback transaction{treasuryData.buybackCount !== 1 ? 's' : ''}
-                          </div>
-
-                          {/* Buyback History */}
-                          {treasuryData.buybacks && treasuryData.buybacks.length > 0 && (
-                            <div className="mt-4 pt-4 border-t border-border/50">
-                              <h5 className="font-medium text-sm mb-3 text-foreground/80">Buyback History</h5>
-                              <div className="space-y-2 max-h-64 overflow-y-auto">
-                                {treasuryData.buybacks.map((buyback: any) => (
-                                  <div key={buyback.id} className="text-xs border border-border/30 rounded-md p-2.5 bg-muted/20 hover:bg-muted/30 transition-colors">
-                                    <div className="flex justify-between items-start mb-1">
-                                      <div className="font-medium text-foreground/90">{formatDisplayDate(buyback.date)}</div>
-                                      <div className="text-right">
-                                        <div className="font-semibold text-foreground">{buyback.j$BoughtBack.toFixed(2)} J$</div>
-                                        {buyback.cashOutType === 'USD' ? (
-                                          <div className="text-muted-foreground text-xs">${buyback.usdCost.toFixed(2)}</div>
-                                        ) : (
-                                          <div className="text-muted-foreground text-xs">{buyback.zapsCost?.toFixed(0) || 0} sats</div>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className="flex justify-between text-muted-foreground text-xs mt-1">
-                                      <span>{buyback.station} • {buyback.cashOutType}</span>
-                                      <span>{buyback.name}</span>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )}
                   </div>
                 </div>
 
@@ -1016,7 +955,21 @@ function FinancesPageContent() {
                       <div className="font-semibold border-t pt-1">Total</div>
                       <div className="font-semibold text-right border-t pt-1">T${formatDecimal(getPersonalMonetaryTotal())}</div>
                     </div>
+                  </div>
+                </div>
 
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-sm">Personal Assets</h4>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEditSection('personal', 'otherAssets')}
+                    >
+                      Edit
+                    </Button>
+                  </div>
+                  <div className="space-y-3">
                     {/* Digital Assets Section */}
                     <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-sm border rounded-lg p-3 bg-muted/30">
                       <div className="font-medium">Digital Assets</div>
@@ -1039,36 +992,23 @@ function FinancesPageContent() {
                       <div className="border-t pt-1"></div>
                       <div className="font-semibold text-right border-t pt-1">${((jungleCoinsBalance || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE) * (exchangeRates.j$ToUSD || VALIDATION_CONSTANTS.DEFAULT_EXCHANGE_RATE)).toLocaleString()}</div>
                     </div>
-                  </div>
-                </div>
 
-                {/* Other Assets Column */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-sm">Other Assets</h4>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleEditSection('personal', 'otherAssets')}
-                    >
-                      Edit
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm border rounded-lg p-3 bg-muted/30">
-                    <div className="font-medium">Asset</div>
-                    <div className="font-medium text-right">Value</div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm border rounded-lg p-3 bg-muted/30">
+                      <div className="font-medium">Other Asset</div>
+                      <div className="font-medium text-right">Value</div>
 
-                    <div>Properties</div>
-                    <div className="text-right">${personalAssets?.properties?.toLocaleString() || '0'}</div>
+                      <div>Properties</div>
+                      <div className="text-right">${personalAssets?.properties?.toLocaleString() || '0'}</div>
 
-                    <div>NFTs</div>
-                    <div className="text-right">${personalAssets?.nfts?.toLocaleString() || '0'}</div>
+                      <div>NFTs</div>
+                      <div className="text-right">${personalAssets?.nfts?.toLocaleString() || '0'}</div>
 
-                    <div>Other</div>
-                    <div className="text-right">${personalAssets?.other?.toLocaleString() || '0'}</div>
+                      <div>Other</div>
+                      <div className="text-right">${personalAssets?.other?.toLocaleString() || '0'}</div>
 
-                    <div className="font-semibold border-t pt-1">Total</div>
-                    <div className="font-semibold text-right border-t pt-1">${getPersonalOtherTotal().toLocaleString()}</div>
+                      <div className="font-semibold border-t pt-1">Total</div>
+                      <div className="font-semibold text-right border-t pt-1">${getPersonalOtherTotal().toLocaleString()}</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1181,6 +1121,72 @@ function FinancesPageContent() {
             deepLinkRecord={finDeepLinkRecord?.type === 'personal' ? finDeepLinkRecord : null}
             onDeepLinkRecordConsumed={clearFinDeepLinkRecord}
           />
+        </TabsContent>
+
+        <TabsContent value="treasury" className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
+            {/* Company J$ Treasury Section */}
+            {treasuryData && (
+              <Card className="border border-border/50 bg-card/50 backdrop-blur-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-foreground/70" />
+                    Company J$ Treasury
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    J$ bought back from players
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Total J$ Bought Back</div>
+                      <div className="text-xl font-semibold text-foreground">
+                        {treasuryData.totalJ$BoughtBack.toFixed(2)} J$
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Total USD Spent</div>
+                      <div className="text-xl font-semibold text-foreground">
+                        ${treasuryData.totalUSDCost.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {treasuryData.buybackCount} buyback transaction{treasuryData.buybackCount !== 1 ? 's' : ''}
+                  </div>
+
+                  {/* Buyback History */}
+                  {treasuryData.buybacks && treasuryData.buybacks.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-border/50">
+                      <h5 className="font-medium text-sm mb-3 text-foreground/80">Buyback History</h5>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {treasuryData.buybacks.map((buyback: any) => (
+                          <div key={buyback.id} className="text-xs border border-border/30 rounded-md p-2.5 bg-muted/20 hover:bg-muted/30 transition-colors">
+                            <div className="flex justify-between items-start mb-1">
+                              <div className="font-medium text-foreground/90">{formatDisplayDate(buyback.date)}</div>
+                              <div className="text-right">
+                                <div className="font-semibold text-foreground">{buyback.j$BoughtBack.toFixed(2)} J$</div>
+                                {buyback.cashOutType === 'USD' ? (
+                                  <div className="text-muted-foreground text-xs">${buyback.usdCost.toFixed(2)}</div>
+                                ) : (
+                                  <div className="text-muted-foreground text-xs">{buyback.zapsCost?.toFixed(0) || 0} sats</div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex justify-between text-muted-foreground text-xs mt-1">
+                              <span>{buyback.station} • {buyback.cashOutType}</span>
+                              <span>{buyback.name}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 
