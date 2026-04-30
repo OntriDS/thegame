@@ -144,8 +144,8 @@ export function InventoryDisplay({
   const [bulkEditItemType, setBulkEditItemType] = useState<ItemType>(ItemType.STICKER);
   const [editingField, setEditingField] = useState<{ itemId: string; field: string } | null>(null);
 
-  /** Grouping is fixed to collection (selector removed); state keeps union type for TS in legacy branches. */
-  const [stickersViewBy] = useState<'collection' | 'subtype' | 'location' | 'model'>('collection');
+  type StickerViewBy = 'collection' | 'subtype' | 'location' | 'model';
+  const [stickersViewBy, setStickersViewBy] = useState<StickerViewBy>('collection');
   const [merchViewBy, setMerchViewBy] = useState<'collection' | 'subtype' | 'location'>('subtype');
 
   const [digitalSearchQuery, setDigitalSearchQuery] = useState('');
@@ -744,6 +744,9 @@ export function InventoryDisplay({
     sort: InventorySortOption;
     onSortChange: (v: InventorySortOption) => void;
     sortOptions: { value: InventorySortOption; label: string }[];
+    viewBy?: string;
+    viewOptions?: { value: string; label: string }[];
+    onViewByChange?: (v: string) => void;
     placeholder: string;
   }) => (
     <div className="flex flex-wrap items-center gap-2">
@@ -783,6 +786,22 @@ export function InventoryDisplay({
           </SelectContent>
         </Select>
       </div>
+      {opts.viewBy && opts.onViewByChange && opts.viewOptions ? (
+        <div className="flex items-center gap-1 text-xs border rounded-md px-2 py-0.5 bg-muted/40">
+          <Select value={opts.viewBy} onValueChange={opts.onViewByChange}>
+            <SelectTrigger className="h-7 min-w-[9.5rem] w-40 max-w-[12rem] bg-transparent border-none text-[11px] font-medium shadow-none hover:bg-muted/60 py-0 sm:max-w-none">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {opts.viewOptions.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
     </div>
   );
 
@@ -1625,6 +1644,14 @@ export function InventoryDisplay({
                 sort: stickersSortOption,
                 onSortChange: setStickersSortOption,
                 sortOptions: INVENTORY_SORT_OPTIONS_WITH_PRICE,
+            viewBy: stickersViewBy,
+            onViewByChange: value => setStickersViewBy(value as 'collection' | 'subtype' | 'location' | 'model'),
+            viewOptions: [
+              { value: 'collection', label: 'Group by: Collection' },
+              { value: 'subtype', label: 'Group by: Subtype' },
+              { value: 'location', label: 'Group by: Site' },
+              { value: 'model', label: 'Group by: Model' },
+            ],
                 placeholder: 'Search stickers…',
               })}
             </div>
@@ -1676,7 +1703,18 @@ export function InventoryDisplay({
           const groupStickers = groupedItems[groupKey];
           return (
             <div key={groupKey} className="border rounded-lg">
-              <div className="bg-muted/50 px-4 py-2 border-b">
+              <div
+                className="bg-muted/50 px-4 py-2 border-b cursor-pointer select-none hover:bg-muted/70"
+                role="button"
+                tabIndex={0}
+                onClick={() => toggleDivision(groupKey)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleDivision(groupKey);
+                  }
+                }}
+              >
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium text-sm">
                     {stickersViewBy === 'location' ? (
@@ -1727,18 +1765,21 @@ export function InventoryDisplay({
                       </div>
                     </div>
                     {/* Collapse/Expand Button */}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0"
-                      onClick={() => toggleDivision(groupKey)}
+                    <button
+                      type="button"
+                      className="h-6 w-6 p-0 rounded hover:bg-accent transition-colors flex items-center justify-center"
+                      onClick={e => {
+                        e.stopPropagation();
+                        toggleDivision(groupKey);
+                      }}
+                      aria-label={`${isDivisionCollapsed(groupKey) ? 'Expand' : 'Collapse'} ${groupKey}`}
                     >
                       {isDivisionCollapsed(groupKey) ? (
                         <ChevronRight className="w-4 h-4" />
                       ) : (
                         <ChevronDown className="w-4 h-4" />
                       )}
-                    </Button>
+                    </button>
                   </div>
                 </div>
               </div>
