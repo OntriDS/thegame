@@ -1078,42 +1078,61 @@ export function InventoryDisplay({
     const item = items.find(i => i.id === itemId);
     if (!item) return;
 
+    const fallbackSiteId = item.stock?.[0]?.siteId ?? 'Home';
+    const totalQuantity = item.stock?.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0) || 0;
+
     let updatedItem = { ...item };
 
-    // Handle different field types properly
-    switch (field) {
-      case 'location':
-        // Update the primary stock location
-        const currentQuantity = ClientAPI.getItemTotalQuantity(item.id, items);
-        const newSiteId = value;
-        updatedItem = await ClientAPI.updateStockAtSite(item.id, newSiteId, currentQuantity);
-        break;
-
-      case 'quantity':
-        // Update quantity at the current location
-        const siteId = item.stock.length > 0 ? item.stock[0].siteId : 'Home';
-        // value is the NEW quantity the user wants, not the current total
-        updatedItem = await ClientAPI.updateStockAtSite(item.id, siteId, value);
-        break;
-
-      default:
-        // Handle other fields normally
-        updatedItem = { ...item, [field]: value };
+    if (field === 'location') {
+      const newSiteId = String(value || '').trim();
+      const nextStock = totalQuantity > 0 ? [{ siteId: newSiteId, quantity: totalQuantity }] : [];
+      updatedItem = { ...item, stock: nextStock };
+    } else if (field === 'quantity') {
+      const parsedQuantity = Number(value);
+      const nextQuantity = Number.isFinite(parsedQuantity) ? parsedQuantity : 0;
+      updatedItem = {
+        ...item,
+        stock: item.stock.length > 0
+          ? [
+              { ...item.stock[0], siteId: item.stock[0]?.siteId || fallbackSiteId, quantity: nextQuantity },
+              ...item.stock.slice(1),
+            ]
+          : [{ siteId: fallbackSiteId, quantity: nextQuantity }]
+      };
+    } else if (field) {
+      updatedItem = { ...item, [field]: value };
     }
 
-    // Save using smart upsert (applies business rules)
-    await ClientAPI.upsertItem(updatedItem);
-
-    // Check for status changes when quantity changes
-    // if (field === 'quantity') {
-    //   checkQuantityZero(updatedItem, value);
-    // }
-
-    // Refresh data (including sticker bundles)
-    loadItems();
-    window.dispatchEvent(new Event('itemsUpdated'));
-
+    // Optimistic update first to keep the table feeling responsive.
+    setItems(prevItems => prevItems.map(i => i.id === item.id ? updatedItem : i));
     setEditingField(null);
+
+    try {
+      await ClientAPI.upsertItem(updatedItem);
+
+      const shouldRefresh = field === 'status';
+      if (shouldRefresh) {
+        // Preserve server-first behavior for workflow-heavy transitions.
+        await loadItems();
+        window.dispatchEvent(new Event('itemsUpdated'));
+      }
+    } catch (error) {
+      console.error('Failed to save inline edit:', error);
+
+      // Rollback on failure and surface a visible error state.
+      setItems(prevItems => prevItems.map(i => i.id === item.id ? item : i));
+      setStatusModalConfig({
+        title: 'Inline save failed',
+        message: `Could not save ${field} for "${item.name}". ${error instanceof Error ? error.message : 'Please try again.'}`,
+        options: [
+          {
+            label: 'Dismiss',
+            action: () => setShowStatusModal(false),
+          },
+        ],
+      });
+      setShowStatusModal(true);
+    }
   };
 
   const handleInlineCancel = () => {
@@ -1304,6 +1323,10 @@ export function InventoryDisplay({
             itemId={item.id}
             onSave={handleInlineSave}
             onCancel={handleInlineCancel}
+            onNavigateNextItem={() => moveToAdjacentInlineItem(item.id, field, 'next')}
+            onNavigatePreviousItem={() => moveToAdjacentInlineItem(item.id, field, 'previous')}
+            onNavigateNextField={() => moveToAdjacentInlineField(item.id, field, 'next')}
+            onNavigatePreviousField={() => moveToAdjacentInlineField(item.id, field, 'previous')}
             type={type}
             options={options}
             step={step}
@@ -1400,6 +1423,48 @@ export function InventoryDisplay({
     // For Model view, we want ALL items, but we'll filter totals by selected locations
     // This ensures items stay grouped by model regardless of their individual locations
     return items;
+  };
+
+  const getInlineEditableItemsForField = (): Item[] => {
+    if (activeTab === InventoryTab.STICKERS) {
+      return getFilteredItemsForModel(getFilteredItems(ItemType.STICKER));
+    }
+
+    return [];
+  };
+
+  const getInlineEditableFieldsForCurrentTab = (): string[] => {
+    if (activeTab !== InventoryTab.STICKERS) return [];
+    if (stickersViewBy === 'model') {
+      return ['quantity', 'price', 'status'];
+    }
+    return ['location', 'quantity', 'price', 'status'];
+  };
+
+  const moveToAdjacentInlineItem = (itemId: string, field: string, direction: 'next' | 'previous') => {
+    const inlineItems = getInlineEditableItemsForField();
+    if (!inlineItems.length) return;
+
+    const index = inlineItems.findIndex(item => item.id === itemId);
+    if (index < 0) return;
+
+    const targetIndex = direction === 'next' ? index + 1 : index - 1;
+    const targetItem = inlineItems[targetIndex];
+    if (!targetItem) return;
+
+    setEditingField({ itemId: targetItem.id, field });
+  };
+
+  const moveToAdjacentInlineField = (itemId: string, field: string, direction: 'next' | 'previous') => {
+    const fields = getInlineEditableFieldsForCurrentTab();
+    const fieldIndex = fields.findIndex(itemField => itemField === field);
+    if (fieldIndex < 0) return;
+
+    const targetIndex = direction === 'next' ? fieldIndex + 1 : fieldIndex - 1;
+    const targetField = fields[targetIndex];
+    if (!targetField) return;
+
+    setEditingField({ itemId, field: targetField });
   };
 
   // Stickers: grouped list, one horizontal data row per item (same column idea as before, no duplicate label row)

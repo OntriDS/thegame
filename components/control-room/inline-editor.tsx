@@ -3,15 +3,18 @@
 import { useState, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ItemStatus, Collection } from '@/types/enums';
-import { ClientAPI } from '@/lib/client-api';
+import { Collection } from '@/types/enums';
 
 interface InlineEditorProps {
   value: string | number;
   field: string;
   itemId: string;
-  onSave: (itemId: string, field: string, value: any) => void;
+  onSave: (itemId: string, field: string, value: any) => Promise<void> | void;
   onCancel: () => void;
+  onNavigateNextItem?: () => void;
+  onNavigatePreviousItem?: () => void;
+  onNavigateNextField?: () => void;
+  onNavigatePreviousField?: () => void;
   type?: 'text' | 'number' | 'select';
   options?: { value: string; label: string }[];
   step?: string;
@@ -24,6 +27,10 @@ export default function InlineEditor({
   itemId,
   onSave,
   onCancel,
+  onNavigateNextItem,
+  onNavigatePreviousItem,
+  onNavigateNextField,
+  onNavigatePreviousField,
   type = 'text',
   options = [],
   step = '0.01',
@@ -32,6 +39,8 @@ export default function InlineEditor({
   const [editValue, setEditValue] = useState(value.toString());
   const inputRef = useRef<HTMLInputElement>(null);
   const selectRef = useRef<HTMLButtonElement>(null);
+  const isSavingRef = useRef(false);
+  const hasSubmittedRef = useRef(false);
 
   useEffect(() => {
     if (type === 'select') {
@@ -42,15 +51,54 @@ export default function InlineEditor({
     }
   }, [type]);
 
+  useEffect(() => {
+    setEditValue(value.toString());
+    isSavingRef.current = false;
+    hasSubmittedRef.current = false;
+  }, [value]);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      handleSave();
+      e.preventDefault();
+      e.stopPropagation();
+      const navigateNext = !e.shiftKey;
+      void handleSave().then((didSave) => {
+        if (!didSave) return;
+        if (navigateNext && onNavigateNextItem) {
+          onNavigateNextItem();
+        } else if (!navigateNext && onNavigatePreviousItem) {
+          onNavigatePreviousItem();
+        }
+      });
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      e.stopPropagation();
+      const navigateNext = !e.shiftKey;
+      void handleSave().then((didSave) => {
+        if (!didSave) return;
+        if (navigateNext && onNavigateNextField) {
+          onNavigateNextField();
+        } else if (!navigateNext && onNavigatePreviousField) {
+          onNavigatePreviousField();
+        }
+      });
     } else if (e.key === 'Escape') {
-      onCancel();
+      handleCancel();
     }
   };
 
-  const handleSave = () => {
+  const handleCancel = () => {
+    isSavingRef.current = false;
+    hasSubmittedRef.current = false;
+    onCancel();
+  };
+
+  const handleSave = async (): Promise<boolean> => {
+    if (isSavingRef.current || hasSubmittedRef.current) return false;
+
+    isSavingRef.current = true;
+    hasSubmittedRef.current = true;
+
     let finalValue: any = editValue;
     
     if (type === 'number') {
@@ -59,20 +107,28 @@ export default function InlineEditor({
       finalValue = editValue === 'none' ? undefined : editValue;
     }
     
-    // Call the original onSave with the proper parameters
-    onSave(itemId, field, finalValue);
+    try {
+      await onSave(itemId, field, finalValue);
+      return true;
+    } catch (error) {
+      hasSubmittedRef.current = false;
+      return false;
+    } finally {
+      isSavingRef.current = false;
+    }
+    return false;
   };
 
   const handleBlur = () => {
-    // Immediate save and cleanup when blurring
-    handleSave();
+    if (isSavingRef.current || hasSubmittedRef.current) return;
+    void handleSave();
   };
 
   const handleSelectOpenChange = (open: boolean) => {
     if (!open) {
       // When dropdown closes, ensure we save and cleanup
       setTimeout(() => {
-        handleSave();
+        void handleSave();
       }, 0);
     }
   };
