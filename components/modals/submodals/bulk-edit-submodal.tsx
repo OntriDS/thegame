@@ -97,7 +97,8 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
   const moveStockToSite = (item: Item, siteId: string): Item['stock'] => {
     const totalQuantity = item.stock.reduce((sum, sp) => sum + sp.quantity, 0);
     const normalizedSiteId = String(siteId || '').trim();
-    return totalQuantity > 0 ? [{ siteId: normalizedSiteId, quantity: totalQuantity }] : [];
+    if (!normalizedSiteId) return [];
+    return [{ siteId: normalizedSiteId, quantity: totalQuantity }];
   };
 
   const handleFieldChange = (nextField: string) => {

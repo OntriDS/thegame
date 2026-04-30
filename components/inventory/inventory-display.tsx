@@ -619,7 +619,7 @@ export function InventoryDisplay({
   const getPrimarySiteName = (item: Item): string => {
     const id = getPrimaryStockSiteId(item);
     if (!id) return '';
-    return sites.find(s => s.id === id)?.name ?? '';
+    return sites.find(s => s.id === id)?.name ?? id;
   };
 
   const isValidSiteId = (siteId: string | undefined): boolean => {
@@ -628,11 +628,13 @@ export function InventoryDisplay({
   };
 
   const getPrimaryStockSiteId = (item: Item): string => {
-    const validStockSiteId = item.stock?.map(stock => stock.siteId).find(isValidSiteId);
-    if (validStockSiteId) return validStockSiteId;
+    const rawStockSiteId = item.stock
+      ?.map(stock => String(stock?.siteId || '').trim())
+      .find(siteId => siteId.length > 0);
+    if (rawStockSiteId) return rawStockSiteId;
 
     const selectedSiteId = String(selectedSite || '').trim();
-    if (selectedSiteId !== 'all' && isValidSiteId(selectedSiteId)) {
+    if (selectedSiteId !== 'all' && selectedSiteId.length > 0) {
       return selectedSiteId;
     }
 
@@ -1399,7 +1401,7 @@ export function InventoryDisplay({
         title={`Click to edit ${field}`}
       >
         {type === 'select' && options.length > 0 ?
-          options.find(opt => opt.value === value)?.label || value || 'None' :
+          options.find(opt => opt.value === value)?.label || value || '' :
           value
         }
       </div>
