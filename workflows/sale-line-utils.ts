@@ -89,7 +89,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
 
       // For now, we'll auto-adjust stock to allow the sale to proceed
       // TODO: UI validation should handle this with user confirmation
-      const targetSiteId = sale.siteId || (item.stock[0]?.siteId) || 'default';
+      const targetSiteId = (sale.siteId && sale.siteId !== 'none' && sale.siteId !== 'None' ? sale.siteId : null) || (item.stock[0]?.siteId) || '';
 
       let siteStockPoint = item.stock.find(sp => sp.siteId === targetSiteId);
 

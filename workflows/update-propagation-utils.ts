@@ -298,7 +298,7 @@ export async function updateItemsCreatedByTask(
                 updatedItem.stock[0].quantity += quantityDiff;
               } else {
                 updatedItem.stock = [{
-                  siteId: task.siteId || 'default',
+                siteId: task.siteId || '',
                   quantity: quantityDiff
                 }];
               }
@@ -345,7 +345,7 @@ export async function updateItemsCreatedByTask(
         return;
       }
 
-      const siteId = preferredSiteId || existingItem.stock?.[0]?.siteId || 'hq';
+      const siteId = preferredSiteId || existingItem.stock?.[0]?.siteId || '';
       const updateKey = EffectKeys.sideEffect('task', task.id, `updateExistingItem:${itemId}:${siteId}:${effectLabel}:${toDateTimestamp(task.updatedAt)}`);
 
       if (await hasEffect(updateKey)) {
@@ -470,7 +470,7 @@ export async function updateItemsCreatedByRecord(
               updatedItem.stock[0].quantity += quantityDiff;
             } else {
               updatedItem.stock = [{
-                siteId: record.siteId || 'default',
+                siteId: record.siteId || '',
                 quantity: quantityDiff
               }];
             }

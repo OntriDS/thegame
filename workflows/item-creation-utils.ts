@@ -59,10 +59,10 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       const existingItem = await getItemById(task.outputItemId);
       if (existingItem) {
         const destinationSiteId =
-          (task.targetSiteId && task.targetSiteId !== 'none' ? task.targetSiteId :
-            (task.siteId && task.siteId !== 'none' ? task.siteId : null)) ||
-          existingItem.stock?.[0]?.siteId ||
-          'hq';
+          (task.targetSiteId && task.targetSiteId !== 'none' && task.targetSiteId !== 'None' ? task.targetSiteId : null) ||
+            (task.siteId && task.siteId !== 'none' && task.siteId !== 'None' ? task.siteId : null) ||
+            existingItem.stock?.[0]?.siteId ||
+            '';
 
         const quantityToAdd = task.outputQuantity || 1;
         const updatedStock = Array.isArray(existingItem.stock)
@@ -137,9 +137,9 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       links: [],  // initialize links array (registry creates real links)
       stock: [
         {
-          siteId: (task.targetSiteId && task.targetSiteId !== 'none' ? task.targetSiteId : null) ||
-            (task.siteId && task.siteId !== 'none' ? task.siteId : null) ||
-            'hq', // Default to HQ
+          siteId: (task.targetSiteId && task.targetSiteId !== 'none' && task.targetSiteId !== 'None' ? task.targetSiteId : null) ||
+            (task.siteId && task.siteId !== 'none' && task.siteId !== 'None' ? task.siteId : null) ||
+            '', // Default to no-site (temporary fallback)
           quantity: task.outputQuantity || 1
         }
       ]
@@ -168,8 +168,10 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
     console.log(`[createItemFromRecord] outputItemType: ${record.outputItemType}`);
     console.log(`[createItemFromRecord] outputQuantity: ${record.outputQuantity}`);
 
-    const isValidSite = (siteId: string | null | undefined) =>
-      Boolean(siteId && siteId !== 'None' && siteId !== 'none');
+    const isValidSite = (siteId: string | null | undefined) => {
+      const normalized = String(siteId || '').trim();
+      return Boolean(normalized && normalized !== 'None' && normalized !== 'none');
+    };
 
     const resolvedOwnerCharacterId = getFinancialCounterpartyId(record);
 
@@ -181,7 +183,7 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
           (isValidSite(record.targetSiteId) ? record.targetSiteId as string :
             (isValidSite(record.siteId) ? record.siteId as string : null)) ||
           existingItem.stock?.[0]?.siteId ||
-          'None';
+          '';
 
         const quantityToAdd = record.outputQuantity || 1;
         const updatedStock = Array.isArray(existingItem.stock)
@@ -225,7 +227,7 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
     const resolvedSiteId =
       (isValidSite(record.targetSiteId) ? record.targetSiteId as string :
         (isValidSite(record.siteId) ? record.siteId as string : null)) ||
-      'None';
+      '';
 
     const newItem: Item = {
       id: `item-${record.id}-${Date.now()}`, // More predictable ID based on record ID

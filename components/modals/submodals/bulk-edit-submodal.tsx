@@ -64,7 +64,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
 
   const booleanFields = new Set(['keepInInventoryAfterSold', 'restockToTarget']);
   const numericFields = new Set(['quantity', 'targetAmount', 'price', 'unitCost', 'size']);
-  const hasNewValue = booleanFields.has(field) || value.trim().length > 0;
+  const hasNewValue = booleanFields.has(field) || field === EntityType.SITE || value.trim().length > 0;
   const canSubmit = hasNewValue && selectedItems.size > 0 && !isProcessing;
 
   const isValidSiteId = (siteId: string | undefined): boolean => {
@@ -97,7 +97,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
   const moveStockToSite = (item: Item, siteId: string): Item['stock'] => {
     const totalQuantity = item.stock.reduce((sum, sp) => sum + sp.quantity, 0);
     const normalizedSiteId = String(siteId || '').trim();
-    return totalQuantity > 0 && normalizedSiteId ? [{ siteId: normalizedSiteId, quantity: totalQuantity }] : [];
+    return totalQuantity > 0 ? [{ siteId: normalizedSiteId, quantity: totalQuantity }] : [];
   };
 
   const handleFieldChange = (nextField: string) => {

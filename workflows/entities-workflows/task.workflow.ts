@@ -762,7 +762,7 @@ export async function uncompleteTask(taskId: string, previousTerminalTask?: Task
       if (quantityToRemove > 0) {
         const existingItem = await getItemById(task.outputItemId);
         if (existingItem) {
-          const preferredSiteId = resolveTaskOutputSite(task) || existingItem.stock?.[0]?.siteId || 'hq';
+          const preferredSiteId = resolveTaskOutputSite(task) || existingItem.stock?.[0]?.siteId || '';
           const updatedStock = Array.isArray(existingItem.stock)
             ? existingItem.stock.map(stockPoint => ({ ...stockPoint }))
             : [];

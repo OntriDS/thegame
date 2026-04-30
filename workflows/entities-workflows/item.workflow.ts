@@ -123,7 +123,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
 
     const soldAt = item.soldAt || getUTCNow();
     const monthKey = formatArchiveMonthKeyUTC(soldAt);
-    const primarySite = item.stock?.[0]?.siteId || 'Home';
+    const primarySite = item.stock?.[0]?.siteId || '';
 
     // 2. CREATE THE SOLD BATCH CLONE FOR THE ARCHIVE (Sold Items Tab)
     const cloneId = `${item.id}-manualsold-${Date.now()}`;
