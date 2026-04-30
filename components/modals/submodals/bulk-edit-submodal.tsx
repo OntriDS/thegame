@@ -117,7 +117,8 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
   // Get filtered items based on selected filters
   const getFilteredItems = useCallback(() => {
     return items.filter(item => {
-      if (collectionFilter !== 'all' && item.collection !== collectionFilter) return false;
+      const itemCollection = item.collection || Collection.NO_COLLECTION;
+      if (collectionFilter !== 'all' && itemCollection !== collectionFilter) return false;
       if (siteFilter !== 'all' && !item.stock.some(stockPoint => stockPoint.siteId === siteFilter)) return false;
       if (subItemFilter !== 'all' && item.subItemType !== subItemFilter) return false;
       if (statusFilter !== 'all' && item.status !== statusFilter) return false;
@@ -175,8 +176,8 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
         } else if (field === 'status') {
           newValue = value as ItemStatus;
           updatedItem = { ...item, status: newValue };
-        } else if (field === 'collection') {
-          newValue = value === 'none' ? Collection.NO_COLLECTION : value as Collection;
+      } else if (field === 'collection') {
+          newValue = value === Collection.NO_COLLECTION ? Collection.NO_COLLECTION : value as Collection;
           updatedItem = { ...item, collection: newValue };
         } else if (field === 'station') {
           // IMPORTANT: Extract just the station name from the combined 'area:station' value
@@ -233,7 +234,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
               <SelectValue placeholder="Select collection" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">{getCollectionLabel(Collection.NO_COLLECTION)}</SelectItem>
+              <SelectItem value={Collection.NO_COLLECTION}>{getCollectionLabel(Collection.NO_COLLECTION)}</SelectItem>
               {Object.values(Collection).filter(collection => collection !== Collection.NO_COLLECTION).map(collection => (
                 <SelectItem key={collection} value={collection}>{getCollectionLabel(collection)}</SelectItem>
               ))}
@@ -406,6 +407,9 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Collections</SelectItem>
+                <SelectItem value={Collection.NO_COLLECTION}>
+                  {getCollectionLabel(Collection.NO_COLLECTION)}
+                </SelectItem>
                   {Object.values(Collection).filter(collection => collection !== Collection.NO_COLLECTION).map(collection => (
                     <SelectItem key={collection} value={collection}>{getCollectionLabel(collection)}</SelectItem>
                   ))}

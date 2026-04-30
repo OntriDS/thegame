@@ -17,6 +17,30 @@ import { getUTCNow } from '@/lib/utils/utc-utils';
 import type { AISystemPreset } from '@/lib/ai/system-presets';
 import { ItemStatus, type CharacterRole } from '@/types/enums';
 
+const LOGIN_REDIRECT_PATH = '/admin/login?reason=session_expired';
+let isRedirectingToLogin = false;
+
+async function request(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const response = await fetch(input, init);
+
+  if (response.status === 401) {
+    if (typeof window !== 'undefined' && !isRedirectingToLogin) {
+      const isLoginPage =
+        window.location.pathname === '/admin/login' || window.location.pathname.startsWith('/admin/login/');
+      if (!isLoginPage) {
+        isRedirectingToLogin = true;
+        window.location.replace(LOGIN_REDIRECT_PATH);
+      }
+    }
+
+    const error = new Error('Unauthorized');
+    (error as Error & { status: number }).status = 401;
+    throw error;
+  }
+
+  return response;
+}
+
 export type CharacterDirectorySortBy = 'name' | 'role';
 type CharacterDirectorySortOrder = 'asc' | 'desc';
 
@@ -56,13 +80,13 @@ export const ClientAPI = {
   getSummary: async (monthYear?: string): Promise<SummaryTotals> => {
     let url = '/api/summary';
     if (monthYear) url += `?month=${encodeURIComponent(monthYear)}`;
-    const res = await fetch(url);
+    const res = await request(url);
     if (!res.ok) throw new Error('Failed to fetch summary');
     return await res.json();
   },
 
   getAvailableSummaryMonths: async (): Promise<string[]> => {
-    const res = await fetch('/api/summary/months');
+    const res = await request('/api/summary/months');
     if (!res.ok) throw new Error('Failed to fetch available months');
     return await res.json();
   },
@@ -75,20 +99,20 @@ export const ClientAPI = {
     if (typeof month === 'number') params.append('month', String(month));
     if (typeof year === 'number') params.append('year', String(year));
     if (params.toString()) url += `?${params.toString()}`;
-    const res = await fetch(url);
+    const res = await request(url);
     if (!res.ok) throw new Error('Failed to fetch tasks');
     return await res.json();
   },
 
   /** All tasks (including recurrent/collected); use for modals and admin tools that need the full set. */
   getAllTasks: async (): Promise<Task[]> => {
-    const res = await fetch('/api/tasks/all');
+    const res = await request('/api/tasks/all');
     if (!res.ok) throw new Error('Failed to fetch all tasks');
     return await res.json();
   },
 
   getTaskById: async (id: string): Promise<Task | null> => {
-    const res = await fetch(`/api/tasks/${id}`);
+    const res = await request(`/api/tasks/${id}`);
     if (!res.ok) return null;
     return await res.json();
   },
@@ -96,13 +120,13 @@ export const ClientAPI = {
   getTaskDescendantInfo: async (
     id: string
   ): Promise<{ hasDescendants: boolean; descendantCount: number }> => {
-    const res = await fetch(`/api/tasks/${id}/descendants`);
+    const res = await request(`/api/tasks/${id}/descendants`);
     if (!res.ok) return { hasDescendants: false, descendantCount: 0 };
     return await res.json();
   },
 
   upsertTask: async (task: Task, options?: { skipDuplicateCheck?: boolean }): Promise<Task> => {
-    const res = await fetch('/api/tasks', {
+    const res = await request('/api/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...task, skipDuplicateCheck: options?.skipDuplicateCheck })
@@ -117,12 +141,12 @@ export const ClientAPI = {
   ): Promise<void> => {
     const q =
       options?.cascadeDeleteActiveChildren === true ? '?cascadeActiveChildren=1' : '';
-    const res = await fetch(`/api/tasks/${id}${q}`, { method: 'DELETE' });
+    const res = await request(`/api/tasks/${id}${q}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete task');
   },
 
   cascadeStatusToInstances: async (templateId: string, newStatus: string, oldStatus: string): Promise<{ updated: Task[], count: number }> => {
-    const res = await fetch('/api/tasks/cascade-status', {
+    const res = await request('/api/tasks/cascade-status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ templateId, newStatus, oldStatus })
@@ -132,14 +156,14 @@ export const ClientAPI = {
   },
 
   getUndoneInstancesCount: async (templateId: string, targetStatus: string): Promise<number> => {
-    const res = await fetch(`/api/tasks/cascade-status?templateId=${encodeURIComponent(templateId)}&targetStatus=${encodeURIComponent(targetStatus)}`);
+    const res = await request(`/api/tasks/cascade-status?templateId=${encodeURIComponent(templateId)}&targetStatus=${encodeURIComponent(targetStatus)}`);
     if (!res.ok) throw new Error('Failed to get undone instances count');
     const data = await res.json();
     return data.count;
   },
 
   upsertTaskQueued: async (task: Task, priority: number = 1): Promise<string> => {
-    const res = await fetch('/api/tasks/queued', {
+    const res = await request('/api/tasks/queued', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ task, priority })
@@ -150,7 +174,7 @@ export const ClientAPI = {
   },
 
   bulkCollectTasks: async (month: number, year: number): Promise<{ collectedCount: number }> => {
-    const res = await fetch('/api/tasks/bulk-collect', {
+    const res = await request('/api/tasks/bulk-collect', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ month, year })
@@ -176,7 +200,7 @@ export const ClientAPI = {
     if (ownerId) params.append('ownerId', ownerId);
 
     const url = params.toString() ? `${base}?${params.toString()}` : base;
-    const res = await fetch(url);
+    const res = await request(url);
     if (!res.ok) throw new Error('Failed to fetch items');
     return await res.json();
   },
@@ -196,7 +220,7 @@ export const ClientAPI = {
     if (siteId) params.append('siteId', siteId);
     if (search) params.append('search', search);
 
-    const res = await fetch(`/api/items?${params.toString()}`);
+    const res = await request(`/api/items?${params.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch legacy items');
     return await res.json();
   },
@@ -208,19 +232,19 @@ export const ClientAPI = {
     if (sort) params.append('sort', sort);
     if (siteId) params.append('siteId', siteId);
 
-    const res = await fetch(`/api/items?${params.toString()}`);
+    const res = await request(`/api/items?${params.toString()}`);
     if (!res.ok) throw new Error('Failed to search legacy items');
     return await res.json();
   },
 
   getItemById: async (id: string): Promise<Item | null> => {
-    const res = await fetch(`/api/items/${id}`);
+    const res = await request(`/api/items/${id}`);
     if (!res.ok) return null;
     return await res.json();
   },
 
   upsertItem: async (item: Item | Item[]): Promise<any> => {
-    const res = await fetch('/api/items', {
+    const res = await request('/api/items', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(item)
@@ -230,24 +254,24 @@ export const ClientAPI = {
   },
 
   deleteItem: async (id: string): Promise<void> => {
-    const res = await fetch(`/api/items/${id}`, { method: 'DELETE' });
+    const res = await request(`/api/items/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete item');
   },
 
   getItemsBySourceTaskId: async (taskId: string): Promise<Item[]> => {
-    const res = await fetch(`/api/items/by-task/${taskId}`);
+    const res = await request(`/api/items/by-task/${taskId}`);
     if (!res.ok) return [];
     return await res.json();
   },
 
   getItemsBySourceRecordId: async (recordId: string): Promise<Item[]> => {
-    const res = await fetch(`/api/items/by-record/${recordId}`);
+    const res = await request(`/api/items/by-record/${recordId}`);
     if (!res.ok) return [];
     return await res.json();
   },
 
   upsertItemQueued: async (item: Item, priority: number = 1): Promise<string> => {
-    const res = await fetch('/api/items/queued', {
+    const res = await request('/api/items/queued', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ item, priority })
@@ -266,13 +290,13 @@ export const ClientAPI = {
     if (typeof month === 'number') params.append('month', String(month));
     if (typeof year === 'number') params.append('year', String(year));
     if (params.toString()) url += `?${params.toString()}`;
-    const res = await fetch(url);
+    const res = await request(url);
     if (!res.ok) throw new Error('Failed to fetch sales');
     return await res.json();
   },
 
   getSaleById: async (id: string): Promise<Sale | null> => {
-    const res = await fetch(`/api/sales/${id}`);
+    const res = await request(`/api/sales/${id}`);
     if (!res.ok) return null;
     return await res.json();
   },
@@ -283,7 +307,7 @@ export const ClientAPI = {
       url += '?force=true';
     }
 
-    const res = await fetch(url, {
+    const res = await request(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(sale)
@@ -300,12 +324,12 @@ export const ClientAPI = {
   },
 
   deleteSale: async (id: string): Promise<void> => {
-    const res = await fetch(`/api/sales/${id}`, { method: 'DELETE' });
+    const res = await request(`/api/sales/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete sale');
   },
 
   upsertSaleQueued: async (sale: Sale, priority: number = 1): Promise<string> => {
-    const res = await fetch('/api/sales/queued', {
+    const res = await request('/api/sales/queued', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sale, priority })
@@ -330,7 +354,7 @@ export const ClientAPI = {
     if (typeof year === 'number') params.append('year', String(year));
     if (params.toString()) url += `?${params.toString()}`;
 
-    const res = await fetch(url);
+    const res = await request(url);
     if (!res.ok) throw new Error('Failed to fetch financial summary');
     return await res.json();
   },
@@ -341,13 +365,13 @@ export const ClientAPI = {
     if (typeof month === 'number') params.append('month', String(month));
     if (typeof year === 'number') params.append('year', String(year));
     if (params.toString()) url += `?${params.toString()}`;
-    const res = await fetch(url);
+    const res = await request(url);
     if (!res.ok) throw new Error('Failed to fetch financials');
     return await res.json();
   },
 
   getFinancialRecordById: async (id: string): Promise<FinancialRecord | null> => {
-    const res = await fetch(`/api/financials/${id}`);
+    const res = await request(`/api/financials/${id}`);
     if (!res.ok) return null;
     return await res.json();
   },
@@ -358,7 +382,7 @@ export const ClientAPI = {
       url += '?force=true';
     }
 
-    const res = await fetch(url, {
+    const res = await request(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(record)
@@ -374,12 +398,12 @@ export const ClientAPI = {
   },
 
   deleteFinancialRecord: async (id: string): Promise<void> => {
-    const res = await fetch(`/api/financials/${id}`, { method: 'DELETE' });
+    const res = await request(`/api/financials/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete financial');
   },
 
   upsertFinancialRecordQueued: async (record: FinancialRecord, priority: number = 1): Promise<string> => {
-    const res = await fetch('/api/financials/queued', {
+    const res = await request('/api/financials/queued', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ record, priority })
@@ -394,7 +418,7 @@ export const ClientAPI = {
   // ============================================================================
   getCharacters: async (filter?: 'special'): Promise<Character[]> => {
     const url = filter ? `/api/characters?filter=${filter}` : '/api/characters';
-    const res = await fetch(url);
+    const res = await request(url);
     if (!res.ok) throw new Error('Failed to fetch characters');
     return await res.json();
   },
@@ -429,19 +453,19 @@ export const ClientAPI = {
       searchParams.set('_t', String(params._t));
     }
 
-    const res = await fetch(`/api/characters?${searchParams.toString()}`);
+    const res = await request(`/api/characters?${searchParams.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch character directory');
     return await res.json();
   },
 
   getCharacterById: async (id: string): Promise<Character | null> => {
-    const res = await fetch(`/api/characters/${id}`);
+    const res = await request(`/api/characters/${id}`);
     if (!res.ok) return null;
     return await res.json();
   },
 
   upsertCharacter: async (character: Character): Promise<Character> => {
-    const res = await fetch('/api/characters', {
+    const res = await request('/api/characters', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(character)
@@ -451,7 +475,7 @@ export const ClientAPI = {
   },
 
   deleteCharacter: async (id: string): Promise<void> => {
-    const res = await fetch(`/api/characters/${id}`, { method: 'DELETE' });
+    const res = await request(`/api/characters/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete character');
   },
 
@@ -459,19 +483,19 @@ export const ClientAPI = {
   // PLAYERS - Player management operations
   // ============================================================================
   getPlayers: async (): Promise<Player[]> => {
-    const res = await fetch('/api/players');
+    const res = await request('/api/players');
     if (!res.ok) throw new Error('Failed to fetch players');
     return await res.json();
   },
 
   getPlayerById: async (id: string): Promise<Player | null> => {
-    const res = await fetch(`/api/players/${id}`);
+    const res = await request(`/api/players/${id}`);
     if (!res.ok) return null;
     return await res.json();
   },
 
   upsertPlayer: async (player: Player): Promise<Player> => {
-    const res = await fetch('/api/players', {
+    const res = await request('/api/players', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(player)
@@ -481,7 +505,7 @@ export const ClientAPI = {
   },
 
   deletePlayer: async (id: string): Promise<void> => {
-    const res = await fetch(`/api/players/${id}`, { method: 'DELETE' });
+    const res = await request(`/api/players/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete player');
   },
 
@@ -489,7 +513,7 @@ export const ClientAPI = {
   // ACCOUNTS - Account management operations
   // ============================================================================
   getAccounts: async (): Promise<Account[]> => {
-    const res = await fetch('/api/accounts');
+    const res = await request('/api/accounts');
     if (!res.ok) {
       console.error('Failed to fetch accounts');
       return [];
@@ -498,13 +522,13 @@ export const ClientAPI = {
   },
 
   getAccountById: async (id: string): Promise<Account | null> => {
-    const res = await fetch(`/api/accounts/${id}`);
+    const res = await request(`/api/accounts/${id}`);
     if (!res.ok) return null;
     return await res.json();
   },
 
   upsertAccount: async (account: Account): Promise<Account> => {
-    const res = await fetch('/api/accounts', {
+    const res = await request('/api/accounts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(account)
@@ -514,18 +538,18 @@ export const ClientAPI = {
   },
 
   deleteAccount: async (id: string): Promise<void> => {
-    const res = await fetch(`/api/accounts/${id}`, { method: 'DELETE' });
+    const res = await request(`/api/accounts/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete account');
   },
 
   /** Soft-disable: unlink character, remove email mapping; row stays (Inactive in admin). */
   disableAccount: async (id: string): Promise<void> => {
-    const res = await fetch(`/api/accounts/${id}/disable`, { method: 'POST' });
+    const res = await request(`/api/accounts/${id}/disable`, { method: 'POST' });
     if (!res.ok) throw new Error('Failed to disable account');
   },
 
   updateAccount: async (id: string, updates: { password?: string }): Promise<void> => {
-    const res = await fetch(`/api/accounts/${id}`, {
+    const res = await request(`/api/accounts/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates)
@@ -540,7 +564,7 @@ export const ClientAPI = {
   // LINKS - Entity relationship management operations
   // ============================================================================
   getLinksFor: async (params: { type: string; id: string }): Promise<any[]> => {
-    const res = await fetch(`/api/links?entityType=${params.type}&entityId=${params.id}`);
+    const res = await request(`/api/links?entityType=${params.type}&entityId=${params.id}`);
     if (!res.ok) {
       console.error('Failed to fetch links');
       return [];
@@ -549,7 +573,7 @@ export const ClientAPI = {
   },
 
   getAllLinks: async (): Promise<any[]> => {
-    const res = await fetch('/api/links');
+    const res = await request('/api/links');
     if (!res.ok) {
       console.error('Failed to fetch all links');
       return [];
@@ -558,7 +582,7 @@ export const ClientAPI = {
   },
 
   createLink: async (link: any): Promise<{ success: boolean }> => {
-    const res = await fetch('/api/links', {
+    const res = await request('/api/links', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(link),
@@ -568,12 +592,12 @@ export const ClientAPI = {
   },
 
   removeLink: async (linkId: string): Promise<void> => {
-    const res = await fetch(`/api/links/${linkId}`, { method: 'DELETE' });
+    const res = await request(`/api/links/${linkId}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to remove link');
   },
 
   removeLogEntry: async (logType: string, entityId: string): Promise<{ success: boolean; message?: string }> => {
-    const res = await fetch(`/api/${logType}-log`, {
+    const res = await request(`/api/${logType}-log`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ entityId })
@@ -588,19 +612,19 @@ export const ClientAPI = {
   // SITES - Site management operations
   // ============================================================================
   getSites: async (): Promise<Site[]> => {
-    const res = await fetch('/api/sites');
+    const res = await request('/api/sites');
     if (!res.ok) throw new Error('Failed to fetch sites');
     return await res.json();
   },
 
   getSiteById: async (id: string): Promise<Site | null> => {
-    const res = await fetch(`/api/sites/${id}`);
+    const res = await request(`/api/sites/${id}`);
     if (!res.ok) return null;
     return await res.json();
   },
 
   upsertSite: async (site: Site): Promise<Site> => {
-    const res = await fetch('/api/sites', {
+    const res = await request('/api/sites', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(site)
@@ -610,7 +634,7 @@ export const ClientAPI = {
   },
 
   deleteSite: async (id: string): Promise<void> => {
-    const res = await fetch(`/api/sites/${id}`, { method: 'DELETE' });
+    const res = await request(`/api/sites/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete site');
   },
 
@@ -618,19 +642,19 @@ export const ClientAPI = {
   // SETTLEMENTS - Settlement management operations
   // ============================================================================
   getSettlements: async (): Promise<Settlement[]> => {
-    const res = await fetch('/api/settlements');
+    const res = await request('/api/settlements');
     if (!res.ok) throw new Error('Failed to fetch settlements');
     return await res.json();
   },
 
   getSettlementById: async (id: string): Promise<Settlement | null> => {
-    const res = await fetch(`/api/settlements/${id}`);
+    const res = await request(`/api/settlements/${id}`);
     if (!res.ok) return null;
     return await res.json();
   },
 
   upsertSettlement: async (settlement: Settlement): Promise<Settlement> => {
-    const res = await fetch('/api/settlements', {
+    const res = await request('/api/settlements', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settlement)
@@ -640,7 +664,7 @@ export const ClientAPI = {
   },
 
   deleteSettlement: async (id: string): Promise<void> => {
-    const res = await fetch(`/api/settlements/${id}`, { method: 'DELETE' });
+    const res = await request(`/api/settlements/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete settlement');
   },
 
@@ -648,7 +672,7 @@ export const ClientAPI = {
   // LINKS REPAIR
   // ============================================================================
   healLinks: async (): Promise<{ success: boolean; repairedCount?: number; error?: string }> => {
-    const res = await fetch('/api/links/heal', { method: 'POST' });
+    const res = await request('/api/links/heal', { method: 'POST' });
     if (!res.ok) throw new Error('Failed to heal links');
     return await res.json();
   },
@@ -657,19 +681,19 @@ export const ClientAPI = {
   // BUSINESSES - Character Infra
   // ============================================================================
   getBusinesses: async (): Promise<Business[]> => {
-    const res = await fetch('/api/businesses');
+    const res = await request('/api/businesses');
     if (!res.ok) throw new Error('Failed to fetch businesses');
     return await res.json();
   },
 
   getBusinessById: async (id: string): Promise<Business | null> => {
-    const res = await fetch(`/api/businesses/${id}`);
+    const res = await request(`/api/businesses/${id}`);
     if (!res.ok) return null;
     return await res.json();
   },
 
   upsertBusiness: async (entity: Business): Promise<Business> => {
-    const res = await fetch('/api/businesses', {
+    const res = await request('/api/businesses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(entity)
@@ -679,7 +703,7 @@ export const ClientAPI = {
   },
 
   deleteBusiness: async (id: string): Promise<void> => {
-    const res = await fetch(`/api/businesses/${id}`, { method: 'DELETE' });
+    const res = await request(`/api/businesses/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete business');
   },
 
@@ -687,19 +711,19 @@ export const ClientAPI = {
   // CONTRACTS - Finance Infra
   // ============================================================================
   getContracts: async (): Promise<Contract[]> => {
-    const res = await fetch('/api/contracts');
+    const res = await request('/api/contracts');
     if (!res.ok) throw new Error('Failed to fetch contracts');
     return await res.json();
   },
 
   getContractById: async (id: string): Promise<Contract | null> => {
-    const res = await fetch(`/api/contracts/${id}`);
+    const res = await request(`/api/contracts/${id}`);
     if (!res.ok) return null;
     return await res.json();
   },
 
   upsertContract: async (contract: Contract): Promise<Contract> => {
-    const res = await fetch('/api/contracts', {
+    const res = await request('/api/contracts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(contract)
@@ -709,7 +733,7 @@ export const ClientAPI = {
   },
 
   deleteContract: async (id: string): Promise<void> => {
-    const res = await fetch(`/api/contracts/${id}`, { method: 'DELETE' });
+    const res = await request(`/api/contracts/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete contract');
   },
 
@@ -724,13 +748,13 @@ export const ClientAPI = {
   // ASSETS MANAGEMENT - Company and personal assets
   // ============================================================================
   getCompanyAssets: async (): Promise<any> => {
-    const res = await fetch('/api/assets/company');
+    const res = await request('/api/assets/company');
     if (!res.ok) throw new Error('Failed to fetch company assets');
     return await res.json();
   },
 
   saveCompanyAssets: async (assets: any): Promise<void> => {
-    const res = await fetch('/api/assets/company', {
+    const res = await request('/api/assets/company', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(assets)
@@ -744,7 +768,7 @@ export const ClientAPI = {
     pointsToExchange: { xp: number; rp: number; fp: number; hp: number },
     j$Received: number
   ): Promise<any> => {
-    const res = await fetch('/api/player/exchange-points', {
+    const res = await request('/api/player/exchange-points', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -759,7 +783,7 @@ export const ClientAPI = {
   },
 
   getPlayerJungleCoinsBalance: async (playerId: string): Promise<any> => {
-    const res = await fetch(`/api/player/${playerId}/jungle-coins`);
+    const res = await request(`/api/player/${playerId}/jungle-coins`);
     if (!res.ok) throw new Error('Failed to fetch player Jungle Coins balance');
     return await res.json();
   },
@@ -772,7 +796,7 @@ export const ClientAPI = {
     cashOutType: 'USD' | 'ZAPS' = 'USD',
     zapsRate?: number
   ): Promise<any> => {
-    const res = await fetch('/api/player/cash-out-j$', {
+    const res = await request('/api/player/cash-out-j$', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -808,25 +832,25 @@ export const ClientAPI = {
       playerCharacterId?: string | null;
     }>;
   }> => {
-    const res = await fetch('/api/company/j$-treasury');
+    const res = await request('/api/company/j$-treasury');
     if (!res.ok) throw new Error('Failed to fetch company J$ treasury');
     return await res.json();
   },
 
   getPlayerFinancialRecords: async (playerId: string): Promise<FinancialRecord[]> => {
-    const res = await fetch(`/api/player/${playerId}/financial-records`);
+    const res = await request(`/api/player/${playerId}/financial-records`);
     if (!res.ok) throw new Error('Failed to fetch player financial records');
     return await res.json();
   },
 
   getPersonalAssets: async (): Promise<any> => {
-    const res = await fetch('/api/assets/personal');
+    const res = await request('/api/assets/personal');
     if (!res.ok) throw new Error('Failed to fetch personal assets');
     return await res.json();
   },
 
   savePersonalAssets: async (assets: any): Promise<void> => {
-    const res = await fetch('/api/assets/personal', {
+    const res = await request('/api/assets/personal', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(assets)
@@ -839,13 +863,13 @@ export const ClientAPI = {
   // ============================================================================
   // PLAYER CONVERSION RATES (for character/player pages)
   getPlayerConversionRates: async (): Promise<any> => {
-    const res = await fetch('/api/conversion-rates/player-conversion-rates');
+    const res = await request('/api/conversion-rates/player-conversion-rates');
     if (!res.ok) throw new Error('Failed to fetch player conversion rates');
     return await res.json();
   },
 
   savePlayerConversionRates: async (rates: any): Promise<void> => {
-    const res = await fetch('/api/conversion-rates/player-conversion-rates', {
+    const res = await request('/api/conversion-rates/player-conversion-rates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(rates)
@@ -855,13 +879,13 @@ export const ClientAPI = {
 
   // FINANCIAL CONVERSION RATES (for finances/assets pages)
   getFinancialConversionRates: async (): Promise<any> => {
-    const res = await fetch('/api/conversion-rates/financial-conversion-rates');
+    const res = await request('/api/conversion-rates/financial-conversion-rates');
     if (!res.ok) throw new Error('Failed to fetch financial conversion rates');
     return await res.json();
   },
 
   saveFinancialConversionRates: async (rates: any): Promise<void> => {
-    const res = await fetch('/api/conversion-rates/financial-conversion-rates', {
+    const res = await request('/api/conversion-rates/financial-conversion-rates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(rates)
@@ -953,7 +977,7 @@ export const ClientAPI = {
   },
 
   moveInventoryItem: async (itemId: string, toSiteId: string, quantity: number, fromSiteId?: string): Promise<Item> => {
-    const res = await fetch('/api/inventory/move', {
+    const res = await request('/api/inventory/move', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ itemId, toSiteId, quantity, fromSiteId })
@@ -1001,7 +1025,7 @@ export const ClientAPI = {
     records: any[];
   }): Promise<{ success: boolean; mode: string; counts: { added: number; updated?: number; skipped?: number }; errors?: string[] }> => {
     try {
-      const res = await fetch('/api/bulk', {
+      const res = await request('/api/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ entityType, mode, source, records })
@@ -1024,7 +1048,7 @@ export const ClientAPI = {
   // BULK OPERATIONS - Bulk import/export and logging
   // ============================================================================
   logBulkImport: async (entityType: string, details: { count: number; source?: string; importMode?: 'add' | 'merge' | 'replace'; extra?: any }): Promise<void> => {
-    const res = await fetch('/api/logs/bulk', {
+    const res = await request('/api/logs/bulk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1037,7 +1061,7 @@ export const ClientAPI = {
   },
 
   logBulkExport: async (entityType: string, details: { count: number; exportFormat?: string; extra?: any }): Promise<void> => {
-    const res = await fetch('/api/logs/bulk', {
+    const res = await request('/api/logs/bulk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1053,13 +1077,13 @@ export const ClientAPI = {
   // QUEUE MANAGEMENT - Background task queue operations
   // ============================================================================
   getQueueStatus: async (): Promise<any> => {
-    const res = await fetch('/api/queue/status');
+    const res = await request('/api/queue/status');
     if (!res.ok) throw new Error('Failed to get queue status');
     return await res.json();
   },
 
   configureQueue: async (options: { maxConcurrency?: number; batchSize?: number }): Promise<void> => {
-    const res = await fetch('/api/queue/configure', {
+    const res = await request('/api/queue/configure', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(options)
@@ -1068,12 +1092,12 @@ export const ClientAPI = {
   },
 
   stopQueue: async (): Promise<void> => {
-    const res = await fetch('/api/queue/stop', { method: 'POST' });
+    const res = await request('/api/queue/stop', { method: 'POST' });
     if (!res.ok) throw new Error('Failed to stop queue');
   },
 
   clearQueue: async (): Promise<void> => {
-    const res = await fetch('/api/queue/clear', { method: 'POST' });
+    const res = await request('/api/queue/clear', { method: 'POST' });
     if (!res.ok) throw new Error('Failed to clear queue');
   },
 
@@ -1081,19 +1105,19 @@ export const ClientAPI = {
   // AI SESSIONS - Session management operations
   // ============================================================================
   getSessions: async (): Promise<any> => {
-    const res = await fetch('/api/ai/sessions');
+    const res = await request('/api/ai/sessions');
     if (!res.ok) throw new Error('Failed to fetch sessions');
     return await res.json();
   },
 
   getSessionById: async (id: string): Promise<AISession | null> => {
-    const res = await fetch(`/api/ai/sessions/${id}`);
+    const res = await request(`/api/ai/sessions/${id}`);
     if (!res.ok) return null;
     return await res.json();
   },
 
   createSession: async (model?: string): Promise<any> => {
-    const res = await fetch('/api/ai/sessions', {
+    const res = await request('/api/ai/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'create', model })
@@ -1103,7 +1127,7 @@ export const ClientAPI = {
   },
 
   setActiveSession: async (sessionId: string): Promise<void> => {
-    const res = await fetch('/api/ai/sessions', {
+    const res = await request('/api/ai/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'set-active', sessionId })
@@ -1112,7 +1136,7 @@ export const ClientAPI = {
   },
 
   updateSessionName: async (id: string, name: string): Promise<AISession> => {
-    const res = await fetch(`/api/ai/sessions/${id}`, {
+    const res = await request(`/api/ai/sessions/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name })
@@ -1122,7 +1146,7 @@ export const ClientAPI = {
   },
 
   updateSessionModel: async (id: string, model: string): Promise<AISession> => {
-    const res = await fetch(`/api/ai/sessions/${id}`, {
+    const res = await request(`/api/ai/sessions/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model })
@@ -1132,7 +1156,7 @@ export const ClientAPI = {
   },
 
   updateSessionMessages: async (id: string, messages: any[]): Promise<AISession> => {
-    const res = await fetch(`/api/ai/sessions/${id}`, {
+    const res = await request(`/api/ai/sessions/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages })
@@ -1142,7 +1166,7 @@ export const ClientAPI = {
   },
 
   updateSessionPrompt: async (id: string, systemPrompt?: string, systemPreset?: AISystemPreset): Promise<AISession> => {
-    const res = await fetch(`/api/ai/sessions/${id}`, {
+    const res = await request(`/api/ai/sessions/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ systemPrompt, systemPreset })
@@ -1152,7 +1176,7 @@ export const ClientAPI = {
   },
 
   updateSessionPixelbrainTarget: async (id: string, pixelbrainTargetAgent: string): Promise<AISession> => {
-    const res = await fetch(`/api/ai/sessions/${id}`, {
+    const res = await request(`/api/ai/sessions/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pixelbrainTargetAgent })
@@ -1162,30 +1186,30 @@ export const ClientAPI = {
   },
 
   deleteSession: async (id: string): Promise<void> => {
-    const res = await fetch(`/api/ai/sessions/${id}`, { method: 'DELETE' });
+    const res = await request(`/api/ai/sessions/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete session');
   },
 
   clearActiveSession: async (): Promise<void> => {
-    const res = await fetch('/api/ai/sessions', { method: 'DELETE' });
+    const res = await request('/api/ai/sessions', { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to clear active session');
   },
 
   getSessionMessages: async (id: string): Promise<any[]> => {
-    const session = await fetch(`/api/ai/sessions/${id}`);
+    const session = await request(`/api/ai/sessions/${id}`);
     if (!session.ok) return [];
     const data = await session.json();
     return data.messages || [];
   },
 
   exportSession: async (sessionId: string): Promise<string> => {
-    const res = await fetch(`/api/ai/sessions/${sessionId}/export`);
+    const res = await request(`/api/ai/sessions/${sessionId}/export`);
     if (!res.ok) throw new Error('Failed to export session');
     return await res.text();
   },
 
   importSession: async (sessionData: string): Promise<AISession> => {
-    const res = await fetch('/api/ai/sessions/import', {
+    const res = await request('/api/ai/sessions/import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionData })
@@ -1198,7 +1222,7 @@ export const ClientAPI = {
   // AI ASSISTANT — chat and model operations (Pixelbrain orchestration)
   // ============================================================================
   getGroqModels: async (): Promise<{ models: any[] }> => {
-    const res = await fetch('/api/ai/groq/models');
+    const res = await request('/api/ai/groq/models');
     if (!res.ok) throw new Error('Failed to fetch Groq models');
     return await res.json();
   },
@@ -1210,7 +1234,7 @@ export const ClientAPI = {
     enableTools?: boolean,
     targetAgent?: string
   ): Promise<any> => {
-    const res = await fetch('/api/ai/chat', {
+    const res = await request('/api/ai/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1239,13 +1263,13 @@ export const ClientAPI = {
   // PLAYER LOG - Player log operations
   // ============================================================================
   getPlayerLog: async (): Promise<{ entries: any[] }> => {
-    const res = await fetch('/api/player-log');
+    const res = await request('/api/player-log');
     if (!res.ok) throw new Error('Failed to fetch player log');
     return await res.json();
   },
 
   appendPlayerLog: async (entityId: string, event: string, details: any): Promise<void> => {
-    const res = await fetch('/api/player-log', {
+    const res = await request('/api/player-log', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ entityId, event, details }),
@@ -1257,13 +1281,13 @@ export const ClientAPI = {
   // RESEARCH SYNC - Research logs sync operations
   // ============================================================================
   getResearchSyncStatus: async (): Promise<any> => {
-    const res = await fetch('/api/sync-research-logs');
+    const res = await request('/api/sync-research-logs');
     if (!res.ok) throw new Error('Failed to fetch research sync status');
     return await res.json();
   },
 
   syncResearchLogs: async (logType: string, strategyOverride?: 'replace' | 'merge'): Promise<any> => {
-    const res = await fetch('/api/sync-research-logs', {
+    const res = await request('/api/sync-research-logs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ logType, strategyOverride })
@@ -1276,7 +1300,7 @@ export const ClientAPI = {
   // PROJECT STATUS - Phase status operations
   // ============================================================================
   updatePhaseStatus: async (phaseKey: string, newStatus: string): Promise<any> => {
-    const res = await fetch('/api/project-status', {
+    const res = await request('/api/project-status', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phaseKey, newStatus })
@@ -1289,17 +1313,17 @@ export const ClientAPI = {
   // AUTH - Authentication operations
   // ============================================================================
   logout: async (): Promise<void> => {
-    const res = await fetch('/admin/logout', { method: 'POST' });
+    const res = await request('/admin/logout', { method: 'POST' });
     if (!res.ok) throw new Error('Failed to logout');
   },
 
   getInventorySummary: async (): Promise<any> => {
-    const res = await fetch('/api/finances/inventory-summary');
+    const res = await request('/api/finances/inventory-summary');
     if (!res.ok) throw new Error('Failed to fetch inventory summary');
     return await res.json();
   },
   deleteArchivedItem: async (id: string, month: string): Promise<void> => {
-    const res = await fetch(`/api/archive/items/${id}?month=${encodeURIComponent(month)}`, {
+    const res = await request(`/api/archive/items/${id}?month=${encodeURIComponent(month)}`, {
       method: 'DELETE'
     });
     if (!res.ok) throw new Error('Failed to delete archived item');
@@ -1307,20 +1331,20 @@ export const ClientAPI = {
 
   getArchivedItems: async (month: number, year: number): Promise<Item[]> => {
     const formattedMonth = `${String(month).padStart(2, '0')}-${String(year).slice(-2)}`;
-    const res = await fetch(`/api/archive/items?month=${formattedMonth}`);
+    const res = await request(`/api/archive/items?month=${formattedMonth}`);
     if (!res.ok) throw new Error('Failed to fetch archived items');
     return await res.json();
   },
 
   deleteArchivedTask: async (id: string, month: string): Promise<void> => {
-    const res = await fetch(`/api/archive/tasks/${id}?month=${encodeURIComponent(month)}`, {
+    const res = await request(`/api/archive/tasks/${id}?month=${encodeURIComponent(month)}`, {
       method: 'DELETE'
     });
     if (!res.ok) throw new Error('Failed to delete archived task');
   },
 
   collectSales: async (month: number, year: number): Promise<{ success: boolean; collected: number }> => {
-    const res = await fetch('/api/sales/collect-all', {
+    const res = await request('/api/sales/collect-all', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ month, year })
@@ -1330,7 +1354,7 @@ export const ClientAPI = {
   },
 
   collectAllEntities: async (month: number, year: number): Promise<{ success: boolean; results: any }> => {
-    const res = await fetch('/api/tasks/collect-all-orchestrated', {
+    const res = await request('/api/tasks/collect-all-orchestrated', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ month, year })
@@ -1340,3 +1364,4 @@ export const ClientAPI = {
   },
 
 };
+
