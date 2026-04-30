@@ -5,22 +5,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NumericInput } from '@/components/ui/numeric-input';
-import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { ItemType, ItemStatus, Collection, EntityType } from '@/types/enums';
 import { getItemStatusLabel } from '@/lib/constants/status-display-labels';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
-import { getCategoryForItemType, createStationCategoryOptions, getStationFromCombined, getCategoryFromCombined, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined } from '@/lib/utils/searchable-select-utils';
-import type { SubItemType, Station } from '@/types/type-aliases';
+import { getCategoryForItemType, createStationCategoryOptions, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
+import type { Station } from '@/types/type-aliases';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 // Side effects handled by parent component via API calls
 import { Item } from '@/types/entities';
-import { PRICE_STEP, DEFAULT_MIN_VALUE, MODAL_MAX_HEIGHT, MODAL_MAX_WIDTH } from '@/lib/constants/app-constants';
-import { MapPin, Package, Trash2 } from 'lucide-react';
+import { PRICE_STEP, DEFAULT_MIN_VALUE } from '@/lib/constants/app-constants';
+import { MapPin, Trash2 } from 'lucide-react';
 
-import { getAllSiteNames, getSiteNameFromId } from '@/lib/utils/site-options-utils';
+import { getSiteNameFromId } from '@/lib/utils/site-options-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { getCollectionLabel } from '@/lib/constants/collection-labels';
 import DeleteModal from './delete-submodal';
@@ -48,6 +48,8 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const fieldOptions = [
+    { value: 'quantity', label: 'Quantity' },
+    { value: 'targetAmount', label: 'Target Quantity' },
     { value: 'price', label: 'Price' },
     { value: 'unitCost', label: 'Unit Cost' },
     { value: 'status', label: 'Status' },
@@ -55,8 +57,43 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
     { value: 'subItemType', label: 'Sub Type' },
     { value: 'size', label: 'Size' },
     { value: 'station', label: 'Station' },
-    { value: EntityType.SITE, label: 'Site' }
+    { value: EntityType.SITE, label: 'Site' },
+    { value: 'keepInInventoryAfterSold', label: 'Keep Item in Inventory after Sold?' },
+    { value: 'restockToTarget', label: 'Restock when Sold?' },
   ];
+
+  const booleanFields = new Set(['keepInInventoryAfterSold', 'restockToTarget']);
+  const numericFields = new Set(['quantity', 'targetAmount', 'price', 'unitCost', 'size']);
+  const hasNewValue = booleanFields.has(field) || value.trim().length > 0;
+  const canSubmit = hasNewValue && selectedItems.size > 0 && !isProcessing;
+
+  const updateStockAtPrimarySite = (item: Item, quantity: number): Item['stock'] => {
+    const primarySiteId = item.stock[0]?.siteId || sites[0]?.id || 'Home';
+    const updatedStock = [...(item.stock || [])];
+    const stockIndex = updatedStock.findIndex(sp => sp.siteId === primarySiteId);
+
+    if (stockIndex >= 0) {
+      if (quantity <= 0) {
+        updatedStock.splice(stockIndex, 1);
+      } else {
+        updatedStock[stockIndex] = { siteId: primarySiteId, quantity };
+      }
+    } else if (quantity > 0) {
+      updatedStock.push({ siteId: primarySiteId, quantity });
+    }
+
+    return updatedStock;
+  };
+
+  const moveStockToSite = (item: Item, siteId: string): Item['stock'] => {
+    const totalQuantity = item.stock.reduce((sum, sp) => sum + sp.quantity, 0);
+    return totalQuantity > 0 ? [{ siteId, quantity: totalQuantity }] : [];
+  };
+
+  const handleFieldChange = (nextField: string) => {
+    setField(nextField);
+    setValue(booleanFields.has(nextField) ? 'false' : '');
+  };
 
   // Load items when modal opens
   useEffect(() => {
@@ -81,7 +118,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
   const getFilteredItems = useCallback(() => {
     return items.filter(item => {
       if (collectionFilter !== 'all' && item.collection !== collectionFilter) return false;
-      if (siteFilter !== 'all' && item.stock[0]?.siteId !== siteFilter) return false;
+      if (siteFilter !== 'all' && !item.stock.some(stockPoint => stockPoint.siteId === siteFilter)) return false;
       if (subItemFilter !== 'all' && item.subItemType !== subItemFilter) return false;
       if (statusFilter !== 'all' && item.status !== statusFilter) return false;
       return true;
@@ -90,9 +127,21 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
 
   const filteredItems = useMemo(getFilteredItems, [getFilteredItems]);
 
+  useEffect(() => {
+    const visibleIds = new Set(filteredItems.map(item => item.id));
+    setSelectedItems(prev => {
+      const next = new Set([...prev].filter(id => visibleIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filteredItems]);
+
+  useEffect(() => {
+    setSelectAll(filteredItems.length > 0 && filteredItems.every(item => selectedItems.has(item.id)));
+  }, [filteredItems, selectedItems]);
+
   const handleBulkEdit = async () => {
     // Check value and selected items
-    if (!value.trim() || selectedItems.size === 0) return;
+    if (!canSubmit) return;
 
     setIsProcessing(true);
 
@@ -106,8 +155,22 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
         let updatedItem: Item = { ...item };
 
         // Convert value based on field type
-        if (field === 'price' || field === 'unitCost') {
-          newValue = parseFloat(value) || 0;
+        if (numericFields.has(field)) {
+          const parsed = Number(value);
+          newValue = Number.isFinite(parsed) ? parsed : 0;
+          if (field === 'quantity') {
+            updatedItem = { ...item, stock: updateStockAtPrimarySite(item, newValue) };
+          } else if (field === 'targetAmount') {
+            updatedItem = {
+              ...item,
+              targetAmount: newValue > 0 ? newValue : undefined,
+              restockToTarget: newValue > 0 ? item.restockToTarget : false,
+            };
+          } else {
+            updatedItem = { ...item, [field]: newValue };
+          }
+        } else if (booleanFields.has(field)) {
+          newValue = value === 'true';
           updatedItem = { ...item, [field]: newValue };
         } else if (field === 'status') {
           newValue = value as ItemStatus;
@@ -120,20 +183,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
           newValue = getStationFromCombined(value) as Station;
           updatedItem = { ...item, station: newValue };
         } else if (field === EntityType.SITE) {
-          // OPTIMIZED: Update stock array locally to avoid individual network fetches
-          const currentQuantity = item.stock.reduce((sum, sp) => sum + sp.quantity, 0);
-          const newSiteId = value;
-          
-          const stockIndex = item.stock.findIndex(sp => sp.siteId === newSiteId);
-          const updatedStock = [...item.stock];
-
-          if (stockIndex >= 0) {
-            updatedStock[stockIndex] = { siteId: newSiteId, quantity: currentQuantity };
-          } else {
-            updatedStock.push({ siteId: newSiteId, quantity: currentQuantity });
-          }
-          
-          updatedItem = { ...item, stock: updatedStock };
+          updatedItem = { ...item, stock: moveStockToSite(item, value) };
         } else {
           // Handle other field updates
           updatedItem = { ...item, [field]: value };
@@ -184,7 +234,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">{getCollectionLabel(Collection.NO_COLLECTION)}</SelectItem>
-              {Object.values(Collection).map(collection => (
+              {Object.values(Collection).filter(collection => collection !== Collection.NO_COLLECTION).map(collection => (
                 <SelectItem key={collection} value={collection}>{getCollectionLabel(collection)}</SelectItem>
               ))}
             </SelectContent>
@@ -192,7 +242,19 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
         );
 
       case 'subItemType':
-        return (
+        const subTypeOptions = getSubTypesForItemType(itemType);
+        return subTypeOptions.length > 0 ? (
+          <Select value={value} onValueChange={setValue}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select sub type" />
+            </SelectTrigger>
+            <SelectContent>
+              {subTypeOptions.map(subType => (
+                <SelectItem key={subType} value={subType}>{subType}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
           <Input
             value={value}
             onChange={(e) => setValue(e.target.value)}
@@ -227,13 +289,29 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
           </Select>
         );
 
+      case 'keepInInventoryAfterSold':
+      case 'restockToTarget':
+        return (
+          <div className="flex h-10 items-center gap-3 rounded-md border px-3">
+            <Switch
+              id={`bulk-${field}`}
+              checked={value === 'true'}
+              onCheckedChange={(checked) => setValue(checked ? 'true' : 'false')}
+            />
+            <Label htmlFor={`bulk-${field}`} className="text-sm">
+              {value === 'true' ? 'Enabled' : 'Disabled'}
+            </Label>
+          </div>
+        );
+
       default:
         return (
           <NumericInput
             value={typeof value === 'number' ? value : parseFloat(value) || 0}
             onChange={(numValue) => setValue(numValue.toString())}
-            placeholder={field === 'price' ? '0.00' : '0'}
-            step={PRICE_STEP}
+            placeholder={field === 'price' || field === 'unitCost' ? '0.00' : '0'}
+            step={field === 'quantity' || field === 'targetAmount' ? 1 : PRICE_STEP}
+            allowDecimals={field !== 'quantity' && field !== 'targetAmount'}
             min={DEFAULT_MIN_VALUE}
           />
         );
@@ -278,7 +356,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="field">Field to Edit</Label>
-              <Select value={field} onValueChange={setField}>
+              <Select value={field} onValueChange={handleFieldChange}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -328,7 +406,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Collections</SelectItem>
-                  {Object.values(Collection).map(collection => (
+                  {Object.values(Collection).filter(collection => collection !== Collection.NO_COLLECTION).map(collection => (
                     <SelectItem key={collection} value={collection}>{getCollectionLabel(collection)}</SelectItem>
                   ))}
                 </SelectContent>
@@ -340,9 +418,9 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Sites</SelectItem>
-                  {getAllSiteNames(sites).map(site => (
-                    <SelectItem key={site} value={site}>
-                      {site}
+                  {sites.map(site => (
+                    <SelectItem key={site.id} value={site.id}>
+                      {site.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -394,6 +472,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
                         )}
                         {item.status && `${getItemStatusLabel(item.status)} • `}
                         Qty: {item.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0}
+                        {item.targetAmount ? ` / Target: ${item.targetAmount}` : ''}
                       </span>
                     </div>
                   </Label>
@@ -416,7 +495,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
           </Button>
           <Button
             onClick={handleBulkEdit}
-            disabled={!value.trim() || selectedItems.size === 0 || isProcessing}
+            disabled={!canSubmit}
           >
             {isProcessing ? 'Processing...' :
               `Update ${selectedItems.size} Selected Item${selectedItems.size > 1 ? 's' : ''}`

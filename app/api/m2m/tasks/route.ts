@@ -58,9 +58,20 @@ export async function GET(request: NextRequest) {
       t.status !== TaskStatus.COLLECTED
     );
 
+    // Enrich assigned tasks with parent names if they exist
+    const tasksWithParentNames = assignedTasks.map(task => {
+      if (task.parentId) {
+        const parent = activeTasks.find(t => t.id === task.parentId);
+        if (parent) {
+          return { ...task, parentName: parent.name };
+        }
+      }
+      return task;
+    });
+
     return NextResponse.json({
       success: true,
-      tasks: assignedTasks,
+      tasks: tasksWithParentNames,
     });
   } catch (error) {
     console.error('[M2M Tasks GET] Error:', error);
