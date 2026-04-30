@@ -114,6 +114,15 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
     loadItems();
   }, [open, itemType]);
 
+  // If a site filter points to a site that no longer exists, reset to ALL
+  useEffect(() => {
+    if (!open) return;
+
+    if (siteFilter !== 'all' && !sites.some(site => site.id === siteFilter)) {
+      setSiteFilter('all');
+    }
+  }, [open, sites, siteFilter]);
+
   // Get filtered items based on selected filters
   const getFilteredItems = useCallback(() => {
     return items.filter(item => {

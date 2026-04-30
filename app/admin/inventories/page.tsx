@@ -69,6 +69,16 @@ function InventoriesPageContent() {
     if (savedStatus) setSelectedStatus(savedStatus);
   }, [getPreference, isLoading]);
 
+  // If the saved selected site was deleted, fall back to all sites
+  useEffect(() => {
+    if (!selectedSite || selectedSite === 'all') return;
+    const siteStillExists = sites.some(site => site.id === selectedSite);
+    if (!siteStillExists) {
+      setSelectedSite('all');
+      setPreference('inventory-selected-site', 'all');
+    }
+  }, [sites, selectedSite, setPreference]);
+
 
   return (
     <div className="space-y-6">
