@@ -14,6 +14,7 @@ import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution'
 import { getItemCharacterId } from '@/lib/item-character-id';
 import { getFinancialCounterpartyId } from '@/lib/financial-record-counterparty-id';
 import { getSaleCharacterId } from '@/lib/sale-character-id';
+import { getAllSites } from '@/data-store/repositories/site.repo';
 
 export function makeLink(linkType: LinkType, source: { type: EntityType; id: string }, target: { type: EntityType; id: string }): Link {
   return {
@@ -131,6 +132,7 @@ export async function processTaskEffects(task: Task): Promise<void> {
 export async function processItemEffects(item: Item): Promise<void> {
   // Get existing links for cleanup
   const existingLinks = await getLinksFor({ type: EntityType.ITEM, id: item.id });
+  const validSiteIds = new Set((await getAllSites()).map(site => site.id));
 
   // ITEM_TASK links are no longer created here to follow original direction (Task -> Item).
   // Clean up any stray ITEM_TASK links if needed, but TASK_ITEM is the canonical link.
@@ -148,9 +150,14 @@ export async function processItemEffects(item: Item): Promise<void> {
 
   // Create fresh ITEM_SITE links for current stock
   for (const s of item.stock || []) {
-    if (s.siteId && s.siteId !== 'None') { // Skip invalid "None" site IDs
-      const l = makeLink(LinkType.ITEM_SITE, { type: EntityType.ITEM, id: item.id }, { type: EntityType.SITE, id: s.siteId });
+    const normalizedSiteId = String(s.siteId || '').trim();
+    if (normalizedSiteId && validSiteIds.has(normalizedSiteId)) {
+      const l = makeLink(LinkType.ITEM_SITE, { type: EntityType.ITEM, id: item.id }, { type: EntityType.SITE, id: normalizedSiteId });
       await createLink(l);
+    } else if (normalizedSiteId) {
+      console.warn(
+        `[processItemEffects] Skipping ITEM_SITE link for invalid site "${normalizedSiteId}" on item ${item.id}.`
+      );
     }
   }
 

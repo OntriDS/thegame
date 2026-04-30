@@ -818,12 +818,20 @@ export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: b
   }
 
   if (!options?.skipWorkflowEffects) {
-    const { onItemUpsert } = await import('@/workflows/entities-workflows/item.workflow');
-    await onItemUpsert(saved, previous || undefined);  // ⚠️ Can throw
+    try {
+      const { onItemUpsert } = await import('@/workflows/entities-workflows/item.workflow');
+      await onItemUpsert(saved, previous || undefined);
+    } catch (error) {
+      console.error(`[Datastore] Item workflow failed for ${saved.id}:`, error);
+    }
   }
 
   if (!options?.skipLinkEffects) {
-    await processLinkEntity(saved, EntityType.ITEM);   // ⚠️ Can throw
+    try {
+      await processLinkEntity(saved, EntityType.ITEM);
+    } catch (error) {
+      console.error(`[Datastore] Item link workflow failed for ${saved.id}:`, error);
+    }
   }
 
   return saved;

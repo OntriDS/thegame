@@ -477,10 +477,9 @@ export function InventoryDisplay({
   // Initialize selectedLocationsForModel with default sites when sites are loaded
   useEffect(() => {
     if (sites.length > 0 && selectedLocationsForModel.size === 0) {
-      // Find common site names and convert to IDs
-      const defaultSiteNames = ['Home', 'Feria Box', 'Akiles'];
+      // Use empty-string site ID as the temporary "none" fallback.
       const defaultSiteIds = sites
-        .filter(site => defaultSiteNames.includes(site.name))
+        .filter(site => String(site.id).trim() === '')
         .map(site => site.id);
       setSelectedLocationsForModel(new Set(defaultSiteIds));
     }
@@ -618,9 +617,26 @@ export function InventoryDisplay({
   };
 
   const getPrimarySiteName = (item: Item): string => {
-    const id = item.stock?.[0]?.siteId;
+    const id = getPrimaryStockSiteId(item);
     if (!id) return '';
-    return sites.find(s => s.id === id)?.name ?? id;
+    return sites.find(s => s.id === id)?.name ?? '';
+  };
+
+  const isValidSiteId = (siteId: string | undefined): boolean => {
+    const normalizedSiteId = String(siteId || '').trim();
+    return normalizedSiteId.length > 0 && sites.some(site => site.id === normalizedSiteId);
+  };
+
+  const getPrimaryStockSiteId = (item: Item): string => {
+    const validStockSiteId = item.stock?.map(stock => stock.siteId).find(isValidSiteId);
+    if (validStockSiteId) return validStockSiteId;
+
+    const selectedSiteId = String(selectedSite || '').trim();
+    if (selectedSiteId !== 'all' && isValidSiteId(selectedSiteId)) {
+      return selectedSiteId;
+    }
+
+    return '';
   };
 
   const getCollectionSortLabel = (item: Item): string => {
@@ -1078,26 +1094,38 @@ export function InventoryDisplay({
     const item = items.find(i => i.id === itemId);
     if (!item) return;
 
-    const fallbackSiteId = item.stock?.[0]?.siteId ?? 'Home';
+    const fallbackSiteId = getPrimaryStockSiteId(item);
     const totalQuantity = item.stock?.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0) || 0;
+    const sanitizedStock = item.stock?.filter((stockPoint) => isValidSiteId(stockPoint.siteId)) || [];
 
     let updatedItem = { ...item };
 
     if (field === 'location') {
       const newSiteId = String(value || '').trim();
+      if (totalQuantity > 0 && !isValidSiteId(newSiteId)) {
+        throw new Error('No valid stock location selected. Please set a location before saving.');
+      }
       const nextStock = totalQuantity > 0 ? [{ siteId: newSiteId, quantity: totalQuantity }] : [];
       updatedItem = { ...item, stock: nextStock };
     } else if (field === 'quantity') {
       const parsedQuantity = Number(value);
       const nextQuantity = Number.isFinite(parsedQuantity) ? parsedQuantity : 0;
+      if (nextQuantity > 0 && !fallbackSiteId) {
+        throw new Error('No valid stock location available. Please set a location before changing quantity.');
+      }
+
+      const targetStock = sanitizedStock.length > 0
+        ? [
+            { ...sanitizedStock[0], siteId: sanitizedStock[0]?.siteId || fallbackSiteId, quantity: nextQuantity },
+            ...sanitizedStock.slice(1),
+          ]
+        : nextQuantity > 0 && fallbackSiteId
+          ? [{ siteId: fallbackSiteId, quantity: nextQuantity }]
+          : [];
+
       updatedItem = {
         ...item,
-        stock: item.stock.length > 0
-          ? [
-              { ...item.stock[0], siteId: item.stock[0]?.siteId || fallbackSiteId, quantity: nextQuantity },
-              ...item.stock.slice(1),
-            ]
-          : [{ siteId: fallbackSiteId, quantity: nextQuantity }]
+        stock: targetStock
       };
     } else if (field) {
       updatedItem = { ...item, [field]: value };
@@ -1276,22 +1304,28 @@ export function InventoryDisplay({
   };
 
   const getLocationsInColumn = (column: string): string[] => {
-    // Define column groupings based on business logic - these could be moved to constants if they change frequently
-    const OWN_SITE_NAMES = ['Akiles', 'Home', 'Feria Box'];
-    const CONSIGNMENT_SITE_NAMES = ['Smoking Lounge', 'Tagua', 'Cafe Vivo'];
+    const noneSiteIds = sites
+      .filter(site => String(site.id).trim() === '')
+      .map(site => site.id);
+    const nonNoneSiteIds = sites
+      .map(site => site.id)
+      .filter(siteId => String(siteId).trim() !== '');
 
     switch (column) {
       case 'own':
-        return sites.filter(site => OWN_SITE_NAMES.includes(site.name)).map(site => site.id);
+        return noneSiteIds;
       case 'consignment':
-        return sites.filter(site => CONSIGNMENT_SITE_NAMES.includes(site.name)).map(site => site.id);
+        return [];
       case 'other':
-        return sites
-          .filter(site => !OWN_SITE_NAMES.includes(site.name) && !CONSIGNMENT_SITE_NAMES.includes(site.name))
-          .map(site => site.id);
+        return nonNoneSiteIds;
       default:
         return [];
     }
+  };
+
+  const getSitesForLocationColumn = (column: string) => {
+    const locationSiteIds = new Set(getLocationsInColumn(column));
+    return sites.filter(site => locationSiteIds.has(site.id));
   };
 
   const toggleLocation = (site: string, checked: boolean) => {
@@ -1765,7 +1799,7 @@ export function InventoryDisplay({
                                   {renderEditableField(
                                     sticker,
                                     'location',
-                                    sticker.stock.length > 0 ? sticker.stock[0].siteId : 'Home',
+                                    getPrimaryStockSiteId(sticker),
                                     'select',
                                     sites.map(site => ({ value: site.id, label: site.name }))
                                   )}
@@ -1909,7 +1943,22 @@ export function InventoryDisplay({
                                 <NumericInput
                                   value={bundle.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}
                                   onChange={async (quantity) => {
-                                    const siteId = bundle.stock.length > 0 ? bundle.stock[0].siteId : 'Home';
+                                    const siteId = getPrimaryStockSiteId(bundle);
+                                    if (!siteId) {
+                                      setStatusModalConfig({
+                                        title: 'Inline save failed',
+                                        message: `Could not update stock for "${bundle.name}". No valid location available.`,
+                                        options: [
+                                          {
+                                            label: 'Dismiss',
+                                            action: () => setShowStatusModal(false),
+                                          },
+                                        ],
+                                      });
+                                      setShowStatusModal(true);
+                                      return;
+                                    }
+
                                     const updated = await ClientAPI.updateStockAtSite(bundle.id, siteId, quantity);
                                     handleSaveItem(updated);
                                   }}
@@ -3376,7 +3425,7 @@ export function InventoryDisplay({
               {/* Column 1: Own Locations */}
               <div className="space-y-2">
                 <h4 className="font-medium text-sm text-muted-foreground mb-3">Own Locations</h4>
-                {sites.filter(site => ['Akiles', 'Home', 'Feria Box'].includes(site.name)).map(site => (
+                {getSitesForLocationColumn('own').map(site => (
                   <label key={site.id} className="flex items-center gap-3 cursor-pointer hover:bg-muted p-2 rounded">
                     <input
                       type="checkbox"
@@ -3392,7 +3441,7 @@ export function InventoryDisplay({
               {/* Column 2: Consignment Network */}
               <div className="space-y-2">
                 <h4 className="font-medium text-sm text-muted-foreground mb-3">Consignment Network</h4>
-                {sites.filter(site => ['Smoking Lounge', 'Tagua', 'Cafe Vivo'].includes(site.name)).map(site => (
+                {getSitesForLocationColumn('consignment').map(site => (
                   <label key={site.id} className="flex items-center gap-3 cursor-pointer hover:bg-muted p-2 rounded">
                     <input
                       type="checkbox"
@@ -3409,9 +3458,7 @@ export function InventoryDisplay({
               <div className="space-y-2">
                 <h4 className="font-medium text-sm text-muted-foreground mb-3">Other Locations</h4>
                 <div className="max-h-32 overflow-y-auto">
-                  {sites.filter(site =>
-                    !['Akiles', 'Home', 'Feria Box', 'Smoking Lounge', 'Tagua', 'Cafe Vivo'].includes(site.name)
-                  ).map(site => (
+                  {getSitesForLocationColumn('other').map(site => (
                     <label key={site.id} className="flex items-center gap-3 cursor-pointer hover:bg-muted p-2 rounded">
                       <input
                         type="checkbox"

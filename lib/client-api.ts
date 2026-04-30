@@ -249,7 +249,18 @@ export const ClientAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(item)
     });
-    if (!res.ok) throw new Error('Failed to save item(s)');
+    if (!res.ok) {
+      let details = 'Failed to save item(s)';
+      try {
+        const payload = await res.clone().json();
+        if (payload && typeof payload.error === 'string' && payload.error.trim()) {
+          details = payload.error;
+        }
+      } catch {
+        // keep fallback message
+      }
+      throw new Error(details);
+    }
     return await res.json();
   },
 

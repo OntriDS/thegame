@@ -67,9 +67,18 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
   const hasNewValue = booleanFields.has(field) || value.trim().length > 0;
   const canSubmit = hasNewValue && selectedItems.size > 0 && !isProcessing;
 
+  const isValidSiteId = (siteId: string | undefined): boolean => {
+    const normalizedSiteId = String(siteId || '').trim();
+    return normalizedSiteId.length > 0 && sites.some(site => site.id === normalizedSiteId);
+  };
+
   const updateStockAtPrimarySite = (item: Item, quantity: number): Item['stock'] => {
-    const primarySiteId = item.stock[0]?.siteId || sites[0]?.id || 'Home';
-    const updatedStock = [...(item.stock || [])];
+    const primarySiteId = item.stock.map(stock => stock.siteId).find(siteId => isValidSiteId(siteId)) || '';
+    const updatedStock = [...(item.stock || [])].filter(stockPoint => isValidSiteId(stockPoint.siteId));
+    if (quantity > 0 && !primarySiteId) {
+      throw new Error(`Could not update stock for "${item.name}" because it has no valid location.`);
+    }
+
     const stockIndex = updatedStock.findIndex(sp => sp.siteId === primarySiteId);
 
     if (stockIndex >= 0) {
@@ -87,7 +96,8 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
 
   const moveStockToSite = (item: Item, siteId: string): Item['stock'] => {
     const totalQuantity = item.stock.reduce((sum, sp) => sum + sp.quantity, 0);
-    return totalQuantity > 0 ? [{ siteId, quantity: totalQuantity }] : [];
+    const normalizedSiteId = String(siteId || '').trim();
+    return totalQuantity > 0 && normalizedSiteId ? [{ siteId: normalizedSiteId, quantity: totalQuantity }] : [];
   };
 
   const handleFieldChange = (nextField: string) => {
