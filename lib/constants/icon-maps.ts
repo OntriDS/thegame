@@ -1,16 +1,16 @@
 import { TaskType, ItemType, EntityType } from '@/types/enums';
-import { Network, Box, Boxes, Brush, CheckSquare, Cpu, CircleDollarSign, FilePlus, FileText, Package, Receipt, Scan, ShoppingCart, Truck, Trophy, Gamepad, Bolt, Anvil, CalendarSync, AlarmCheck, MapPin, Folder, Zap, BarChart3, DollarSign, Coins, User, Link as LinkIcon, MessageSquare, Building2, FileCheck, Briefcase, Goal, Layers, Star } from 'lucide-react';
+import { Network, Box, Boxes, Brush, CheckSquare, Cpu, CircleDollarSign, FilePlus, FileText, Package, Receipt, Scan, ShoppingCart, Truck, Trophy, Target, Gamepad, Bolt, Anvil, CalendarSync, AlarmCheck, MapPin, Folder, Zap, BarChart3, DollarSign, Coins, User, Link as LinkIcon, MessageSquare, Building2, FileCheck, Briefcase, Goal, Layers, Star } from 'lucide-react';
 
 export const TASK_TYPE_ICONS: Record<TaskType, React.ElementType> = {
   [TaskType.MISSION_GROUP]: Network,
-  [TaskType.GOAL]: Goal,
+  [TaskType.GOAL]: Zap,
   [TaskType.MILESTONE]: Star,
   [TaskType.MISSION]: Trophy,
   [TaskType.ASSIGNMENT]: CheckSquare,
   [TaskType.RECURRENT_GROUP]: Network,
   [TaskType.RECURRENT_TEMPLATE]: Layers,
-  [TaskType.RECURRENT_INSTANCE]: AlarmCheck,
-  [TaskType.AUTOMATION]: Zap
+  [TaskType.RECURRENT_INSTANCE]: Target,
+  [TaskType.AUTOMATION]: Cpu
 };
 
 export const ITEM_TYPE_ICONS: Record<string, React.ElementType> = {

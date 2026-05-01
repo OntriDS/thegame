@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { iamService } from '@/lib/iam-service';
 import { TaskStatus, TaskType } from '@/types/enums';
-import { getActiveTasks, getTaskById, upsertTask } from '@/data-store/datastore';
+import { getActiveTasks, getAllTasks, getTaskById, upsertTask } from '@/data-store/datastore';
 import type { Task } from '@/types/entities';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { parseDateToUTC } from '@/lib/utils/date-parsers';
@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const ownerId = searchParams.get('ownerId');
+    const includeDoneThisMonth = searchParams.get('includeDoneThisMonth') === 'true';
 
     if (!ownerId) {
       return NextResponse.json(
@@ -53,7 +54,33 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch active tasks and filter by owner
+    // Optional done count for current month
+    let doneThisMonth = 0;
+    if (includeDoneThisMonth) {
+      const now = getUTCNow();
+      const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+      const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+      const allTasks = await getAllTasks();
+      const doneTaskIds = new Set<string>();
+      allTasks.forEach((task) => {
+        if (task.ownerId !== ownerId) return;
+        if (task.status !== TaskStatus.DONE) return;
+        if (typeof task.progress === 'number' && task.progress < 100) return;
+
+        if (!task.doneAt) return;
+        const doneDate = new Date(task.doneAt);
+        if (!Number.isFinite(doneDate.getTime())) return;
+        if (Number.isNaN(doneDate.getTime())) return;
+
+        if (doneDate < monthStart || doneDate >= nextMonthStart) return;
+
+        doneTaskIds.add(task.id);
+        return;
+      });
+
+      doneThisMonth = doneTaskIds.size;
+    }
+
     const activeTasks = await getActiveTasks();
     const assignedTasks = activeTasks.filter(t => 
       t.ownerId === ownerId && 
@@ -74,6 +101,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       tasks: tasksWithParentNames,
+      doneThisMonth,
     });
   } catch (error) {
     console.error('[M2M Tasks GET] Error:', error);
@@ -178,26 +206,42 @@ export async function PATCH(request: NextRequest) {
     }
 
     const nextStatus = normalizedStatus || task.status;
+    const isTerminalStatus = (value?: TaskStatus) =>
+      value === TaskStatus.DONE ||
+      value === TaskStatus.COLLECTED ||
+      value === TaskStatus.FAILED;
+    const isRevertingFromTerminal =
+      isTerminalStatus(task.status) && Boolean(status) && !isTerminalStatus(nextStatus);
+
     const preserveDoneAt =
-      status && (nextStatus === TaskStatus.DONE || nextStatus === TaskStatus.COLLECTED || nextStatus === TaskStatus.FAILED)
-        ? (task.doneAt ?? getUTCNow())
-        : task.doneAt;
+      !status
+        ? task.doneAt
+        : isRevertingFromTerminal
+          ? undefined
+          : isTerminalStatus(nextStatus)
+            ? (task.doneAt ?? getUTCNow())
+            : task.doneAt;
 
     const preserveCollectedAt =
-      status && nextStatus === TaskStatus.COLLECTED
-        ? (task.collectedAt ?? getUTCNow())
-        : task.collectedAt;
+      !status
+        ? task.collectedAt
+        : isRevertingFromTerminal
+          ? undefined
+          : nextStatus === TaskStatus.COLLECTED
+            ? (task.collectedAt ?? getUTCNow())
+            : task.collectedAt;
 
     const incomingDoneAt = explicitDoneAt;
     const incomingCollectedAt = explicitCollectedAt;
 
     const nextDoneAt = rawDoneAt !== undefined ? incomingDoneAt : preserveDoneAt;
     const nextCollectedAt = rawCollectedAt !== undefined ? incomingCollectedAt : preserveCollectedAt;
+    const nextProgress = progress !== undefined ? Number(progress) : isRevertingFromTerminal ? 0 : task.progress;
 
     const updatedTask: Task = {
       ...task,
       ...(status ? { status: nextStatus } : {}),
-      ...(progress !== undefined ? { progress: Number(progress) } : {}),
+      ...(nextProgress !== undefined ? { progress: nextProgress } : {}),
       ...(description !== undefined ? { description } : {}),
       ...(characterId !== undefined ? { characterId } : {}),
       ...(siteId !== undefined ? { siteId } : {}),
@@ -205,10 +249,9 @@ export async function PATCH(request: NextRequest) {
       ...(cost !== undefined ? { cost: Number(cost) } : {}),
       ...(revenue !== undefined ? { revenue: Number(revenue) } : {}),
       ...(ownerId !== undefined ? { ownerId } : {}),
-      ...(rawDoneAt !== undefined ? { doneAt: nextDoneAt } : {}),
-      ...(rawCollectedAt !== undefined ? { collectedAt: nextCollectedAt } : {}),
-      ...(!rawDoneAt && status ? { doneAt: nextDoneAt } : {}),
-      ...(!rawCollectedAt && status ? { collectedAt: nextCollectedAt } : {}),
+      ...(rawDoneAt !== undefined || status ? { doneAt: nextDoneAt } : {}),
+      ...(rawCollectedAt !== undefined || status ? { collectedAt: nextCollectedAt } : {}),
+      ...(isRevertingFromTerminal ? { isCollected: false } : {}),
       updatedAt: new Date(),
     };
 

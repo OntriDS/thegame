@@ -796,6 +796,9 @@ export async function uncompleteTask(taskId: string, previousTerminalTask?: Task
     await removeItemsCreatedByTask(taskId);
     // 2. Remove points awarded by this task
     await removePlayerPointsFromTask(task);
+    // 2.5 Tear down task-created financial records + FINANCIAL logs (mirrors delete cleanup)
+    await removeFinancialRecordsCreatedByTask(taskId);
+    await removeLogEntriesAcrossMonths(EntityType.FINANCIAL, (entry: { sourceTaskId?: string }) => entry.sourceTaskId === taskId);
     // 3. Clear effects registry entries
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'itemCreated'));
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'financialCreated'));

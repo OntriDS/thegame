@@ -116,6 +116,44 @@ export async function POST(req: NextRequest) {
     }
 
     const existingTask = taskBody.id ? await getTaskById(taskBody.id) : null;
+    const requestedStatus = taskBody.status as TaskStatus | undefined;
+    const isTerminalStatus = (status?: TaskStatus) =>
+      status === TaskStatus.DONE ||
+      status === TaskStatus.COLLECTED ||
+      status === TaskStatus.FAILED;
+    const isRevertingFromTerminal =
+      Boolean(existingTask?.status) &&
+      isTerminalStatus(existingTask?.status as TaskStatus) &&
+      Boolean(requestedStatus) &&
+      !isTerminalStatus(requestedStatus);
+    const requestedDoneAt = taskBody.doneAt ? parseDateToUTC(taskBody.doneAt) : undefined;
+    const requestedCollectedAt = taskBody.collectedAt ? parseDateToUTC(taskBody.collectedAt) : undefined;
+    const shouldSetDoneAt = Boolean(requestedStatus) &&
+      (requestedStatus === TaskStatus.DONE ||
+        requestedStatus === TaskStatus.COLLECTED ||
+        requestedStatus === TaskStatus.FAILED);
+    const nextDoneAt =
+      requestedDoneAt !== undefined
+        ? requestedDoneAt
+        : isRevertingFromTerminal
+          ? undefined
+          : shouldSetDoneAt
+            ? (existingTask?.doneAt || getUTCNow())
+            : existingTask?.doneAt;
+    const nextCollectedAt =
+      requestedCollectedAt !== undefined
+        ? requestedCollectedAt
+        : isRevertingFromTerminal
+          ? undefined
+          : requestedStatus === TaskStatus.COLLECTED
+            ? (existingTask?.collectedAt || getUTCNow())
+            : existingTask?.collectedAt;
+    const nextProgress =
+      taskBody.progress !== undefined
+        ? Number(taskBody.progress)
+        : isRevertingFromTerminal
+          ? 0
+          : existingTask?.progress;
 
     const task = {
       ...cleanTaskBody,
@@ -126,10 +164,12 @@ export async function POST(req: NextRequest) {
       createdAt: taskBody.createdAt ? parseDateToUTC(taskBody.createdAt as Date | string | number | null | undefined) : getUTCNow(),
       updatedAt: getUTCNow(),
       dueDate: taskBody.dueDate ? parseDateToUTC(taskBody.dueDate) : undefined,
-      doneAt: taskBody.doneAt
-        ? parseDateToUTC(taskBody.doneAt)
-        : existingTask?.doneAt || (taskBody.status === TaskStatus.DONE ? getUTCNow() : undefined),
-      collectedAt: taskBody.collectedAt ? parseDateToUTC(taskBody.collectedAt) : undefined,
+      doneAt: nextDoneAt,
+      collectedAt: nextCollectedAt,
+      progress: nextProgress,
+      isCollected: isRevertingFromTerminal
+        ? false
+        : ((taskBody as Task).isCollected ?? existingTask?.isCollected),
       frequencyConfig: normalizedFrequencyConfig
     } as unknown as Task;
     const saved = await upsertTask(task, { skipDuplicateCheck });
