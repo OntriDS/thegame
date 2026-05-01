@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Task } from '@/types/entities';
+import { Character, Task } from '@/types/entities';
 import { ClientAPI } from '@/lib/client-api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -172,7 +172,8 @@ const sortGroupedTasks = (groupedTasks: Map<string, EnrichedTask[]>, sortOption:
 function renderTaskHierarchy(
   tasks: EnrichedTask[],
   onSelectTask: ((task: Task) => void) | undefined,
-  sortOption: TaskHistorySort
+  sortOption: TaskHistorySort,
+  ownerNameById: Record<string, string>
 ): JSX.Element {
     // Group tasks by immediate parent
     const groupedTasks = new Map<string, EnrichedTask[]>();
@@ -264,6 +265,13 @@ function renderTaskHierarchy(
                                                             <span className="px-1.5 py-0.5 bg-muted rounded-sm text-[10px] font-semibold uppercase tracking-wider">
                                                                 {(task as any)?.station?.toString()?.trim() || 'Unknown'}
                                                             </span>
+                                                            {task.ownerId ? (
+                                                              ownerNameById[task.ownerId] ? (
+                                                                <span className="text-muted-foreground">
+                                                                  owner: {ownerNameById[task.ownerId]}
+                                                                </span>
+                                                              ) : null
+                                                            ) : null}
                                                             <TaskHistoryDoneCollectedLine task={task} />
                                                         </div>
                                                     </div>
@@ -294,6 +302,7 @@ export type TaskHistorySort = 'done-date' | 'name-asc';
 export default function TaskHistoryView({ onSelectTask, refreshKey = 0 }: TaskHistoryViewProps) {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [ownerNameById, setOwnerNameById] = useState<Record<string, string>>({});
     const {
       availableMonths,
       selectedMonthKey,
@@ -315,6 +324,15 @@ export default function TaskHistoryView({ onSelectTask, refreshKey = 0 }: TaskHi
                 const collectedResponse = await fetch(`/api/tasks/history?month=${monthNum}&year=${yearNum}`);
                 if (collectedResponse.ok) {
                     const collectedData = await collectedResponse.json();
+
+                    const allCharacters = await ClientAPI.getCharacters();
+                    const nextOwnerNameById = allCharacters.reduce<Record<string, string>>((acc, character: Character) => {
+                        if (character?.id && character?.name) {
+                            acc[character.id] = character.name;
+                        }
+                        return acc;
+                    }, {});
+                    setOwnerNameById(nextOwnerNameById);
 
                     // Load all tasks to build parent relationships (using ClientAPI for consistency)
                     const allTasks = reviveDates(await ClientAPI.getTasks());
@@ -414,7 +432,7 @@ export default function TaskHistoryView({ onSelectTask, refreshKey = 0 }: TaskHi
                         <p className="text-sm text-muted-foreground animate-pulse">Rebuilding hierarchy...</p>
                     </div>
                 ) : (
-                    renderTaskHierarchy(tasks, onSelectTask, sortOption)
+                    renderTaskHierarchy(tasks, onSelectTask, sortOption, ownerNameById)
                 )}
             </div>
         </div>

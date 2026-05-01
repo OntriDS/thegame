@@ -67,11 +67,15 @@ export async function POST(
     }
 
     // 3. Spawn next instance
-    const instance = await spawnNextRecurrentInstance(template);
+    const result = await spawnNextRecurrentInstance(template);
+    const instance = result.instance;
 
     if (!instance) {
       return NextResponse.json(
-        { error: 'Could not find a valid next occurrence based on this frequency (all dates used or beyond safety limit).' },
+        {
+          error: result.errorMessage || 'Could not find a valid next occurrence.',
+          errorCode: result.errorCode,
+        },
         { status: 400 }
       );
     }

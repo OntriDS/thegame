@@ -86,6 +86,12 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
     if (code === 'NO_MORE_CUSTOM_DATES') {
       return 'Stopped: no more custom dates.';
     }
+    if (code === 'INSTANCE_ALREADY_EXISTS') {
+      return 'Stopped: no available next occurrence (dates already used).';
+    }
+    if (code === 'INVALID_FREQUENCY_CONFIG') {
+      return 'Stopped: invalid frequency configuration.';
+    }
     if (error) {
       return error;
     }
@@ -313,8 +319,12 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
           detailedMessage = "Safety limit reached. This template has expired based on its End Date or Due Date.";
         } else if (code === 'STOP_TIMES_REACHED') {
           detailedMessage = "Execution limit reached. This template has already spawned the maximum number of times allowed.";
+        } else if (code === 'INSTANCE_ALREADY_EXISTS') {
+          detailedMessage = "Cannot spawn now because the next occurrence already exists.";
         } else if (code === 'NO_MORE_CUSTOM_DATES') {
           detailedMessage = "Custom date list exhausted. There are no more predefined dates left to spawn.";
+        } else if (code === 'INVALID_FREQUENCY_CONFIG') {
+          detailedMessage = "Frequency configuration is invalid and cannot compute the next occurrence.";
         }
 
         setSpawnErrorMessage(detailedMessage);
@@ -518,7 +528,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
                   <Button variant="outline" size="sm" onClick={handleSpawnNext}>
                     Spawn
                   </Button>
-                  <span className="text-[10px] font-medium text-primary">
+                  <span className="text-[8px] md:text-[9px] font-medium text-primary">
                     {isNextSpawnLoading
                       ? 'Calculating...'
                       : nextSpawnDate
