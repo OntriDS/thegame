@@ -24,6 +24,7 @@ import {
   auditMonthIndexAccuracy,
   auditStatusConsistency,
 } from '@/lib/integrity/integrity-audits';
+import { runDatabaseAudit } from '@/lib/integrity/database-auditor';
 import {
   auditActiveTasksMissingFromActiveIndex,
   auditCompletedTasksMissingFromCompletedIndex,
@@ -530,6 +531,14 @@ export async function POST(req: NextRequest) {
           }
         }
         const data = await SummaryService.rebuildAllSummaries();
+        return NextResponse.json({ success: true, data });
+      }
+      case 'thegame.database.audit': {
+        const entityType = parameters.entityType ? String(parameters.entityType).trim() : '';
+        const data = await runDatabaseAudit(entityType);
+        if ('error' in data) {
+          return NextResponse.json({ success: false, error: data.error }, { status: 400 });
+        }
         return NextResponse.json({ success: true, data });
       }
       case 'thegame.logs.patchEntry': {

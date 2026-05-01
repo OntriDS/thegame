@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { iamService } from '@/lib/iam-service';
 import { ItemStatus, ItemType, Collection } from '@/types/enums';
+import { AdminStation } from '@/lib/storage/taxonomy';
 import type { SubItemType } from '@/types/type-aliases';
 import {
   getActiveItems,
@@ -309,7 +310,7 @@ function buildDraftItem(input: {
     name: input.name,
     type: input.type,
     status: NEW_ITEM_STATUS,
-    station: 'strategy',
+    station: AdminStation.STRATEGY,
     stock: [],
     unitCost: 0,
     additionalCost: 0,
@@ -386,11 +387,16 @@ export async function GET(request: NextRequest) {
     const collection = searchParams.get('collection')?.trim() || undefined;
     const search = searchParams.get('search')?.trim().toLowerCase() || undefined;
 
+    // Sanitize multi-category input
+    const categoryArray = category 
+      ? category.split(',').map(c => c.trim()).filter(Boolean) as ItemType[]
+      : [];
+
     // 1. Determine which index to hit - OPTIMIZED
     let items: Item[] = [];
-    if (category) {
-      // UTILIZE Redis Sets index for specific type to prevent loading entire DB
-      items = await getItemsByType(category as ItemType);
+    if (categoryArray.length > 0) {
+      // UTILIZE Redis Sets index for specific type(s) to prevent loading entire DB
+      items = await getItemsByType(categoryArray);
     } else if (statusFilter === 'legacy') {
       items = await getLegacyItems();
     } else if (statusFilter === 'all') {
@@ -421,8 +427,8 @@ export async function GET(request: NextRequest) {
     }
 
     // 3. Filter by Category (ItemType) - redundant if category was used in Step 1, but keeps logic consistent
-    if (category) {
-      filteredItems = filteredItems.filter((i) => i.type === category);
+    if (categoryArray.length > 0) {
+      filteredItems = filteredItems.filter((i) => categoryArray.includes(i.type));
     }
 
     // 4. Filter by Collection

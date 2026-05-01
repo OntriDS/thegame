@@ -6,6 +6,7 @@ import * as DataStore from '@/data-store/datastore';
 import { appendEntityLog, updateEntityLogField } from '@/workflows/entities-logging';
 import { Task, Item, Character, Player, Site, Sale } from '@/types/entities';
 import { ItemStatus, TaskType, TaskStatus, TaskPriority, ItemType, ItemCategory } from '@/types/enums';
+import { AdminStation } from '@/lib/storage/taxonomy';
 import { logger } from '@/lib/utils/logger';
 
 const DEFAULT_LIST_LIMIT = 50;
@@ -177,7 +178,7 @@ export class MCPServer {
           type: TaskType.ASSIGNMENT,
           status: args.status || TaskStatus.CREATED,
           priority: args.priority || TaskPriority.NORMAL,
-          station: 'strategy',
+          station: AdminStation.STRATEGY,
           progress: 0,
           order: 0,
           createdAt: new Date(),
@@ -407,7 +408,7 @@ export class MCPServer {
           description: args.description || '',
           type: args.type as ItemType,
           status: ItemStatus.CREATED,
-          station: 'strategy',
+          station: AdminStation.STRATEGY,
           stock: [],
           createdAt: new Date(),
           updatedAt: new Date(),

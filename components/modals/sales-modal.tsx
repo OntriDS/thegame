@@ -9,11 +9,12 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sale, SaleLine, Item, Discount, Site, Character, Task, ItemSaleLine, ServiceLine, Business, Contract } from '@/types/entities';
-import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, STATION_CATEGORIES, CharacterRole, EntityType, FOUNDER_CHARACTER_ID } from '@/types/enums';
+import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, CharacterRole, EntityType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import type { Station } from '@/types/type-aliases';
+import { ArtDesignStation, SalesStation } from '@/lib/storage/taxonomy';
 import { CurrencyExchangeRates } from '@/lib/constants/financial-constants';
 import { buildAutoSaleName, resolveCanonicalSaleTimelineDate } from '@/lib/utils/sale-auto-name-utils';
-import { getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
+import { getSalesChannelFromSaleType, normalizeStationValue } from '@/lib/utils/business-structure-utils';
 import { createStationCategoryOptions, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
 import { roundCurrency2 } from '@/lib/utils/financial-utils';
 import { getSaleStatusLabel } from '@/lib/constants/status-display-labels';
@@ -176,7 +177,7 @@ export default function SalesModal({
   const [selectedItems, setSelectedItems] = useState<SaleItemLine[]>([]);
   const [recordedPayments, setRecordedPayments] = useState<SalePaymentLine[]>([]);
   const [taskDueDate, setTaskDueDate] = useState<Date | undefined>(undefined);
-  const [taskStation, setTaskStation] = useState<Station>('SALES' as Station);
+  const [taskStation, setTaskStation] = useState<Station>(getSalesChannelFromSaleType(SaleType.DIRECT) || SalesStation.DIRECT_SALES);
   const [salesChannel, setSalesChannel] = useState<Station | null>(null);
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
@@ -447,7 +448,7 @@ export default function SalesModal({
         setTaskRevenue(0);
         setTaskDueDate(undefined);
         setTaskTargetSiteId('');
-        setTaskStation('SALES' as Station);
+        setTaskStation(SalesStation.BOOTH_SALES);
         setManualLines(false);
         setTaskItemData({
           outputItemType: '',
@@ -715,7 +716,7 @@ export default function SalesModal({
     setTaskRevenue(0);
     setTaskDueDate(undefined);
     setTaskTargetSiteId('');
-    setTaskStation('SALES' as Station);
+    setTaskStation(getSalesChannelFromSaleType(SaleType.DIRECT) || SalesStation.DIRECT_SALES);
     setIsNameCustom(false);
   };
 
@@ -1142,7 +1143,7 @@ export default function SalesModal({
     const newLine: SaleLine = {
       lineId: uuid(),
       kind: 'service',
-      station: 'design',
+      station: ArtDesignStation.DESIGN,
       revenue: 0,
       description: '',
       taxAmount: 0,
@@ -1213,7 +1214,7 @@ export default function SalesModal({
     setRevenue(roundCurrency2(Math.max(0, revenue - amount)));
 
     // Set category to Other-Sales
-    setTaskStation(STATION_CATEGORIES.sales[7] as Station); // gallery-store
+    setTaskStation(SalesStation.GALLERY_STORE);
   };
 
   const handleExchangeApplied = (description: string, value: number, category?: string) => {
@@ -1235,9 +1236,9 @@ export default function SalesModal({
 
     // Set category based on exchange category if provided, otherwise default to "Other-Sales"
     if (category) {
-      setTaskStation(category as Station);
+      setTaskStation(normalizeStationValue(category) || SalesStation.GALLERY_STORE);
     } else {
-      setTaskStation(STATION_CATEGORIES.sales[7] as Station); // gallery-store
+      setTaskStation(SalesStation.GALLERY_STORE);
     }
   };
 

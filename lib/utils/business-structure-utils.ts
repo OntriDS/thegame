@@ -4,6 +4,7 @@
 import { BUSINESS_STRUCTURE, COMPANY_AREAS, PERSONAL_AREAS } from '@/types/enums';
 import { SalesStation } from '@/lib/storage/taxonomy';
 import type { Area, Station } from '@/types/type-aliases';
+import { STATION_DISPLAY_LABEL } from '@/lib/constants/business-structure-labels';
 
 // Get all company areas
 export function getCompanyAreas(): readonly Area[] {
@@ -85,4 +86,51 @@ export function getSalesChannelFromSaleType(saleType: string): Station | null {
   };
 
   return typeToChannel[key] ?? null;
+}
+
+/**
+ * Normalize station values coming from UI/API/raw data to a canonical station slug.
+ * Handles:
+ * - canonical slugs: "booth-sales"
+ * - combined values: "sales:booth-sales"
+ * - display labels: "Booth-Sales"
+ */
+export function normalizeStationValue(value: string | Station | null | undefined): Station | null {
+  if (value == null) return null;
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  const stations = getAllStations();
+  const canonicalLookup = new Map<string, Station>(
+    stations.map((station) => [String(station).toLowerCase(), station])
+  );
+
+  const labelLookup = new Map<string, Station>(
+    Object.entries(STATION_DISPLAY_LABEL).map(([station, label]) => [String(label).toLowerCase(), station as Station])
+  );
+
+  const candidates = new Set<string>();
+  const combinedParts = raw.split(':');
+  const tail = combinedParts.length > 1 ? combinedParts[combinedParts.length - 1] : raw;
+
+  candidates.add(raw);
+  candidates.add(raw.toLowerCase());
+  candidates.add(raw.replace(/\s+/g, '-'));
+  candidates.add(raw.replace(/\s+/g, '-').toLowerCase());
+  candidates.add(tail);
+  candidates.add(tail.toLowerCase());
+  candidates.add(tail.replace(/\s+/g, '-'));
+  candidates.add(tail.replace(/\s+/g, '-').toLowerCase());
+
+  for (const candidate of candidates) {
+    if (canonicalLookup.has(candidate)) return canonicalLookup.get(candidate)!;
+  }
+
+  for (const candidate of candidates) {
+    const labelMatch = labelLookup.get(candidate.toLowerCase());
+    if (labelMatch) return labelMatch;
+  }
+
+  return null;
 }

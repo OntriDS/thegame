@@ -3,6 +3,7 @@ import { v4 as uuid } from 'uuid';
 import { getUTCNow, startOfDayUTC } from '@/lib/utils/utc-utils';
 import { iamService } from '@/lib/iam-service';
 import { SaleStatus, SaleType, type Station } from '@/types/enums';
+import { SalesStation } from '@/lib/storage/taxonomy';
 import type { Sale, SaleLine, ItemSaleLine } from '@/types/entities';
 import { upsertSale } from '@/data-store/datastore';
 
@@ -125,7 +126,7 @@ export async function POST(request: NextRequest) {
       siteId: normalizeString(body.siteId) || 'site-akiles-ecosystem',
       counterpartyName: normalizeString(body.counterpartyName) || 'akiles-ecosystem',
       characterId: characterId ?? null,
-      salesChannel: 'online-sales' as Station,
+      salesChannel: SalesStation.ONLINE_SALES as Station,
       lines: lines as SaleLine[],
       totals: total,
       isNotPaid: true,

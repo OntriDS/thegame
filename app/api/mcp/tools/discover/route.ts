@@ -363,6 +363,19 @@ const TOOLS = [
       required: ['entityType', 'entityId'],
     },
   },
+  {
+    id: 'thegame.database.audit',
+    name: 'Universal Database Audit',
+    description: 'Read-only per-entity integrity audits with index/data consistency checks, shape validation, and Rosetta link inspection.',
+    systemId: 'thegame',
+    parameters: {
+      type: 'object',
+      properties: {
+        entityType: { type: 'string', description: 'Entity type to audit (player, task, item, financial, sale, character, site, account)' },
+      },
+      required: ['entityType'],
+    },
+  },
 ];
 
 export async function GET(req: NextRequest) {

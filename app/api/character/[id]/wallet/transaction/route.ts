@@ -5,6 +5,7 @@ import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { EntityType, LinkType, Station } from '@/types/enums';
 import { FinancialRecord } from '@/types/entities';
+import { AdminStation } from '@/lib/storage/taxonomy';
 
 // POST /api/character/[id]/wallet/transaction
 // Body: { type: 'transfer' | 'exchange', amount: number, note?: string }
@@ -36,7 +37,7 @@ export async function POST(
                 description: note || `Manual transfer of ${amount} J$ to ${character.name}`,
                 year: currentDate.getFullYear(),
                 month: currentDate.getMonth() + 1,
-                station: 'Admin' as Station,
+                station: AdminStation.FINANCES as Station,
                 type: 'company',
                 siteId: undefined,
                 cost: 0,
@@ -60,7 +61,7 @@ export async function POST(
                 description: note || `Exchanged ${amount} J$`,
                 year: currentDate.getFullYear(),
                 month: currentDate.getMonth() + 1,
-                station: 'Admin' as Station,
+                station: AdminStation.FINANCES as Station,
                 type: 'company',
                 siteId: undefined,
                 cost: 0,

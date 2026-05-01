@@ -14,6 +14,7 @@ import { ClientAPI } from '@/lib/client-api';
 import { Trash2, Plus } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
 import { ItemType, ItemStatus } from '@/types/enums';
+import { AdminStation } from '@/lib/storage/taxonomy';
 
 // Default values for quick-created items
 /** Sold rows show clean display name; id is rendered in a dedicated row below. */
@@ -25,7 +26,7 @@ function soldRowLabel(resolved: Item | undefined, lineName?: string): string {
 const ITEM_DEFAULTS = {
   type: ItemType.ARTWORK, // Defaulting to Artwork for creative context
   status: ItemStatus.FOR_SALE,
-  station: 'strategy' as const, // Default station
+  station: AdminStation.STRATEGY,
   stock: [],
   unitCost: 0,
   additionalCost: 0,

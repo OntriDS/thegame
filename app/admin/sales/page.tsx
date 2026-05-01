@@ -356,68 +356,63 @@ function SalesPageContent() {
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader className="pb-3 px-6 pt-6">
-          <CardTitle className="text-base font-medium">Active Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Type:</span>
-              <Select value={selectedType} onValueChange={(value) => setSelectedType(value as SaleType | 'all')}>
-                <SelectTrigger className="w-40 h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {Object.values(SaleType).map(type => (
-                    <SelectItem key={type} value={type as string}>{type as string}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Status:</span>
-              <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as SaleStatus | 'all')}>
-                <SelectTrigger className="w-32 h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  {Object.values(SaleStatus).map(status => (
-                    <SelectItem key={status} value={status as string}>{getSaleStatusLabel(status)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Site:</span>
-              <Select value={selectedSite} onValueChange={(value) => setSelectedSite(value)}>
-                <SelectTrigger className="w-40 h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sites</SelectItem>
-                  {getAllSiteNames(sites).map(site => (
-                    <SelectItem key={site} value={site}>{site}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Sales List */}
       <Card>
         <CardHeader>
-          <CardTitle>Sales</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            All sales for the selected month
-          </p>
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div className="min-w-0">
+              <CardTitle>Sales</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                All sales for the selected month
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Type:</span>
+                <Select value={selectedType} onValueChange={(value) => setSelectedType(value as SaleType | 'all')}>
+                  <SelectTrigger className="w-40 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    {Object.values(SaleType).map(type => (
+                      <SelectItem key={type} value={type as string}>{type as string}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Status:</span>
+                <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as SaleStatus | 'all')}>
+                  <SelectTrigger className="w-32 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    {Object.values(SaleStatus).map(status => (
+                      <SelectItem key={status} value={status as string}>{getSaleStatusLabel(status)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Site:</span>
+                <Select value={selectedSite} onValueChange={(value) => setSelectedSite(value)}>
+                  <SelectTrigger className="w-40 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sites</SelectItem>
+                    {getAllSiteNames(sites).map(site => (
+                      <SelectItem key={site} value={site}>{site}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (

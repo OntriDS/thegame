@@ -48,6 +48,7 @@ import {
   SaleStatus,
   CharacterRole,
 } from "@/types/enums";
+import { SalesStation } from "@/lib/storage/taxonomy";
 import {
   Sale,
   SaleLine,
@@ -723,7 +724,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       const newServiceLine: ServiceLine = {
         lineId: newLineId,
         kind: "service",
-        station: "Booth-Sales" as Station,
+        station: SalesStation.BOOTH_SALES as Station,
         // Revenue in USD (Source of Truth for Financials)
         revenue: amountCRC / safeExchangeRate + amountUSD,
         // Descriptive label
@@ -844,7 +845,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         isNotPaid: isNotPaid,
         isNotCharged: isNotCharged,
         siteId: siteId,
-        salesChannel: "Booth-Sales" as Station,
+        salesChannel: SalesStation.BOOTH_SALES as Station,
         characterId: null,
         partnerId:
           viewMode === "Partner" && selectedPartnerId

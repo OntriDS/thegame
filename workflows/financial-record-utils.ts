@@ -19,7 +19,7 @@ import {
 import { makeLink } from '@/links/links-workflows';
 import { createLink, getLinksFor, removeLink } from '@/links/link-registry';
 import { appendEntityLog } from './entities-logging';
-import { getFinancialTypeForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
+import { getFinancialTypeForStation, getSalesChannelFromSaleType, normalizeStationValue } from '@/lib/utils/business-structure-utils';
 import { SalesStation } from '@/lib/storage/taxonomy';
 import type { Station } from '@/types/type-aliases';
 
@@ -489,8 +489,9 @@ async function resolveSaleDerivedFinrecFields(
   const dateToUse = coerceSaleFinrecDate(sale, currentDate);
   const hasChannel =
     sale.salesChannel != null && String(sale.salesChannel).trim() !== '';
+  const normalizedChannel = hasChannel ? normalizeStationValue(sale.salesChannel) : null;
   const salesChannel =
-    (hasChannel ? sale.salesChannel : null) ||
+    normalizedChannel ||
     getSalesChannelFromSaleType(String(sale.type)) ||
     (SalesStation.DIRECT_SALES as Station);
   const station = salesChannel;
