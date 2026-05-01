@@ -76,7 +76,7 @@ export default function DatesSubmodal({
             ? (normalizedStatus === 'charged' || normalizedStatus === 'collected')
         : isFinancial
             ? (normalizedStatus === 'done' || normalizedStatus === 'charged')
-            : (normalizedStatus === 'done' || normalizedStatus === 'failed');
+            : (normalizedStatus === 'done' || normalizedStatus === 'failed' || normalizedStatus === 'collected');
     const showCollectedSection = isSale || isTask;
     const isCollectedAllowed = showCollectedSection && normalizedStatus === 'collected';
 
@@ -134,9 +134,9 @@ export default function DatesSubmodal({
                                     ? 'Set item status to Sold first to unlock this date.'
                                     : isSale
                                         ? 'Please set the sale status to Charged or Collected first to unlock this date.'
-                                                : isFinancial
-                                                    ? 'Please set the financial status to Done (or Charged) first to unlock this date.'
-                                                    : 'Please set the task status to Done or Failed first to unlock this date. Collected has its own Collected date below.'
+                                : isFinancial
+                                        ? 'Please set the financial status to Done (or Charged) first to unlock this date.'
+                                        : 'Please set the task status to Done, Failed, or Collected first to unlock this date.'
                                 }
                             </p>
                         ) : (

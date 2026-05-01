@@ -400,7 +400,6 @@ export default function RecurrentTreeModalContent({
     const determineFinalStatus = () => {
       if (status === TaskStatus.FAILED) return TaskStatus.FAILED;
       if (status === TaskStatus.COLLECTED) return TaskStatus.COLLECTED;
-      if (editingExisting && task?.status === TaskStatus.COLLECTED) return TaskStatus.COLLECTED;
       if (editingExisting && task?.status === TaskStatus.DONE && progress === 100) return TaskStatus.DONE;
       if (progress === 100) return TaskStatus.DONE;
       return status;
@@ -420,7 +419,7 @@ export default function RecurrentTreeModalContent({
       progress,
       dueDate,
       doneAt:
-        finalStatus === TaskStatus.DONE || finalStatus === TaskStatus.FAILED
+        finalStatus === TaskStatus.DONE || finalStatus === TaskStatus.FAILED || finalStatus === TaskStatus.COLLECTED
           ? localDoneAt
           : undefined,
       collectedAt: finalStatus === TaskStatus.COLLECTED ? localCollectedAt : undefined,
@@ -719,30 +718,6 @@ export default function RecurrentTreeModalContent({
                   </div>
                 </Button>
               </div>
-
-              {showScheduler && (
-                <SmartSchedulerSubmodal
-                  open={showScheduler}
-                  onOpenChange={setShowScheduler}
-                  isRecurrent={type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE}
-                  value={{
-                    dueDate,
-                    scheduledStart: scheduledStartDate,
-                    scheduledEnd: scheduledEndDate,
-                    frequencyConfig,
-                    recurrenceStart,
-                    recurrenceEnd,
-                  }}
-                  onChange={(val) => {
-                    setDueDate(val.dueDate);
-                    setScheduledStartDate(val.scheduledStart);
-                    setScheduledEndDate(val.scheduledEnd);
-                    setFrequencyConfig(val.frequencyConfig);
-                    setRecurrenceStart(val.recurrenceStart);
-                    setRecurrenceEnd(val.recurrenceEnd);
-                  }}
-                />
-              )}
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-2">
@@ -1366,6 +1341,8 @@ export default function RecurrentTreeModalContent({
           dueDate,
           scheduledStart: scheduledStartDate,
           scheduledEnd: scheduledEndDate,
+          recurrenceStart,
+          recurrenceEnd,
           frequencyConfig:
             type === TaskType.RECURRENT_GROUP ||
             type === TaskType.RECURRENT_TEMPLATE ||
@@ -1389,6 +1366,8 @@ export default function RecurrentTreeModalContent({
             setScheduledEndDate(undefined);
             setScheduledEndTime('');
           }
+          setRecurrenceStart(val.recurrenceStart);
+          setRecurrenceEnd(val.recurrenceEnd);
           if (
             type === TaskType.RECURRENT_GROUP ||
             type === TaskType.RECURRENT_TEMPLATE ||

@@ -1,8 +1,10 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { iamService } from '@/lib/iam-service';
-import { TaskStatus, TaskType, EntityType } from '@/types/enums';
+import { TaskStatus, TaskType } from '@/types/enums';
 import { getActiveTasks, getTaskById, upsertTask } from '@/data-store/datastore';
 import type { Task } from '@/types/entities';
+import { getUTCNow } from '@/lib/utils/utc-utils';
+import { parseDateToUTC } from '@/lib/utils/date-parsers';
 
 /**
  * M2M Tasks API Endpoint
@@ -88,7 +90,69 @@ export async function PATCH(request: NextRequest) {
     if (authFailure) return authFailure;
 
     const body = await request.json();
-    const { id, status, progress, description, characterId, siteId, priority, cost, revenue, ownerId } = body;
+    const {
+      id,
+      status,
+      progress,
+      description,
+      characterId,
+      siteId,
+      priority,
+      cost,
+      revenue,
+      ownerId,
+      doneAt: rawDoneAt,
+      collectedAt: rawCollectedAt,
+    } = body;
+
+    const normalizedStatus = typeof status === 'string' ? (status as TaskStatus) : undefined;
+
+    if (normalizedStatus === TaskStatus.COLLECTED) {
+      return NextResponse.json(
+        { success: false, error: 'AKILES ecosystem cannot set task status to COLLECTED. Use TheGame reward flow.' },
+        { status: 400 },
+      );
+    }
+
+    if (rawCollectedAt !== undefined) {
+      return NextResponse.json(
+        { success: false, error: 'AKILES ecosystem cannot modify collectedAt. Collection is handled by TheGame.' },
+        { status: 400 },
+      );
+    }
+
+    let explicitDoneAt: Date | undefined = undefined;
+    let explicitCollectedAt: Date | undefined = undefined;
+
+    const parseDateInput = (value: any): Date | undefined => {
+      if (value === undefined) return undefined;
+      if (value === null || value === '') return undefined;
+      try {
+        return parseDateToUTC(value);
+      } catch (error) {
+        return undefined;
+      }
+    };
+
+    if (rawDoneAt !== undefined) {
+      explicitDoneAt = parseDateInput(rawDoneAt);
+      if (explicitDoneAt === undefined && rawDoneAt !== null) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid doneAt value' },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (rawCollectedAt !== undefined) {
+      explicitCollectedAt = parseDateInput(rawCollectedAt);
+      if (explicitCollectedAt === undefined && rawCollectedAt !== null) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid collectedAt value' },
+          { status: 400 },
+        );
+      }
+    }
 
     if (!id) {
       return NextResponse.json(
@@ -113,9 +177,26 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    const nextStatus = normalizedStatus || task.status;
+    const preserveDoneAt =
+      status && (nextStatus === TaskStatus.DONE || nextStatus === TaskStatus.COLLECTED || nextStatus === TaskStatus.FAILED)
+        ? (task.doneAt ?? getUTCNow())
+        : task.doneAt;
+
+    const preserveCollectedAt =
+      status && nextStatus === TaskStatus.COLLECTED
+        ? (task.collectedAt ?? getUTCNow())
+        : task.collectedAt;
+
+    const incomingDoneAt = explicitDoneAt;
+    const incomingCollectedAt = explicitCollectedAt;
+
+    const nextDoneAt = rawDoneAt !== undefined ? incomingDoneAt : preserveDoneAt;
+    const nextCollectedAt = rawCollectedAt !== undefined ? incomingCollectedAt : preserveCollectedAt;
+
     const updatedTask: Task = {
       ...task,
-      ...(status ? { status: status as TaskStatus } : {}),
+      ...(status ? { status: nextStatus } : {}),
       ...(progress !== undefined ? { progress: Number(progress) } : {}),
       ...(description !== undefined ? { description } : {}),
       ...(characterId !== undefined ? { characterId } : {}),
@@ -124,6 +205,10 @@ export async function PATCH(request: NextRequest) {
       ...(cost !== undefined ? { cost: Number(cost) } : {}),
       ...(revenue !== undefined ? { revenue: Number(revenue) } : {}),
       ...(ownerId !== undefined ? { ownerId } : {}),
+      ...(rawDoneAt !== undefined ? { doneAt: nextDoneAt } : {}),
+      ...(rawCollectedAt !== undefined ? { collectedAt: nextCollectedAt } : {}),
+      ...(!rawDoneAt && status ? { doneAt: nextDoneAt } : {}),
+      ...(!rawCollectedAt && status ? { collectedAt: nextCollectedAt } : {}),
       updatedAt: new Date(),
     };
 

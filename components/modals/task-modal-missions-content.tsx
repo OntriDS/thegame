@@ -408,9 +408,6 @@ export default function MissionTreeModalContent({
       if (status === TaskStatus.COLLECTED) {
         return TaskStatus.COLLECTED;
       }
-      if (editingExisting && task?.status === TaskStatus.COLLECTED) {
-        return TaskStatus.COLLECTED;
-      }
       if (editingExisting && task?.status === TaskStatus.DONE && progress === 100) {
         return TaskStatus.DONE;
       }
@@ -434,7 +431,7 @@ export default function MissionTreeModalContent({
       progress,
       dueDate,
       doneAt:
-        finalStatus === TaskStatus.DONE || finalStatus === TaskStatus.FAILED
+        finalStatus === TaskStatus.DONE || finalStatus === TaskStatus.FAILED || finalStatus === TaskStatus.COLLECTED
           ? localDoneAt
           : undefined,
       collectedAt: finalStatus === TaskStatus.COLLECTED ? localCollectedAt : undefined,

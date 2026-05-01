@@ -6,12 +6,12 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { format, addHours, isSameDay, addDays, nextSaturday, nextMonday, startOfToday } from 'date-fns';
+import { format, addHours, addDays, nextSaturday, nextMonday, startOfToday } from 'date-fns';
 import { FrequencyCalendar, FrequencyConfig } from '@/components/ui/frequency-calendar';
 import SimpleTimePicker from '@/components/ui/simple-time-picker';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { getZIndexClass } from '@/lib/utils/z-index-utils';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 export interface ScheduleValue {
     dueDate?: Date;
@@ -263,25 +263,43 @@ export function SmartSchedulerSubmodal({
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="space-y-1">
                                                 <Label className="text-[10px]">Start Boundary</Label>
-                                                <Button 
-                                                    variant="outline" 
-                                                    size="sm" 
-                                                    className="w-full text-[10px] h-7 justify-start font-normal"
-                                                    onClick={() => onChange({ ...value, recurrenceStart: value.scheduledStart || value.dueDate || new Date() })}
-                                                >
-                                                    {value.recurrenceStart ? format(value.recurrenceStart, 'PP') : 'Optional'}
-                                                </Button>
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button variant="outline" size="sm" className="w-full text-[10px] h-7 justify-start font-normal">
+                                                            <CalendarIcon className="mr-2 h-3 w-3" />
+                                                            {value.recurrenceStart ? format(value.recurrenceStart, 'PP') : 'Optional'}
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="p-0" align="start" side="bottom">
+                                                        <Calendar
+                                                            mode="single"
+                                                            selected={value.recurrenceStart}
+                                                            onSelect={handleRecurrenceStartChange}
+                                                            className="rounded-md border"
+                                                            initialFocus
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
                                             </div>
                                             <div className="space-y-1">
                                                 <Label className="text-[10px]">End Boundary</Label>
-                                                <Button 
-                                                    variant="outline" 
-                                                    size="sm" 
-                                                    className="w-full text-[10px] h-7 justify-start font-normal"
-                                                    onClick={() => onChange({ ...value, recurrenceEnd: value.scheduledEnd || value.dueDate || new Date(Date.now() + 30*24*60*60*1000) })}
-                                                >
-                                                    {value.recurrenceEnd ? format(value.recurrenceEnd, 'PP') : 'Optional'}
-                                                </Button>
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button variant="outline" size="sm" className="w-full text-[10px] h-7 justify-start font-normal">
+                                                            <CalendarIcon className="mr-2 h-3 w-3" />
+                                                            {value.recurrenceEnd ? format(value.recurrenceEnd, 'PP') : 'Optional'}
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="p-0" align="start" side="bottom">
+                                                        <Calendar
+                                                            mode="single"
+                                                            selected={value.recurrenceEnd}
+                                                            onSelect={handleRecurrenceEndChange}
+                                                            className="rounded-md border"
+                                                            initialFocus
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
                                             </div>
                                         </div>
                                         <p className="text-[9px] text-muted-foreground leading-tight">
@@ -300,7 +318,7 @@ export function SmartSchedulerSubmodal({
                         variant="ghost"
                         size="sm"
                         className="h-8 text-xs text-muted-foreground hover:text-destructive"
-                        onClick={() => onChange({ dueDate: undefined, scheduledStart: undefined, scheduledEnd: undefined, frequencyConfig: undefined })}
+                        onClick={() => onChange({ dueDate: undefined, scheduledStart: undefined, scheduledEnd: undefined, recurrenceStart: undefined, recurrenceEnd: undefined, frequencyConfig: undefined })}
                     >
                         Clear Schedule
                     </Button>

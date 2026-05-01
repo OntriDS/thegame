@@ -3,7 +3,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { Task } from '@/types/entities';
 import { TaskType, TaskStatus, TaskPriority } from '@/types/enums';
-import { getAllTasks, getActiveTasks, upsertTask, getTasksForMonth } from '@/data-store/datastore';
+import { getAllTasks, getActiveTasks, upsertTask, getTasksForMonth, getTaskById } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 // UTC STANDARDIZATION: Using new UTC utilities
 import { getUTCNow } from '@/lib/utils/utc-utils';
@@ -115,6 +115,8 @@ export async function POST(req: NextRequest) {
       parentId = null;
     }
 
+    const existingTask = taskBody.id ? await getTaskById(taskBody.id) : null;
+
     const task = {
       ...cleanTaskBody,
       id,
@@ -124,7 +126,9 @@ export async function POST(req: NextRequest) {
       createdAt: taskBody.createdAt ? parseDateToUTC(taskBody.createdAt as Date | string | number | null | undefined) : getUTCNow(),
       updatedAt: getUTCNow(),
       dueDate: taskBody.dueDate ? parseDateToUTC(taskBody.dueDate) : undefined,
-      doneAt: taskBody.doneAt ? parseDateToUTC(taskBody.doneAt) : (taskBody.status === TaskStatus.DONE ? getUTCNow() : undefined),
+      doneAt: taskBody.doneAt
+        ? parseDateToUTC(taskBody.doneAt)
+        : existingTask?.doneAt || (taskBody.status === TaskStatus.DONE ? getUTCNow() : undefined),
       collectedAt: taskBody.collectedAt ? parseDateToUTC(taskBody.collectedAt) : undefined,
       frequencyConfig: normalizedFrequencyConfig
     } as unknown as Task;

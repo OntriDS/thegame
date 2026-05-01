@@ -69,11 +69,28 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
   const [spawnErrorMessage, setSpawnErrorMessage] = useState<string | null>(null);
   const [isSpawnErrorOpen, setIsSpawnErrorOpen] = useState(false);
   const [nextSpawnDate, setNextSpawnDate] = useState<Date | null>(null);
+  const [nextSpawnStatusMessage, setNextSpawnStatusMessage] = useState<string | null>(null);
   const [isNextSpawnLoading, setIsNextSpawnLoading] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [editingSubTaskStatusId, setEditingSubTaskStatusId] = useState<string | null>(null);
   const [tempSubTaskStatus, setTempSubTaskStatus] = useState<TaskStatus | ''>('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const getNextSpawnStatusMessage = (error?: string, code?: string) => {
+    if (code === 'SAFETY_LIMIT_EXCEEDED') {
+      return 'Stopped: safety limit exceeded.';
+    }
+    if (code === 'STOP_TIMES_REACHED') {
+      return 'Stopped: spawn count limit reached.';
+    }
+    if (code === 'NO_MORE_CUSTOM_DATES') {
+      return 'Stopped: no more custom dates.';
+    }
+    if (error) {
+      return error;
+    }
+    return 'No next date available.';
+  };
 
   // No initialization needed for ClientAPI
 
@@ -94,6 +111,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
     const loadNextSpawn = async () => {
       if (!node || node.task.type !== TaskType.RECURRENT_TEMPLATE || !node.task.frequencyConfig) {
         setNextSpawnDate(null);
+        setNextSpawnStatusMessage(null);
         return;
       }
       try {
@@ -101,19 +119,19 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
         const resp = await fetch(`/api/tasks/${node.task.id}/spawn-next?preview=1`, { method: 'POST' });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data?.success) {
-          if (data.error) {
-            console.error('Spawn Next Error:', data.error);
-            setNextSpawnDate(null);
-          } else {
-            setNextSpawnDate(null);
-          }
+          const message = getNextSpawnStatusMessage(data?.error, data?.errorCode);
+          console.error('Spawn Next Error:', message);
+          setNextSpawnDate(null);
+          setNextSpawnStatusMessage(message);
           return;
         }
         // Convert UTC midnight date to local for display
         setNextSpawnDate(data.nextDate ? fromRecurrentUTC(new Date(data.nextDate)) : null);
+        setNextSpawnStatusMessage(null);
       } catch (err) {
         console.error('Failed to preview next spawn date:', err);
         setNextSpawnDate(null);
+        setNextSpawnStatusMessage('Unable to load next spawn preview.');
       } finally {
         setIsNextSpawnLoading(false);
       }
@@ -138,11 +156,8 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
   const saveEdit = async () => {
     if (!node || !editingField) return;
 
-    let updatedTask: Task = {
+    const updatedTask: Task = {
       ...node.task,
-      // Clear completion timestamps - The Ribosome will set them if task is completing
-      doneAt: undefined,
-      collectedAt: undefined
     };
 
     switch (editingField) {
@@ -181,8 +196,6 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
   const saveSubTaskStatus = async (subTask: Task, nextStatus: TaskStatus) => {
     const updatedTask: Task = {
       ...subTask,
-      doneAt: undefined,
-      collectedAt: undefined,
       status: nextStatus,
     };
 
@@ -510,7 +523,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
                       ? 'Calculating...'
                       : nextSpawnDate
                         ? `Next: ${formatDisplayDate(nextSpawnDate)}`
-                        : 'No next date'}
+                        : nextSpawnStatusMessage || 'No next date'}
                   </span>
                 </div>
                 {(task.recurrenceStart || task.recurrenceEnd) && (
