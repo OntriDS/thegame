@@ -8,7 +8,7 @@ A gamified admin web-app for business management with Vercel-only architecture. 
 - **TypeScript** for type safety
 - **Tailwind CSS** for styling
 - **Dark mode** by default with theme switching
-- **Vercel KV** data persistence
+- **Upstash Redis** data persistence
 - **Responsive design** with mobile-first approach
 
 ### Core Systems
@@ -39,7 +39,7 @@ A gamified admin web-app for business management with Vercel-only architecture. 
 - Lucide React
 - Framer Motion
 - @dnd-kit for drag-and-drop
-- @vercel/kv for data persistence
+- @upstash/redis for data persistence
 
 ## Getting Started
 
@@ -68,7 +68,7 @@ Following the Rosetta Stone System architecture with clear entity hierarchy:
 ```
 ENUMS → ENTITIES → SECTIONS → MODALS → LINKS ← WORKFLOWS ← LOGGING
                     ↓
-                  DATA-STORE (Vercel KV)
+                  DATA-STORE (Upstash Redis)
                     ↓
                   APIs → MCP (AI Tools)
                     ↓
