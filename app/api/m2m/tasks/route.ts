@@ -123,6 +123,7 @@ export async function PATCH(request: NextRequest) {
       status,
       progress,
       description,
+      name,
       characterId,
       siteId,
       priority,
@@ -134,6 +135,19 @@ export async function PATCH(request: NextRequest) {
     } = body;
 
     const normalizedStatus = typeof status === 'string' ? (status as TaskStatus) : undefined;
+    if (name !== undefined && typeof name !== 'string') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid name value' },
+        { status: 400 },
+      );
+    }
+
+    if (name !== undefined && name.trim().length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Task name cannot be empty' },
+        { status: 400 },
+      );
+    }
 
     if (normalizedStatus === TaskStatus.COLLECTED) {
       return NextResponse.json(
@@ -198,7 +212,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Templates cannot be edited directly (except maybe status, but user says templates are not suppose to be editable)
-    if (task.type === TaskType.RECURRENT_TEMPLATE && (description || cost || revenue || priority || ownerId)) {
+    if (task.type === TaskType.RECURRENT_TEMPLATE && (name || description || cost || revenue || priority || ownerId)) {
        return NextResponse.json(
         { success: false, error: 'Recurrent templates are not editable. Edit instances instead.' },
         { status: 403 },
@@ -242,6 +256,7 @@ export async function PATCH(request: NextRequest) {
       ...task,
       ...(status ? { status: nextStatus } : {}),
       ...(nextProgress !== undefined ? { progress: nextProgress } : {}),
+      ...(name !== undefined ? { name: name.trim() } : {}),
       ...(description !== undefined ? { description } : {}),
       ...(characterId !== undefined ? { characterId } : {}),
       ...(siteId !== undefined ? { siteId } : {}),

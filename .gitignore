@@ -95,3 +95,5 @@ dev-log - copia.json
 .cursor
 
 tsconfig.tsbuildinfo
+
+graphify-out
