@@ -9,6 +9,7 @@ import { ChevronRight, ChevronDown, PlusCircle } from 'lucide-react';
 import { TRANSITION_DURATION_150, TASK_TYPE_ICONS } from '@/lib/constants/app-constants';
 import { TASK_PRIORITY_ICON_COLORS, TASK_STATUS_ICON_COLORS } from '@/lib/constants/color-constants';
 import { getStationFromCombined } from '@/lib/utils/searchable-select-utils';
+import { getStationIconSemanticTextClass } from '@/lib/utils/business-structure-utils';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Tree } from 'react-arborist';
 import type { CursorProps, DragPreviewProps, MoveHandler, NodeRendererProps, TreeApi } from 'react-arborist';
@@ -45,6 +46,30 @@ function collectNodesByType(nodes: TreeNode[], type: TaskType): TreeNode[] {
   return result;
 }
 
+const getTreeTaskIconColorClass = (task: TreeNode['task']): string => {
+  if (task.status === TaskStatus.COLLECTED) {
+    return TASK_STATUS_ICON_COLORS[TaskStatus.COLLECTED];
+  }
+  if (task.status === TaskStatus.DONE) {
+    return TASK_STATUS_ICON_COLORS[TaskStatus.DONE];
+  }
+  if (task.status === TaskStatus.FAILED) {
+    return TASK_STATUS_ICON_COLORS[TaskStatus.FAILED];
+  }
+
+  return getStationIconSemanticTextClass(task.station);
+};
+
+const getTreeTaskTitleColorClass = (task: TreeNode['task']): string => {
+  const priority = task.priority as TaskPriority | undefined;
+  if (priority && priority !== TaskPriority.NORMAL) {
+    const color = TASK_PRIORITY_ICON_COLORS[priority as keyof typeof TASK_PRIORITY_ICON_COLORS];
+    if (color) return color;
+  }
+
+  return '';
+};
+
 
 
 // ——— NEW: TreeNode Component (can use hooks) ———
@@ -72,32 +97,15 @@ const makeDragPreview = (treeRef: React.RefObject<TreeApi<TreeNode>>) =>
     const treeNode = node.data as TreeNode;
     const Icon = TASK_TYPE_ICONS[treeNode.task.type as keyof typeof TASK_TYPE_ICONS] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT];
 
-    const getTaskIconColorClass = (task: TreeNode['task']): string => {
-      if (task.status === TaskStatus.COLLECTED) {
-        return TASK_STATUS_ICON_COLORS[TaskStatus.COLLECTED];
-      }
-      if (task.status === TaskStatus.DONE) {
-        return TASK_STATUS_ICON_COLORS[TaskStatus.DONE];
-      }
-      if (task.status === TaskStatus.FAILED) {
-        return TASK_STATUS_ICON_COLORS[TaskStatus.FAILED];
-      }
-
-      const priority = task.priority as TaskPriority | undefined;
-      if (priority && priority !== TaskPriority.NORMAL) {
-        const color = TASK_PRIORITY_ICON_COLORS[priority as keyof typeof TASK_PRIORITY_ICON_COLORS];
-        if (color) return color;
-      }
-
-      return 'text-muted-foreground';
-    };
-
-    const iconColorClass = getTaskIconColorClass(treeNode.task);
+    const iconColorClass = getTreeTaskIconColorClass(treeNode.task);
+    const titleColorClass = getTreeTaskTitleColorClass(treeNode.task);
 
     return (
       <div className="pointer-events-none select-none rounded-md bg-background/90 shadow-lg ring-1 ring-primary/20 px-3 py-2 flex items-center gap-3">
         <Icon className={`h-4 w-4 ${iconColorClass}`} />
-        <span className="text-sm font-medium truncate max-w-[280px]">{treeNode.task.name}</span>
+        <span className={`text-sm font-medium truncate max-w-[280px] ${titleColorClass}`}>
+          {treeNode.task.name}
+        </span>
       </div>
     );
   };
@@ -422,27 +430,8 @@ export default function TaskTree({
 
       const Icon = TASK_TYPE_ICONS[treeNode.task.type as keyof typeof TASK_TYPE_ICONS] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT];
 
-      const getTaskIconColorClass = (task: TreeNode['task']): string => {
-        if (task.status === TaskStatus.COLLECTED) {
-          return TASK_STATUS_ICON_COLORS[TaskStatus.COLLECTED];
-        }
-        if (task.status === TaskStatus.DONE) {
-          return TASK_STATUS_ICON_COLORS[TaskStatus.DONE];
-        }
-        if (task.status === TaskStatus.FAILED) {
-          return TASK_STATUS_ICON_COLORS[TaskStatus.FAILED];
-        }
-
-        const priority = task.priority as TaskPriority | undefined;
-        if (priority && priority !== TaskPriority.NORMAL) {
-          const color = TASK_PRIORITY_ICON_COLORS[priority as keyof typeof TASK_PRIORITY_ICON_COLORS];
-          if (color) return color;
-        }
-
-        return 'text-muted-foreground';
-      };
-
-      const iconColorClass = getTaskIconColorClass(treeNode.task);
+      const iconColorClass = getTreeTaskIconColorClass(treeNode.task);
+      const titleColorClass = getTreeTaskTitleColorClass(treeNode.task);
 
       const parent = node.parent;
       const siblingCount = parent?.children?.length ?? 1;
@@ -551,7 +540,9 @@ export default function TaskTree({
               )}
             </div>
 
-            <span className="flex-1 truncate text-base font-medium">{treeNode.task.name}</span>
+            <span className={`flex-1 truncate text-base font-medium ${titleColorClass}`}>
+              {treeNode.task.name}
+            </span>
           </button>
         </div>
       );

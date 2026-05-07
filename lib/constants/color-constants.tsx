@@ -102,6 +102,41 @@ export const TASK_STATUS_ICON_COLORS = {
   [TaskStatus.COLLECTED]: 'text-emerald-600 dark:text-emerald-400',
 } as const;
 
+/**
+ * Semantic text classes for station/area color tokens.
+ * Used for icon coloring in tree/task components.
+ */
+export const SEMANTIC_TEXT_CLASSES = {
+  white: 'text-slate-400 dark:text-slate-300',
+  gray: 'text-gray-500 dark:text-gray-400',
+  red: 'text-red-500 dark:text-red-400',
+  purple: 'text-purple-600 dark:text-purple-500',
+  cyan: 'text-cyan-600 dark:text-cyan-400',
+  indigo: 'text-indigo-600 dark:text-indigo-400',
+  turquoise: 'text-teal-600 dark:text-teal-300',
+  orange: 'text-orange-600 dark:text-orange-500',
+  amber: 'text-amber-600 dark:text-amber-400',
+  yellow: 'text-yellow-600 dark:text-yellow-400',
+  brown: 'text-amber-600 dark:text-amber-500',
+  pink: 'text-pink-600 dark:text-pink-400',
+  green: 'text-green-600 dark:text-green-600',
+  royalblue: 'text-blue-600 dark:text-blue-400',
+  violet: 'text-violet-600 dark:text-violet-800',
+  emerald: 'text-emerald-600 dark:text-emerald-500',
+  lime: 'text-lime-600 dark:text-lime-400',
+  fuchsia: 'text-fuchsia-600 dark:text-fuchsia-400',
+  rose: 'text-rose-600 dark:text-rose-400',
+  sky: 'text-sky-600 dark:text-sky-400',
+  stone: 'text-stone-600 dark:text-stone-400',
+} as const;
+
+/**
+ * Convert semantic color token into a tailwind text class.
+ */
+export function getSemanticIconTextClass(color: string): string {
+  return SEMANTIC_TEXT_CLASSES[color as keyof typeof SEMANTIC_TEXT_CLASSES] || 'text-muted-foreground';
+}
+
 /** Task Status Badge Colors - For weekly schedule badges (solid backgrounds) */
 export const TASK_STATUS_BADGE_COLORS = {
   [TaskStatus.CREATED]: 'bg-slate-400/80 text-slate-50',
@@ -169,11 +204,11 @@ export const ROLE_COLORS = {
 export const AREA_COLORS = {
   admin: 'purple',
   research: 'cyan',
-  dev: 'indigo',
-  'art-design': 'turquoise',
+  dev: 'turquoise',
+  'art-design': 'green',
   'maker-space': 'orange',
-  sales: 'yellow',
-  personal: 'brown',
+  sales: 'amber',
+  personal: 'stone',
 } as const;
 
 /**
@@ -184,7 +219,7 @@ export const STATION_COLORS = {
   family: 'pink',
   health: 'green',
   rewards: 'gold',
-  projects: 'royalblue',
+  projects: 'violet',
 } as const;
 
 /**

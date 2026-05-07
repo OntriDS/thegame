@@ -5,6 +5,7 @@ import { BUSINESS_STRUCTURE, COMPANY_AREAS, PERSONAL_AREAS } from '@/types/enums
 import { SalesStation } from '@/lib/storage/taxonomy';
 import type { Area, Station } from '@/types/type-aliases';
 import { STATION_DISPLAY_LABEL } from '@/lib/constants/business-structure-labels';
+import { getStationColor, getSemanticIconTextClass } from '@/lib/constants/color-constants';
 
 // Get all company areas
 export function getCompanyAreas(): readonly Area[] {
@@ -46,6 +47,12 @@ export function getStationSelectValue(station: Station | null | undefined): stri
   if (station == null || String(station).trim() === '') return 'none:';
   const area = getAreaForStation(station);
   return `${area || 'admin'}:${station}`;
+}
+
+export function getStationIconSemanticTextClass(station: Station): string {
+  const area = getAreaForStation(station);
+  const color = getStationColor(station, area ?? undefined);
+  return getSemanticIconTextClass(color);
 }
 
 // Check if a station belongs to company areas
