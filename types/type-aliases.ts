@@ -4,7 +4,6 @@
 // Import the const structures that these types are derived from
 import { 
   BUSINESS_STRUCTURE, 
-  LOCATION_STRUCTURE, 
   NOTE_TAGS, 
   ItemType, 
   ItemCategory,
@@ -22,12 +21,6 @@ import {
 // Business Structure Types
 export type Area = keyof typeof BUSINESS_STRUCTURE;
 export type Station = typeof BUSINESS_STRUCTURE[Area][number];
-
-// Geographic Location Types
-export type Continent = keyof typeof LOCATION_STRUCTURE;
-export type Country = keyof typeof LOCATION_STRUCTURE[Continent];
-export type Region = keyof typeof LOCATION_STRUCTURE[Continent][Country];
-// Settlement is now a proper interface in entities.ts, not a type alias
 
 // Re-export SubType enums as types for backward compatibility
 export type { DigitalSubType, ArtworkSubType, PrintSubType, StickerSubType, MerchSubType, CraftSubType, MaterialSubType, EquipmentSubType, BundleSubType };

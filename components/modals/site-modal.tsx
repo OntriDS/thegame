@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import { Site, PhysicalSiteMetadata, DigitalSiteMetadata, SystemSiteMetadata, Settlement } from '@/types/entities';
+import { Site, PhysicalSiteMetadata, DigitalSiteMetadata, SystemSiteMetadata, Settlement, Region } from '@/types/entities';
 import {
   SiteType,
   SiteStatus,
@@ -58,6 +58,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
   // Physical site fields
   const [settlementId, setSettlementId] = useState<string>('');
   const [settlements, setSettlements] = useState<Settlement[]>([]);
+  const [regions, setRegions] = useState<Region[]>([]);
   const [businessType, setBusinessType] = useState<PhysicalBusinessType>(PhysicalBusinessType.STORAGE);
   const [googleMapsAddress, setGoogleMapsAddress] = useState('');
 
@@ -94,9 +95,20 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
     }
   };
 
+  const loadRegions = async () => {
+    try {
+      const { ClientAPI } = await import('@/lib/client-api');
+      const allRegions = await ClientAPI.getRegions();
+      setRegions(allRegions);
+    } catch (error) {
+      console.error('Failed to load regions:', error);
+    }
+  };
+
   useEffect(() => {
     if (open) {
       loadSettlements();
+      loadRegions();
     }
   }, [open]);
 
@@ -220,6 +232,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
 
       // Refresh settlements list
       await loadSettlements();
+      await loadRegions();
 
       // Select the newly created settlement
       setSettlementId(settlement.id);
@@ -229,12 +242,33 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
     }
   };
 
-  const [settlementOptions, setSettlementOptions] = useState<Array<{ value: string; label: string; category: string }>>([]);
+  const [settlementOptions, setSettlementOptions] = useState<Array<{ value: string; label: string; category: string; group: string }>>([]);
+
+  const regionLookup = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const region of regions) {
+      map.set(region.id, region.name);
+    }
+    return map;
+  }, [regions]);
 
   // Load settlement options when settlements change
   useEffect(() => {
-    setSettlementOptions(createSettlementOptions(settlements));
-  }, [settlements]);
+    setSettlementOptions(createSettlementOptions(settlements, regionLookup));
+  }, [settlements, regionLookup]);
+
+  const handleCreateRegion = async (region: Region): Promise<Region> => {
+    const { ClientAPI } = await import('@/lib/client-api');
+    try {
+      const savedRegion = await ClientAPI.upsertRegion(region);
+      await loadRegions();
+      return savedRegion;
+    } catch (error) {
+      console.error('Failed to save region:', error);
+      alert('Failed to save region. Please try again.');
+      throw error;
+    }
+  };
 
   const handleDeleteComplete = () => {
     setShowDeleteModal(false);
@@ -540,6 +574,8 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
         open={showSettlementModal}
         onOpenChange={setShowSettlementModal}
         onSave={handleSettlementSave}
+        regions={regions}
+        onCreateRegion={handleCreateRegion}
       />
 
       {/* Links Relationships Modal */}

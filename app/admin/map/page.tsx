@@ -1,58 +1,215 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Wrench, Building2, Settings, Cloud, Sparkles, Plus, Search, ArrowUpDown } from "lucide-react";
+import {
+  Map as MapIcon,
+  MapPin,
+  Building2,
+  Cloud,
+  Sparkles,
+  Landmark,
+  Layers,
+  Plus,
+  Search,
+  ArrowUpDown,
+} from "lucide-react";
 import { ClientAPI } from "@/lib/client-api";
 import { SiteModal } from "@/components/modals/site-modal";
-import type { Site } from "@/types/entities";
+import SettlementSubmodal from '@/components/modals/submodals/settlement-submodal';
+import RegionSubmodal from '@/components/modals/submodals/region-submodal';
+import MapWrapper from '@/components/map/map-wrapper';
+import type { Site, Settlement, Region } from "@/types/entities";
 import { SiteType, SiteStatus } from "@/types/enums";
+import type { MapReadModel } from '@/types/map-types';
 import { getSiteStatusLabel } from "@/lib/constants/status-display-labels";
 import { MapDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
+import { OPEN_ENTITY_QUERY, OPEN_ID_QUERY } from '@/lib/utils/entity-admin-deep-links';
+import { adminMapWindowEvents, type CoordPickRequestDetail } from '@/lib/admin-map-events';
+
+type MapGeoDeleteTarget =
+  | { kind: 'settlement'; entity: Settlement }
+  | { kind: 'region'; entity: Region };
 
 function MapPageContent() {
-  const [activeView, setActiveView] = useState('world-map');
+  type ActiveMapView = 'map' | 'sites' | 'settlements' | 'regions';
+  const [activeView, setActiveView] = useState<ActiveMapView>('map');
   const [siteFilter, setSiteFilter] = useState<'all' | SiteType | 'inactive'>('all');
   const [sites, setSites] = useState<Site[]>([]);
+  const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [showSiteModal, setShowSiteModal] = useState(false);
   const [selectedSite, setSelectedSite] = useState<Site | null>(null);
+  const [showSettlementModal, setShowSettlementModal] = useState(false);
+  const [selectedSettlement, setSelectedSettlement] = useState<Settlement | null>(null);
+  const [showRegionModal, setShowRegionModal] = useState(false);
+  const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [mapData, setMapData] = useState<MapReadModel | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [settlementSearch, setSettlementSearch] = useState('');
+  const [regionSearch, setRegionSearch] = useState('');
+  const [isSettlementsLoading, setIsSettlementsLoading] = useState(false);
+  const [isRegionsLoading, setIsRegionsLoading] = useState(false);
+  const [isMapLoading, setIsMapLoading] = useState(false);
+  const [isSitesLoading, setIsSitesLoading] = useState(false);
+  const [isRegionsDataLoaded, setIsRegionsDataLoaded] = useState(false);
+  const [isSettlementsDataLoaded, setIsSettlementsDataLoaded] = useState(false);
+  const [isSitesDataLoaded, setIsSitesDataLoaded] = useState(false);
+  const [isMapDataLoaded, setIsMapDataLoaded] = useState(false);
+  const [coordinatePickSession, setCoordinatePickSession] = useState<{ pickId: string } | null>(null);
+  const [mapDeleteTarget, setMapDeleteTarget] = useState<MapGeoDeleteTarget | null>(null);
+  const [mapDeleteBusy, setMapDeleteBusy] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   
   // Search and sort state
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'type' | 'status' | 'createdAt'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
+  const loadSites = async () => {
+    try {
+      setIsSitesLoading(true);
+      const sitesData = await ClientAPI.getSites();
+      setSites(sitesData || []);
+      setIsSitesDataLoaded(true);
+    } catch (error) {
+      console.error('Failed to load sites:', error);
+      setSites([]);
+      setIsSitesDataLoaded(true);
+    } finally {
+      setIsSitesLoading(false);
+    }
+  };
+
+  const loadSettlements = async () => {
+    try {
+      setIsSettlementsLoading(true);
+      const settlementsData = await ClientAPI.getSettlements();
+      setSettlements(settlementsData || []);
+      setIsSettlementsDataLoaded(true);
+    } catch (error) {
+      console.error('Failed to load settlements:', error);
+    } finally {
+      setIsSettlementsLoading(false);
+    }
+  };
+
+  const loadRegions = async () => {
+    try {
+      setIsRegionsLoading(true);
+      const regionsData = await ClientAPI.getRegions();
+      setRegions(regionsData || []);
+      setIsRegionsDataLoaded(true);
+    } catch (error) {
+      console.error('Failed to load regions:', error);
+      setRegions([]);
+    } finally {
+      setIsRegionsLoading(false);
+    }
+  };
+
+  const loadMapData = async () => {
+    try {
+      setIsMapLoading(true);
+      const mapReadModel = await ClientAPI.getMap();
+      setMapData(mapReadModel);
+      setIsMapDataLoaded(true);
+    } catch (error) {
+      console.error('Failed to load map data:', error);
+      setMapData(null);
+    } finally {
+      setIsMapLoading(false);
+    }
+  };
+
   // Load sites
   useEffect(() => {
     setIsHydrated(true);
-    
-    const loadSites = async () => {
-      try {
-        const sitesData = await ClientAPI.getSites();
-        setSites(sitesData || []);
-      } catch (error) {
-        console.error('Failed to load sites:', error);
-      }
+    const handleSiteUpdate = async () => {
+      await loadSites();
+      setIsMapDataLoaded(false);
     };
-    
-    loadSites();
-
-    // Listen for site updates
-    const handleSiteUpdate = () => {
-      loadSites();
+    const handleSettlementUpdate = async () => {
+      await loadSettlements();
+      setIsMapDataLoaded(false);
     };
-
+    const handleRegionUpdate = async () => {
+      await loadRegions();
+      setIsMapDataLoaded(false);
+    };
+    const handleMapDataRefresh = () => {
+      setIsMapDataLoaded(false);
+    };
     window.addEventListener('sitesUpdated', handleSiteUpdate);
+    window.addEventListener('settlementsUpdated', handleSettlementUpdate);
+    window.addEventListener('regionsUpdated', handleRegionUpdate);
+    window.addEventListener('mapDataRefreshNeeded', handleMapDataRefresh);
+    const handleCoordPickRequest = (ev: Event) => {
+      const ce = ev as CustomEvent<CoordPickRequestDetail>;
+      if (!ce.detail?.pickId) return;
+      setActiveView('map');
+      setCoordinatePickSession({ pickId: ce.detail.pickId });
+    };
+    const handleCoordPickCancelled = () => {
+      setCoordinatePickSession(null);
+    };
+    window.addEventListener(adminMapWindowEvents.requestCoordPick, handleCoordPickRequest);
+    window.addEventListener(adminMapWindowEvents.coordPickCancelled, handleCoordPickCancelled);
     return () => {
       window.removeEventListener('sitesUpdated', handleSiteUpdate);
+      window.removeEventListener('settlementsUpdated', handleSettlementUpdate);
+      window.removeEventListener('regionsUpdated', handleRegionUpdate);
+      window.removeEventListener('mapDataRefreshNeeded', handleMapDataRefresh);
+      window.removeEventListener(adminMapWindowEvents.requestCoordPick, handleCoordPickRequest);
+      window.removeEventListener(adminMapWindowEvents.coordPickCancelled, handleCoordPickCancelled);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    if (activeView === 'sites' && !isSitesDataLoaded) {
+      void loadSites();
+      return;
+    }
+
+    if (activeView === 'settlements') {
+      if (!isSettlementsDataLoaded) void loadSettlements();
+      if (!isRegionsDataLoaded) void loadRegions();
+      return;
+    }
+
+    if (activeView === 'regions' && !isRegionsDataLoaded) {
+      void loadRegions();
+      return;
+    }
+
+    if (activeView === 'map' && !isMapDataLoaded) {
+      void loadMapData();
+    }
+  }, [activeView, isHydrated, isSitesDataLoaded, isSettlementsDataLoaded, isRegionsDataLoaded, isMapDataLoaded, loadSites, loadSettlements, loadRegions, loadMapData]);
+
+  /** Settlement form needs region options; regions were only loaded on the Regions tab before. */
+  useEffect(() => {
+    if (!isHydrated || !showSettlementModal) return;
+    if (!isRegionsDataLoaded) void loadRegions();
+  }, [isHydrated, showSettlementModal, isRegionsDataLoaded]);
 
   const handleSiteSave = async (site: Site) => {
     try {
@@ -78,6 +235,124 @@ function MapPageContent() {
     setShowSiteModal(true);
   };
 
+  const handleManageSettlements = () => {
+    setSelectedSettlement(null);
+    setShowSettlementModal(true);
+  };
+
+  const handleManageRegions = () => {
+    setSelectedRegion(null);
+    setShowRegionModal(true);
+  };
+
+  const handleEditSettlement = (settlement: Settlement) => {
+    setSelectedSettlement(settlement);
+    setShowSettlementModal(true);
+  };
+
+  const handleEditRegion = (region: Region) => {
+    setSelectedRegion(region);
+    setShowRegionModal(true);
+  };
+
+  const handleSettlementSave = async (settlement: Settlement) => {
+    try {
+      const payload: Settlement = {
+        ...settlement,
+        id: settlement.id || `settlement-${Date.now()}`,
+        createdAt: settlement.createdAt || new Date(),
+        updatedAt: new Date()
+      };
+      await ClientAPI.upsertSettlement(payload);
+      window.dispatchEvent(new Event('settlementsUpdated'));
+      setShowSettlementModal(false);
+    } catch (error) {
+      console.error('Failed to save settlement:', error);
+      alert('Failed to save settlement');
+    }
+  };
+
+  const handleDeleteSettlement = (settlement: Settlement) => {
+    setMapDeleteTarget({ kind: 'settlement', entity: settlement });
+  };
+
+  const handleConfirmMapDelete = async () => {
+    if (!mapDeleteTarget) return;
+    setMapDeleteBusy(true);
+    try {
+      if (mapDeleteTarget.kind === 'settlement') {
+        await ClientAPI.deleteSettlement(mapDeleteTarget.entity.id);
+        window.dispatchEvent(new Event('settlementsUpdated'));
+      } else {
+        await ClientAPI.deleteRegion(mapDeleteTarget.entity.id);
+        window.dispatchEvent(new Event('regionsUpdated'));
+      }
+      setMapDeleteTarget(null);
+    } catch (error) {
+      console.error('Failed to delete:', error);
+      alert(
+        mapDeleteTarget.kind === 'settlement'
+          ? 'Failed to delete settlement'
+          : 'Failed to delete region'
+      );
+    } finally {
+      setMapDeleteBusy(false);
+    }
+  };
+
+  const handleRegionSave = async (region: Region) => {
+    try {
+      await ClientAPI.upsertRegion(region);
+      window.dispatchEvent(new Event('regionsUpdated'));
+      setShowRegionModal(false);
+    } catch (error) {
+      console.error('Failed to save region:', error);
+      alert('Failed to save region');
+    }
+  };
+
+  const handleDeleteRegion = (region: Region) => {
+    setMapDeleteTarget({ kind: 'region', entity: region });
+  };
+
+  const handleCreateRegion = async (region: Region): Promise<Region> => {
+    const savedRegion = await ClientAPI.upsertRegion(region);
+    window.dispatchEvent(new Event('regionsUpdated'));
+    return savedRegion;
+  };
+
+  const handleMapRegionShapeSave = (updatedRegion: Region) => {
+    setRegions((current) => current.map((item) => (item.id === updatedRegion.id ? updatedRegion : item)));
+    setMapData((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        regions: current.regions.map((item) => (item.id === updatedRegion.id ? updatedRegion : item))
+      };
+    });
+    setIsMapDataLoaded(true);
+  };
+
+  const handleMapSettlementShapeSave = (updatedSettlement: Settlement) => {
+    setSettlements((current) => current.map((item) => (item.id === updatedSettlement.id ? updatedSettlement : item)));
+    setMapData((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        settlements: current.settlements.map((item) => (item.id === updatedSettlement.id ? updatedSettlement : item))
+      };
+    });
+    setIsMapDataLoaded(true);
+  };
+
+  const regionById = useMemo(() => {
+    const map = new Map<string, Region>();
+    for (const region of regions) {
+      map.set(region.id, region);
+    }
+    return map;
+  }, [regions]);
+
   // Helper to check if site is the protected "None" system site
   const isNoneSite = (site: Site): boolean => {
     return site.metadata.type === SiteType.SYSTEM && (site.name === 'None' || site.id === 'none');
@@ -100,6 +375,28 @@ function MapPageContent() {
     setSelectedSite(site);
     setShowSiteModal(true);
   }, []);
+
+  const clearSiteDeepLink = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (!params.has(OPEN_ENTITY_QUERY) && !params.has(OPEN_ID_QUERY)) {
+      return;
+    }
+
+    params.delete(OPEN_ENTITY_QUERY);
+    params.delete(OPEN_ID_QUERY);
+
+    const target = params.toString()
+      ? `${pathname || '/admin/map'}?${params.toString()}`
+      : (pathname || '/admin/map');
+    router.replace(target, { scroll: false });
+  }, [pathname, router, searchParams]);
+
+  const handleSiteModalOpenChange = useCallback((open: boolean) => {
+    setShowSiteModal(open);
+    if (!open) {
+      clearSiteDeepLink();
+    }
+  }, [clearSiteDeepLink]);
 
   const getSiteTypeColor = (type: SiteType): string => {
     switch (type) {
@@ -185,6 +482,58 @@ function MapPageContent() {
     return filtered;
   }, [sites, siteFilter, searchQuery, sortBy, sortOrder]);
 
+  const filteredSettlements = useMemo(() => {
+    const query = settlementSearch.trim().toLowerCase();
+    const list = settlements.filter((settlement) => {
+      if (!query) return true;
+
+      const text = [
+        settlement.name || '',
+        settlement.regionId || '',
+        regionById.get(settlement.regionId || '')?.name || '',
+        settlement.googleMapsAddress || '',
+        settlement.coordinates?.lat,
+        settlement.coordinates?.lng,
+        settlement.isActive ? 'active' : 'inactive',
+        settlement.id || ''
+      ]
+        .filter((part) => part !== undefined && part !== null)
+        .map((part) => String(part).toLowerCase())
+        .join(' ');
+
+      return text.includes(query);
+    });
+
+    return [...list].sort((a, b) => a.name.localeCompare(b.name));
+  }, [regionById, settlements, settlementSearch]);
+
+  // Regions table uses canonical Region entities and computed settlement counts.
+  type RegionListItem = Region & {
+    settlementsCount: number;
+    parentName?: string;
+  };
+
+  const filteredRegions = useMemo<RegionListItem[]>(() => {
+    const counts = new Map<string, number>();
+    for (const settlement of settlements) {
+      if (!settlement.regionId) continue;
+      counts.set(settlement.regionId, (counts.get(settlement.regionId) || 0) + 1);
+    }
+
+    const query = regionSearch.trim().toLowerCase();
+    const list: RegionListItem[] = regions.map((region) => ({
+      ...region,
+      settlementsCount: counts.get(region.id) || 0,
+      parentName: region.parentId ? regionById.get(region.parentId)?.name : undefined
+    }))
+      .filter((region) => {
+        if (!query) return true;
+        return `${region.name} ${region.settlementsCount}`.toLowerCase().includes(query);
+      });
+
+    return list.sort((a, b) => a.name.localeCompare(b.name));
+  }, [regions, settlements, regionSearch, regionById]);
+  
   if (!isHydrated) {
     return (
       <div className="space-y-6">
@@ -209,23 +558,14 @@ function MapPageContent() {
           </CardHeader>
           <CardContent className="space-y-1">
             <Button
-              variant={activeView === 'world-map' ? 'default' : 'ghost'}
+              variant={activeView === 'map' ? 'default' : 'ghost'}
               className="w-full justify-start"
-              onClick={() => setActiveView('world-map')}
+              onClick={() => setActiveView('map')}
             >
-              <MapPin className="h-4 w-4 mr-2" />
-              World Map
+              <MapIcon className="h-4 w-4 mr-2" />
+              Map
             </Button>
-            
-            <Button
-              variant={activeView === 'world-tools' ? 'default' : 'ghost'}
-              className="w-full justify-start"
-              onClick={() => setActiveView('world-tools')}
-            >
-              <Wrench className="h-4 w-4 mr-2" />
-              World Tools
-            </Button>
-            
+
             <Button
               variant={activeView === 'sites' ? 'default' : 'ghost'}
               className="w-full justify-start"
@@ -233,9 +573,24 @@ function MapPageContent() {
             >
               <Building2 className="h-4 w-4 mr-2" />
               Sites
-              <Badge variant="outline" className="ml-auto">
-                {sites.length}
-              </Badge>
+            </Button>
+
+            <Button
+              variant={activeView === 'settlements' ? 'default' : 'ghost'}
+              className="w-full justify-start"
+              onClick={() => setActiveView('settlements')}
+            >
+              <Landmark className="h-4 w-4 mr-2" />
+              Settlements
+            </Button>
+
+            <Button
+              variant={activeView === 'regions' ? 'default' : 'ghost'}
+              className="w-full justify-start"
+              onClick={() => setActiveView('regions')}
+            >
+              <Layers className="h-4 w-4 mr-2" />
+              Regions
             </Button>
           </CardContent>
         </Card>
@@ -243,40 +598,25 @@ function MapPageContent() {
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-auto">
-        {/* World Map View */}
-        {activeView === 'world-map' && (
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle>World Map</CardTitle>
-            </CardHeader>
-            <CardContent className="flex items-center justify-center h-[calc(100%-5rem)]">
-              <div className="text-center space-y-4">
-                <div className="w-full max-w-2xl h-96 bg-muted rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
-                  <div className="text-muted-foreground text-sm">
-                    Google Maps Placeholder
+        {/* Map View */}
+        {activeView === 'map' && (
+          <Card className="flex h-full min-h-0 flex-col border-0 shadow-none md:border md:shadow-sm">
+            <CardContent className="flex min-h-0 flex-1 flex-col p-3 md:p-4">
+              {mapData ? (
+                <MapWrapper
+                  mapData={mapData}
+                  coordinatePickSession={coordinatePickSession}
+                  onCoordinatePickComplete={() => setCoordinatePickSession(null)}
+                  onRegionShapeSave={handleMapRegionShapeSave}
+                  onSettlementShapeSave={handleMapSettlementShapeSave}
+                />
+              ) : (
+                <div className="grid min-h-[16rem] flex-1 place-items-center rounded-lg border border-border bg-muted">
+                  <div className="text-muted-foreground">
+                    {isMapLoading ? 'Loading map…' : 'Map unavailable'}
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Interactive map coming soon...
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* World Tools View */}
-        {activeView === 'world-tools' && (
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle>World Tools</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-16 text-muted-foreground">
-                <Wrench className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">World Tools</p>
-                <p className="text-sm">Location filters, zoom controls, and map layers</p>
-                <p className="text-xs mt-4">Coming in V0.2</p>
-              </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -292,7 +632,11 @@ function MapPageContent() {
               </Button>
             </CardHeader>
             <CardContent>
-              {sites.length === 0 ? (
+            {isSitesLoading && sites.length === 0 ? (
+              <div className="text-center text-muted-foreground py-16">
+                <p>Loading sites...</p>
+              </div>
+            ) : sites.length === 0 ? (
                 <div className="text-center text-muted-foreground py-16">
                   <Building2 className="h-16 w-16 mx-auto mb-4 opacity-50" />
                   <p className="text-lg font-medium">No sites yet</p>
@@ -421,15 +765,217 @@ function MapPageContent() {
             </CardContent>
           </Card>
         )}
+
+        {/* Settlements View */}
+        {activeView === 'settlements' && (
+          <Card className="h-full">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Settlements</CardTitle>
+              <Button onClick={handleManageSettlements} size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Settlement
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search settlements by name, region, address..."
+                  value={settlementSearch}
+                  onChange={(e) => setSettlementSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              {isSettlementsLoading ? (
+                <div className="text-sm text-muted-foreground">Loading settlements...</div>
+              ) : filteredSettlements.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  <p>No settlements found.</p>
+                  <Button onClick={handleManageSettlements} variant="outline" className="mt-3">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Settlement
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {filteredSettlements.map((settlement) => {
+                    const settlementRegion = regionById.get(settlement.regionId);
+                    return (
+                      <Card
+                        key={settlement.id}
+                        className="cursor-pointer p-4 transition-colors hover:bg-muted/40"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleEditSettlement(settlement)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            handleEditSettlement(settlement);
+                          }
+                        }}
+                      >
+                        <div className="font-medium">{settlement.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {settlementRegion?.name || settlement.regionId}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {settlement.isActive ? 'Active' : 'Inactive'} · {settlement.isUnlocked === true ? 'Unlocked' : 'Locked'}
+                          <span className="mx-2">·</span>
+                          Region: {settlementRegion ? (settlementRegion.isUnlocked === true ? 'unlocked' : 'locked') : 'missing'}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-1 font-mono">
+                          {settlement.id}
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Regions View */}
+        {activeView === 'regions' && (
+          <Card className="h-full">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Regions</CardTitle>
+              <Button onClick={handleManageRegions} size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Region
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search regions by name..."
+                  value={regionSearch}
+                  onChange={(e) => setRegionSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              {isRegionsLoading ? (
+                <div className="text-sm text-muted-foreground">Loading regions...</div>
+              ) : filteredRegions.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  <p>No regions found.</p>
+                  <Button onClick={handleManageRegions} variant="outline" className="mt-3">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Region
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {filteredRegions.map((region) => (
+                    <Card
+                      key={region.id}
+                      className="cursor-pointer p-4 transition-colors hover:bg-muted/40"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleEditRegion(region)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          handleEditRegion(region);
+                        }
+                      }}
+                    >
+                      <div className="font-medium">{region.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        Center: {region.center?.lat?.toFixed?.(6)}, {region.center?.lng?.toFixed?.(6)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Settlements: {region.settlementsCount} · {region.isActive ? 'Active' : 'Inactive'} · {region.isUnlocked === true ? 'Unlocked' : 'Locked'}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1 font-mono">
+                        {region.id}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Site Modal */}
       <SiteModal
         site={selectedSite}
         open={showSiteModal}
-        onOpenChange={setShowSiteModal}
+        onOpenChange={handleSiteModalOpenChange}
         onSave={handleSiteSave}
       />
+      <SettlementSubmodal
+        open={showSettlementModal}
+        onOpenChange={setShowSettlementModal}
+        settlement={selectedSettlement}
+        onSave={handleSettlementSave}
+        onDelete={handleDeleteSettlement}
+        regions={regions}
+        onCreateRegion={handleCreateRegion}
+      />
+      <RegionSubmodal
+        open={showRegionModal}
+        onOpenChange={setShowRegionModal}
+        region={selectedRegion}
+        onSave={handleRegionSave}
+        onDelete={handleDeleteRegion}
+        allRegions={regions}
+      />
+
+      <Dialog
+        open={mapDeleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !mapDeleteBusy) {
+            setMapDeleteTarget(null);
+          }
+        }}
+      >
+        <DialogContent zIndexLayer="SUB_MODALS" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {mapDeleteTarget?.kind === 'settlement' ? 'Delete settlement?' : 'Delete region?'}
+            </DialogTitle>
+            <DialogDescription>
+              {mapDeleteTarget?.kind === 'settlement' ? (
+                <>
+                  <span className="font-medium text-foreground">
+                    &ldquo;{mapDeleteTarget.entity.name}&rdquo;
+                  </span>{' '}
+                  will be removed permanently. This cannot be undone.
+                </>
+              ) : mapDeleteTarget?.kind === 'region' ? (
+                <>
+                  <span className="font-medium text-foreground">
+                    &ldquo;{mapDeleteTarget.entity.name}&rdquo;
+                  </span>{' '}
+                  will be removed permanently. This cannot be undone.
+                </>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={mapDeleteBusy}
+              onClick={() => setMapDeleteTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={mapDeleteBusy}
+              onClick={() => void handleConfirmMapDelete()}
+            >
+              {mapDeleteBusy ? 'Deleting…' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

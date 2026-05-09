@@ -1,4 +1,3 @@
-import type { Continent, Country, Region } from '@/types/type-aliases';
 import {
   SiteType,
   PhysicalBusinessType,
@@ -6,7 +5,7 @@ import {
   SystemSiteType,
 } from '@/types/enums';
 
-const toTitle = (slug: string): string =>
+export const toTitle = (slug: string): string =>
   slug
     .split('-')
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
@@ -51,47 +50,6 @@ export const SYSTEM_SITE_TYPE_LABEL: Record<SystemSiteType, string> = {
   [SystemSiteType.ARCHIVED]: 'Archived',
 };
 
-export const CONTINENT_LABEL: Record<Continent, string> = {
-  'north-america': 'North America',
-  'central-america': 'Central America',
-  'south-america': 'South America',
-};
-
-export const COUNTRY_LABEL: Record<Country, string> = {
-  'united-states': 'United States',
-  canada: 'Canada',
-  'costa-rica': 'Costa Rica',
-  panama: 'Panama',
-  nicaragua: 'Nicaragua',
-  'el-salvador': 'El Salvador',
-  venezuela: 'Venezuela',
-  colombia: 'Colombia',
-  uruguay: 'Uruguay',
-  chile: 'Chile',
-  argentina: 'Argentina',
-  brasil: 'Brazil',
-  peru: 'Peru',
-};
-
-export const REGION_LABEL: Record<Region, string> = {
-  'united-states': 'United States',
-  canada: 'Canada',
-  puntarenas: 'Puntarenas',
-  'san-jose': 'San Jose',
-  guanacaste: 'Guanacaste',
-  limon: 'Limon',
-  panama: 'Panama',
-  nicaragua: 'Nicaragua',
-  'el-salvador': 'El Salvador',
-  'margarita-island': 'Margarita Island',
-  caracas: 'Caracas',
-  bogota: 'Bogota',
-  montevideo: 'Montevideo',
-  santiago: 'Santiago',
-  'buenos-aires': 'Buenos Aires',
-  'rio-de-janeiro': 'Rio de Janeiro',
-  lima: 'Lima',
-};
 
 export function getSiteTypeLabel(siteType: SiteType | string | undefined | null): string {
   if (!siteType) return '';
@@ -129,17 +87,3 @@ export function getSystemSiteTypeLabel(
   return String(siteSubType);
 }
 
-export function getContinentLabel(continent: Continent | string | undefined | null): string {
-  if (!continent) return '';
-  return CONTINENT_LABEL[continent as Continent] || toTitle(String(continent));
-}
-
-export function getCountryLabel(country: Country | string | undefined | null): string {
-  if (!country) return '';
-  return COUNTRY_LABEL[country as Country] || toTitle(String(country));
-}
-
-export function getRegionLabel(region: Region | string | undefined | null): string {
-  if (!region) return '';
-  return REGION_LABEL[region as Region] || toTitle(String(region));
-}

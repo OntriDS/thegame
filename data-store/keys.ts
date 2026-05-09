@@ -132,3 +132,7 @@ export function buildLogMonthsIndexKey(entity: EntityType | string): string {
   return `${NAMESPACE}logs:index:months:${entity}`;
 }
 
+export function buildMapReadModelKey(): string {
+  return `${NAMESPACE}readmodel:map`;
+}
+

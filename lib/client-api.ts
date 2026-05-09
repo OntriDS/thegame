@@ -12,7 +12,8 @@
  * from @/data-store/datastore, which is server-side only.
  */
 
-import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Account, Settlement, AISession, Business, Contract, SummaryTotals } from '@/types/entities';
+import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Account, Settlement, Region, AISession, Business, Contract, SummaryTotals } from '@/types/entities';
+import type { MapReadModel } from '@/types/map-types';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import type { AISystemPreset } from '@/lib/ai/system-presets';
 import { ItemStatus, type CharacterRole } from '@/types/enums';
@@ -677,6 +678,45 @@ export const ClientAPI = {
   deleteSettlement: async (id: string): Promise<void> => {
     const res = await request(`/api/settlements/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete settlement');
+  },
+
+  // ============================================================================
+  // REGIONS - Region management operations
+  // ============================================================================
+  getRegions: async (): Promise<Region[]> => {
+    const res = await request('/api/regions');
+    if (!res.ok) throw new Error('Failed to fetch regions');
+    return await res.json();
+  },
+
+  getRegionById: async (id: string): Promise<Region | null> => {
+    const res = await request(`/api/regions/${id}`);
+    if (!res.ok) return null;
+    return await res.json();
+  },
+
+  upsertRegion: async (region: Region): Promise<Region> => {
+    const res = await request('/api/regions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(region)
+    });
+    if (!res.ok) throw new Error('Failed to save region');
+    return await res.json();
+  },
+
+  deleteRegion: async (id: string): Promise<void> => {
+    const res = await request(`/api/regions/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete region');
+  },
+
+  // ============================================================================
+  // MAP READ MODEL
+  // ============================================================================
+  getMap: async (): Promise<MapReadModel> => {
+    const res = await request('/api/map');
+    if (!res.ok) throw new Error('Failed to fetch map data');
+    return await res.json();
   },
 
   // ============================================================================

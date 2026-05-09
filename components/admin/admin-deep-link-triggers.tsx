@@ -24,7 +24,11 @@ export function SalesDeepLinkTrigger({ onSale }: { onSale: SaleHandler }) {
   const id = searchParams.get(OPEN_ID_QUERY);
 
   useEffect(() => {
-    if (consumedRef.current || entity !== 'sale' || !id) return;
+    if (entity !== 'sale' || !id) {
+      consumedRef.current = false;
+      return;
+    }
+    if (consumedRef.current) return;
     consumedRef.current = true;
     let cancelled = false;
     (async () => {
@@ -48,7 +52,11 @@ export function FinancesDeepLinkTrigger({ onFinancialRecord }: { onFinancialReco
   const id = searchParams.get(OPEN_ID_QUERY);
 
   useEffect(() => {
-    if (consumedRef.current || entity !== 'financial' || !id) return;
+    if (entity !== 'financial' || !id) {
+      consumedRef.current = false;
+      return;
+    }
+    if (consumedRef.current) return;
     consumedRef.current = true;
     let cancelled = false;
     (async () => {
@@ -72,7 +80,11 @@ export function InventoriesDeepLinkTrigger({ onItem }: { onItem: ItemHandler }) 
   const id = searchParams.get(OPEN_ID_QUERY);
 
   useEffect(() => {
-    if (consumedRef.current || entity !== 'item' || !id) return;
+    if (entity !== 'item' || !id) {
+      consumedRef.current = false;
+      return;
+    }
+    if (consumedRef.current) return;
     consumedRef.current = true;
     let cancelled = false;
     (async () => {
@@ -95,7 +107,11 @@ export function MapDeepLinkTrigger({ onSite }: { onSite: SiteHandler }) {
   const id = searchParams.get(OPEN_ID_QUERY);
 
   useEffect(() => {
-    if (consumedRef.current || entity !== 'site' || !id) return;
+    if (entity !== 'site' || !id) {
+      consumedRef.current = false;
+      return;
+    }
+    if (consumedRef.current) return;
     consumedRef.current = true;
     let cancelled = false;
     (async () => {
@@ -118,7 +134,11 @@ export function CharactersDeepLinkTrigger({ onCharacter }: { onCharacter: Charac
   const id = searchParams.get(OPEN_ID_QUERY);
 
   useEffect(() => {
-    if (consumedRef.current || entity !== 'character' || !id) return;
+    if (entity !== 'character' || !id) {
+      consumedRef.current = false;
+      return;
+    }
+    if (consumedRef.current) return;
     consumedRef.current = true;
     let cancelled = false;
     (async () => {
@@ -141,7 +161,11 @@ export function PlayerDeepLinkTrigger({ onPlayer }: { onPlayer: PlayerHandler })
   const id = searchParams.get(OPEN_ID_QUERY);
 
   useEffect(() => {
-    if (consumedRef.current || entity !== 'player' || !id) return;
+    if (entity !== 'player' || !id) {
+      consumedRef.current = false;
+      return;
+    }
+    if (consumedRef.current) return;
     consumedRef.current = true;
     let cancelled = false;
     (async () => {
@@ -164,7 +188,11 @@ export function AccountsDeepLinkTrigger({ onAccount }: { onAccount: AccountHandl
   const id = searchParams.get(OPEN_ID_QUERY);
 
   useEffect(() => {
-    if (consumedRef.current || entity !== 'account' || !id) return;
+    if (entity !== 'account' || !id) {
+      consumedRef.current = false;
+      return;
+    }
+    if (consumedRef.current) return;
     consumedRef.current = true;
     let cancelled = false;
     (async () => {
@@ -187,7 +215,11 @@ export function ControlRoomDeepLinkTrigger({ onTask }: { onTask: TaskHandler }) 
   const id = searchParams.get(OPEN_ID_QUERY);
 
   useEffect(() => {
-    if (consumedRef.current || entity !== 'task' || !id) return;
+    if (entity !== 'task' || !id) {
+      consumedRef.current = false;
+      return;
+    }
+    if (consumedRef.current) return;
     consumedRef.current = true;
     let cancelled = false;
     (async () => {

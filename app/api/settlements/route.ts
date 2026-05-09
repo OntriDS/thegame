@@ -24,11 +24,18 @@ export async function POST(req: NextRequest) {
   if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const body = (await req.json()) as Settlement;
-    const settlement = {
-      ...body,
-      id: body.id || uuid(),
-      createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
+    const raw = (await req.json()) as Settlement & { country?: string; region?: string };
+    if (!raw.regionId) {
+      return NextResponse.json({ error: 'Missing regionId' }, { status: 400 });
+    }
+
+    const { country: _legacyCountry, region: _legacyRegion, ...payload } = raw;
+
+    const settlement: Settlement = {
+      ...payload,
+      id: payload.id || uuid(),
+      createdAt: payload.createdAt ? new Date(payload.createdAt) : new Date(),
+      isUnlocked: payload.isUnlocked ?? false,
       updatedAt: new Date()
     };
     const saved = await upsertSettlement(settlement);

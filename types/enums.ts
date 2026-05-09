@@ -50,38 +50,6 @@ export const FINANCE_DASHBOARD_COMPANY_AREA_KEYS = [
   'sales',
 ] as const;
 
-// ============================================================================
-// LOCATION STRUCTURE
-// ============================================================================
-
-/** Geographic Location Structure - Single source of truth for geographic hierarchy */
-export const LOCATION_STRUCTURE = {
-  'north-america': {
-    'united-states': ['united-states'],
-    canada: ['canada']
-  },
-  'central-america': {
-    'costa-rica': ['puntarenas', 'san-jose', 'guanacaste', 'limon'],
-    panama: ['panama'],
-    nicaragua: ['nicaragua'],
-    'el-salvador': ['el-salvador']
-  },
-  'south-america': {
-    venezuela: ['margarita-island', 'caracas'],
-    colombia: ['bogota'],
-    uruguay: ['montevideo'],
-    chile: ['santiago'],
-    argentina: ['buenos-aires'],
-    brasil: ['rio-de-janeiro'],
-    peru: ['lima']
-  },
-} as const;
-
-// Export the structure for components to use
-export const LOCATION_HIERARCHY = LOCATION_STRUCTURE;
-
-/** Settlement categories for SearchableSelect grouping - based on LOCATION_STRUCTURE regions */
-// SETTLEMENT_CATEGORIES removed - now using dynamic Settlement entities with country field
 
 // ============================================================================
 // SITE ENUMS
@@ -728,6 +696,7 @@ export enum EntityType {
   // INFRA ENTITIES - Supporting Data
   SESSION = 'session',          // AI assistant conversation sessions
   SETTLEMENT = 'settlement',     // Settlement reference data for Sites
+  REGION = 'region',            // Region scene definitions for map camera presets
   BUSINESS = 'business',         // Business Entities for contracts and finance
   CONTRACT = 'contract',        // Financial Contracts between Business Entities
 }

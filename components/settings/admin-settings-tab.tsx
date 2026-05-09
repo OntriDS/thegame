@@ -77,6 +77,7 @@ export function AdminSettingsTab() {
             </CardContent>
           </Card>
         </TabsContent>
+
       </Tabs>
     </TabsContent>
   );

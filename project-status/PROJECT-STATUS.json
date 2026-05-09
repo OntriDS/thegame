@@ -24,7 +24,7 @@
       "status": "in-progress",
       "description": "Complete Maps and Accounts Sections, Improve UI and Gameplay (Player and Characters)",
       "deliverables": [
-        "Make the Map and Sites visible with GoogleMap",
+        "Make the Map and Sites visible in the Map Section",
         "Define if to Create Events Tab in the Control Room",
         "Connect Events to the system and Manage Events, tracking Tasks and Items sales in a specific timeframe",
         "Events temporarily take over regular workflow during time-bound campaigns (e.g. Special Week Sale)",
@@ -85,7 +85,10 @@
       "phaseName": "",
       "status": "not-started",
       "description": "",
-      "deliverables": []
+      "deliverables": [
+        "Use Map MapLibre GL JS (The 3D Engine), 3D Pitch/Tilt. with Civ 6 Isometric theme potential.",
+        "Prepare the foundation for Sci-Fi, Cyberpunk, Massive data glowing in 3D theme"
+      ]
     },
     "phaseX.3": {
       "phaseName": "",

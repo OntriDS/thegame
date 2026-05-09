@@ -2,6 +2,7 @@
 // Settlement and location helper functions
 
 import type { Settlement } from '@/types/entities';
+import { toTitle } from '@/lib/constants/site-taxonomy-labels';
 
 /** Helper function to get all settlements from API */
 export async function getAllSettlements(): Promise<Settlement[]> {
@@ -23,21 +24,29 @@ export async function getAllSettlementNames(): Promise<string[]> {
 /** Helper function to get the category for a given settlement */
 export function getCategoryForSettlement(settlement: Settlement | string): string {
   if (typeof settlement === 'string') {
-    // For backward compatibility, try to find by name
-    return 'Other';
+    return 'Settlement';
   }
-  return settlement.country;
+  return settlement.regionId ? toTitle(settlement.regionId) : 'Unknown';
 }
 
 /** Helper function to get settlements for a given category/country */
-export async function getSettlementsForCategory(category: string): Promise<Settlement[]> {
-  const settlements = await getAllSettlements();
-  return settlements.filter(s => s.country === category);
+export async function getSettlementsForCategory(category: string, settlements: Settlement[] = []): Promise<Settlement[]> {
+  const allSettlements = await getAllSettlements();
+  if (settlements.length > 0) {
+    return settlements.filter(s => (s.regionId && toTitle(s.regionId) === category));
+  }
+
+  return allSettlements.filter(s => (s.regionId && toTitle(s.regionId) === category));
 }
 
 /** Helper function to get all settlement categories/countries */
 export async function getAllSettlementCategories(): Promise<string[]> {
   const settlements = await getAllSettlements();
-  const countries = [...new Set(settlements.map(s => s.country))];
-  return countries.sort();
+  const regions = [...new Set(
+    settlements
+      .map(s => s.regionId)
+      .filter((regionId): regionId is string => Boolean(regionId))
+      .map(toTitle)
+  )];
+  return regions.sort();
 }

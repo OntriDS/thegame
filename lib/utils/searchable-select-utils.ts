@@ -29,7 +29,7 @@ import {
 import type { Area, Station, SubItemType } from '@/types/type-aliases';
 import { getItemTypeLabel, getSubItemTypeLabel } from '@/lib/constants/item-taxonomy-labels';
 import { getAreaDisplayLabel, getStationDisplayLabel } from '@/lib/constants/business-structure-labels';
-import { getCountryLabel, getRegionLabel } from '@/lib/constants/site-taxonomy-labels';
+import { toTitle } from '@/lib/constants/site-taxonomy-labels';
 
 // ============================================================================
 // ITEM HELPERS
@@ -368,16 +368,26 @@ export function createBusinessOptions(businesses: Business[], includeNone = fals
 // LOCATION & SETTLEMENT OPTION CREATORS
 // ============================================================================
 
-export function createSettlementOptions(settlements: Settlement[]) {
-    // Group by Country -> Region -> Settlement
-    // SearchableSelect supports 'group' and 'category'.
-    // We'll use Country as Category, Region as Group.
-    return settlements.map(settlement => ({
+type RegionLookup = Map<string, string>;
+
+export function createSettlementOptions(
+  settlements: Settlement[],
+  regionLookup: RegionLookup = new Map()
+) {
+  return settlements
+    .map(settlement => {
+      const regionId = settlement.regionId || '';
+      const regionName = regionLookup.get(regionId) || toTitle(regionId || 'unassigned');
+      const fallbackRegionCategory = regionId ? 'Regions' : 'Unassigned';
+
+      return {
         value: settlement.id,
         label: settlement.name,
-        group: getRegionLabel(settlement.region),
-        category: getCountryLabel(settlement.country),
-    })).sort((a, b) => a.category.localeCompare(b.category) || a.group.localeCompare(b.group));
+        group: regionName,
+        category: settlement.regionId ? fallbackRegionCategory : 'Unassigned',
+      };
+    })
+    .sort((a, b) => a.category.localeCompare(b.category) || a.group.localeCompare(b.group));
 }
 
 // ============================================================================

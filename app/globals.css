@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 @import "react-resizable/css/styles.css";
+@import "leaflet/dist/leaflet.css";
 
 @layer base {
   :root {

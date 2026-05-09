@@ -24,10 +24,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const body = (await req.json()) as Settlement;
-    const settlement: Settlement = { 
-      ...body, 
+    const raw = (await req.json()) as Settlement & { country?: string; region?: string };
+    if (!raw.regionId) {
+      return NextResponse.json({ error: 'Missing regionId' }, { status: 400 });
+    }
+
+    const { country: _legacyCountry, region: _legacyRegion, ...payload } = raw;
+
+    const settlement: Settlement = {
+      ...payload,
       id: params.id,
+      isUnlocked: payload.isUnlocked ?? false,
       updatedAt: new Date()
     };
     const saved = await upsertSettlement(settlement);

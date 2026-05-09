@@ -5,7 +5,7 @@ import { EntityType, SiteType } from '@/types/enums';
 import type { Site, Settlement, PhysicalSiteMetadata } from '@/types/entities';
 
 const ENTITY = EntityType.SITE;
-const SETTLEMENTS_ENTITY = 'settlements';
+const SETTLEMENT_ENTITY = EntityType.SETTLEMENT;
 
 export async function getAllSites(): Promise<Site[]> {
   const indexKey = buildIndexKey(ENTITY);
@@ -45,23 +45,23 @@ export async function deleteSite(id: string): Promise<void> {
 // ============================================================================
 
 export async function getAllSettlements(): Promise<Settlement[]> {
-  const indexKey = buildIndexKey(SETTLEMENTS_ENTITY);
+  const indexKey = buildIndexKey(SETTLEMENT_ENTITY);
   const ids = await kvSMembers(indexKey);
   if (ids.length === 0) return [];
   
-  const keys = ids.map(id => buildDataKey(SETTLEMENTS_ENTITY, id));
+  const keys = ids.map(id => buildDataKey(SETTLEMENT_ENTITY, id));
   const settlements = await kvMGet<Settlement>(keys);
   return settlements.filter((settlement): settlement is Settlement => settlement !== null);
 }
 
 export async function getSettlementById(id: string): Promise<Settlement | null> {
-  const key = buildDataKey(SETTLEMENTS_ENTITY, id);
+  const key = buildDataKey(SETTLEMENT_ENTITY, id);
   return await kvGet<Settlement>(key);
 }
 
 export async function upsertSettlement(settlement: Settlement): Promise<Settlement> {
-  const key = buildDataKey(SETTLEMENTS_ENTITY, settlement.id);
-  const indexKey = buildIndexKey(SETTLEMENTS_ENTITY);
+  const key = buildDataKey(SETTLEMENT_ENTITY, settlement.id);
+  const indexKey = buildIndexKey(SETTLEMENT_ENTITY);
   
   await kvSet(key, settlement);
   await kvSAdd(indexKey, settlement.id);
@@ -70,8 +70,8 @@ export async function upsertSettlement(settlement: Settlement): Promise<Settleme
 }
 
 export async function removeSettlement(id: string): Promise<void> {
-  const key = buildDataKey(SETTLEMENTS_ENTITY, id);
-  const indexKey = buildIndexKey(SETTLEMENTS_ENTITY);
+  const key = buildDataKey(SETTLEMENT_ENTITY, id);
+  const indexKey = buildIndexKey(SETTLEMENT_ENTITY);
   
   await kvDel(key);
   await kvSRem(indexKey, id);

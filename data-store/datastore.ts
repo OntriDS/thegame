@@ -1,7 +1,7 @@
 // data-store/datastore.ts
 // Orchestration layer: repositories → workflows → links → logging
 
-import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Account, Business, Contract } from '@/types/entities';
+import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Region, Account, Business, Contract } from '@/types/entities';
 import { roundSaleTotals } from '@/lib/utils/financial-utils';
 import { ensureItemSaleLineIds, normalizeSale } from '@/lib/utils/sale-lines-normalize';
 import type { TaskSnapshot, ItemSnapshot, SaleSnapshot, FinancialSnapshot } from '@/types/archive';
@@ -80,6 +80,12 @@ import {
   getSitesBySettlement as repoGetSitesBySettlement,
   getSitesByRadius as repoGetSitesByRadius
 } from './repositories/site.repo';
+import {
+  getAllRegions as repoGetAllRegions,
+  getRegionById as repoGetRegionById,
+  upsertRegion as repoUpsertRegion,
+  removeRegion as repoRemoveRegion
+} from './repositories/region.repo';
 import * as archiveRepo from './repositories/archive.repo';
 import { kvGet, kvSet } from './kv';
 // Import workflow functions dynamically to break circular dependency
@@ -109,6 +115,7 @@ import {
   buildArchiveMonthsKey,
   buildSummaryMonthsKey,
   buildTaskActiveIndexKey,
+  buildMapReadModelKey,
 } from './keys';
 import { isTaskActive, isTaskCompleted } from '@/lib/utils/task-active-utils';
 import { isSoldStatus } from '@/lib/utils/status-utils';
@@ -1449,6 +1456,7 @@ export async function removeContract(id: string): Promise<void> {
 export async function upsertSite(site: Site, options?: { skipWorkflowEffects?: boolean }): Promise<Site> {
   const previous = await repoGetSiteById(site.id);
   const saved = await repoUpsertSite(site);
+  await kvDel(buildMapReadModelKey());
 
   if (!options?.skipWorkflowEffects) {
     const { onSiteUpsert } = await import('@/workflows/entities-workflows/site.workflow');
@@ -1471,6 +1479,7 @@ export async function getSiteById(id: string): Promise<Site | null> {
 export async function removeSite(id: string): Promise<void> {
   const existing = await repoGetSiteById(id);
   await repoDeleteSite(id);
+  await kvDel(buildMapReadModelKey());
   if (existing) {
     // Call site deletion workflow for cleanup
     const { removeSiteEffectsOnDelete } = await import('@/workflows/entities-workflows/site.workflow');
@@ -1491,11 +1500,47 @@ export async function getSettlementById(id: string): Promise<Settlement | null> 
 }
 
 export async function upsertSettlement(settlement: Settlement): Promise<Settlement> {
-  return await repoUpsertSettlement(settlement);
+  const saved = await repoUpsertSettlement(settlement);
+  await kvDel(buildMapReadModelKey());
+  return saved;
 }
 
 export async function removeSettlement(id: string): Promise<void> {
+  await kvDel(buildMapReadModelKey());
   await repoRemoveSettlement(id);
+}
+
+// ============================================================================
+// REGION METHODS
+// ============================================================================
+
+/** Legacy KV rows may omit `isUnlocked`; treat as unlocked so existing maps keep working until re-saved. */
+function normalizeRegionForRead(region: Region): Region {
+  return {
+    ...region,
+    isUnlocked: region.isUnlocked !== undefined ? region.isUnlocked : true,
+  };
+}
+
+export async function getAllRegions(): Promise<Region[]> {
+  const list = await repoGetAllRegions();
+  return list.map(normalizeRegionForRead);
+}
+
+export async function getRegionById(id: string): Promise<Region | null> {
+  const region = await repoGetRegionById(id);
+  return region ? normalizeRegionForRead(region) : null;
+}
+
+export async function upsertRegion(region: Region): Promise<Region> {
+  const saved = await repoUpsertRegion(region);
+  await kvDel(buildMapReadModelKey());
+  return saved;
+}
+
+export async function removeRegion(id: string): Promise<void> {
+  await kvDel(buildMapReadModelKey());
+  await repoRemoveRegion(id);
 }
 
 // ============================================================================

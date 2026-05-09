@@ -69,10 +69,40 @@ export type CustomerCounterpartyRole = (CharacterRole.CUSTOMER | CharacterRole.B
 export interface Settlement {
   id: string;
   name: string;
-  country: string;
-  region: string;
+  regionId: string;
   googleMapsAddress: string;
   coordinates?: { lat: number; lng: number };  // NEW - for future Google Maps integration
+  isActive: boolean;
+  shape?: MapGeometryShape;
+  isUnlocked?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type MapGeometryShapeType = 'rectangle' | 'circle' | 'polygon';
+
+export type MapGeometryShape = {
+  type: MapGeometryShapeType;
+  bounds?: [[number, number], [number, number]];
+  center?: { lat: number; lng: number };
+  radius?: number;
+  /** Up to 8 vertices for admin-drawn polygons */
+  coordinates?: Array<{ lat: number; lng: number }>;
+};
+
+/** Region entity - user-defined geo container for settlements */
+export interface Region {
+  id: string;
+  name: string;
+  center: {
+    lat: number;
+    lng: number;
+  };
+  defaultZoom: number;
+  isUnlocked?: boolean;
+  shape?: MapGeometryShape;
+  maxBounds?: [[number, number], [number, number]];
+  parentId?: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
