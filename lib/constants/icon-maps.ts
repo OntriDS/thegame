@@ -40,6 +40,7 @@ export const FINANCIAL_ENTRY_ICONS: Record<EntityType, React.ElementType> = {
   settlement: Building2,
   business: Briefcase,
   contract: FileCheck,
+  region: MapPin,
 };
 
 export const PLAYER_ENTRY_ICON = Gamepad;

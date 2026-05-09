@@ -159,7 +159,7 @@ function FinancesPageContent() {
     setSelectedMonthKey(monthKeyFromYearMonth(record.year, record.month));
     setActiveTab(record.type === 'company' ? 'company' : 'personal');
     setFinDeepLinkRecord(record);
-  }, []);
+  }, [setSelectedMonthKey]);
 
   const clearFinDeepLinkRecord = useCallback(() => setFinDeepLinkRecord(null), []);
 

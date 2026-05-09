@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetState
 import { MapContainer, Marker, Popup, TileLayer, Tooltip, useMap, useMapEvents, Circle, Rectangle, Polygon, Polyline } from 'react-leaflet';
 import L, { type LatLngBoundsExpression, type LatLngExpression, type LeafletMouseEvent } from 'leaflet';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { OPEN_ENTITY_QUERY, OPEN_ID_QUERY } from '@/lib/utils/entity-admin-deep-links';
 import MapHUD from '@/components/map/map-hud';
 import type { MapMarker, MapReadModel } from '@/types/map-types';
@@ -1200,11 +1201,13 @@ export default function MapBoard({
                       return (
                         <div key={marker.siteId} className="rounded border border-border p-2">
                           <div className="flex items-center gap-2">
-                            <img
-                              src={theme.iconPath}
-                              alt={theme.label}
-                              className="h-4 w-4 rounded-sm"
-                            />
+                              <Image
+                                src={theme.iconPath}
+                                alt={theme.label}
+                                width={16}
+                                height={16}
+                                className="rounded-sm"
+                              />
                             <div className="min-w-0 flex-1">
                               <p className="truncate font-medium">{marker.siteName}</p>
                               <p className="text-[10px] text-muted-foreground">

@@ -48,15 +48,15 @@ export function formatSaleAutoDateDDMMYY(date: Date): string {
 export function getSaleTypeLabelForAutoName(type: SaleType): string {
   switch (type) {
     case SaleType.BOOTH:
-      return 'Booth Sale';
+      return 'booth sale';
     case SaleType.DIRECT:
-      return 'Direct Sale';
+      return 'direct sale';
     case SaleType.NETWORK:
-      return 'Network Sale';
+      return 'network sale';
     case SaleType.ONLINE:
-      return 'Online Sale';
+      return 'online sale';
     default:
-      return 'Sale';
+      return 'sale';
   }
 }
 

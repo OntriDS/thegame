@@ -82,7 +82,7 @@ function MapPageContent() {
   const [sortBy, setSortBy] = useState<'name' | 'type' | 'status' | 'createdAt'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  const loadSites = async () => {
+  const loadSites = useCallback(async () => {
     try {
       setIsSitesLoading(true);
       const sitesData = await ClientAPI.getSites();
@@ -95,9 +95,9 @@ function MapPageContent() {
     } finally {
       setIsSitesLoading(false);
     }
-  };
+  }, []);
 
-  const loadSettlements = async () => {
+  const loadSettlements = useCallback(async () => {
     try {
       setIsSettlementsLoading(true);
       const settlementsData = await ClientAPI.getSettlements();
@@ -108,9 +108,9 @@ function MapPageContent() {
     } finally {
       setIsSettlementsLoading(false);
     }
-  };
+  }, []);
 
-  const loadRegions = async () => {
+  const loadRegions = useCallback(async () => {
     try {
       setIsRegionsLoading(true);
       const regionsData = await ClientAPI.getRegions();
@@ -122,9 +122,9 @@ function MapPageContent() {
     } finally {
       setIsRegionsLoading(false);
     }
-  };
+  }, []);
 
-  const loadMapData = async () => {
+  const loadMapData = useCallback(async () => {
     try {
       setIsMapLoading(true);
       const mapReadModel = await ClientAPI.getMap();
@@ -136,7 +136,7 @@ function MapPageContent() {
     } finally {
       setIsMapLoading(false);
     }
-  };
+  }, []);
 
   // Load sites
   useEffect(() => {
@@ -179,7 +179,7 @@ function MapPageContent() {
       window.removeEventListener(adminMapWindowEvents.requestCoordPick, handleCoordPickRequest);
       window.removeEventListener(adminMapWindowEvents.coordPickCancelled, handleCoordPickCancelled);
     };
-  }, []);
+  }, [loadRegions, loadSettlements, loadSites]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -209,7 +209,7 @@ function MapPageContent() {
   useEffect(() => {
     if (!isHydrated || !showSettlementModal) return;
     if (!isRegionsDataLoaded) void loadRegions();
-  }, [isHydrated, showSettlementModal, isRegionsDataLoaded]);
+  }, [isHydrated, showSettlementModal, isRegionsDataLoaded, loadRegions]);
 
   const handleSiteSave = async (site: Site) => {
     try {

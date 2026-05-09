@@ -91,7 +91,7 @@ function SalesPageContent() {
     setSelectedMonthKey(formatMonthKey(sale.saleDate));
     setEditingSale(sale);
     setShowSalesModal(true);
-  }, []);
+  }, [setSelectedMonthKey]);
 
   // Load sales data & config
   useEffect(() => {

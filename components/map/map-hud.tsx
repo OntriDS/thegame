@@ -1,4 +1,5 @@
 import type { PhysicalBusinessType } from '@/types/enums';
+import Image from 'next/image';
 
 type MapHUDLegendItem = {
   type: PhysicalBusinessType;
@@ -52,10 +53,12 @@ export default function MapHUD({
                 ) : (
                   legend.map((entry) => (
                     <div key={entry.type} className="flex items-center gap-2">
-                      <img
+                      <Image
                         src={entry.iconPath}
                         alt={entry.label}
-                        className="h-4 w-4 rounded-sm"
+                        width={16}
+                        height={16}
+                        className="rounded-sm"
                         style={{ boxShadow: `0 0 8px ${entry.glowColor}` }}
                       />
                       <span className="flex-1">{entry.label}</span>

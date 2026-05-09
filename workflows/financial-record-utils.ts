@@ -764,7 +764,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
     const split = await calculateBoothFinancials(sale);
     const derived = await resolveSaleDerivedFinrecFields(sale);
     const boothTitleBase = composeSaleSourcedFinrecName(sale, derived.siteLabel, split.date);
-    const partnerPayoutRecordName = `${boothTitleBase} • Partner`;
+    const partnerPayoutRecordName = `${boothTitleBase} • partner`;
     const payoutCounterpartyId = split.targetEntityId || null;
 
     // [IDEMPOTENCY CHECK] Load existing records linked to this sale
