@@ -979,8 +979,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
           {/* Booth-Sales Lozenge (Relocated) */}
           <div className="flex items-center gap-1.5 px-2 py-0.5 bg-indigo-500/10 rounded-md border border-indigo-500/20 ml-2">
             <Store className="h-3 w-3 text-indigo-500" />
-            <span className="text-[10px] font-bold text-indigo-500 whitespace-nowrap uppercase tracking-wider">
-              Booth-Sales
+            <span className="text-[10px] font-bold text-indigo-500 whitespace-nowrap tracking-wider">
+              booth-sales
             </span>
           </div>
 

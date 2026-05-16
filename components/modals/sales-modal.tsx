@@ -1470,7 +1470,7 @@ export default function SalesModal({
                     className={`h-8 px-2 text-xs ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                     title={isDisabled ? 'Sale type cannot be changed after creation' : ''}
                   >
-                    {t === SaleType.BOOTH ? 'BOOTH' : t}
+                    {t}
                   </Button>
                 );
               })}
