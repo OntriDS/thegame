@@ -97,3 +97,4 @@ dev-log - copia.json
 tsconfig.tsbuildinfo
 
 graphify-out
+env.local
