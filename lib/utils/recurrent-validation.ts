@@ -103,14 +103,20 @@ export async function validateSpawnOperation(template: Task): Promise<Validation
   // (removed ONCE frequency check to allow manual spawning)
 
   // Check stopsAfter times
-  if (config.stopsAfter?.type === 'times') {
+  const explicitLimit = config.stopsAfter?.type === 'times' ? (config.stopsAfter.value as number) : Infinity;
+  const HARD_SAFETY_LIMIT = 1000;
+  const effectiveLimit = Math.min(explicitLimit, HARD_SAFETY_LIMIT);
+
+  if (effectiveLimit !== Infinity) {
     const existingInstances = await getTasksByParentId(template.id);
     const instanceCount = existingInstances.filter(t => t.type === TaskType.RECURRENT_INSTANCE).length;
-    if (instanceCount >= (config.stopsAfter.value as number)) {
+    if (instanceCount >= effectiveLimit) {
       return {
         isValid: false,
         errorCode: SpawnErrorCode.STOP_TIMES_REACHED,
-        errorMessage: `Maximum ${config.stopsAfter.value} instances reached`
+        errorMessage: instanceCount >= HARD_SAFETY_LIMIT 
+          ? `Hard safety limit of ${HARD_SAFETY_LIMIT} instances reached.`
+          : `Maximum ${explicitLimit} instances reached.`
       };
     }
   }

@@ -488,15 +488,6 @@ export default function RecurrentTreeModalContent({
       if (freq?.type === RecurrentFrequency.ONCE) {
         // ok
       } else {
-        const hasStopCondition =
-          freq?.stopsAfter && (freq.stopsAfter.type === 'times' || freq.stopsAfter.type === 'date');
-        if (!hasStopCondition) {
-          setValidationMessage(
-            'Recurrent templates with repeat frequencies must have a stop condition (times or date) to prevent infinite instance creation.'
-          );
-          setShowValidationModal(true);
-          return;
-        }
         const validation = validateFrequencyConfig(freq);
         if (!validation.isValid) {
           setValidationMessage(validation.error || 'Invalid frequency configuration');

@@ -72,6 +72,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
   const [nextSpawnStatusMessage, setNextSpawnStatusMessage] = useState<string | null>(null);
   const [isNextSpawnLoading, setIsNextSpawnLoading] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [isSpawning, setIsSpawning] = useState(false);
   const [editingSubTaskStatusId, setEditingSubTaskStatusId] = useState<string | null>(null);
   const [tempSubTaskStatus, setTempSubTaskStatus] = useState<TaskStatus | ''>('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -306,7 +307,8 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
   };
 
   const handleSpawnNext = async () => {
-    if (!node) return;
+    if (!node || isSpawning) return;
+    setIsSpawning(true);
     try {
       const response = await fetch(`/api/tasks/${node.task.id}/spawn-next`, { method: 'POST' });
       const data = await response.json().catch(() => ({}));
@@ -336,6 +338,8 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
       console.error('Error spawning next instance:', err);
       setSpawnErrorMessage('Unexpected error while spawning the next instance.');
       setIsSpawnErrorOpen(true);
+    } finally {
+      setIsSpawning(false);
     }
   };
 
@@ -525,8 +529,13 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
             {task.type === TaskType.RECURRENT_TEMPLATE && (
               <div className="flex flex-col items-end gap-1">
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={handleSpawnNext}>
-                    Spawn
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleSpawnNext}
+                    disabled={isSpawning}
+                  >
+                    {isSpawning ? 'Spawning...' : 'Spawn'}
                   </Button>
                   <span className="text-[8px] md:text-[9px] font-medium text-primary">
                     {isNextSpawnLoading
