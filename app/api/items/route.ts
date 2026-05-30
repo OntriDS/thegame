@@ -143,9 +143,11 @@ export async function GET(req: NextRequest) {
   // 5. Sorting and Pagination
   if (true) { // Apply sorting to all requests
     if (searchQuery && !isLegacyTab) {
+       const normalize = (str: string) => str.toLowerCase().replace(/[\s\-_]+/g, '');
+       const normalizedQuery = normalize(searchQuery);
        items = items.filter(item => 
-        (item.name || '').toLowerCase().includes(searchQuery) ||
-        (item.description || '').toLowerCase().includes(searchQuery)
+        normalize(item.name || '').includes(normalizedQuery) ||
+        (item.description ? normalize(item.description).includes(normalizedQuery) : false)
       );
     }
 

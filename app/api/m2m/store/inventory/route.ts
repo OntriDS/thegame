@@ -436,11 +436,13 @@ export async function GET(request: NextRequest) {
       filteredItems = filteredItems.filter((i) => i.collection === collection);
     }
 
-    // 5. Filter by Search (Name or Collection) - UPDATED per instructions
+    // 5. Filter by Search (Name or Collection) - Normalized for space/casing/hyphens
     if (search) {
+      const normalize = (str: string) => str.toLowerCase().replace(/[\s\-_]+/g, '');
+      const normalizedSearch = normalize(search);
       filteredItems = filteredItems.filter((i) => 
-        i.name.toLowerCase().includes(search) || 
-        i.collection?.toLowerCase().includes(search)
+        normalize(i.name).includes(normalizedSearch) || 
+        (i.collection ? normalize(i.collection).includes(normalizedSearch) : false)
       );
     }
 
