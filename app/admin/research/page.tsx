@@ -2,7 +2,7 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Map, FileText, Compass, Zap, CheckCircle, AlertTriangle, X, Bot } from 'lucide-react';
+import { BookOpen, Map, FileText, Compass, Zap, CheckCircle, AlertTriangle, X, Bot, Wrench } from 'lucide-react';
 import { useState, useEffect, Suspense } from 'react';
 import { NotebookType, DevSprintStatus } from '@/types/enums';
 import { getNotebookTypeLabel } from '@/lib/constants/notes-taxonomy-labels';
@@ -13,6 +13,7 @@ import { DiagramsViewerTab } from '@/components/research/diagrams-viewer-tab';
 import { SystemDevelopmentTab } from '@/components/research/system-development-tab';
 import { DevSprintsTab } from '@/components/research/dev-sprints-tab';
 import { AIAssistantTab } from '@/components/research/ai-assistant-tab';
+import { ToolboxesTab } from '@/components/research/toolboxes-tab';
 
 function ResearchPageContent() {
   const { getPreference, setPreference } = useUserPreferences();
@@ -467,7 +468,7 @@ function ResearchPageContent() {
   return (
     <div className="container mx-auto px-4 space-y-6">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="ai-assistant" className="flex items-center gap-2">
             <Bot className="h-4 w-4" />
             AI Assistant
@@ -483,6 +484,10 @@ function ResearchPageContent() {
           <TabsTrigger value="diagrams" className="flex items-center gap-2">
             <Map className="h-4 w-4" />
             Diagrams
+          </TabsTrigger>
+          <TabsTrigger value="toolboxes" className="flex items-center gap-2">
+            <Wrench className="h-4 w-4" />
+            Toolboxes
           </TabsTrigger>
           <TabsTrigger value="notes" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
@@ -513,6 +518,10 @@ function ResearchPageContent() {
         {/* Diagrams Tab (Merged) */}
         <DiagramsViewerTab />
 
+        {/* Toolboxes Tab */}
+        <TabsContent value="toolboxes" className="space-y-6">
+          <ToolboxesTab />
+        </TabsContent>
 
         {/* Notes Tab */}
         <NotesTab

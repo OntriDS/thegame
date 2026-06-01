@@ -1,0 +1,714 @@
+{
+  "tools": [
+    {
+      "id": "get_tasks",
+      "description": "List tasks with optional status filter. Limit is optional.",
+      "tags": [
+        "database",
+        "thegame",
+        "tasks"
+      ],
+      "implementation": "thegame/tools/database/get-tasks.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "universal"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "type": "object"
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of records to return"
+          },
+          "offset": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    {
+      "id": "get_sales",
+      "description": "List sales with optional date range. Limit is optional.",
+      "tags": [
+        "database",
+        "thegame",
+        "sales"
+      ],
+      "implementation": "thegame/tools/database/get-sales.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "universal"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "dateRange": {
+            "type": "object"
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of records to return"
+          },
+          "offset": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    {
+      "id": "get_players",
+      "description": "List players with pagination. Limit is optional.",
+      "tags": [
+        "database",
+        "thegame",
+        "players"
+      ],
+      "implementation": "thegame/tools/database/get-players.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "universal"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of records to return"
+          },
+          "offset": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    {
+      "id": "get_financials",
+      "description": "List financial records. Limit is optional.",
+      "tags": [
+        "database",
+        "thegame",
+        "financials"
+      ],
+      "implementation": "thegame/tools/database/get-financials.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "universal"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of records to return"
+          },
+          "offset": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    {
+      "id": "get_items",
+      "description": "List items. Limit is optional.",
+      "tags": [
+        "database",
+        "thegame",
+        "items"
+      ],
+      "implementation": "thegame/tools/database/get-items.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "universal"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of records to return"
+          },
+          "offset": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    {
+      "id": "get_items_by_category",
+      "description": "List items filtered by item type and/or sub-item type. Limit is optional.",
+      "tags": [
+        "database",
+        "thegame",
+        "items"
+      ],
+      "implementation": "thegame/tools/database/get-items-by-category.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "universal"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "types": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "Single ItemType value (eg. ARTWORK, DIGITAL)"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "One or more ItemType values"
+              }
+            ]
+          },
+          "subTypes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "Single Item subType value"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "One or more Item subType values"
+              }
+            ]
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of records to return"
+          },
+          "offset": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    {
+      "id": "get_item_counts",
+      "description": "Get matching item count by item type and/or sub-item type.",
+      "tags": [
+        "database",
+        "thegame",
+        "items"
+      ],
+      "implementation": "thegame/tools/database/get-item-counts.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "universal"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "types": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "Single ItemType value (eg. ARTWORK, DIGITAL)"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "One or more ItemType values"
+              }
+            ]
+          },
+          "subTypes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "Single Item subType value"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "One or more Item subType values"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "get_sites",
+      "description": "List sites. Limit is optional.",
+      "tags": [
+        "database",
+        "thegame",
+        "sites"
+      ],
+      "implementation": "thegame/tools/database/get-sites.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "universal"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of records to return"
+          },
+          "offset": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    {
+      "id": "get_characters",
+      "description": "List characters. Limit is optional.",
+      "tags": [
+        "database",
+        "thegame",
+        "characters"
+      ],
+      "implementation": "thegame/tools/database/get-characters.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "universal"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of records to return"
+          },
+          "offset": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    {
+      "id": "thegame.integrity.linkConsistency",
+      "description": "Verify link endpoints for entities in the given calendar month.",
+      "tags": [
+        "database",
+        "integrity",
+        "thegame"
+      ],
+      "implementation": "thegame/tools/integrity/link-consistency.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "analyst"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "number",
+            "description": "1-12"
+          },
+          "year": {
+            "type": "number",
+            "description": "e.g. 2026"
+          }
+        },
+        "required": [
+          "month",
+          "year"
+        ]
+      }
+    },
+    {
+      "id": "thegame.integrity.statusConsistency",
+      "description": "Sale/financial status vs payment and collected flags for the month index.",
+      "tags": [
+        "database",
+        "integrity",
+        "thegame"
+      ],
+      "implementation": "thegame/tools/integrity/status-consistency.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "analyst"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "number"
+          },
+          "year": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "month",
+          "year"
+        ]
+      }
+    },
+    {
+      "id": "thegame.integrity.monthIndex",
+      "description": "Compare month indexes to sale dates and financial year/month fields.",
+      "tags": [
+        "database",
+        "integrity",
+        "thegame"
+      ],
+      "implementation": "thegame/tools/integrity/month-index.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "analyst"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "number"
+          },
+          "year": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "month",
+          "year"
+        ]
+      }
+    },
+    {
+      "id": "thegame.integrity.archiveCompleteness",
+      "description": "Collected sales vs archive index and data keys.",
+      "tags": [
+        "database",
+        "integrity",
+        "thegame"
+      ],
+      "implementation": "thegame/tools/integrity/archive-completeness.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "analyst"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "number"
+          },
+          "year": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "month",
+          "year"
+        ]
+      }
+    },
+    {
+      "id": "thegame.integrity.taskTimelineVsMonthIndex",
+      "description": "Audit tasks in History scope for a month: collected index; flags missing or wrong-month doneAt/collectedAt.",
+      "tags": [
+        "database",
+        "integrity",
+        "thegame"
+      ],
+      "implementation": "thegame/tools/integrity/task-timeline-vs-month-index.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "analyst"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "number",
+            "description": "1-12"
+          },
+          "year": {
+            "type": "number",
+            "description": "e.g. 2026"
+          }
+        },
+        "required": [
+          "month",
+          "year"
+        ]
+      }
+    },
+    {
+      "id": "thegame.integrity.completedTasksMissingFromCompletedIndex",
+      "description": "Done or Collected tasks that are not in any monthly tasks index (Redis: thegame:index:task:by-month:MM-YY). No month parameters.",
+      "tags": [
+        "database",
+        "integrity",
+        "thegame"
+      ],
+      "implementation": "thegame/tools/integrity/completed-tasks-missing-from-completed-index.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "analyst"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "id": "thegame.integrity.activeTasksMissingFromActiveIndex",
+      "description": "Tasks not yet Done/Collected that are missing from thegame:index:task:active. No month parameters.",
+      "tags": [
+        "database",
+        "integrity",
+        "thegame"
+      ],
+      "implementation": "thegame/tools/integrity/active-tasks-missing-from-active-index.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "analyst"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "id": "thegame.tasks.repairActiveIndex",
+      "description": "Rebuild thegame:index:task:active from all tasks (excludes ids in any tasks collected-month set). Returns diff counts and id samples.",
+      "tags": [
+        "database",
+        "repair",
+        "thegame"
+      ],
+      "implementation": "thegame/tools/repair/repair-active-index.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "mechanic"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "id": "thegame.tasks.repairCompletedIndex",
+      "description": "Rebuild all thegame:index:task:by-month:MM-YY sets from all tasks marked as Done or Collected. Returns rebuilt months count and id samples.",
+      "tags": [
+        "database",
+        "repair",
+        "thegame"
+      ],
+      "implementation": "thegame/tools/repair/repair-completed-index.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "mechanic"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "id": "thegame.sales.repairSummaries",
+      "description": "Recompute monthly and all-time rolling counters in Redis (salesRevenue, salesVolume, itemsSold, financial revenue/cost, task counts).",
+      "tags": [
+        "database",
+        "repair",
+        "thegame"
+      ],
+      "implementation": "thegame/tools/repair/repair-summaries.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "mechanic"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "monthKey": {
+            "type": "string",
+            "description": "Optional month in MM-YY or MM-YYYY (for example 03-26 or 03-2026). Omit to rebuild all summaries."
+          }
+        }
+      }
+    },
+    {
+      "id": "thegame.summary.describe",
+      "description": "Read month-level summary hash presence, final hash snapshot, and raw month-index counts.",
+      "tags": [
+        "database",
+        "thegame"
+      ],
+      "implementation": "thegame/tools/summary/describe.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "universal"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "monthKey": {
+            "type": "string",
+            "description": "Optional month in MM-YY, MM-YYYY, or YYYY-MM format."
+          }
+        }
+      }
+    },
+    {
+      "id": "thegame.logs.patchEntry",
+      "description": "Patch one entity log row",
+      "tags": [
+        "database",
+        "logs",
+        "thegame"
+      ],
+      "implementation": "thegame/tools/logs/patch-entry.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "mechanic"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "entityType": {
+            "type": "string",
+            "description": "sale | task | item | financial"
+          },
+          "logEntryId": {
+            "type": "string",
+            "description": "UUID of the log entry row"
+          },
+          "entityId": {
+            "type": "string",
+            "description": "Optional; must match entry.entityId if provided"
+          },
+          "newEvent": {
+            "type": "string",
+            "description": "Optional; rename the event"
+          }
+        },
+        "required": [
+          "entityType",
+          "logEntryId"
+        ]
+      }
+    },
+    {
+      "id": "thegame.logs.ensureDone",
+      "description": "Ensure primary lifecycle log for one entity",
+      "tags": [
+        "database",
+        "logs",
+        "thegame"
+      ],
+      "implementation": "thegame/tools/logs/ensure-done.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "mechanic"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "entityType": {
+            "type": "string",
+            "description": "sale | task | item | financial"
+          },
+          "entityId": {
+            "type": "string",
+            "description": "entity id for that type"
+          }
+        },
+        "required": [
+          "entityType",
+          "entityId"
+        ]
+      }
+    },
+    {
+      "id": "thegame.logs.ensureCollected",
+      "description": "Ensure COLLECTED log for one entity",
+      "tags": [
+        "database",
+        "logs",
+        "thegame"
+      ],
+      "implementation": "thegame/tools/logs/ensure-collected.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "mechanic"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "entityType": {
+            "type": "string",
+            "description": "sale | task"
+          },
+          "entityId": {
+            "type": "string",
+            "description": "sale id or task id"
+          }
+        },
+        "required": [
+          "entityType",
+          "entityId"
+        ]
+      }
+    },
+    {
+      "id": "thegame.database.audit",
+      "description": "Read-only per-entity integrity audits with index/data consistency checks, shape validation, and Rosetta link inspection.",
+      "tags": [
+        "database",
+        "audit",
+        "thegame"
+      ],
+      "implementation": "thegame/tools/database/audit.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "analyst"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "entityType": {
+            "type": "string",
+            "description": "Entity type to audit"
+          }
+        },
+        "required": [
+          "entityType"
+        ]
+      }
+    }
+  ]
+}
