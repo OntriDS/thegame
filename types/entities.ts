@@ -963,6 +963,28 @@ export interface Business extends BaseEntity {
   isActive: boolean;
 }
 
+export interface AiAgentEducationState {
+  lessonCreated: boolean;
+  educated: boolean;
+  consolidated: boolean;
+  pro: boolean;
+}
+
+/**
+ * AGENT - Pixelbrain AI Agent (Character Infra-Entity)
+ * 
+ * Represents an autonomous or semi-autonomous worker in the system.
+ */
+export interface Agent extends BaseEntity {
+  slug: string;             // The kebab-case identifier (e.g., "strategist/timer")
+  
+  // Knowledge & Education
+  knowledgeFields: string[]; 
+  educationState: AiAgentEducationState;
+  
+  isActive: boolean;
+}
+
 // Note: Player and Character are SEPARATE but CONNECTED entities
 // - Player: Controls business, has authentication, earns rewards, manages characters
 // - Character: People - customers, family, collaborators (NO business control, NO login)

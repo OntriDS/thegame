@@ -14,6 +14,8 @@ import { SystemDevelopmentTab } from '@/components/research/system-development-t
 import { DevSprintsTab } from '@/components/research/dev-sprints-tab';
 import { AIAssistantTab } from '@/components/research/ai-assistant-tab';
 import { ToolboxesTab } from '@/components/research/toolboxes-tab';
+import { AgentsTab } from './components/agents-tab';
+import { DelegationMatrixTab } from '@/components/research/delegation-matrix-tab';
 
 function ResearchPageContent() {
   const { getPreference, setPreference } = useUserPreferences();
@@ -468,10 +470,14 @@ function ResearchPageContent() {
   return (
     <div className="container mx-auto px-4 space-y-6">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="ai-assistant" className="flex items-center gap-2">
             <Bot className="h-4 w-4" />
             AI Assistant
+          </TabsTrigger>
+          <TabsTrigger value="agents" className="flex items-center gap-2">
+            <Bot className="h-4 w-4" />
+            Agents
           </TabsTrigger>
           <TabsTrigger value="system-development" className="flex items-center gap-2">
             <BookOpen className="h-4 w-4" />
@@ -493,11 +499,20 @@ function ResearchPageContent() {
             <FileText className="h-4 w-4" />
             Notes
           </TabsTrigger>
+          <TabsTrigger value="delegation-matrix" className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4" />
+            Task Matrix
+          </TabsTrigger>
         </TabsList>
 
         {/* AI Assistant Tab */}
         <TabsContent value="ai-assistant" className="space-y-6">
           <AIAssistantTab />
+        </TabsContent>
+
+        {/* Agents Tab */}
+        <TabsContent value="agents" className="space-y-6">
+          <AgentsTab />
         </TabsContent>
 
         {/* System Development Tab */}
@@ -530,6 +545,11 @@ function ResearchPageContent() {
           onUpdateNotes={setNotes}
           onUpdateNotebooks={setNotebooks}
         />
+
+        {/* Delegation Matrix Tab */}
+        <TabsContent value="delegation-matrix" className="space-y-6">
+          <DelegationMatrixTab />
+        </TabsContent>
       </Tabs>
 
       {/* Success/Error Modal */}

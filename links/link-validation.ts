@@ -115,12 +115,13 @@ export function validateLinkTypeCompatibility(
 ): LinkValidationResult {
   // Define valid link type combinations for all 39 link types
   const validCombinations: Record<LinkType, { source: EntityType[], target: EntityType[] }> = {
-    // TASK relationships (6)
+    // TASK relationships (7)
     'TASK_ITEM': { source: [EntityType.TASK], target: [EntityType.ITEM] },
     'TASK_FINREC': { source: [EntityType.TASK], target: [EntityType.FINANCIAL] },
     'TASK_SALE': { source: [EntityType.TASK], target: [EntityType.SALE] },
     'TASK_PLAYER': { source: [EntityType.TASK], target: [EntityType.PLAYER] },
     'TASK_CHARACTER': { source: [EntityType.TASK], target: [EntityType.CHARACTER] },
+    'TASK_AGENT': { source: [EntityType.TASK], target: [EntityType.AGENT] },
     'TASK_SITE': { source: [EntityType.TASK], target: [EntityType.SITE] },
 
     // ITEM relationships (6)
@@ -178,6 +179,9 @@ export function validateLinkTypeCompatibility(
     'ACCOUNT_CHARACTER': { source: [EntityType.ACCOUNT], target: [EntityType.CHARACTER] },
     'PLAYER_ACCOUNT': { source: [EntityType.PLAYER], target: [EntityType.ACCOUNT] },
     'CHARACTER_ACCOUNT': { source: [EntityType.CHARACTER], target: [EntityType.ACCOUNT] },
+
+    // AGENT relationships (1)
+    'AGENT_TASK': { source: [EntityType.AGENT], target: [EntityType.TASK] },
 
     // CONTRACT relationships (1)
     'CONTRACT_CHARACTER': { source: [EntityType.CONTRACT], target: [EntityType.CHARACTER] }
@@ -295,6 +299,8 @@ async function checkReverseDuplicate(
     [LinkType.PLAYER_ACCOUNT]: null,
     [LinkType.ACCOUNT_CHARACTER]: null,
     [LinkType.CHARACTER_ACCOUNT]: null,
+    [LinkType.TASK_AGENT]: null,
+    [LinkType.AGENT_TASK]: null,
     [LinkType.CHARACTER_BUSINESS]: null,
     [LinkType.CONTRACT_CHARACTER]: null,
     [LinkType.SALE_BUSINESS]: null,

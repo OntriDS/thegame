@@ -616,7 +616,11 @@ export enum LinkType {
   TASK_SALE = 'TASK_SALE',      // Task spawned from Sale
   TASK_PLAYER = 'TASK_PLAYER',    // Task earned Player points (only for PLAYERS)
   TASK_CHARACTER = 'TASK_CHARACTER', // Task assigned to Character (customer, team member, etc.)
+  TASK_AGENT = 'TASK_AGENT',    // Task assigned to AI Agent
   TASK_SITE = 'TASK_SITE',      // Task is performed at a Site
+
+  // AGENT relationships
+  AGENT_TASK = 'AGENT_TASK',    // AI Agent owns/performs Task
 
   // ITEM relationships
   ITEM_TASK = 'ITEM_TASK',      // Item was created by Task
@@ -694,6 +698,7 @@ export enum EntityType {
   PLAYER = 'player',        // Players are real people with authentication and progression
 
   // INFRA ENTITIES - Supporting Data
+  AGENT = 'agent',              // Pixelbrain AI Agents with knowledge fields and education state
   SESSION = 'session',          // AI assistant conversation sessions
   SETTLEMENT = 'settlement',     // Settlement reference data for Sites
   REGION = 'region',            // Region scene definitions for map camera presets

@@ -1,5 +1,5 @@
 import { TaskType, ItemType, EntityType } from '@/types/enums';
-import { Network, Box, Boxes, Brush, CheckSquare, Cpu, CircleDollarSign, FilePlus, FileText, Package, Receipt, Scan, ShoppingCart, Truck, Trophy, Target, Gamepad, Bolt, Anvil, CalendarSync, AlarmCheck, MapPin, Folder, Zap, BarChart3, DollarSign, Coins, User, Link as LinkIcon, MessageSquare, Building2, FileCheck, Briefcase, Goal, Layers, Star } from 'lucide-react';
+import { Network, Box, Boxes, Brush, CheckSquare, Cpu, CircleDollarSign, FilePlus, FileText, Package, Receipt, Scan, ShoppingCart, Truck, Trophy, Target, Gamepad, Bolt, Anvil, CalendarSync, AlarmCheck, MapPin, Folder, Zap, BarChart3, DollarSign, Coins, User, Link as LinkIcon, MessageSquare, Building2, FileCheck, Briefcase, Goal, Layers, Star, Bot } from 'lucide-react';
 
 export const TASK_TYPE_ICONS: Record<TaskType, React.ElementType> = {
   [TaskType.MISSION_GROUP]: Network,
@@ -41,6 +41,7 @@ export const FINANCIAL_ENTRY_ICONS: Record<EntityType, React.ElementType> = {
   business: Briefcase,
   contract: FileCheck,
   region: MapPin,
+  agent: Bot,
 };
 
 export const PLAYER_ENTRY_ICON = Gamepad;

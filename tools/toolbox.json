@@ -11,8 +11,7 @@
       "implementation": "thegame/tools/database/get-tasks.ts",
       "roles": [
         "orchestrator",
-        "king",
-        "universal"
+        "king"
       ],
       "parameters": {
         "type": "object",
@@ -41,8 +40,7 @@
       "implementation": "thegame/tools/database/get-sales.ts",
       "roles": [
         "orchestrator",
-        "king",
-        "universal"
+        "king"
       ],
       "parameters": {
         "type": "object",
@@ -71,8 +69,7 @@
       "implementation": "thegame/tools/database/get-players.ts",
       "roles": [
         "orchestrator",
-        "king",
-        "universal"
+        "king"
       ],
       "parameters": {
         "type": "object",
@@ -98,8 +95,7 @@
       "implementation": "thegame/tools/database/get-financials.ts",
       "roles": [
         "orchestrator",
-        "king",
-        "universal"
+        "king"
       ],
       "parameters": {
         "type": "object",
@@ -125,8 +121,7 @@
       "implementation": "thegame/tools/database/get-items.ts",
       "roles": [
         "orchestrator",
-        "king",
-        "universal"
+        "king"
       ],
       "parameters": {
         "type": "object",
@@ -152,8 +147,7 @@
       "implementation": "thegame/tools/database/get-items-by-category.ts",
       "roles": [
         "orchestrator",
-        "king",
-        "universal"
+        "king"
       ],
       "parameters": {
         "type": "object",
@@ -209,8 +203,7 @@
       "implementation": "thegame/tools/database/get-item-counts.ts",
       "roles": [
         "orchestrator",
-        "king",
-        "universal"
+        "king"
       ],
       "parameters": {
         "type": "object",
@@ -259,8 +252,7 @@
       "implementation": "thegame/tools/database/get-sites.ts",
       "roles": [
         "orchestrator",
-        "king",
-        "universal"
+        "king"
       ],
       "parameters": {
         "type": "object",
@@ -286,8 +278,7 @@
       "implementation": "thegame/tools/database/get-characters.ts",
       "roles": [
         "orchestrator",
-        "king",
-        "universal"
+        "king"
       ],
       "parameters": {
         "type": "object",
@@ -566,8 +557,7 @@
       "implementation": "thegame/tools/summary/describe.ts",
       "roles": [
         "orchestrator",
-        "king",
-        "universal"
+        "king"
       ],
       "parameters": {
         "type": "object",
@@ -709,6 +699,22 @@
           "entityType"
         ]
       }
+    },
+    {
+      "id": "sync_university_state",
+      "description": "Parse the university-state.md file from Pixelbrain and upsert all AI Agents into TheGame Database.",
+      "tags": [
+        "core",
+        "thegame",
+        "agents"
+      ],
+      "implementation": "thegame/tools/core/sync-university-state.ts",
+      "roles": [],
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     }
-  ]
+  ],
+  "_AI_NOTE": "No roles means the tool is available to any agent. DO NOT use generic roles like universal or all."
 }

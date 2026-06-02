@@ -1,7 +1,7 @@
 // data-store/datastore.ts
 // Orchestration layer: repositories → workflows → links → logging
 
-import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Region, Account, Business, Contract } from '@/types/entities';
+import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Region, Account, Business, Contract, Agent } from '@/types/entities';
 import { roundSaleTotals } from '@/lib/utils/financial-utils';
 import { ensureItemSaleLineIds, normalizeSale } from '@/lib/utils/sale-lines-normalize';
 import type { TaskSnapshot, ItemSnapshot, SaleSnapshot, FinancialSnapshot } from '@/types/archive';
@@ -55,6 +55,12 @@ import {
   getBusinessById as repoGetBusinessById,
   deleteBusiness as repoDeleteBusiness
 } from './repositories/character.repo';
+import {
+  upsertAgent as repoUpsertAgent,
+  getAllAgents as repoGetAllAgents,
+  getAgentById as repoGetAgentById,
+  deleteAgent as repoDeleteAgent
+} from './repositories/agent.repo';
 import {
   upsertPlayer as repoUpsertPlayer,
   getAllPlayers as repoGetAllPlayers,
@@ -1841,4 +1847,30 @@ export async function getFinancialConversionRates(): Promise<any> {
 
 export async function saveFinancialConversionRates(rates: any): Promise<void> {
   await kvSet('thegame:data:financial-conversion-rates', rates);
+}
+
+// AGENT
+export async function upsertAgent(entity: Agent): Promise<Agent> {
+  const previous = await repoGetAgentById(entity.id);
+  await repoUpsertAgent(entity);
+  if (previous) {
+    await processLinkEntity(entity, EntityType.AGENT);
+  }
+  return entity;
+}
+
+export async function getAllAgents(): Promise<Agent[]> {
+  return await repoGetAllAgents();
+}
+
+export async function getAgentById(id: string): Promise<Agent | null> {
+  return await repoGetAgentById(id);
+}
+
+export async function deleteAgent(id: string): Promise<void> {
+  const previous = await repoGetAgentById(id);
+  await repoDeleteAgent(id);
+  if (previous) {
+    // Additional deletion effects if any
+  }
 }
