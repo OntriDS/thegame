@@ -89,7 +89,7 @@ export function AgentsTab() {
       {agents.length === 0 && !error ? (
         <div className="flex flex-col items-center justify-center h-64 text-muted-foreground space-y-4 bg-background/30 rounded-lg border border-dashed border-primary/20">
           <Bot className="h-12 w-12 opacity-50" />
-          <p>No agents found in TheGame Database. Click "Sync Agents" to populate from university-state.md.</p>
+          <p>No agents found in TheGame Database. Click &quot;Sync Agents&quot; to populate from university-state.md.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
