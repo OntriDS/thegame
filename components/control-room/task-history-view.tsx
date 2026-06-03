@@ -266,11 +266,11 @@ function renderTaskHierarchy(
                                                                 {(task as any)?.station?.toString()?.trim() || 'Unknown'}
                                                             </span>
                                                             {task.ownerId ? (
-                                                              ownerNameById[task.ownerId] ? (
                                                                 <span className="text-muted-foreground">
-                                                                  owner: {ownerNameById[task.ownerId]}
+                                                                    owner: {Array.isArray(task.ownerId) 
+                                                                        ? task.ownerId.map(id => ownerNameById[id] || id).join(', ')
+                                                                        : ownerNameById[task.ownerId] || task.ownerId}
                                                                 </span>
-                                                              ) : null
                                                             ) : null}
                                                             <TaskHistoryDoneCollectedLine task={task} />
                                                         </div>
