@@ -3,11 +3,14 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUp, ArrowDown, MoreVertical } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import OwnerSelectorModal from '@/components/modals/submodals/owner-selector-submodal';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ClientAPI } from '@/lib/client-api';
-import { Character } from '@/types/entities';
+import { Character, Task } from '@/types/entities';
+import { STATION_CATEGORIES } from '@/types/enums';
 
 export interface MatrixTask {
   id: string;
@@ -25,6 +28,7 @@ export interface MatrixTask {
   delegation: string;
   reasons: string;
   notes: string;
+  taskId?: string;
 }
 
 const INITIAL_MOCK_DATA: MatrixTask[] = [
@@ -1155,6 +1159,7 @@ const INITIAL_MOCK_DATA: MatrixTask[] = [
 export function DelegationMatrixTab() {
   const [tasks, setTasks] = useState<MatrixTask[]>(INITIAL_MOCK_DATA);
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [ownerModal, setOwnerModal] = useState<{
     isOpen: boolean;
     taskId: string;
@@ -1164,7 +1169,41 @@ export function DelegationMatrixTab() {
 
   React.useEffect(() => {
     ClientAPI.getCharacters().then(setCharacters).catch(console.error);
+    ClientAPI.getTasks().then(setAllTasks).catch(console.error);
   }, []);
+
+  const taskOptions = React.useMemo(() => {
+    return allTasks.map(t => ({
+      value: t.id,
+      label: t.name,
+      group: t.station ? (t.station.charAt(0).toUpperCase() + t.station.slice(1)) : 'Unassigned'
+    }));
+  }, [allTasks]);
+
+  const getAreaForStation = (stationStr: string) => {
+    for (const [area, stations] of Object.entries(STATION_CATEGORIES)) {
+      if ((stations as readonly string[]).includes(stationStr)) {
+        return area;
+      }
+    }
+    return '';
+  };
+
+  const handleRealTaskSelect = (matrixTaskId: string, selectedTaskId: string) => {
+    const realTask = allTasks.find(t => t.id === selectedTaskId);
+    if (realTask) {
+      setTasks(prev => prev.map(t => {
+        if (t.id !== matrixTaskId) return t;
+        const newArea = realTask.station ? getAreaForStation(realTask.station) : t.area;
+        return {
+          ...t,
+          taskId: selectedTaskId,
+          station: realTask.station || t.station,
+          area: newArea || t.area,
+        };
+      }));
+    }
+  };
 
   const getOwnerDisplay = (idOrName: string) => {
     if (!idOrName) return <span className="text-muted-foreground opacity-50">Unassigned</span>;
@@ -1327,23 +1366,37 @@ export function DelegationMatrixTab() {
 
                 return (
                   <tr key={task.id} className="border-b hover:bg-muted/20 transition-colors">
-                    <td className="p-1 align-top">
-                      <div className="flex flex-col items-center gap-1 opacity-50 hover:opacity-100 transition-opacity mt-1">
-                        <button onClick={() => moveRowUp(index)} disabled={index === 0} className="hover:text-primary disabled:opacity-20"><ArrowUp className="h-4 w-4" /></button>
-                        <button onClick={() => moveRowDown(index)} disabled={index === tasks.length - 1} className="hover:text-primary disabled:opacity-20"><ArrowDown className="h-4 w-4" /></button>
-                      </div>
+                    <td className="p-1 align-top text-center w-8">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger className="opacity-50 hover:opacity-100 transition-opacity mt-1 focus:outline-none">
+                          <MoreVertical className="h-4 w-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                          <DropdownMenuItem onClick={() => moveRowUp(index)} disabled={index === 0}>
+                            <ArrowUp className="h-4 w-4 mr-2" /> Move Up
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => moveRowDown(index)} disabled={index === tasks.length - 1}>
+                            <ArrowDown className="h-4 w-4 mr-2" /> Move Down
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                     <td className="p-1 align-top">
                       <div className="flex gap-1 text-xs mb-1">
-                        <span className="font-semibold">{task.area}</span>
+                        <span className="font-semibold capitalize">{task.area}</span>
                         <span className="text-muted-foreground">&gt;</span>
-                        <span className="italic">{task.station}</span>
+                        <span className="italic capitalize">{task.station}</span>
                         <span className="text-muted-foreground">&gt;</span>
                       </div>
-                      <Input 
-                        value={task.task} 
-                        onChange={(e) => updateTask(task.id, 'task', e.target.value)}
-                        className="h-7 px-2 border-transparent hover:border-input focus:border-input text-sm"
+                      <SearchableSelect
+                        value={task.taskId || ''}
+                        onValueChange={(val) => handleRealTaskSelect(task.id, val)}
+                        options={taskOptions}
+                        autoGroupByCategory={true}
+                        initialLabel={task.task}
+                        placeholder={task.task}
+                        className="h-7 text-sm"
+                        instanceId={`matrix-task-${task.id}`}
                       />
                     </td>
                     <td className="p-1 align-top">
