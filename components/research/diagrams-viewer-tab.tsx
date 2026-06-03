@@ -137,8 +137,8 @@ export function DiagramsViewerTab() {
     };
 
     return (
-        <TabsContent value="diagrams" className="h-[calc(100vh-200px)] min-h-[600px] border border-white/10 rounded-lg overflow-hidden flex shadow-2xl shadow-black/50 bg-[#050505]">
-
+        <TabsContent value="diagrams" className="mt-2">
+            <div className="h-[calc(100vh-200px)] min-h-[600px] border border-white/10 rounded-lg overflow-hidden flex shadow-2xl shadow-black/50 bg-[#050505]">
             {/* Sidebar Navigation */}
             <div className="w-16 flex-shrink-0 border-r border-white/10 bg-black/40 flex flex-col items-center py-4 gap-4 z-10">
                 {diagrams.map(diagram => (
@@ -281,6 +281,7 @@ export function DiagramsViewerTab() {
                     </h3>
                 </div>
 
+            </div>
             </div>
         </TabsContent>
     );
