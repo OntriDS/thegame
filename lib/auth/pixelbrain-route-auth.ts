@@ -14,7 +14,7 @@ export type PixelbrainRouteAuthResult =
 const ALLOWED_ROLES = new Set<CharacterRole>([
   CharacterRole.FOUNDER,
   CharacterRole.TEAM,
-  CharacterRole.AI_AGENT,
+  CharacterRole.AGENT,
 ]);
 
 function hasAllowedRole(roles: (CharacterRole | string | null | undefined)[] | undefined): boolean {

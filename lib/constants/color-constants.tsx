@@ -162,7 +162,7 @@ const SPECIAL_ROLE_CUSTOMER =     'border-1 border-sky-500   bg-sky-400   text-b
 const SPECIAL_ROLE_FAMILY =       'border-1 border-pink-500    bg-pink-300    text-black  hover:bg-pink-600     dark:bg-pink-700    dark:text-white dark:hover:bg-pink-600';
 const SPECIAL_ROLE_PARTNER =      'border-1 border-rose-500    bg-rose-300    text-black  hover:bg-rose-600     dark:bg-rose-800    dark:text-white dark:hover:bg-rose-600';
 const SPECIAL_ROLE_BENEFICIARY =  'border-1 border-fuchsia-500 bg-fuchsia-400 text-black  hover:bg-fuchsia-600  dark:bg-fuchsia-700 dark:text-white dark:hover:bg-fuchsia-600';
-const SPECIAL_ROLE_AI_AGENT =     'border-1 border-stone-500   bg-stone-400   text-black  hover:bg-stone-600    dark:bg-stone-700   dark:text-white dark:hover:bg-stone-600';
+const SPECIAL_ROLE_AGENT =     'border-1 border-stone-500   bg-stone-400   text-black  hover:bg-stone-600    dark:bg-stone-700   dark:text-white dark:hover:bg-stone-600';
 const REGULAR_ROLE_DEFAULT =      'border-1 border-slate-500   bg-slate-300   text-black  hover:bg-slate-600    dark:bg-slate-800   dark:text-white dark:hover:bg-slate-600';
 
 export const ROLE_COLORS = {
@@ -174,7 +174,7 @@ export const ROLE_COLORS = {
   [toRoleKey(CharacterRole.TOKENHOLDER)]: SPECIAL_ROLE_TOKENHOLDER,
   [toRoleKey(CharacterRole.FAMILY)]: SPECIAL_ROLE_FAMILY,
   [toRoleKey(CharacterRole.PARTNER)]: SPECIAL_ROLE_PARTNER,
-  [toRoleKey(CharacterRole.AI_AGENT)]: SPECIAL_ROLE_AI_AGENT,
+  [toRoleKey(CharacterRole.AGENT)]: SPECIAL_ROLE_AGENT,
   [toRoleKey(CharacterRole.CUSTOMER)]: SPECIAL_ROLE_CUSTOMER,
   [toRoleKey(CharacterRole.BENEFICIARY)]: SPECIAL_ROLE_BENEFICIARY,
   // Regular Roles - all use the same neutral styling

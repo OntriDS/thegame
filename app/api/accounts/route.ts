@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
       character: {
         id: 'system',
         name: app.appId,
-        roles: [CharacterRole.AI_AGENT],
+        roles: [CharacterRole.AGENT],
         accountId: 'system',
         description: 'System-managed M2M Application',
         achievementsCharacter: [],

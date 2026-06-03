@@ -459,7 +459,7 @@ export const PAYMENT_METHOD_CATEGORIES: {
 export enum CharacterRole {
   FOUNDER = 'founder',
   TEAM = 'team',
-  AI_AGENT = 'ai-agent',
+  AGENT = 'agent',
   CUSTOMER = 'customer',
   BENEFICIARY = 'beneficiary',
   PLAYER = 'player',
@@ -502,7 +502,7 @@ export const CHARACTER_ROLE_TYPES = {
     CharacterRole.FAMILY,
     CharacterRole.TOKENHOLDER,
     CharacterRole.PARTNER,
-    CharacterRole.AI_AGENT,
+    CharacterRole.AGENT,
     CharacterRole.CUSTOMER,
     CharacterRole.BENEFICIARY,
     CharacterRole.COLLABORATOR

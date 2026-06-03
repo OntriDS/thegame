@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       createdAt: app.createdAt,
       updatedAt: app.createdAt,
       type: 'm2m',
-      character: { roles: [CharacterRole.AI_AGENT] },
+      character: { roles: [CharacterRole.AGENT] },
     }));
 
     return NextResponse.json({

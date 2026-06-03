@@ -118,7 +118,7 @@ export async function requireProvisioningM2MAuth(req: NextRequest): Promise<bool
 
     const roles = extractAuthRoles(user);
 
-    if (!roles.includes(CharacterRole.AI_AGENT.toLowerCase())) {
+    if (!roles.includes(CharacterRole.AGENT.toLowerCase())) {
       return false;
     }
 

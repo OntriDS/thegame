@@ -105,7 +105,7 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
       founder: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20',
       admin: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
       team: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-      'ai-agent': 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+      'agent': 'bg-amber-500/10 text-amber-500 border-amber-500/20',
       developer: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
       player: 'bg-violet-500/10 text-violet-500 border-violet-500/20',
       customer: 'bg-sky-500/10 text-sky-500 border-sky-500/20',
@@ -194,7 +194,7 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
     CharacterRole.TEAM,
     CharacterRole.APPRENTICE,
     CharacterRole.PARTNER,
-    CharacterRole.AI_AGENT,
+    CharacterRole.AGENT,
     CharacterRole.CUSTOMER,
     CharacterRole.BENEFICIARY,
     CharacterRole.FAMILY,
@@ -222,7 +222,7 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
       valueColor: 'text-emerald-600',
       iconColor: 'text-emerald-600',
     },
-    [CharacterRole.AI_AGENT]: {
+    [CharacterRole.AGENT]: {
       title: 'AI Agents',
       classes: 'bg-amber-500/5 border-amber-500/10',
       labelColor: 'text-amber-500/50',

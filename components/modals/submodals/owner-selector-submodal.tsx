@@ -23,6 +23,7 @@ const ALLOWED_OWNER_ROLES = [
   CharacterRole.APPRENTICE,
   CharacterRole.COLLABORATOR,
   CharacterRole.PARTNER,
+  CharacterRole.AGENT,
 ];
 
 const STORAGE_KEY = 'owner-selector-active-roles';

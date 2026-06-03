@@ -70,7 +70,7 @@ export const ROLE_BEHAVIORS = {
     isDisplayOnly: false,     // Can be freely toggled
     requiresJungleCoins: false,
   },
-  [CharacterRole.AI_AGENT]: {
+  [CharacterRole.AGENT]: {
     isImmutable: false,
     hideIfNotAssigned: false,
     isDisplayOnly: false,

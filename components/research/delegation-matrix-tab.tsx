@@ -4,8 +4,10 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ArrowUp, ArrowDown } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
+import OwnerSelectorModal from '@/components/modals/submodals/owner-selector-submodal';
+import { ClientAPI } from '@/lib/client-api';
+import { Character } from '@/types/entities';
 
 export interface MatrixTask {
   id: string;
@@ -1152,51 +1154,32 @@ const INITIAL_MOCK_DATA: MatrixTask[] = [
 
 export function DelegationMatrixTab() {
   const [tasks, setTasks] = useState<MatrixTask[]>(INITIAL_MOCK_DATA);
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [ownerModal, setOwnerModal] = useState<{
+    isOpen: boolean;
+    taskId: string;
+    field: 'currentOwner' | 'idealOwner';
+    currentOwnerId: string | null;
+  }>({ isOpen: false, taskId: '', field: 'currentOwner', currentOwnerId: null });
 
-  const OwnerSelect = ({ value, onChange }: { value: string, onChange: (v: string) => void }) => {
-    const owners = value ? value.split(',').map(s => s.trim()).filter(Boolean) : [];
-    const availableOwners = ['Founder', 'Pixelbrain', 'Team Member', 'System'];
-    
-    const toggleOwner = (owner: string) => {
-      if (owners.includes(owner)) {
-        onChange(owners.filter(o => o !== owner).join(', '));
-      } else {
-        onChange([...owners, owner].join(', '));
-      }
-    };
+  React.useEffect(() => {
+    ClientAPI.getCharacters().then(setCharacters).catch(console.error);
+  }, []);
 
+  const getOwnerDisplay = (idOrName: string) => {
+    if (!idOrName) return <span className="text-muted-foreground opacity-50">Unassigned</span>;
+    const char = characters.find(c => c.id === idOrName);
     return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <button className="flex min-h-[28px] w-full flex-wrap items-center gap-1 rounded border border-transparent px-2 py-1 text-xs hover:border-input focus:border-input focus:outline-none transition-colors text-left bg-transparent">
-            {owners.length > 0 ? (
-              owners.map(o => (
-                <Badge key={o} variant="secondary" className="px-1 text-[10px] h-4 leading-none py-0">
-                  {o}
-                </Badge>
-              ))
-            ) : (
-              <span className="text-muted-foreground opacity-50">Select...</span>
-            )}
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-48 p-2" align="start">
-          <div className="space-y-1">
-            {availableOwners.map(owner => (
-              <label key={owner} className="flex items-center gap-2 p-1.5 hover:bg-muted/50 cursor-pointer rounded text-sm transition-colors">
-                <input 
-                  type="checkbox" 
-                  checked={owners.includes(owner)} 
-                  onChange={() => toggleOwner(owner)} 
-                  className="rounded border-gray-300 bg-transparent"
-                />
-                {owner}
-              </label>
-            ))}
-          </div>
-        </PopoverContent>
-      </Popover>
+      <Badge variant="secondary" className="px-1 text-[10px] h-4 leading-none py-0 font-medium">
+        {char ? char.name : idOrName}
+      </Badge>
     );
+  };
+
+  const handleOwnerSelect = (characterId: string | null) => {
+    if (ownerModal.taskId) {
+      updateTask(ownerModal.taskId, ownerModal.field, characterId || '');
+    }
   };
 
   const calculateStatus = (task: MatrixTask) => {
@@ -1295,6 +1278,15 @@ export function DelegationMatrixTab() {
     return reasons.join(', ');
   };
 
+  const getDelegationColor = (del: string) => {
+    if (del === 'Keep') return 'text-cyan-500';
+    if (del.includes('Keep') && del.includes('Automate')) return 'text-yellow-500';
+    if (del.includes('Delegate') && !del.includes('Automate')) return 'text-orange-500';
+    if (del.includes('Delegate') && del.includes('Automate')) return 'text-orange-400';
+    if (del === 'Automate') return 'text-purple-500';
+    return 'text-primary';
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -1370,10 +1362,20 @@ export function DelegationMatrixTab() {
                       <div className="mt-1">{dps}</div>
                     </td>
                     <td className="p-1 align-top">
-                      <OwnerSelect value={task.currentOwner} onChange={(val) => updateTask(task.id, 'currentOwner', val)} />
+                      <button 
+                        onClick={() => setOwnerModal({ isOpen: true, taskId: task.id, field: 'currentOwner', currentOwnerId: task.currentOwner })}
+                        className="flex min-h-[28px] w-full items-center gap-1 rounded border border-transparent px-2 py-1 text-xs hover:border-input focus:border-input focus:outline-none transition-colors text-left bg-transparent"
+                      >
+                        {getOwnerDisplay(task.currentOwner)}
+                      </button>
                     </td>
                     <td className="p-1 align-top">
-                      <OwnerSelect value={task.idealOwner} onChange={(val) => updateTask(task.id, 'idealOwner', val)} />
+                      <button 
+                        onClick={() => setOwnerModal({ isOpen: true, taskId: task.id, field: 'idealOwner', currentOwnerId: task.idealOwner })}
+                        className="flex min-h-[28px] w-full items-center gap-1 rounded border border-transparent px-2 py-1 text-xs hover:border-input focus:border-input focus:outline-none transition-colors text-left bg-transparent"
+                      >
+                        {getOwnerDisplay(task.idealOwner)}
+                      </button>
                     </td>
                     <td className="p-1 align-top">
                       <select 
@@ -1396,7 +1398,7 @@ export function DelegationMatrixTab() {
                       </select>
                     </td>
                     <td className="p-1 align-top">
-                      <div className="mt-1 px-2 text-sm font-semibold italic text-primary">{computedDelegation}</div>
+                      <div className={`mt-1 px-2 text-sm font-semibold italic ${getDelegationColor(computedDelegation)}`}>{computedDelegation}</div>
                     </td>
                     <td className="p-1 align-top">
                       <div className="mt-1 px-2 text-sm text-muted-foreground leading-tight">{computedReasons}</div>
@@ -1477,6 +1479,13 @@ export function DelegationMatrixTab() {
           </div>
         </CardContent>
       </Card>
+
+      <OwnerSelectorModal
+        open={ownerModal.isOpen}
+        onOpenChange={(isOpen) => setOwnerModal(prev => ({ ...prev, isOpen }))}
+        onSelect={handleOwnerSelect}
+        currentOwnerId={ownerModal.currentOwnerId}
+      />
     </div>
   );
 }
