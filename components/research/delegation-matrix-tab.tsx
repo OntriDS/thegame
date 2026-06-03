@@ -1219,7 +1219,25 @@ export function DelegationMatrixTab() {
         console.error("Failed to parse saved rules", e);
       }
     }
+
+    // Load tasks from local storage if available
+    const savedTasks = localStorage.getItem('delegation-matrix-tasks');
+    if (savedTasks) {
+      try {
+        setTasks(JSON.parse(savedTasks));
+      } catch (e) {
+        console.error("Failed to parse saved tasks", e);
+      }
+    }
   }, []);
+
+  const saveTasks = (newTasks: MatrixTask[] | ((prev: MatrixTask[]) => MatrixTask[])) => {
+    setTasks((prev) => {
+      const updated = typeof newTasks === 'function' ? newTasks(prev) : newTasks;
+      localStorage.setItem('delegation-matrix-tasks', JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   const saveRules = () => {
     setRules(tempRules);
@@ -1252,7 +1270,7 @@ export function DelegationMatrixTab() {
   const handleRealTaskSelect = (matrixTaskId: string, selectedTaskId: string) => {
     const realTask = allTasks.find(t => t.id === selectedTaskId);
     if (realTask) {
-      setTasks(prev => prev.map(t => {
+      saveTasks(prev => prev.map(t => {
         if (t.id !== matrixTaskId) return t;
         const newArea = realTask.station ? getAreaForStation(realTask.station) : t.area;
         return {
@@ -1323,12 +1341,12 @@ export function DelegationMatrixTab() {
   };
 
   const updateTask = (id: string, field: keyof MatrixTask, value: any) => {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));
+    saveTasks(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));
   };
 
   const moveRowUp = (index: number) => {
     if (index === 0) return;
-    setTasks(prev => {
+    saveTasks(prev => {
       const newTasks = [...prev];
       const temp = newTasks[index - 1];
       newTasks[index - 1] = newTasks[index];
@@ -1339,7 +1357,7 @@ export function DelegationMatrixTab() {
 
   const moveRowDown = (index: number) => {
     if (index === tasks.length - 1) return;
-    setTasks(prev => {
+    saveTasks(prev => {
       const newTasks = [...prev];
       const temp = newTasks[index + 1];
       newTasks[index + 1] = newTasks[index];
@@ -1549,7 +1567,7 @@ export function DelegationMatrixTab() {
           
           <div className="mt-4 flex justify-end">
              <button 
-                onClick={() => setTasks([...tasks, { id: Date.now().toString(), area: 'NEW', station: 'station', task: 'new-task', f: 0, a: 0, i: 0, s: 0, currentOwner: '', idealOwner: '', doc: 'N', feed: 'N', delegation: 'Keep', reasons: '', notes: '' }])}
+                onClick={() => saveTasks([...tasks, { id: Date.now().toString(), area: 'NEW', station: 'station', task: 'new-task', f: 0, a: 0, i: 0, s: 0, currentOwner: '', idealOwner: '', doc: 'N', feed: 'N', delegation: 'Keep', reasons: '', notes: '' }])}
                 className="px-4 py-2 text-sm font-medium border rounded-md hover:bg-muted transition-colors"
              >
                 + Add Task Row
@@ -1756,8 +1774,8 @@ export function DelegationMatrixTab() {
           ? ownerModal.currentOwnerId.split(',').map(s => {
               const trimmed = s.trim();
               const char = characters.find(c => c.id === trimmed || c.name === trimmed);
-              return char ? char.id : trimmed;
-            }).filter(Boolean)
+              return char ? char.id : null; // ONLY return valid mapped IDs, drop raw names like 'Founder'
+            }).filter(Boolean) as string[]
           : []}
       />
     </div>
