@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ArrowUp, ArrowDown, MoreVertical } from 'lucide-react';
+import { ArrowUp, ArrowDown, MoreVertical, CheckCircle, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import OwnerSelectorModal from '@/components/modals/submodals/owner-selector-submodal';
 import { SearchableSelect } from '@/components/ui/searchable-select';
@@ -30,6 +30,40 @@ export interface MatrixTask {
   notes: string;
   taskId?: string;
 }
+
+// Default dynamic rules
+const DEFAULT_RULES = {
+  statusPenalties: {
+    noDoc: 20,
+    noFeed: 10,
+    noCurrentOwner: 10,
+    mismatchIdealCurrent: 20,
+    mismatchFThreshold: 4, mismatchFPenalty: 10,
+    mismatchAThreshold: 4, mismatchAPenalty: 10,
+    mismatchIThreshold: 2, mismatchIPenalty: 10,
+    mismatchSThreshold: 2, mismatchSPenalty: 10,
+  },
+  delegation: {
+    lowDpsMax: 7,
+    midDpsMin: 8, midDpsMax: 11,
+    midDpsKeepAMax: 2, // Actually if A <= 2 (Fine, Love it, Mind Blowing), it's not annoying, so Keep. Wait, in math it was A>=2 (which meant 2, 3, 4, 5). 2 is Fine, 3 is Neutral. Let's make it midDpsKeepAMin: 2 meaning if A >= 2 (Wait, lower A is better or higher A is better? 5=Soul crushing. So A<=3 means it's not super annoying. Let's make it customizable.)
+    midDpsKeepAMin: 2, // Keeps if A is 2 or more? No, the original code had `if (task.a >= 2) del = 'Keep'`. This meant 2, 3, 4, 5 are kept. Wait, if it's 5 (Soul Crushing) it's kept? That makes no sense. The legend said "Low A (2+)". Let's change this to midDpsKeepAMax: 2 meaning if A <= 2, Keep it.
+    highDpsMin: 12,
+    automateSMin: 3
+  },
+  pointsLegend: {
+    f: "5=Daily, 4=Frequent, 3=Weekly, 2=Bi-Weekly, 1=Monthly, 0=Never",
+    a: "5=Soul-Crushing, 4=Frustrating, 3=Neutral, 2=Fine, 1=Love it, 0=Mind-Blowing",
+    i: "5=Terrible, 4=Supportive, 3=Necessary, 2=Growth, 1=Critical, 0=Highest Priority",
+    s: "5=No-Brainer, 4=Easy, 3=Procedural (SOP), 2=Difficult, 1=Complex, 0=Hardest"
+  },
+  pointsMapping: {
+    f: ["Never", "Monthly", "Bi-Weekly", "Weekly", "Frequent", "Daily"],
+    a: ["Mind-Blowing", "Love it", "Fine", "Neutral", "Frustrating", "Soul-Crushing"],
+    i: ["Highest Priority", "Critical", "Growth", "Necessary", "Supportive", "Terrible"],
+    s: ["Hardest", "Complex", "Difficult", "Procedural (SOP)", "Easy", "No-Brainer"]
+  }
+};
 
 const INITIAL_MOCK_DATA: MatrixTask[] = [
   {
@@ -195,7 +229,7 @@ const INITIAL_MOCK_DATA: MatrixTask[] = [
     "i": 2,
     "s": 3,
     "currentOwner": "Founder",
-    "idealOwner": "Assistant/Co-Pixelbrain",
+    "idealOwner": "Assistant, Co-Pixelbrain",
     "doc": "N",
     "feed": "N",
     "delegation": "Delegate",
@@ -263,7 +297,7 @@ const INITIAL_MOCK_DATA: MatrixTask[] = [
     "i": 1,
     "s": 5,
     "currentOwner": "Founder",
-    "idealOwner": "Delivery + Co-Assistant",
+    "idealOwner": "Delivery, Co-Assistant",
     "doc": "N",
     "feed": "N",
     "delegation": "Delegate",
@@ -1160,6 +1194,10 @@ export function DelegationMatrixTab() {
   const [tasks, setTasks] = useState<MatrixTask[]>(INITIAL_MOCK_DATA);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const [rules, setRules] = useState(DEFAULT_RULES);
+  const [isEditingRules, setIsEditingRules] = useState(false);
+  const [tempRules, setTempRules] = useState(DEFAULT_RULES);
+  
   const [ownerModal, setOwnerModal] = useState<{
     isOpen: boolean;
     taskId: string;
@@ -1170,7 +1208,29 @@ export function DelegationMatrixTab() {
   React.useEffect(() => {
     ClientAPI.getCharacters().then(setCharacters).catch(console.error);
     ClientAPI.getTasks().then(setAllTasks).catch(console.error);
+    
+    // Load rules from local storage if available
+    const savedRules = localStorage.getItem('delegation-matrix-rules');
+    if (savedRules) {
+      try {
+        setRules(JSON.parse(savedRules));
+        setTempRules(JSON.parse(savedRules));
+      } catch (e) {
+        console.error("Failed to parse saved rules", e);
+      }
+    }
   }, []);
+
+  const saveRules = () => {
+    setRules(tempRules);
+    localStorage.setItem('delegation-matrix-rules', JSON.stringify(tempRules));
+    setIsEditingRules(false);
+  };
+
+  const cancelEditRules = () => {
+    setTempRules(rules);
+    setIsEditingRules(false);
+  };
 
   const taskOptions = React.useMemo(() => {
     return allTasks.map(t => ({
@@ -1230,22 +1290,24 @@ export function DelegationMatrixTab() {
 
   const calculateStatus = (task: MatrixTask) => {
     let score = 100;
-    if (task.doc === 'N') score -= 20;
-    if (task.feed === 'N') score -= 10;
+    const p = rules.statusPenalties;
+    
+    if (task.doc === 'N') score -= p.noDoc;
+    if (task.feed === 'N') score -= p.noFeed;
     
     const hasCurrent = task.currentOwner && task.currentOwner.trim() !== '';
     const hasIdeal = task.idealOwner && task.idealOwner.trim() !== '';
 
     if (!hasCurrent) {
-      score -= 10;
+      score -= p.noCurrentOwner;
     }
     
     if ((hasCurrent || hasIdeal) && task.currentOwner !== task.idealOwner) {
-      score -= 20;
-      if (task.f >= 4) score -= 10;
-      if (task.a >= 4) score -= 10;
-      if (task.i <= 2) score -= 10;
-      if (task.s <= 2) score -= 10;
+      score -= p.mismatchIdealCurrent;
+      if (task.f >= p.mismatchFThreshold) score -= p.mismatchFPenalty;
+      if (task.a >= p.mismatchAThreshold) score -= p.mismatchAPenalty;
+      if (task.i <= p.mismatchIThreshold) score -= p.mismatchIPenalty;
+      if (task.s <= p.mismatchSThreshold) score -= p.mismatchSPenalty;
     }
     
     return Math.max(0, score);
@@ -1287,41 +1349,51 @@ export function DelegationMatrixTab() {
   };
 
   const calculateDelegation = (task: MatrixTask, dps: number) => {
+    const d = rules.delegation;
     let del = '';
-    if (dps <= 7) del = 'Keep';
-    else if (dps >= 8 && dps <= 11) {
-      if (task.a >= 2) del = 'Keep';
+    if (dps <= d.lowDpsMax) del = 'Keep';
+    else if (dps >= d.midDpsMin && dps <= d.midDpsMax) {
+      // Keep if Annoyance is low (e.g. A <= 2) otherwise Delegate
+      if (task.a <= d.midDpsKeepAMax) del = 'Keep';
       else del = 'Delegate';
-    } else if (dps >= 12) {
+    } else if (dps >= d.highDpsMin) {
       del = 'Delegate';
+    } else {
+      del = 'Keep'; // Fallback
     }
 
-    if (task.s >= 3) {
+    if (task.s >= d.automateSMin) {
       del = del === 'Keep' ? 'Automate' : del + '-Automate';
     }
     return del;
   };
 
   const calculateReasons = (task: MatrixTask, dps: number) => {
+    const d = rules.delegation;
     const reasons: string[] = [];
-    if (dps >= 12) reasons.push('High DPS');
-    else if (dps >= 8 && dps <= 11) reasons.push('Mid DPS');
-    else reasons.push('Low DPS');
-
-    if (task.a >= 4) {
-      if (task.f >= 4) reasons.push('High F+A');
-      else reasons.push(`High A ${task.a}`);
-    } else if (task.a <= 2) {
-      reasons.push(`Low A ${task.a}`);
-    }
-
-    if (task.i <= 2) {
-       reasons.push(`Low I ${task.i}`);
-    }
-
-    if (task.s >= 3) reasons.push(`S=${task.s}`);
     
-    return reasons.join(', ');
+    // Human readable mapping for the reasons
+    if (dps >= d.highDpsMin) reasons.push('High Friction/Priority');
+    else if (dps >= d.midDpsMin && dps <= d.midDpsMax) reasons.push('Moderate Friction');
+    else reasons.push('Low Friction');
+
+    if (task.a >= rules.statusPenalties.mismatchAThreshold) {
+      reasons.push('Frustrating to do');
+    }
+
+    if (task.i <= rules.statusPenalties.mismatchIThreshold) {
+       reasons.push('Critical for Growth');
+    }
+
+    if (task.s >= rules.delegation.automateSMin) {
+       reasons.push(`Easily Proceduralized`);
+    }
+    
+    if (task.currentOwner && task.idealOwner && task.currentOwner !== task.idealOwner) {
+       reasons.push('Owner Mismatch');
+    }
+    
+    return reasons.join('. ');
   };
 
   const getDelegationColor = (del: string) => {
@@ -1487,56 +1559,191 @@ export function DelegationMatrixTab() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Legend & Math</CardTitle>
+          <div className="flex gap-2">
+            {!isEditingRules ? (
+              <button 
+                onClick={() => setIsEditingRules(true)}
+                className="text-xs flex items-center gap-1 px-3 py-1.5 border rounded-md hover:bg-muted font-medium transition-colors"
+              >
+                Edit Rules
+              </button>
+            ) : (
+              <>
+                <button 
+                  onClick={cancelEditRules}
+                  className="text-xs flex items-center gap-1 px-3 py-1.5 border rounded-md hover:bg-muted font-medium transition-colors"
+                >
+                  <X className="h-3 w-3" /> Cancel
+                </button>
+                <button 
+                  onClick={saveRules}
+                  className="text-xs flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md font-medium transition-colors"
+                >
+                  <CheckCircle className="h-3 w-3" /> Save
+                </button>
+              </>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
-            
-            <div className="space-y-2">
-              <h4 className="font-semibold border-b pb-1">Points Legend (0-5)</h4>
-              <p><strong>F (Frequency):</strong> 5=Daily, 4=Frequent, 3=Weekly, 2=Bi-Weekly, 1=Monthly, 0=Never</p>
-              <p><strong>A (Annoyance):</strong> 5=Soul-Crushing, 4=Frustrating, 3=Neutral, 2=Fine, 1=Love it, 0=Mind-Blowing</p>
-              <p><strong>I (Impact):</strong> 5=Terrible, 4=Supportive, 3=Necessary, 2=Growth, 1=Critical, 0=Highest Priority</p>
-              <p><strong>S (Simplicity):</strong> 5=No-Brainer, 4=Easy, 3=Procedural (SOP), 2=Difficult, 1=Complex, 0=Hardest</p>
-            </div>
+          {!isEditingRules ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
+              <div className="space-y-2">
+                <h4 className="font-semibold border-b pb-1">Points Legend (0-5)</h4>
+                <p><strong>F (Frequency):</strong> {rules.pointsLegend.f}</p>
+                <p><strong>A (Annoyance):</strong> {rules.pointsLegend.a}</p>
+                <p><strong>I (Impact):</strong> {rules.pointsLegend.i}</p>
+                <p><strong>S (Simplicity):</strong> {rules.pointsLegend.s}</p>
+              </div>
 
-            <div className="space-y-2">
-              <h4 className="font-semibold border-b pb-1">Status Calculation</h4>
-              <p>Base is 100%. Penalties apply cumulatively:</p>
-              <ul className="list-disc pl-4 space-y-1">
-                <li>No Doc: <strong>-20%</strong></li>
-                <li>No Feed: <strong>-10%</strong></li>
-                <li>No Current Owner: <strong>-10%</strong></li>
-                <li>Ideal != Current: <strong>-20%</strong></li>
-                <li>+ Mismatch & F≥4: <strong>-10%</strong></li>
-                <li>+ Mismatch & A≥4: <strong>-10%</strong></li>
-                <li>+ Mismatch & I≤2: <strong>-10%</strong></li>
-                <li>+ Mismatch & S≤2: <strong>-10%</strong></li>
-              </ul>
-            </div>
+              <div className="space-y-2">
+                <h4 className="font-semibold border-b pb-1">Status Calculation</h4>
+                <p>Base is 100%. Penalties apply cumulatively:</p>
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>No Doc: <strong>-{rules.statusPenalties.noDoc}%</strong></li>
+                  <li>No Feed: <strong>-{rules.statusPenalties.noFeed}%</strong></li>
+                  <li>No Current Owner: <strong>-{rules.statusPenalties.noCurrentOwner}%</strong></li>
+                  <li>Ideal != Current: <strong>-{rules.statusPenalties.mismatchIdealCurrent}%</strong></li>
+                  <li>+ Mismatch & F≥{rules.statusPenalties.mismatchFThreshold}: <strong>-{rules.statusPenalties.mismatchFPenalty}%</strong></li>
+                  <li>+ Mismatch & A≥{rules.statusPenalties.mismatchAThreshold}: <strong>-{rules.statusPenalties.mismatchAPenalty}%</strong></li>
+                  <li>+ Mismatch & I≤{rules.statusPenalties.mismatchIThreshold}: <strong>-{rules.statusPenalties.mismatchIPenalty}%</strong></li>
+                  <li>+ Mismatch & S≤{rules.statusPenalties.mismatchSThreshold}: <strong>-{rules.statusPenalties.mismatchSPenalty}%</strong></li>
+                </ul>
+              </div>
 
-            <div className="space-y-2">
-              <h4 className="font-semibold border-b pb-1">Color Status</h4>
-              <div className="flex flex-col gap-1 mt-2">
-                <span className="text-cyan-500 font-bold">90-100% (Cyan)</span>
-                <span className="text-green-500 font-bold">70-80% (Green)</span>
-                <span className="text-yellow-500 font-bold">50-60% (Yellow)</span>
-                <span className="text-orange-500 font-bold">30-40% (Orange)</span>
-                <span className="text-red-500 font-bold">10-20% (Red)</span>
-                <span className="text-gray-500 font-bold">0% (Grey)</span>
+              <div className="space-y-2">
+                <h4 className="font-semibold border-b pb-1">Color Status</h4>
+                <div className="flex flex-col gap-1 mt-2">
+                  <span className="text-cyan-500 font-bold">90-100% (Cyan)</span>
+                  <span className="text-green-500 font-bold">70-80% (Green)</span>
+                  <span className="text-yellow-500 font-bold">50-60% (Yellow)</span>
+                  <span className="text-orange-500 font-bold">30-40% (Orange)</span>
+                  <span className="text-red-500 font-bold">10-20% (Red)</span>
+                  <span className="text-gray-500 font-bold">0% (Grey)</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-semibold border-b pb-1">Delegation Rules</h4>
+                <p><strong>Low DPS ({rules.delegation.lowDpsMax}-):</strong> Keep</p>
+                <p><strong>Mid DPS ({rules.delegation.midDpsMin}-{rules.delegation.midDpsMax}) + Low Annoyance (A≤{rules.delegation.midDpsKeepAMax}):</strong> Keep</p>
+                <p><strong>High DPS ({rules.delegation.highDpsMin}+):</strong> Delegate</p>
+                <p><strong>S≥{rules.delegation.automateSMin} (Procedural):</strong> Automate</p>
               </div>
             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
+              <div className="space-y-3">
+                <h4 className="font-semibold border-b pb-1">Edit Points Legend</h4>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold">F (Frequency)</label>
+                  <Input className="h-8 text-xs" value={tempRules.pointsLegend.f} onChange={e => setTempRules({...tempRules, pointsLegend: {...tempRules.pointsLegend, f: e.target.value}})} />
+                  <label className="text-xs font-semibold">A (Annoyance)</label>
+                  <Input className="h-8 text-xs" value={tempRules.pointsLegend.a} onChange={e => setTempRules({...tempRules, pointsLegend: {...tempRules.pointsLegend, a: e.target.value}})} />
+                  <label className="text-xs font-semibold">I (Impact)</label>
+                  <Input className="h-8 text-xs" value={tempRules.pointsLegend.i} onChange={e => setTempRules({...tempRules, pointsLegend: {...tempRules.pointsLegend, i: e.target.value}})} />
+                  <label className="text-xs font-semibold">S (Simplicity)</label>
+                  <Input className="h-8 text-xs" value={tempRules.pointsLegend.s} onChange={e => setTempRules({...tempRules, pointsLegend: {...tempRules.pointsLegend, s: e.target.value}})} />
+                </div>
+              </div>
 
-            <div className="space-y-2">
-              <h4 className="font-semibold border-b pb-1">Delegation Rules</h4>
-              <p><strong>Low DPS (7-):</strong> Keep</p>
-              <p><strong>Mid DPS (8-11) + Low A (2+):</strong> Keep</p>
-              <p><strong>High DPS (12+):</strong> Delegate</p>
-              <p><strong>S=3+ (Procedural):</strong> Automate</p>
+              <div className="space-y-3">
+                <h4 className="font-semibold border-b pb-1">Edit Status Penalties</h4>
+                <div className="space-y-2 grid grid-cols-2 gap-x-2">
+                  <div>
+                    <label className="text-xs font-semibold block">No Doc</label>
+                    <Input type="number" className="h-8 text-xs" value={tempRules.statusPenalties.noDoc} onChange={e => setTempRules({...tempRules, statusPenalties: {...tempRules.statusPenalties, noDoc: parseInt(e.target.value)||0}})} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold block">No Feed</label>
+                    <Input type="number" className="h-8 text-xs" value={tempRules.statusPenalties.noFeed} onChange={e => setTempRules({...tempRules, statusPenalties: {...tempRules.statusPenalties, noFeed: parseInt(e.target.value)||0}})} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold block">No Owner</label>
+                    <Input type="number" className="h-8 text-xs" value={tempRules.statusPenalties.noCurrentOwner} onChange={e => setTempRules({...tempRules, statusPenalties: {...tempRules.statusPenalties, noCurrentOwner: parseInt(e.target.value)||0}})} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold block">Ideal != Curr</label>
+                    <Input type="number" className="h-8 text-xs" value={tempRules.statusPenalties.mismatchIdealCurrent} onChange={e => setTempRules({...tempRules, statusPenalties: {...tempRules.statusPenalties, mismatchIdealCurrent: parseInt(e.target.value)||0}})} />
+                  </div>
+                </div>
+                <div className="space-y-2 grid grid-cols-2 gap-x-2 pt-2 border-t">
+                  <div>
+                    <label className="text-[10px] font-semibold block leading-tight">Mismatch F &ge;</label>
+                    <Input type="number" className="h-7 text-xs" value={tempRules.statusPenalties.mismatchFThreshold} onChange={e => setTempRules({...tempRules, statusPenalties: {...tempRules.statusPenalties, mismatchFThreshold: parseInt(e.target.value)||0}})} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold block leading-tight">Penalty</label>
+                    <Input type="number" className="h-7 text-xs" value={tempRules.statusPenalties.mismatchFPenalty} onChange={e => setTempRules({...tempRules, statusPenalties: {...tempRules.statusPenalties, mismatchFPenalty: parseInt(e.target.value)||0}})} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold block leading-tight">Mismatch A &ge;</label>
+                    <Input type="number" className="h-7 text-xs" value={tempRules.statusPenalties.mismatchAThreshold} onChange={e => setTempRules({...tempRules, statusPenalties: {...tempRules.statusPenalties, mismatchAThreshold: parseInt(e.target.value)||0}})} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold block leading-tight">Penalty</label>
+                    <Input type="number" className="h-7 text-xs" value={tempRules.statusPenalties.mismatchAPenalty} onChange={e => setTempRules({...tempRules, statusPenalties: {...tempRules.statusPenalties, mismatchAPenalty: parseInt(e.target.value)||0}})} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold block leading-tight">Mismatch I &le;</label>
+                    <Input type="number" className="h-7 text-xs" value={tempRules.statusPenalties.mismatchIThreshold} onChange={e => setTempRules({...tempRules, statusPenalties: {...tempRules.statusPenalties, mismatchIThreshold: parseInt(e.target.value)||0}})} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold block leading-tight">Penalty</label>
+                    <Input type="number" className="h-7 text-xs" value={tempRules.statusPenalties.mismatchIPenalty} onChange={e => setTempRules({...tempRules, statusPenalties: {...tempRules.statusPenalties, mismatchIPenalty: parseInt(e.target.value)||0}})} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold block leading-tight">Mismatch S &le;</label>
+                    <Input type="number" className="h-7 text-xs" value={tempRules.statusPenalties.mismatchSThreshold} onChange={e => setTempRules({...tempRules, statusPenalties: {...tempRules.statusPenalties, mismatchSThreshold: parseInt(e.target.value)||0}})} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold block leading-tight">Penalty</label>
+                    <Input type="number" className="h-7 text-xs" value={tempRules.statusPenalties.mismatchSPenalty} onChange={e => setTempRules({...tempRules, statusPenalties: {...tempRules.statusPenalties, mismatchSPenalty: parseInt(e.target.value)||0}})} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-semibold border-b pb-1">Color Status</h4>
+                <div className="flex flex-col gap-1 mt-2 text-muted-foreground italic text-xs">
+                  (Color customization not yet available in this build)
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="font-semibold border-b pb-1">Edit Delegation Rules</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs font-semibold whitespace-nowrap">Low DPS Max:</label>
+                    <Input type="number" className="h-7 text-xs w-20" value={tempRules.delegation.lowDpsMax} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, lowDpsMax: parseInt(e.target.value)||0}})} />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs font-semibold whitespace-nowrap">Mid DPS Range:</label>
+                    <div className="flex gap-1 w-20">
+                      <Input type="number" className="h-7 text-xs w-9 px-1" value={tempRules.delegation.midDpsMin} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, midDpsMin: parseInt(e.target.value)||0}})} />
+                      <span className="text-xs">-</span>
+                      <Input type="number" className="h-7 text-xs w-9 px-1" value={tempRules.delegation.midDpsMax} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, midDpsMax: parseInt(e.target.value)||0}})} />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs font-semibold whitespace-nowrap leading-tight">Mid DPS Keep Annoyance Max:</label>
+                    <Input type="number" className="h-7 text-xs w-20" value={tempRules.delegation.midDpsKeepAMax} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, midDpsKeepAMax: parseInt(e.target.value)||0}})} />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs font-semibold whitespace-nowrap">High DPS Min:</label>
+                    <Input type="number" className="h-7 text-xs w-20" value={tempRules.delegation.highDpsMin} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, highDpsMin: parseInt(e.target.value)||0}})} />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs font-semibold whitespace-nowrap">Automate Simplicity Min:</label>
+                    <Input type="number" className="h-7 text-xs w-20" value={tempRules.delegation.automateSMin} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, automateSMin: parseInt(e.target.value)||0}})} />
+                  </div>
+                </div>
+              </div>
+
             </div>
-
-          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -1545,7 +1752,13 @@ export function DelegationMatrixTab() {
         onOpenChange={(isOpen) => setOwnerModal(prev => ({ ...prev, isOpen }))}
         onMultiSelect={handleOwnerSelect}
         multiSelect={true}
-        currentOwnerIds={ownerModal.currentOwnerId ? ownerModal.currentOwnerId.split(',') : []}
+        currentOwnerIds={ownerModal.currentOwnerId 
+          ? ownerModal.currentOwnerId.split(',').map(s => {
+              const trimmed = s.trim();
+              const char = characters.find(c => c.id === trimmed || c.name === trimmed);
+              return char ? char.id : trimmed;
+            }).filter(Boolean)
+          : []}
       />
     </div>
   );
