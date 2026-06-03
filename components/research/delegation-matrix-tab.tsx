@@ -1207,17 +1207,24 @@ export function DelegationMatrixTab() {
 
   const getOwnerDisplay = (idOrName: string) => {
     if (!idOrName) return <span className="text-muted-foreground opacity-50">Unassigned</span>;
-    const char = characters.find(c => c.id === idOrName);
+    const owners = idOrName.split(',').map(s => s.trim());
     return (
-      <Badge variant="secondary" className="px-1 text-[10px] h-4 leading-none py-0 font-medium">
-        {char ? char.name : idOrName}
-      </Badge>
+      <div className="flex flex-col gap-1">
+        {owners.map((owner, i) => {
+          const char = characters.find(c => c.id === owner || c.name === owner);
+          return (
+            <Badge key={i} variant="secondary" className="px-1 text-[10px] h-4 leading-none py-0 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+              {char ? char.name : owner}
+            </Badge>
+          );
+        })}
+      </div>
     );
   };
 
-  const handleOwnerSelect = (characterId: string | null) => {
+  const handleOwnerSelect = (characterIds: string[]) => {
     if (ownerModal.taskId) {
-      updateTask(ownerModal.taskId, ownerModal.field, characterId || '');
+      updateTask(ownerModal.taskId, ownerModal.field, characterIds.join(','));
     }
   };
 
@@ -1536,8 +1543,9 @@ export function DelegationMatrixTab() {
       <OwnerSelectorModal
         open={ownerModal.isOpen}
         onOpenChange={(isOpen) => setOwnerModal(prev => ({ ...prev, isOpen }))}
-        onSelect={handleOwnerSelect}
-        currentOwnerId={ownerModal.currentOwnerId}
+        onMultiSelect={handleOwnerSelect}
+        multiSelect={true}
+        currentOwnerIds={ownerModal.currentOwnerId ? ownerModal.currentOwnerId.split(',') : []}
       />
     </div>
   );

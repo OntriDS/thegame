@@ -13,8 +13,11 @@ import { Search, User, X, CheckCircle2, UserMinus } from 'lucide-react';
 interface OwnerSelectorModalProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  onSelect: (characterId: string | null) => void;
+  onSelect?: (characterId: string | null) => void;
   currentOwnerId?: string | null;
+  multiSelect?: boolean;
+  onMultiSelect?: (characterIds: string[]) => void;
+  currentOwnerIds?: string[];
 }
 
 const ALLOWED_OWNER_ROLES = [
@@ -32,11 +35,15 @@ export default function OwnerSelectorModal({
   open, 
   onOpenChange, 
   onSelect, 
-  currentOwnerId
+  currentOwnerId,
+  multiSelect = false,
+  onMultiSelect,
+  currentOwnerIds = []
 }: OwnerSelectorModalProps) {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(currentOwnerId || null);
+  const [selectedIds, setSelectedIds] = useState<string[]>(currentOwnerIds);
   const [activeRoles, setActiveRoles] = useState<CharacterRole[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -67,8 +74,9 @@ export default function OwnerSelectorModal({
     if (open) {
       loadCharacters();
       setSelectedId(currentOwnerId || null);
+      setSelectedIds(currentOwnerIds || []);
     }
-  }, [open, currentOwnerId]);
+  }, [open, currentOwnerId, currentOwnerIds]);
 
   const loadCharacters = async () => {
     try {
@@ -111,8 +119,11 @@ export default function OwnerSelectorModal({
     return matchesSearch;
   }).sort((a, b) => {
     // 1. Put selected character on top
-    if (a.id === selectedId) return -1;
-    if (b.id === selectedId) return 1;
+    const isASelected = multiSelect ? selectedIds.includes(a.id) : a.id === selectedId;
+    const isBSelected = multiSelect ? selectedIds.includes(b.id) : b.id === selectedId;
+    
+    if (isASelected && !isBSelected) return -1;
+    if (!isASelected && isBSelected) return 1;
 
     // 2. Sort by role priority
     const getMinRoleIndex = (c: Character) => {
@@ -135,13 +146,31 @@ export default function OwnerSelectorModal({
   });
 
   const handleSelect = () => {
-    onSelect(selectedId);
+    if (multiSelect && onMultiSelect) {
+      onMultiSelect(selectedIds);
+    } else if (onSelect) {
+      onSelect(selectedId);
+    }
     onOpenChange(false);
   };
 
   const handleRemove = () => {
-    onSelect(null);
+    if (multiSelect && onMultiSelect) {
+      onMultiSelect([]);
+    } else if (onSelect) {
+      onSelect(null);
+    }
     onOpenChange(false);
+  };
+
+  const toggleSelection = (id: string) => {
+    if (multiSelect) {
+      setSelectedIds(prev => 
+        prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+      );
+    } else {
+      setSelectedId(selectedId === id ? null : id);
+    }
   };
 
   return (
@@ -200,80 +229,85 @@ export default function OwnerSelectorModal({
             ) : (
               <div className="divide-y">
                 {/* Special "No Owner" Option */}
-                <div
-                  className={`p-3 cursor-pointer transition-all relative ${
-                    selectedId === null
-                      ? 'bg-emerald-500/10 border-l-4 border-l-emerald-500'
-                      : 'hover:bg-muted'
-                  }`}
-                  onClick={() => setSelectedId(null)}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                      selectedId === null ? 'bg-emerald-500 text-white' : 'bg-destructive/10 text-destructive'
-                    }`}>
-                      {selectedId === null ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : (
-                        <UserMinus className="h-4 w-4" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <div className="font-bold text-sm text-destructive">No Owner / Unassigned</div>
-                        {selectedId === null && (
-                          <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-500 h-4 text-[9px] px-1.5 font-bold uppercase">
-                            Selected
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5">
-                        Task will have no assigned owner
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {filteredCharacters.map((character) => (
+                {!multiSelect && (
                   <div
-                    key={character.id}
                     className={`p-3 cursor-pointer transition-all relative ${
-                      selectedId === character.id
+                      selectedId === null
                         ? 'bg-emerald-500/10 border-l-4 border-l-emerald-500'
                         : 'hover:bg-muted'
                     }`}
-                    onClick={() => setSelectedId(selectedId === character.id ? null : character.id)}
+                    onClick={() => setSelectedId(null)}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                        selectedId === character.id ? 'bg-emerald-500 text-white' : 'bg-primary/10 text-primary'
+                        selectedId === null ? 'bg-emerald-500 text-white' : 'bg-destructive/10 text-destructive'
                       }`}>
-                        {selectedId === character.id ? (
+                        {selectedId === null ? (
                           <CheckCircle2 className="h-4 w-4" />
                         ) : (
-                          <User className="h-4 w-4" />
+                          <UserMinus className="h-4 w-4" />
                         )}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <div className="font-bold text-sm">{character.name}</div>
-                          {selectedId === character.id && (
+                          <div className="font-bold text-sm text-destructive">No Owner / Unassigned</div>
+                          {selectedId === null && (
                             <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-500 h-4 text-[9px] px-1.5 font-bold uppercase">
                               Selected
                             </Badge>
                           )}
                         </div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5">
+                          Task will have no assigned owner
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {filteredCharacters.map((character) => {
+                  const isSelected = multiSelect ? selectedIds.includes(character.id) : selectedId === character.id;
+                  return (
+                    <div
+                      key={character.id}
+                      className={`p-3 cursor-pointer transition-all relative ${
+                        isSelected
+                          ? 'bg-emerald-500/10 border-l-4 border-l-emerald-500'
+                          : 'hover:bg-muted'
+                      }`}
+                      onClick={() => toggleSelection(character.id)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                          isSelected ? 'bg-emerald-500 text-white' : 'bg-primary/10 text-primary'
+                        }`}>
+                          {isSelected ? (
+                            <CheckCircle2 className="h-4 w-4" />
+                          ) : (
+                            <User className="h-4 w-4" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <div className="font-bold text-sm">{character.name}</div>
+                            {isSelected && (
+                              <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-500 h-4 text-[9px] px-1.5 font-bold uppercase">
+                                Selected
+                              </Badge>
+                            )}
+                          </div>
                         <div className="flex gap-1 mt-0.5">
                           {character.roles?.filter(r => ALLOWED_OWNER_ROLES.includes(r)).map(r => (
                             <span key={r} className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">
                               {r}
                             </span>
                           ))}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </ScrollArea>

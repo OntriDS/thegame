@@ -146,7 +146,7 @@ export default function RecurrentTreeModalContent({
   const [showDatesModal, setShowDatesModal] = useState(false);
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
   const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
-  const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [ownerId, setOwnerId] = useState<string | string[] | null>(null);
   const [showOwnerSelector, setShowOwnerSelector] = useState(false);
   const [showArchiveCollectionModal, setShowArchiveCollectionModal] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{
@@ -1321,8 +1321,9 @@ export default function RecurrentTreeModalContent({
       <OwnerSelectorModal
         open={showOwnerSelector}
         onOpenChange={setShowOwnerSelector}
-        onSelect={setOwnerId}
-        currentOwnerId={ownerId}
+        onMultiSelect={setOwnerId as any}
+        multiSelect={true}
+        currentOwnerIds={Array.isArray(ownerId) ? ownerId : (ownerId ? [ownerId as string] : [])}
       />
 
       <SmartSchedulerSubmodal

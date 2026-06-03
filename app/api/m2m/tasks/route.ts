@@ -63,7 +63,8 @@ export async function GET(request: NextRequest) {
       const allTasks = await getAllTasks();
       const doneTaskIds = new Set<string>();
       allTasks.forEach((task) => {
-        if (task.ownerId !== ownerId) return;
+        const isOwner = Array.isArray(task.ownerId) ? task.ownerId.includes(ownerId) : task.ownerId === ownerId;
+        if (!isOwner) return;
         if (task.status !== TaskStatus.DONE) return;
         if (typeof task.progress === 'number' && task.progress < 100) return;
 
@@ -82,10 +83,10 @@ export async function GET(request: NextRequest) {
     }
 
     const activeTasks = await getActiveTasks();
-    const assignedTasks = activeTasks.filter(t => 
-      t.ownerId === ownerId && 
-      t.status !== TaskStatus.COLLECTED
-    );
+    const assignedTasks = activeTasks.filter(t => {
+      const isOwner = Array.isArray(t.ownerId) ? t.ownerId.includes(ownerId) : t.ownerId === ownerId;
+      return isOwner && t.status !== TaskStatus.COLLECTED;
+    });
 
     // Enrich assigned tasks with parent names if they exist
     const tasksWithParentNames = assignedTasks.map(task => {

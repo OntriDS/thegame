@@ -140,7 +140,7 @@ export default function MissionTreeModalContent({
   const [customerCharacterRole, setCustomerCharacterRole] = useState<CharacterRole>(CharacterRole.CUSTOMER);
   const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(FOUNDER_CHARACTER_ID);
   const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
-  const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [ownerId, setOwnerId] = useState<string | string[] | null>(null);
   const [showOwnerSelector, setShowOwnerSelector] = useState(false);
   const [showScheduler, setShowScheduler] = useState(false);
   const [showValidationModal, setShowValidationModal] = useState(false);
@@ -1272,8 +1272,9 @@ export default function MissionTreeModalContent({
       <OwnerSelectorModal
         open={showOwnerSelector}
         onOpenChange={setShowOwnerSelector}
-        onSelect={setOwnerId}
-        currentOwnerId={ownerId}
+        onMultiSelect={setOwnerId as any}
+        multiSelect={true}
+        currentOwnerIds={Array.isArray(ownerId) ? ownerId : (ownerId ? [ownerId as string] : [])}
       />
 
       {/* Validation Modal */}
