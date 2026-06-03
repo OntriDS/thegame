@@ -3,6 +3,9 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { ArrowUp, ArrowDown } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Badge } from '@/components/ui/badge';
 
 export interface MatrixTask {
   id: string;
@@ -1150,6 +1153,52 @@ const INITIAL_MOCK_DATA: MatrixTask[] = [
 export function DelegationMatrixTab() {
   const [tasks, setTasks] = useState<MatrixTask[]>(INITIAL_MOCK_DATA);
 
+  const OwnerSelect = ({ value, onChange }: { value: string, onChange: (v: string) => void }) => {
+    const owners = value ? value.split(',').map(s => s.trim()).filter(Boolean) : [];
+    const availableOwners = ['Founder', 'Pixelbrain', 'Team Member', 'System'];
+    
+    const toggleOwner = (owner: string) => {
+      if (owners.includes(owner)) {
+        onChange(owners.filter(o => o !== owner).join(', '));
+      } else {
+        onChange([...owners, owner].join(', '));
+      }
+    };
+
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <button className="flex min-h-[28px] w-full flex-wrap items-center gap-1 rounded border border-transparent px-2 py-1 text-xs hover:border-input focus:border-input focus:outline-none transition-colors text-left bg-transparent">
+            {owners.length > 0 ? (
+              owners.map(o => (
+                <Badge key={o} variant="secondary" className="px-1 text-[10px] h-4 leading-none py-0">
+                  {o}
+                </Badge>
+              ))
+            ) : (
+              <span className="text-muted-foreground opacity-50">Select...</span>
+            )}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-48 p-2" align="start">
+          <div className="space-y-1">
+            {availableOwners.map(owner => (
+              <label key={owner} className="flex items-center gap-2 p-1.5 hover:bg-muted/50 cursor-pointer rounded text-sm transition-colors">
+                <input 
+                  type="checkbox" 
+                  checked={owners.includes(owner)} 
+                  onChange={() => toggleOwner(owner)} 
+                  className="rounded border-gray-300 bg-transparent"
+                />
+                {owner}
+              </label>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  };
+
   const calculateStatus = (task: MatrixTask) => {
     let score = 100;
     if (task.doc === 'N') score -= 20;
@@ -1186,6 +1235,66 @@ export function DelegationMatrixTab() {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));
   };
 
+  const moveRowUp = (index: number) => {
+    if (index === 0) return;
+    setTasks(prev => {
+      const newTasks = [...prev];
+      const temp = newTasks[index - 1];
+      newTasks[index - 1] = newTasks[index];
+      newTasks[index] = temp;
+      return newTasks;
+    });
+  };
+
+  const moveRowDown = (index: number) => {
+    if (index === tasks.length - 1) return;
+    setTasks(prev => {
+      const newTasks = [...prev];
+      const temp = newTasks[index + 1];
+      newTasks[index + 1] = newTasks[index];
+      newTasks[index] = temp;
+      return newTasks;
+    });
+  };
+
+  const calculateDelegation = (task: MatrixTask, dps: number) => {
+    let del = '';
+    if (dps <= 7) del = 'Keep';
+    else if (dps >= 8 && dps <= 11) {
+      if (task.a >= 2) del = 'Keep';
+      else del = 'Delegate';
+    } else if (dps >= 12) {
+      del = 'Delegate';
+    }
+
+    if (task.s >= 3) {
+      del = del === 'Keep' ? 'Automate' : del + '-Automate';
+    }
+    return del;
+  };
+
+  const calculateReasons = (task: MatrixTask, dps: number) => {
+    const reasons: string[] = [];
+    if (dps >= 12) reasons.push('High DPS');
+    else if (dps >= 8 && dps <= 11) reasons.push('Mid DPS');
+    else reasons.push('Low DPS');
+
+    if (task.a >= 4) {
+      if (task.f >= 4) reasons.push('High F+A');
+      else reasons.push(`High A ${task.a}`);
+    } else if (task.a <= 2) {
+      reasons.push(`Low A ${task.a}`);
+    }
+
+    if (task.i <= 2) {
+       reasons.push(`Low I ${task.i}`);
+    }
+
+    if (task.s >= 3) reasons.push(`S=${task.s}`);
+    
+    return reasons.join(', ');
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -1199,6 +1308,7 @@ export function DelegationMatrixTab() {
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b bg-muted/50">
+                <th className="p-2 w-8"></th>
                 <th className="p-2 text-left font-medium">Area &gt; Station &gt; Task</th>
                 <th className="p-2 text-center font-medium w-12" title="Frequency">F</th>
                 <th className="p-2 text-center font-medium w-12" title="Annoyance">A</th>
@@ -1216,13 +1326,21 @@ export function DelegationMatrixTab() {
               </tr>
             </thead>
             <tbody>
-              {tasks.map(task => {
+              {tasks.map((task, index) => {
                 const dps = task.f + task.a + task.i + task.s;
                 const statusScore = calculateStatus(task);
                 const statusColor = getStatusColor(statusScore);
+                const computedDelegation = calculateDelegation(task, dps);
+                const computedReasons = calculateReasons(task, dps);
 
                 return (
                   <tr key={task.id} className="border-b hover:bg-muted/20 transition-colors">
+                    <td className="p-1 align-top">
+                      <div className="flex flex-col items-center gap-1 opacity-50 hover:opacity-100 transition-opacity mt-1">
+                        <button onClick={() => moveRowUp(index)} disabled={index === 0} className="hover:text-primary disabled:opacity-20"><ArrowUp className="h-4 w-4" /></button>
+                        <button onClick={() => moveRowDown(index)} disabled={index === tasks.length - 1} className="hover:text-primary disabled:opacity-20"><ArrowDown className="h-4 w-4" /></button>
+                      </div>
+                    </td>
                     <td className="p-1 align-top">
                       <div className="flex gap-1 text-xs mb-1">
                         <span className="font-semibold">{task.area}</span>
@@ -1252,10 +1370,10 @@ export function DelegationMatrixTab() {
                       <div className="mt-1">{dps}</div>
                     </td>
                     <td className="p-1 align-top">
-                      <Input value={task.currentOwner} onChange={(e) => updateTask(task.id, 'currentOwner', e.target.value)} className="h-7 px-2 border-transparent hover:border-input text-sm" />
+                      <OwnerSelect value={task.currentOwner} onChange={(val) => updateTask(task.id, 'currentOwner', val)} />
                     </td>
                     <td className="p-1 align-top">
-                      <Input value={task.idealOwner} onChange={(e) => updateTask(task.id, 'idealOwner', e.target.value)} className="h-7 px-2 border-transparent hover:border-input text-sm" />
+                      <OwnerSelect value={task.idealOwner} onChange={(val) => updateTask(task.id, 'idealOwner', val)} />
                     </td>
                     <td className="p-1 align-top">
                       <select 
@@ -1278,10 +1396,10 @@ export function DelegationMatrixTab() {
                       </select>
                     </td>
                     <td className="p-1 align-top">
-                      <Input value={task.delegation} onChange={(e) => updateTask(task.id, 'delegation', e.target.value)} className="h-7 px-2 border-transparent hover:border-input text-sm font-semibold italic" />
+                      <div className="mt-1 px-2 text-sm font-semibold italic text-primary">{computedDelegation}</div>
                     </td>
                     <td className="p-1 align-top">
-                      <Input value={task.reasons} onChange={(e) => updateTask(task.id, 'reasons', e.target.value)} className="h-7 px-2 border-transparent hover:border-input text-sm" />
+                      <div className="mt-1 px-2 text-sm text-muted-foreground leading-tight">{computedReasons}</div>
                     </td>
                     <td className="p-1 align-top text-center">
                       <div className="mt-1"><span className={statusColor}>{statusScore}%</span></div>
