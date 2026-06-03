@@ -32,7 +32,27 @@ const INITIAL_MOCK_DATA: MatrixTask[] = [
 ];
 
 export function DelegationMatrixTab() {
-  const [tasks, setTasks] = useState<MatrixTask[]>(INITIAL_MOCK_DATA);
+  const [tasks, setTasks] = useState<MatrixTask[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  React.useEffect(() => {
+    const fetchMatrix = async () => {
+      try {
+        const res = await fetch('/api/research/delegation-matrix');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.tasks) {
+            setTasks(data.tasks);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching delegation matrix:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchMatrix();
+  }, []);
 
   const calculateStatus = (task: MatrixTask) => {
     let score = 100;
@@ -81,7 +101,10 @@ export function DelegationMatrixTab() {
           </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
+          {isLoading ? (
+            <div className="p-8 text-center text-muted-foreground animate-pulse">Loading Matrix Data...</div>
+          ) : (
+            <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b bg-muted/50">
                 <th className="p-2 text-left font-medium">Area &gt; Station &gt; Task</th>
@@ -108,7 +131,7 @@ export function DelegationMatrixTab() {
 
                 return (
                   <tr key={task.id} className="border-b hover:bg-muted/20 transition-colors">
-                    <td className="p-1">
+                    <td className="p-1 align-top">
                       <div className="flex gap-1 text-xs mb-1">
                         <span className="font-semibold">{task.area}</span>
                         <span className="text-muted-foreground">&gt;</span>
@@ -121,28 +144,28 @@ export function DelegationMatrixTab() {
                         className="h-7 px-2 border-transparent hover:border-input focus:border-input text-sm"
                       />
                     </td>
-                    <td className="p-1">
+                    <td className="p-1 align-top">
                       <Input type="number" min={0} max={5} value={task.f} onChange={(e) => updateTask(task.id, 'f', parseInt(e.target.value) || 0)} className="h-7 w-12 px-1 text-center border-transparent hover:border-input" />
                     </td>
-                    <td className="p-1">
+                    <td className="p-1 align-top">
                       <Input type="number" min={0} max={5} value={task.a} onChange={(e) => updateTask(task.id, 'a', parseInt(e.target.value) || 0)} className="h-7 w-12 px-1 text-center border-transparent hover:border-input" />
                     </td>
-                    <td className="p-1">
+                    <td className="p-1 align-top">
                       <Input type="number" min={0} max={5} value={task.i} onChange={(e) => updateTask(task.id, 'i', parseInt(e.target.value) || 0)} className="h-7 w-12 px-1 text-center border-transparent hover:border-input" />
                     </td>
-                    <td className="p-1">
+                    <td className="p-1 align-top">
                       <Input type="number" min={0} max={5} value={task.s} onChange={(e) => updateTask(task.id, 's', parseInt(e.target.value) || 0)} className="h-7 w-12 px-1 text-center border-transparent hover:border-input" />
                     </td>
-                    <td className="p-1 text-center font-bold bg-muted/30">
-                      {dps}
+                    <td className="p-1 align-top text-center font-bold bg-muted/30">
+                      <div className="mt-1">{dps}</div>
                     </td>
-                    <td className="p-1">
+                    <td className="p-1 align-top">
                       <Input value={task.currentOwner} onChange={(e) => updateTask(task.id, 'currentOwner', e.target.value)} className="h-7 px-2 border-transparent hover:border-input text-sm" />
                     </td>
-                    <td className="p-1">
+                    <td className="p-1 align-top">
                       <Input value={task.idealOwner} onChange={(e) => updateTask(task.id, 'idealOwner', e.target.value)} className="h-7 px-2 border-transparent hover:border-input text-sm" />
                     </td>
-                    <td className="p-1">
+                    <td className="p-1 align-top">
                       <select 
                         value={task.doc} 
                         onChange={(e) => updateTask(task.id, 'doc', e.target.value as 'Y'|'N')}
@@ -162,16 +185,16 @@ export function DelegationMatrixTab() {
                         <option value="N">N</option>
                       </select>
                     </td>
-                    <td className="p-1">
+                    <td className="p-1 align-top">
                       <Input value={task.delegation} onChange={(e) => updateTask(task.id, 'delegation', e.target.value)} className="h-7 px-2 border-transparent hover:border-input text-sm font-semibold italic" />
                     </td>
-                    <td className="p-1">
+                    <td className="p-1 align-top">
                       <Input value={task.reasons} onChange={(e) => updateTask(task.id, 'reasons', e.target.value)} className="h-7 px-2 border-transparent hover:border-input text-sm" />
                     </td>
-                    <td className="p-1 text-center">
-                      <span className={statusColor}>{statusScore}%</span>
+                    <td className="p-1 align-top text-center">
+                      <div className="mt-1"><span className={statusColor}>{statusScore}%</span></div>
                     </td>
-                    <td className="p-1">
+                    <td className="p-1 align-top">
                       <Input value={task.notes} onChange={(e) => updateTask(task.id, 'notes', e.target.value)} className="h-7 px-2 border-transparent hover:border-input text-sm" />
                     </td>
                   </tr>
@@ -179,6 +202,7 @@ export function DelegationMatrixTab() {
               })}
             </tbody>
           </table>
+          )}
           
           <div className="mt-4 flex justify-end">
              <button 
@@ -223,7 +247,7 @@ export function DelegationMatrixTab() {
 
             <div className="space-y-2">
               <h4 className="font-semibold border-b pb-1">Color Status</h4>
-              <div className="grid grid-cols-2 gap-2 mt-2">
+              <div className="flex flex-col gap-1 mt-2">
                 <span className="text-cyan-500 font-bold">90-100% (Cyan)</span>
                 <span className="text-green-500 font-bold">70-80% (Green)</span>
                 <span className="text-yellow-500 font-bold">50-60% (Yellow)</span>
