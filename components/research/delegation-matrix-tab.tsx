@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import OwnerSelectorModal from '@/components/modals/submodals/owner-selector-submodal';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ClientAPI } from '@/lib/client-api';
+import ConfirmationModal from '@/components/modals/submodals/confirmation-submodal';
 import { Character, Task } from '@/types/entities';
 import { STATION_CATEGORIES, TaskStatus } from '@/types/enums';
 
@@ -1326,6 +1327,7 @@ export function DelegationMatrixTab() {
   const [rules, setRules] = useState(DEFAULT_RULES);
   const [isEditingRules, setIsEditingRules] = useState(false);
   const [tempRules, setTempRules] = useState(DEFAULT_RULES);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   
   const [ownerModal, setOwnerModal] = useState<{
     isOpen: boolean;
@@ -1498,8 +1500,15 @@ export function DelegationMatrixTab() {
     saveTasks(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));
   };
 
-  const deleteTask = (id: string) => {
-    saveTasks(prev => prev.filter(t => t.id !== id));
+  const requestDeleteTask = (id: string) => {
+    setTaskToDelete(id);
+  };
+
+  const confirmDeleteTask = () => {
+    if (taskToDelete) {
+      saveTasks(prev => prev.filter(t => t.id !== taskToDelete));
+      setTaskToDelete(null);
+    }
   };
 
   const moveRowUp = (index: number) => {
@@ -1670,7 +1679,7 @@ export function DelegationMatrixTab() {
                         characters={characters}
                         handleRealTaskSelect={handleRealTaskSelect}
                         updateTask={updateTask}
-                        deleteTask={deleteTask}
+                        deleteTask={requestDeleteTask}
                         getOwnerDisplay={getOwnerDisplay}
                         setOwnerModal={setOwnerModal}
                       />
@@ -1904,6 +1913,16 @@ export function DelegationMatrixTab() {
               return char ? char.id : null; // ONLY return valid mapped IDs, drop raw names like 'Founder'
             }).filter(Boolean) as string[]
           : []}
+      />
+      <ConfirmationModal
+        open={!!taskToDelete}
+        onOpenChange={(open) => !open && setTaskToDelete(null)}
+        title="Delete Matrix Row"
+        description="Are you sure you want to remove this row from the delegation matrix? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="destructive"
+        onConfirm={confirmDeleteTask}
       />
     </div>
   );
