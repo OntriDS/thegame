@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAllAgents } from '@/data-store/datastore';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const agents = await getAllAgents();
