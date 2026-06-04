@@ -1414,5 +1414,34 @@ export const ClientAPI = {
     return await res.json();
   },
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RESEARCH / MATRIX LOGIC
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  getMatrixState: async (): Promise<{ tasks: any, rules: any }> => {
+    const res = await request('/api/research/matrix-state');
+    if (!res.ok) throw new Error('Failed to get matrix state');
+    return await res.json();
+  },
+
+  saveMatrixState: async (data: { tasks: any, rules: any }): Promise<void> => {
+    const res = await request('/api/research/matrix-state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to save matrix state');
+  },
+
+  exportDelegationMatrix: async (data: { tasks: any, rules: any }): Promise<{ success: boolean; path: string }> => {
+    const res = await request('/api/research/export-matrix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to export delegation matrix');
+    return await res.json();
+  },
+
 };
 

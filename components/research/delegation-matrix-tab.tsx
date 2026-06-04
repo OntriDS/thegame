@@ -1289,21 +1289,21 @@ function SortableRow({
         <select 
           value={task.doc} 
           onChange={(e) => updateTask(task.id, 'doc', e.target.value)}
-          className="w-full h-7 text-center bg-transparent border border-transparent hover:border-input rounded px-1 outline-none focus:ring-1 focus:ring-ring"
+          className="w-full h-7 text-center bg-transparent border border-transparent hover:border-input rounded px-1 outline-none focus:ring-1 focus:ring-ring text-foreground"
         >
-          <option value="Y">Y</option>
-          <option value="H">H</option>
-          <option value="N">N</option>
+          <option value="Y" className="bg-background text-foreground">Y</option>
+          <option value="H" className="bg-background text-foreground">H</option>
+          <option value="N" className="bg-background text-foreground">N</option>
         </select>
       </td>
       <td className="p-1 align-top">
         <select 
           value={task.feed} 
           onChange={(e) => updateTask(task.id, 'feed', e.target.value)}
-          className="w-full h-7 text-center bg-transparent border border-transparent hover:border-input rounded px-1 outline-none focus:ring-1 focus:ring-ring"
+          className="w-full h-7 text-center bg-transparent border border-transparent hover:border-input rounded px-1 outline-none focus:ring-1 focus:ring-ring text-foreground"
         >
-          <option value="Y">Y</option>
-          <option value="N">N</option>
+          <option value="Y" className="bg-background text-foreground">Y</option>
+          <option value="N" className="bg-background text-foreground">N</option>
         </select>
       </td>
       <td className="p-1 align-top">
@@ -1340,39 +1340,28 @@ export function DelegationMatrixTab() {
     ClientAPI.getCharacters().then(setCharacters).catch(console.error);
     ClientAPI.getTasks().then(tasks => setAllTasks(tasks)).catch(console.error);
     
-    // Load rules from local storage if available
-    const savedRules = localStorage.getItem('delegation-matrix-rules');
-    if (savedRules) {
-      try {
-        setRules(JSON.parse(savedRules));
-        setTempRules(JSON.parse(savedRules));
-      } catch (e) {
-        console.error("Failed to parse saved rules", e);
+    ClientAPI.getMatrixState().then(state => {
+      if (state.rules) {
+        setRules(state.rules);
+        setTempRules(state.rules);
       }
-    }
-
-    // Load tasks from local storage if available
-    const savedTasks = localStorage.getItem('delegation-matrix-tasks');
-    if (savedTasks) {
-      try {
-        setTasks(JSON.parse(savedTasks));
-      } catch (e) {
-        console.error("Failed to parse saved tasks", e);
+      if (state.tasks) {
+        setTasks(state.tasks);
       }
-    }
+    }).catch(console.error);
   }, []);
 
   const saveTasks = (newTasks: MatrixTask[] | ((prev: MatrixTask[]) => MatrixTask[])) => {
     setTasks((prev) => {
       const updated = typeof newTasks === 'function' ? newTasks(prev) : newTasks;
-      localStorage.setItem('delegation-matrix-tasks', JSON.stringify(updated));
+      ClientAPI.saveMatrixState({ tasks: updated, rules }).catch(console.error);
       return updated;
     });
   };
 
   const saveRules = () => {
     setRules(tempRules);
-    localStorage.setItem('delegation-matrix-rules', JSON.stringify(tempRules));
+    ClientAPI.saveMatrixState({ tasks, rules: tempRules }).catch(console.error);
     setIsEditingRules(false);
   };
 
@@ -1681,11 +1670,34 @@ export function DelegationMatrixTab() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Task Delegation Matrix</CardTitle>
-          <CardDescription>
-            Identify and evaluate tasks to determine if they should be Kept, Delegated, or Automated.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Task Delegation Matrix</CardTitle>
+            <CardDescription>
+              Identify and evaluate tasks to determine if they should be Kept, Delegated, or Automated.
+            </CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <button 
+              onClick={async () => {
+                const btn = document.getElementById('export-btn');
+                if (btn) btn.innerText = 'Exporting...';
+                try {
+                  await ClientAPI.exportDelegationMatrix({ tasks, rules });
+                  if (btn) btn.innerText = 'Exported!';
+                  setTimeout(() => { if (btn) btn.innerText = 'Export to Library'; }, 2000);
+                } catch(e) {
+                  console.error(e);
+                  if (btn) btn.innerText = 'Error';
+                  setTimeout(() => { if (btn) btn.innerText = 'Export to Library'; }, 2000);
+                }
+              }}
+              id="export-btn"
+              className="px-3 py-1 bg-secondary text-secondary-foreground text-sm font-medium rounded hover:bg-secondary/80"
+            >
+              Export to Library
+            </button>
+          </div>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
