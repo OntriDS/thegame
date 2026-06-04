@@ -41,7 +41,7 @@ export interface MatrixTask {
   s: number;
   currentOwner: string;
   idealOwner: string;
-  doc: 'Y' | 'N';
+  doc: 'Y' | 'N' | 'H';
   feed: 'Y' | 'N';
   delegation: string;
   reasons: string;
@@ -53,6 +53,7 @@ export interface MatrixTask {
 const DEFAULT_RULES = {
   statusPenalties: {
     noDoc: 20,
+    halfDoc: 10,
     noFeed: 10,
     noCurrentOwner: 10,
     mismatchIdealCurrent: 20,
@@ -1291,6 +1292,7 @@ function SortableRow({
           className="w-full h-7 text-center bg-transparent border border-transparent hover:border-input rounded px-1 outline-none focus:ring-1 focus:ring-ring"
         >
           <option value="Y">Y</option>
+          <option value="H">H</option>
           <option value="N">N</option>
         </select>
       </td>
@@ -1462,9 +1464,10 @@ export function DelegationMatrixTab() {
 
   const calculateStatus = (task: MatrixTask) => {
     let score = 100;
-    const p = rules.statusPenalties;
+    const p = rules.statusPenalties as any;
     
     if (task.doc === 'N') score -= p.noDoc;
+    if (task.doc === 'H') score -= (p.halfDoc ?? 10);
     if (task.feed === 'N') score -= p.noFeed;
     
     const hasCurrent = task.currentOwner && task.currentOwner.trim() !== '';
@@ -1796,6 +1799,7 @@ export function DelegationMatrixTab() {
                 <p>Base is 100%. Penalties apply cumulatively:</p>
                 <ul className="list-disc pl-4 space-y-1">
                   <li>No Doc: <strong>-{rules.statusPenalties.noDoc}%</strong></li>
+                  <li>Half Doc: <strong>-{(rules.statusPenalties as any).halfDoc ?? 10}%</strong></li>
                   <li>No Feed: <strong>-{rules.statusPenalties.noFeed}%</strong></li>
                   <li>No Current Owner: <strong>-{rules.statusPenalties.noCurrentOwner}%</strong></li>
                   <li>Ideal != Current: <strong>-{rules.statusPenalties.mismatchIdealCurrent}%</strong></li>
@@ -1862,6 +1866,10 @@ export function DelegationMatrixTab() {
                   <div>
                     <label className="text-xs font-semibold block">No Doc</label>
                     <Input type="number" className="h-8 text-xs" value={tempRules.statusPenalties.noDoc} onChange={e => setTempRules({...tempRules, statusPenalties: {...tempRules.statusPenalties, noDoc: parseInt(e.target.value)||0}})} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold block">Half Doc</label>
+                    <Input type="number" className="h-8 text-xs" value={(tempRules.statusPenalties as any).halfDoc ?? 10} onChange={e => setTempRules({...tempRules, statusPenalties: {...tempRules.statusPenalties, halfDoc: parseInt(e.target.value)||0}})} />
                   </div>
                   <div>
                     <label className="text-xs font-semibold block">No Feed</label>
