@@ -1746,17 +1746,17 @@ export function DelegationMatrixTab() {
 
               <div className="space-y-2">
                 <h4 className="font-semibold border-b pb-1">Delegation Rules</h4>
-                <p><span className="text-cyan-500 font-bold">Cyan (Keep):</span> Ideal is '{rules.delegation.targetFounder}'</p>
+                <p><span className="text-cyan-500 font-bold">Cyan (Keep):</span> Ideal is &apos;{rules.delegation.targetFounder}&apos;</p>
                 <p><span className="text-orange-500 font-bold">Orange (Action Needed):</span> Current != Ideal</p>
                 <ul className="list-disc pl-4 space-y-1 mt-0">
-                  <li><strong>Automate:</strong> Ideal has '{rules.delegation.targetAI}'</li>
-                  <li><strong>Delegate:</strong> Ideal doesn't have '{rules.delegation.targetAI}'</li>
+                  <li><strong>Automate:</strong> Ideal has &apos;{rules.delegation.targetAI}&apos;</li>
+                  <li><strong>Delegate:</strong> Ideal doesn&apos;t have &apos;{rules.delegation.targetAI}&apos;</li>
                   <li><strong>Co-:</strong> Ideal has multiple characters</li>
                 </ul>
                 <p><span className="text-purple-500 font-bold">Purple (Completed):</span> Current == Ideal</p>
                 <ul className="list-disc pl-4 space-y-1 mt-0">
-                  <li><strong>Automated:</strong> Ideal has '{rules.delegation.targetAI}'</li>
-                  <li><strong>Delegated:</strong> Ideal doesn't have '{rules.delegation.targetAI}'</li>
+                  <li><strong>Automated:</strong> Ideal has &apos;{rules.delegation.targetAI}&apos;</li>
+                  <li><strong>Delegated:</strong> Ideal doesn&apos;t have &apos;{rules.delegation.targetAI}&apos;</li>
                 </ul>
               </div>
             </div>
@@ -1862,7 +1862,7 @@ export function DelegationMatrixTab() {
                       <Input type="number" className="h-7 text-xs w-9 px-1" value={tempRules.delegation.midDpsMax} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, midDpsMax: parseInt(e.target.value)||0}})} />
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2 italic">Names calculate Delegation (Cyan/Orange/Purple). DPS ranges calculate 'Reasons' friction strings.</p>
+                  <p className="text-xs text-muted-foreground mt-2 italic">Names calculate Delegation (Cyan/Orange/Purple). DPS ranges calculate &apos;Reasons&apos; friction strings.</p>
                 </div>
               </div>
 
