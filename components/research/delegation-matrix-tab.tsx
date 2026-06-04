@@ -1307,14 +1307,11 @@ function SortableRow({
       <td className="p-1 align-top">
         <div className={`mt-1 px-2 text-sm font-semibold italic ${computedDelegationColor}`}>{computedDelegation}</div>
       </td>
-      <td className="p-1 align-top">
-        <div className="mt-1 px-2 text-sm text-muted-foreground leading-tight">{computedReasons}</div>
-      </td>
       <td className="p-1 align-top text-center">
         <div className="mt-1"><span className={statusColor}>{statusScore}%</span></div>
       </td>
       <td className="p-1 align-top">
-        <Input value={task.notes} onChange={(e) => updateTask(task.id, 'notes', e.target.value)} className="h-7 px-2 border-transparent hover:border-input text-sm" />
+        <div className="mt-1 px-2 text-sm text-muted-foreground leading-tight">{computedReasons}</div>
       </td>
     </tr>
   );
@@ -1328,6 +1325,7 @@ export function DelegationMatrixTab() {
   const [isEditingRules, setIsEditingRules] = useState(false);
   const [tempRules, setTempRules] = useState(DEFAULT_RULES);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
   
   const [ownerModal, setOwnerModal] = useState<{
     isOpen: boolean;
@@ -1622,7 +1620,60 @@ export function DelegationMatrixTab() {
     return reasons.join('. ');
   };
 
+  const requestSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
 
+  const sortedTasks = React.useMemo(() => {
+    if (!sortConfig) return tasks;
+    return [...tasks].sort((a, b) => {
+      const { key, direction } = sortConfig;
+      
+      let aVal: any = a[key as keyof MatrixTask];
+      let bVal: any = b[key as keyof MatrixTask];
+
+      if (key === 'area') {
+        aVal = `${a.area} ${a.station} ${a.task}`;
+        bVal = `${b.area} ${b.station} ${b.task}`;
+      } else if (key === 'dps') {
+        const aDps = a.f + a.a + a.i + a.s;
+        const bDps = b.f + b.a + b.i + b.s;
+        aVal = aDps;
+        bVal = bDps;
+      } else if (key === 'delegation') {
+        aVal = calculateDelegation(a, a.f + a.a + a.i + a.s).text;
+        bVal = calculateDelegation(b, b.f + b.a + b.i + b.s).text;
+      } else if (key === 'status') {
+        aVal = calculateStatus(a);
+        bVal = calculateStatus(b);
+      } else if (key === 'currentOwner') {
+        aVal = typeof getOwnerDisplay(a.currentOwner) === 'string' ? getOwnerDisplay(a.currentOwner) : a.currentOwner;
+        bVal = typeof getOwnerDisplay(b.currentOwner) === 'string' ? getOwnerDisplay(b.currentOwner) : b.currentOwner;
+      } else if (key === 'idealOwner') {
+        aVal = typeof getOwnerDisplay(a.idealOwner) === 'string' ? getOwnerDisplay(a.idealOwner) : a.idealOwner;
+        bVal = typeof getOwnerDisplay(b.idealOwner) === 'string' ? getOwnerDisplay(b.idealOwner) : b.idealOwner;
+      }
+
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+
+      if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [tasks, sortConfig, rules, characters, calculateDelegation, calculateStatus]);
+
+  const renderSortIndicator = (key: string) => {
+    if (sortConfig?.key === key) {
+      return sortConfig.direction === 'asc' ? ' ↑' : ' ↓';
+    }
+    return '';
+  };
 
   return (
     <div className="space-y-6">
@@ -1638,26 +1689,25 @@ export function DelegationMatrixTab() {
             <thead>
               <tr className="border-b bg-muted/50">
                 <th className="p-2 w-8"></th>
-                <th className="p-2 text-left font-medium">Area &gt; Station &gt; Task</th>
-                <th className="p-2 text-center font-medium w-12" title="Frequency">F</th>
-                <th className="p-2 text-center font-medium w-12" title="Annoyance">A</th>
-                <th className="p-2 text-center font-medium w-12" title="Impact">I</th>
-                <th className="p-2 text-center font-medium w-12" title="Simplicity">S</th>
-                <th className="p-2 text-center font-medium w-16 bg-muted/80">DPS</th>
-                <th className="p-2 text-left font-medium w-32">Current Owner</th>
-                <th className="p-2 text-left font-medium w-32">Ideal Owner</th>
-                <th className="p-2 text-center font-medium w-12">Doc?</th>
-                <th className="p-2 text-center font-medium w-12">Feed?</th>
-                <th className="p-2 text-left font-medium">Delegation</th>
+                <th className="p-2 text-left font-medium cursor-pointer hover:bg-muted/80" onClick={() => requestSort('area')}>Area &gt; Station &gt; Task{renderSortIndicator('area')}</th>
+                <th className="p-2 text-center font-medium w-12 cursor-pointer hover:bg-muted/80" title="Frequency" onClick={() => requestSort('f')}>F{renderSortIndicator('f')}</th>
+                <th className="p-2 text-center font-medium w-12 cursor-pointer hover:bg-muted/80" title="Annoyance" onClick={() => requestSort('a')}>A{renderSortIndicator('a')}</th>
+                <th className="p-2 text-center font-medium w-12 cursor-pointer hover:bg-muted/80" title="Impact" onClick={() => requestSort('i')}>I{renderSortIndicator('i')}</th>
+                <th className="p-2 text-center font-medium w-12 cursor-pointer hover:bg-muted/80" title="Simplicity" onClick={() => requestSort('s')}>S{renderSortIndicator('s')}</th>
+                <th className="p-2 text-center font-medium w-16 bg-muted/80 cursor-pointer hover:bg-muted/100" onClick={() => requestSort('dps')}>DPS{renderSortIndicator('dps')}</th>
+                <th className="p-2 text-left font-medium w-32 cursor-pointer hover:bg-muted/80" onClick={() => requestSort('currentOwner')}>Current Owner{renderSortIndicator('currentOwner')}</th>
+                <th className="p-2 text-left font-medium w-32 cursor-pointer hover:bg-muted/80" onClick={() => requestSort('idealOwner')}>Ideal Owner{renderSortIndicator('idealOwner')}</th>
+                <th className="p-2 text-center font-medium w-12 cursor-pointer hover:bg-muted/80" onClick={() => requestSort('doc')}>Doc?{renderSortIndicator('doc')}</th>
+                <th className="p-2 text-center font-medium w-12 cursor-pointer hover:bg-muted/80" onClick={() => requestSort('feed')}>Feed?{renderSortIndicator('feed')}</th>
+                <th className="p-2 text-left font-medium cursor-pointer hover:bg-muted/80" onClick={() => requestSort('delegation')}>Delegation{renderSortIndicator('delegation')}</th>
+                <th className="p-2 text-center font-medium w-20 cursor-pointer hover:bg-muted/80" onClick={() => requestSort('status')}>Status{renderSortIndicator('status')}</th>
                 <th className="p-2 text-left font-medium">Reasons</th>
-                <th className="p-2 text-center font-medium w-20">Status</th>
-                <th className="p-2 text-left font-medium min-w-[200px]">Notes</th>
               </tr>
             </thead>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+              <SortableContext items={sortedTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
                 <tbody>
-                  {tasks.map((task, index) => {
+                  {sortedTasks.map((task, index) => {
                     const dps = task.f + task.a + task.i + task.s;
                     const statusScore = calculateStatus(task);
                     const statusColor = getStatusColor(statusScore);
