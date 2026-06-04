@@ -3,14 +3,31 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ArrowUp, ArrowDown, MoreVertical, CheckCircle, X } from 'lucide-react';
+import { ArrowUp, ArrowDown, CheckCircle, X, GripVertical } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import OwnerSelectorModal from '@/components/modals/submodals/owner-selector-submodal';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ClientAPI } from '@/lib/client-api';
 import { Character, Task } from '@/types/entities';
-import { STATION_CATEGORIES } from '@/types/enums';
+import { STATION_CATEGORIES, TaskStatus } from '@/types/enums';
+
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 export interface MatrixTask {
   id: string;
@@ -44,12 +61,12 @@ const DEFAULT_RULES = {
     mismatchSThreshold: 2, mismatchSPenalty: 10,
   },
   delegation: {
-    lowDpsMax: 7,
-    midDpsMin: 8, midDpsMax: 11,
-    midDpsKeepAMax: 2, // Actually if A <= 2 (Fine, Love it, Mind Blowing), it's not annoying, so Keep. Wait, in math it was A>=2 (which meant 2, 3, 4, 5). 2 is Fine, 3 is Neutral. Let's make it midDpsKeepAMin: 2 meaning if A >= 2 (Wait, lower A is better or higher A is better? 5=Soul crushing. So A<=3 means it's not super annoying. Let's make it customizable.)
-    midDpsKeepAMin: 2, // Keeps if A is 2 or more? No, the original code had `if (task.a >= 2) del = 'Keep'`. This meant 2, 3, 4, 5 are kept. Wait, if it's 5 (Soul Crushing) it's kept? That makes no sense. The legend said "Low A (2+)". Let's change this to midDpsKeepAMax: 2 meaning if A <= 2, Keep it.
+    targetFounder: "akiles",
+    targetAI: "pixelbrain",
     highDpsMin: 12,
-    automateSMin: 3
+    midDpsMin: 8,
+    midDpsMax: 11,
+    fallbackDpsMax: 7
   },
   pointsLegend: {
     f: "5=Daily, 4=Frequent, 3=Weekly, 2=Bi-Weekly, 1=Monthly, 0=Never",
@@ -1190,6 +1207,113 @@ const INITIAL_MOCK_DATA: MatrixTask[] = [
   }
 ];
 
+function SortableRow({
+  task, dps, statusScore, statusColor, computedDelegation, computedReasons,
+  taskOptions, characters, handleRealTaskSelect, updateTask, getOwnerDisplay,
+  setOwnerModal, getDelegationColor
+}: any) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    position: 'relative' as React.CSSProperties['position'],
+    zIndex: isDragging ? 1 : 0,
+  };
+
+  return (
+    <tr ref={setNodeRef} style={style} className={`border-b hover:bg-muted/20 transition-colors ${isDragging ? 'bg-muted/50' : 'bg-card'}`}>
+      <td className="p-1 align-top text-center w-8">
+        <button {...attributes} {...listeners} className="opacity-50 hover:opacity-100 transition-opacity mt-1 focus:outline-none cursor-grab active:cursor-grabbing">
+          <GripVertical className="h-4 w-4 mx-auto" />
+        </button>
+      </td>
+      <td className="p-1 align-top">
+        <div className="flex gap-1 text-xs mb-1">
+          <span className="font-semibold capitalize">{task.area}</span>
+          <span className="text-muted-foreground">&gt;</span>
+          <span className="italic capitalize">{task.station}</span>
+          <span className="text-muted-foreground">&gt;</span>
+        </div>
+        <SearchableSelect
+          value={task.taskId || ''}
+          onValueChange={(val) => handleRealTaskSelect(task.id, val)}
+          options={taskOptions}
+          autoGroupByCategory={true}
+          initialLabel={task.task}
+          placeholder={task.task}
+          className="h-7 text-sm"
+          instanceId={`matrix-task-${task.id}`}
+        />
+      </td>
+      <td className="p-1 align-top">
+        <Input type="number" min={0} max={5} value={task.f} onChange={(e) => updateTask(task.id, 'f', parseInt(e.target.value) || 0)} className="h-7 w-12 px-1 text-center border-transparent hover:border-input" />
+      </td>
+      <td className="p-1 align-top">
+        <Input type="number" min={0} max={5} value={task.a} onChange={(e) => updateTask(task.id, 'a', parseInt(e.target.value) || 0)} className="h-7 w-12 px-1 text-center border-transparent hover:border-input" />
+      </td>
+      <td className="p-1 align-top">
+        <Input type="number" min={0} max={5} value={task.i} onChange={(e) => updateTask(task.id, 'i', parseInt(e.target.value) || 0)} className="h-7 w-12 px-1 text-center border-transparent hover:border-input" />
+      </td>
+      <td className="p-1 align-top">
+        <Input type="number" min={0} max={5} value={task.s} onChange={(e) => updateTask(task.id, 's', parseInt(e.target.value) || 0)} className="h-7 w-12 px-1 text-center border-transparent hover:border-input" />
+      </td>
+      <td className="p-1 align-top text-center font-bold bg-muted/30">
+        <div className="mt-1">{dps}</div>
+      </td>
+      <td className="p-1 align-top">
+        <button 
+          onClick={() => setOwnerModal({ isOpen: true, taskId: task.id, field: 'currentOwner', currentOwnerId: task.currentOwner })}
+          className="flex min-h-[28px] w-full items-center gap-1 rounded border border-transparent px-2 py-1 text-xs hover:border-input focus:border-input focus:outline-none transition-colors text-left bg-transparent"
+        >
+          {getOwnerDisplay(task.currentOwner)}
+        </button>
+      </td>
+      <td className="p-1 align-top">
+        <button 
+          onClick={() => setOwnerModal({ isOpen: true, taskId: task.id, field: 'idealOwner', currentOwnerId: task.idealOwner })}
+          className="flex min-h-[28px] w-full items-center gap-1 rounded border border-transparent px-2 py-1 text-xs hover:border-input focus:border-input focus:outline-none transition-colors text-left bg-transparent"
+        >
+          {getOwnerDisplay(task.idealOwner)}
+        </button>
+      </td>
+      <td className="p-1 align-top">
+        <select 
+          value={task.doc} 
+          onChange={(e) => updateTask(task.id, 'doc', e.target.value)}
+          className="w-full h-7 text-center bg-transparent border border-transparent hover:border-input rounded px-1 outline-none focus:ring-1 focus:ring-ring"
+        >
+          <option value="Y">Y</option>
+          <option value="N">N</option>
+        </select>
+      </td>
+      <td className="p-1 align-top">
+        <select 
+          value={task.feed} 
+          onChange={(e) => updateTask(task.id, 'feed', e.target.value)}
+          className="w-full h-7 text-center bg-transparent border border-transparent hover:border-input rounded px-1 outline-none focus:ring-1 focus:ring-ring"
+        >
+          <option value="Y">Y</option>
+          <option value="N">N</option>
+        </select>
+      </td>
+      <td className="p-1 align-top">
+        <div className={`mt-1 px-2 text-sm font-semibold italic ${getDelegationColor(computedDelegation)}`}>{computedDelegation}</div>
+      </td>
+      <td className="p-1 align-top">
+        <div className="mt-1 px-2 text-sm text-muted-foreground leading-tight">{computedReasons}</div>
+      </td>
+      <td className="p-1 align-top text-center">
+        <div className="mt-1"><span className={statusColor}>{statusScore}%</span></div>
+      </td>
+      <td className="p-1 align-top">
+        <Input value={task.notes} onChange={(e) => updateTask(task.id, 'notes', e.target.value)} className="h-7 px-2 border-transparent hover:border-input text-sm" />
+      </td>
+    </tr>
+  );
+}
+
 export function DelegationMatrixTab() {
   const [tasks, setTasks] = useState<MatrixTask[]>(INITIAL_MOCK_DATA);
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -1207,7 +1331,7 @@ export function DelegationMatrixTab() {
 
   React.useEffect(() => {
     ClientAPI.getCharacters().then(setCharacters).catch(console.error);
-    ClientAPI.getTasks().then(setAllTasks).catch(console.error);
+    ClientAPI.getAllTasks().then(tasks => setAllTasks(tasks.filter(t => t.status !== TaskStatus.COLLECTED))).catch(console.error);
     
     // Load rules from local storage if available
     const savedRules = localStorage.getItem('delegation-matrix-rules');
@@ -1270,6 +1394,12 @@ export function DelegationMatrixTab() {
   const handleRealTaskSelect = (matrixTaskId: string, selectedTaskId: string) => {
     const realTask = allTasks.find(t => t.id === selectedTaskId);
     if (realTask) {
+      let currentOwnerString = '';
+      if (realTask.ownerId) {
+         const ownerIds = Array.isArray(realTask.ownerId) ? realTask.ownerId : [realTask.ownerId];
+         currentOwnerString = ownerIds.join(',');
+      }
+
       saveTasks(prev => prev.map(t => {
         if (t.id !== matrixTaskId) return t;
         const newArea = realTask.station ? getAreaForStation(realTask.station) : t.area;
@@ -1278,6 +1408,7 @@ export function DelegationMatrixTab() {
           taskId: selectedTaskId,
           station: realTask.station || t.station,
           area: newArea || t.area,
+          currentOwner: currentOwnerString || t.currentOwner,
         };
       }));
     }
@@ -1300,9 +1431,27 @@ export function DelegationMatrixTab() {
     );
   };
 
-  const handleOwnerSelect = (characterIds: string[]) => {
+  const handleOwnerSelect = async (characterIds: string[]) => {
     if (ownerModal.taskId) {
-      updateTask(ownerModal.taskId, ownerModal.field, characterIds.join(','));
+      const ownerString = characterIds.join(',');
+      updateTask(ownerModal.taskId, ownerModal.field, ownerString);
+      
+      // If it's linked to a real task and we are changing currentOwner, update DB
+      if (ownerModal.field === 'currentOwner') {
+        const matrixTask = tasks.find(t => t.id === ownerModal.taskId);
+        if (matrixTask && matrixTask.taskId) {
+          const realTask = allTasks.find(t => t.id === matrixTask.taskId);
+          if (realTask) {
+            try {
+              const newOwnerId = characterIds.length === 1 ? characterIds[0] : characterIds;
+              const updatedTask = await ClientAPI.upsertTask({ ...realTask, ownerId: newOwnerId });
+              setAllTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+            } catch (e) {
+              console.error("Failed to update task owner in DB", e);
+            }
+          }
+        }
+      }
     }
   };
 
@@ -1355,35 +1504,66 @@ export function DelegationMatrixTab() {
     });
   };
 
-  const moveRowDown = (index: number) => {
-    if (index === tasks.length - 1) return;
-    saveTasks(prev => {
-      const newTasks = [...prev];
-      const temp = newTasks[index + 1];
-      newTasks[index + 1] = newTasks[index];
-      newTasks[index] = temp;
-      return newTasks;
-    });
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      saveTasks((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   };
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   const calculateDelegation = (task: MatrixTask, dps: number) => {
-    const d = rules.delegation;
-    let del = '';
-    if (dps <= d.lowDpsMax) del = 'Keep';
-    else if (dps >= d.midDpsMin && dps <= d.midDpsMax) {
-      // Keep if Annoyance is low (e.g. A <= 2) otherwise Delegate
-      if (task.a <= d.midDpsKeepAMax) del = 'Keep';
-      else del = 'Delegate';
-    } else if (dps >= d.highDpsMin) {
-      del = 'Delegate';
-    } else {
-      del = 'Keep'; // Fallback
+    const getOwnerNames = (ownerString: string) => {
+      if (!ownerString) return [];
+      return ownerString.split(',').map(s => {
+        const trimmed = s.trim();
+        const char = characters.find(c => c.id === trimmed || c.name === trimmed);
+        return char ? char.name.toLowerCase() : trimmed.toLowerCase();
+      });
+    };
+
+    const currentNames = getOwnerNames(task.currentOwner);
+    const idealNames = getOwnerNames(task.idealOwner);
+
+    if (idealNames.length === 0) return 'Keep';
+
+    const idealHasFounder = idealNames.some(n => n.includes(rules.delegation.targetFounder) || n.includes('founder'));
+    const idealHasAI = idealNames.some(n => n.includes(rules.delegation.targetAI));
+    
+    // Check if exactly same sets
+    const isCurrentEqualIdeal = 
+      currentNames.length > 0 && 
+      currentNames.length === idealNames.length && 
+      currentNames.every(n => idealNames.includes(n));
+
+    // Cyan logic
+    if (idealHasFounder) return 'Keep';
+
+    const hasMultipleIdeal = idealNames.length > 1;
+
+    // Purple logic
+    if (isCurrentEqualIdeal) {
+      if (idealHasAI) return hasMultipleIdeal ? 'Co-Automated' : 'Automated';
+      else return hasMultipleIdeal ? 'Co-Delegated' : 'Delegated';
     }
 
-    if (task.s >= d.automateSMin) {
-      del = del === 'Keep' ? 'Automate' : del + '-Automate';
+    // Orange logic
+    if (!isCurrentEqualIdeal) {
+      if (idealHasAI) return hasMultipleIdeal ? 'Co-Automate' : 'Automate';
+      else return hasMultipleIdeal ? 'Co-Delegate' : 'Delegate';
     }
-    return del;
+
+    return 'Keep';
   };
 
   const calculateReasons = (task: MatrixTask, dps: number) => {
@@ -1403,7 +1583,7 @@ export function DelegationMatrixTab() {
        reasons.push('Critical for Growth');
     }
 
-    if (task.s >= rules.delegation.automateSMin) {
+    if (task.s >= 3) { // Legacy rule just for reasons display
        reasons.push(`Easily Proceduralized`);
     }
     
@@ -1415,12 +1595,10 @@ export function DelegationMatrixTab() {
   };
 
   const getDelegationColor = (del: string) => {
-    if (del === 'Keep') return 'text-cyan-500';
-    if (del.includes('Keep') && del.includes('Automate')) return 'text-yellow-500';
-    if (del.includes('Delegate') && !del.includes('Automate')) return 'text-orange-500';
-    if (del.includes('Delegate') && del.includes('Automate')) return 'text-orange-400';
-    if (del === 'Automate') return 'text-purple-500';
-    return 'text-primary';
+    const d = del.toLowerCase();
+    if (d === 'keep') return 'text-cyan-500 font-bold';
+    if (d.includes('ed')) return 'text-purple-500 font-bold'; // Delegated, Automated
+    return 'text-orange-500 font-bold'; // Delegate, Automate
   };
 
   return (
@@ -1453,116 +1631,39 @@ export function DelegationMatrixTab() {
                 <th className="p-2 text-left font-medium min-w-[200px]">Notes</th>
               </tr>
             </thead>
-            <tbody>
-              {tasks.map((task, index) => {
-                const dps = task.f + task.a + task.i + task.s;
-                const statusScore = calculateStatus(task);
-                const statusColor = getStatusColor(statusScore);
-                const computedDelegation = calculateDelegation(task, dps);
-                const computedReasons = calculateReasons(task, dps);
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                <tbody>
+                  {tasks.map((task, index) => {
+                    const dps = task.f + task.a + task.i + task.s;
+                    const statusScore = calculateStatus(task);
+                    const statusColor = getStatusColor(statusScore);
+                    const computedDelegation = calculateDelegation(task, dps);
+                    const computedReasons = calculateReasons(task, dps);
 
-                return (
-                  <tr key={task.id} className="border-b hover:bg-muted/20 transition-colors">
-                    <td className="p-1 align-top text-center w-8">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger className="opacity-50 hover:opacity-100 transition-opacity mt-1 focus:outline-none">
-                          <MoreVertical className="h-4 w-4" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                          <DropdownMenuItem onClick={() => moveRowUp(index)} disabled={index === 0}>
-                            <ArrowUp className="h-4 w-4 mr-2" /> Move Up
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => moveRowDown(index)} disabled={index === tasks.length - 1}>
-                            <ArrowDown className="h-4 w-4 mr-2" /> Move Down
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                    <td className="p-1 align-top">
-                      <div className="flex gap-1 text-xs mb-1">
-                        <span className="font-semibold capitalize">{task.area}</span>
-                        <span className="text-muted-foreground">&gt;</span>
-                        <span className="italic capitalize">{task.station}</span>
-                        <span className="text-muted-foreground">&gt;</span>
-                      </div>
-                      <SearchableSelect
-                        value={task.taskId || ''}
-                        onValueChange={(val) => handleRealTaskSelect(task.id, val)}
-                        options={taskOptions}
-                        autoGroupByCategory={true}
-                        initialLabel={task.task}
-                        placeholder={task.task}
-                        className="h-7 text-sm"
-                        instanceId={`matrix-task-${task.id}`}
+                    return (
+                      <SortableRow
+                        key={task.id}
+                        task={task}
+                        index={index}
+                        dps={dps}
+                        statusScore={statusScore}
+                        statusColor={statusColor}
+                        computedDelegation={computedDelegation}
+                        computedReasons={computedReasons}
+                        taskOptions={taskOptions}
+                        characters={characters}
+                        handleRealTaskSelect={handleRealTaskSelect}
+                        updateTask={updateTask}
+                        getOwnerDisplay={getOwnerDisplay}
+                        setOwnerModal={setOwnerModal}
+                        getDelegationColor={getDelegationColor}
                       />
-                    </td>
-                    <td className="p-1 align-top">
-                      <Input type="number" min={0} max={5} value={task.f} onChange={(e) => updateTask(task.id, 'f', parseInt(e.target.value) || 0)} className="h-7 w-12 px-1 text-center border-transparent hover:border-input" />
-                    </td>
-                    <td className="p-1 align-top">
-                      <Input type="number" min={0} max={5} value={task.a} onChange={(e) => updateTask(task.id, 'a', parseInt(e.target.value) || 0)} className="h-7 w-12 px-1 text-center border-transparent hover:border-input" />
-                    </td>
-                    <td className="p-1 align-top">
-                      <Input type="number" min={0} max={5} value={task.i} onChange={(e) => updateTask(task.id, 'i', parseInt(e.target.value) || 0)} className="h-7 w-12 px-1 text-center border-transparent hover:border-input" />
-                    </td>
-                    <td className="p-1 align-top">
-                      <Input type="number" min={0} max={5} value={task.s} onChange={(e) => updateTask(task.id, 's', parseInt(e.target.value) || 0)} className="h-7 w-12 px-1 text-center border-transparent hover:border-input" />
-                    </td>
-                    <td className="p-1 align-top text-center font-bold bg-muted/30">
-                      <div className="mt-1">{dps}</div>
-                    </td>
-                    <td className="p-1 align-top">
-                      <button 
-                        onClick={() => setOwnerModal({ isOpen: true, taskId: task.id, field: 'currentOwner', currentOwnerId: task.currentOwner })}
-                        className="flex min-h-[28px] w-full items-center gap-1 rounded border border-transparent px-2 py-1 text-xs hover:border-input focus:border-input focus:outline-none transition-colors text-left bg-transparent"
-                      >
-                        {getOwnerDisplay(task.currentOwner)}
-                      </button>
-                    </td>
-                    <td className="p-1 align-top">
-                      <button 
-                        onClick={() => setOwnerModal({ isOpen: true, taskId: task.id, field: 'idealOwner', currentOwnerId: task.idealOwner })}
-                        className="flex min-h-[28px] w-full items-center gap-1 rounded border border-transparent px-2 py-1 text-xs hover:border-input focus:border-input focus:outline-none transition-colors text-left bg-transparent"
-                      >
-                        {getOwnerDisplay(task.idealOwner)}
-                      </button>
-                    </td>
-                    <td className="p-1 align-top">
-                      <select 
-                        value={task.doc} 
-                        onChange={(e) => updateTask(task.id, 'doc', e.target.value)}
-                        className="w-full h-7 text-center bg-transparent border border-transparent hover:border-input rounded px-1 outline-none focus:ring-1 focus:ring-ring"
-                      >
-                        <option value="Y">Y</option>
-                        <option value="N">N</option>
-                      </select>
-                    </td>
-                    <td className="p-1 align-top">
-                      <select 
-                        value={task.feed} 
-                        onChange={(e) => updateTask(task.id, 'feed', e.target.value)}
-                        className="w-full h-7 text-center bg-transparent border border-transparent hover:border-input rounded px-1 outline-none focus:ring-1 focus:ring-ring"
-                      >
-                        <option value="Y">Y</option>
-                        <option value="N">N</option>
-                      </select>
-                    </td>
-                    <td className="p-1 align-top">
-                      <div className={`mt-1 px-2 text-sm font-semibold italic ${getDelegationColor(computedDelegation)}`}>{computedDelegation}</div>
-                    </td>
-                    <td className="p-1 align-top">
-                      <div className="mt-1 px-2 text-sm text-muted-foreground leading-tight">{computedReasons}</div>
-                    </td>
-                    <td className="p-1 align-top text-center">
-                      <div className="mt-1"><span className={statusColor}>{statusScore}%</span></div>
-                    </td>
-                    <td className="p-1 align-top">
-                      <Input value={task.notes} onChange={(e) => updateTask(task.id, 'notes', e.target.value)} className="h-7 px-2 border-transparent hover:border-input text-sm" />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
+                    );
+                  })}
+                </tbody>
+              </SortableContext>
+            </DndContext>
           </table>
           
           <div className="mt-4 flex justify-end">
@@ -1645,10 +1746,18 @@ export function DelegationMatrixTab() {
 
               <div className="space-y-2">
                 <h4 className="font-semibold border-b pb-1">Delegation Rules</h4>
-                <p><strong>Low DPS ({rules.delegation.lowDpsMax}-):</strong> Keep</p>
-                <p><strong>Mid DPS ({rules.delegation.midDpsMin}-{rules.delegation.midDpsMax}) + Low Annoyance (A≤{rules.delegation.midDpsKeepAMax}):</strong> Keep</p>
-                <p><strong>High DPS ({rules.delegation.highDpsMin}+):</strong> Delegate</p>
-                <p><strong>S≥{rules.delegation.automateSMin} (Procedural):</strong> Automate</p>
+                <p><span className="text-cyan-500 font-bold">Cyan (Keep):</span> Ideal is '{rules.delegation.targetFounder}'</p>
+                <p><span className="text-orange-500 font-bold">Orange (Action Needed):</span> Current != Ideal</p>
+                <ul className="list-disc pl-4 space-y-1 mt-0">
+                  <li><strong>Automate:</strong> Ideal has '{rules.delegation.targetAI}'</li>
+                  <li><strong>Delegate:</strong> Ideal doesn't have '{rules.delegation.targetAI}'</li>
+                  <li><strong>Co-:</strong> Ideal has multiple characters</li>
+                </ul>
+                <p><span className="text-purple-500 font-bold">Purple (Completed):</span> Current == Ideal</p>
+                <ul className="list-disc pl-4 space-y-1 mt-0">
+                  <li><strong>Automated:</strong> Ideal has '{rules.delegation.targetAI}'</li>
+                  <li><strong>Delegated:</strong> Ideal doesn't have '{rules.delegation.targetAI}'</li>
+                </ul>
               </div>
             </div>
           ) : (
@@ -1731,11 +1840,19 @@ export function DelegationMatrixTab() {
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-semibold border-b pb-1">Edit Delegation Rules</h4>
+                <h4 className="font-semibold border-b pb-1">Edit Delegation Targets & Config</h4>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <label className="text-xs font-semibold whitespace-nowrap">Low DPS Max:</label>
-                    <Input type="number" className="h-7 text-xs w-20" value={tempRules.delegation.lowDpsMax} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, lowDpsMax: parseInt(e.target.value)||0}})} />
+                    <label className="text-xs font-semibold whitespace-nowrap">Target Founder Name:</label>
+                    <Input className="h-7 text-xs w-32" value={tempRules.delegation.targetFounder} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, targetFounder: e.target.value.toLowerCase()}})} />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs font-semibold whitespace-nowrap">Target AI Name:</label>
+                    <Input className="h-7 text-xs w-32" value={tempRules.delegation.targetAI} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, targetAI: e.target.value.toLowerCase()}})} />
+                  </div>
+                  <div className="flex items-center justify-between gap-2 mt-4">
+                    <label className="text-xs font-semibold whitespace-nowrap">High DPS Min:</label>
+                    <Input type="number" className="h-7 text-xs w-20" value={tempRules.delegation.highDpsMin} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, highDpsMin: parseInt(e.target.value)||0}})} />
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <label className="text-xs font-semibold whitespace-nowrap">Mid DPS Range:</label>
@@ -1745,18 +1862,7 @@ export function DelegationMatrixTab() {
                       <Input type="number" className="h-7 text-xs w-9 px-1" value={tempRules.delegation.midDpsMax} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, midDpsMax: parseInt(e.target.value)||0}})} />
                     </div>
                   </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <label className="text-xs font-semibold whitespace-nowrap leading-tight">Mid DPS Keep Annoyance Max:</label>
-                    <Input type="number" className="h-7 text-xs w-20" value={tempRules.delegation.midDpsKeepAMax} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, midDpsKeepAMax: parseInt(e.target.value)||0}})} />
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <label className="text-xs font-semibold whitespace-nowrap">High DPS Min:</label>
-                    <Input type="number" className="h-7 text-xs w-20" value={tempRules.delegation.highDpsMin} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, highDpsMin: parseInt(e.target.value)||0}})} />
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <label className="text-xs font-semibold whitespace-nowrap">Automate Simplicity Min:</label>
-                    <Input type="number" className="h-7 text-xs w-20" value={tempRules.delegation.automateSMin} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, automateSMin: parseInt(e.target.value)||0}})} />
-                  </div>
+                  <p className="text-xs text-muted-foreground mt-2 italic">Names calculate Delegation (Cyan/Orange/Purple). DPS ranges calculate 'Reasons' friction strings.</p>
                 </div>
               </div>
 
