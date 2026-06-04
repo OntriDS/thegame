@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ArrowUp, ArrowDown, CheckCircle, X, GripVertical } from 'lucide-react';
+import { ArrowUp, ArrowDown, CheckCircle, X, GripVertical, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import OwnerSelectorModal from '@/components/modals/submodals/owner-selector-submodal';
 import { SearchableSelect } from '@/components/ui/searchable-select';
@@ -1208,9 +1208,9 @@ const INITIAL_MOCK_DATA: MatrixTask[] = [
 ];
 
 function SortableRow({
-  task, dps, statusScore, statusColor, computedDelegation, computedReasons,
-  taskOptions, characters, handleRealTaskSelect, updateTask, getOwnerDisplay,
-  setOwnerModal, getDelegationColor
+  task, dps, statusScore, statusColor, computedDelegation, computedDelegationColor, computedReasons,
+  taskOptions, characters, handleRealTaskSelect, updateTask, deleteTask, getOwnerDisplay,
+  setOwnerModal
 }: any) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
 
@@ -1225,9 +1225,14 @@ function SortableRow({
   return (
     <tr ref={setNodeRef} style={style} className={`border-b hover:bg-muted/20 transition-colors ${isDragging ? 'bg-muted/50' : 'bg-card'}`}>
       <td className="p-1 align-top text-center w-8">
-        <button {...attributes} {...listeners} className="opacity-50 hover:opacity-100 transition-opacity mt-1 focus:outline-none cursor-grab active:cursor-grabbing">
-          <GripVertical className="h-4 w-4 mx-auto" />
-        </button>
+        <div className="flex flex-col items-center justify-start h-full gap-2 mt-1">
+          <button {...attributes} {...listeners} className="opacity-50 hover:opacity-100 transition-opacity focus:outline-none cursor-grab active:cursor-grabbing">
+            <GripVertical className="h-4 w-4" />
+          </button>
+          <button onClick={() => deleteTask(task.id)} className="opacity-30 hover:opacity-100 hover:text-red-500 transition-colors focus:outline-none" title="Delete Row">
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
       </td>
       <td className="p-1 align-top">
         <div className="flex gap-1 text-xs mb-1">
@@ -1299,7 +1304,7 @@ function SortableRow({
         </select>
       </td>
       <td className="p-1 align-top">
-        <div className={`mt-1 px-2 text-sm font-semibold italic ${getDelegationColor(computedDelegation)}`}>{computedDelegation}</div>
+        <div className={`mt-1 px-2 text-sm font-semibold italic ${computedDelegationColor}`}>{computedDelegation}</div>
       </td>
       <td className="p-1 align-top">
         <div className="mt-1 px-2 text-sm text-muted-foreground leading-tight">{computedReasons}</div>
@@ -1493,6 +1498,10 @@ export function DelegationMatrixTab() {
     saveTasks(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));
   };
 
+  const deleteTask = (id: string) => {
+    saveTasks(prev => prev.filter(t => t.id !== id));
+  };
+
   const moveRowUp = (index: number) => {
     if (index === 0) return;
     saveTasks(prev => {
@@ -1535,7 +1544,7 @@ export function DelegationMatrixTab() {
     const currentNames = getOwnerNames(task.currentOwner);
     const idealNames = getOwnerNames(task.idealOwner);
 
-    if (idealNames.length === 0) return 'Keep';
+    if (idealNames.length === 0) return { text: 'Keep', color: 'text-cyan-500 font-bold' };
 
     const idealHasFounder = idealNames.some(n => n.includes(rules.delegation.targetFounder) || n.includes('founder'));
     const idealHasAI = idealNames.some(n => n.includes(rules.delegation.targetAI));
@@ -1546,24 +1555,34 @@ export function DelegationMatrixTab() {
       currentNames.length === idealNames.length && 
       currentNames.every(n => idealNames.includes(n));
 
-    // Cyan logic
-    if (idealHasFounder) return 'Keep';
-
     const hasMultipleIdeal = idealNames.length > 1;
 
-    // Purple logic
+    // COMPLETED (Current == Ideal)
     if (isCurrentEqualIdeal) {
-      if (idealHasAI) return hasMultipleIdeal ? 'Co-Automated' : 'Automated';
-      else return hasMultipleIdeal ? 'Co-Delegated' : 'Delegated';
+      if (idealHasFounder) {
+        let text = '';
+        if (!hasMultipleIdeal) text = 'Kept';
+        else text = idealHasAI ? 'Co-Automated' : 'Co-Worked';
+        return { text, color: 'text-cyan-500 font-bold' };
+      } else {
+        let text = '';
+        if (idealHasAI) text = hasMultipleIdeal ? 'Co-Automated' : 'Automated';
+        else text = hasMultipleIdeal ? 'Co-Delegated' : 'Delegated';
+        return { text, color: 'text-purple-500 font-bold' };
+      }
     }
 
-    // Orange logic
-    if (!isCurrentEqualIdeal) {
-      if (idealHasAI) return hasMultipleIdeal ? 'Co-Automate' : 'Automate';
-      else return hasMultipleIdeal ? 'Co-Delegate' : 'Delegate';
+    // ACTION NEEDED (Current != Ideal)
+    // Always Orange
+    let text = '';
+    if (idealHasFounder) {
+      if (!hasMultipleIdeal) text = 'Keep';
+      else text = idealHasAI ? 'Co-Automate' : 'Co-Work';
+    } else {
+      if (idealHasAI) text = hasMultipleIdeal ? 'Co-Automate' : 'Automate';
+      else text = hasMultipleIdeal ? 'Co-Delegate' : 'Delegate';
     }
-
-    return 'Keep';
+    return { text, color: 'text-orange-500 font-bold' };
   };
 
   const calculateReasons = (task: MatrixTask, dps: number) => {
@@ -1594,12 +1613,7 @@ export function DelegationMatrixTab() {
     return reasons.join('. ');
   };
 
-  const getDelegationColor = (del: string) => {
-    const d = del.toLowerCase();
-    if (d === 'keep') return 'text-cyan-500 font-bold';
-    if (d.includes('ed')) return 'text-purple-500 font-bold'; // Delegated, Automated
-    return 'text-orange-500 font-bold'; // Delegate, Automate
-  };
+
 
   return (
     <div className="space-y-6">
@@ -1649,15 +1663,16 @@ export function DelegationMatrixTab() {
                         dps={dps}
                         statusScore={statusScore}
                         statusColor={statusColor}
-                        computedDelegation={computedDelegation}
+                        computedDelegation={computedDelegation.text}
+                        computedDelegationColor={computedDelegation.color}
                         computedReasons={computedReasons}
                         taskOptions={taskOptions}
                         characters={characters}
                         handleRealTaskSelect={handleRealTaskSelect}
                         updateTask={updateTask}
+                        deleteTask={deleteTask}
                         getOwnerDisplay={getOwnerDisplay}
                         setOwnerModal={setOwnerModal}
-                        getDelegationColor={getDelegationColor}
                       />
                     );
                   })}
@@ -1746,17 +1761,23 @@ export function DelegationMatrixTab() {
 
               <div className="space-y-2">
                 <h4 className="font-semibold border-b pb-1">Delegation Rules</h4>
-                <p><span className="text-cyan-500 font-bold">Cyan (Keep):</span> Ideal is &apos;{rules.delegation.targetFounder}&apos;</p>
-                <p><span className="text-orange-500 font-bold">Orange (Action Needed):</span> Current != Ideal</p>
+                <p><span className="text-cyan-500 font-bold">Cyan (Completed w/ Founder):</span> Current == Ideal</p>
                 <ul className="list-disc pl-4 space-y-1 mt-0">
-                  <li><strong>Automate:</strong> Ideal has &apos;{rules.delegation.targetAI}&apos;</li>
-                  <li><strong>Delegate:</strong> Ideal doesn&apos;t have &apos;{rules.delegation.targetAI}&apos;</li>
-                  <li><strong>Co-:</strong> Ideal has multiple characters</li>
+                  <li><strong>Kept:</strong> Ideal is only &apos;{rules.delegation.targetFounder}&apos;</li>
+                  <li><strong>Co-Worked:</strong> Ideal has multiple, including &apos;{rules.delegation.targetFounder}&apos;</li>
+                  <li><strong>Co-Automated:</strong> Ideal has Founder + &apos;{rules.delegation.targetAI}&apos;</li>
                 </ul>
-                <p><span className="text-purple-500 font-bold">Purple (Completed):</span> Current == Ideal</p>
+                <p><span className="text-purple-500 font-bold">Purple (Completed, No Founder):</span> Current == Ideal</p>
                 <ul className="list-disc pl-4 space-y-1 mt-0">
                   <li><strong>Automated:</strong> Ideal has &apos;{rules.delegation.targetAI}&apos;</li>
                   <li><strong>Delegated:</strong> Ideal doesn&apos;t have &apos;{rules.delegation.targetAI}&apos;</li>
+                </ul>
+                <p><span className="text-orange-500 font-bold">Orange (Action Needed):</span> Current != Ideal</p>
+                <ul className="list-disc pl-4 space-y-1 mt-0">
+                  <li><strong>Keep:</strong> Ideal is only &apos;{rules.delegation.targetFounder}&apos;</li>
+                  <li><strong>Automate:</strong> Ideal has &apos;{rules.delegation.targetAI}&apos;</li>
+                  <li><strong>Delegate:</strong> Ideal doesn&apos;t have &apos;{rules.delegation.targetAI}&apos;</li>
+                  <li><strong>Co-:</strong> Ideal has multiple characters</li>
                 </ul>
               </div>
             </div>
