@@ -1338,7 +1338,7 @@ export function DelegationMatrixTab() {
 
   React.useEffect(() => {
     ClientAPI.getCharacters().then(setCharacters).catch(console.error);
-    ClientAPI.getAllTasks().then(tasks => setAllTasks(tasks.filter(t => t.status !== TaskStatus.COLLECTED))).catch(console.error);
+    ClientAPI.getTasks().then(tasks => setAllTasks(tasks)).catch(console.error);
     
     // Load rules from local storage if available
     const savedRules = localStorage.getItem('delegation-matrix-rules');
