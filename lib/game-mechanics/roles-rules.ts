@@ -87,6 +87,12 @@ export const ROLE_BEHAVIORS = {
     hideIfNotAssigned: false,
     isDisplayOnly: false,     // Can be freely toggled
     requiresJungleCoins: false,
+  },
+  [CharacterRole.COLLABORATOR]: {
+    isImmutable: false,
+    hideIfNotAssigned: false,
+    isDisplayOnly: false,
+    requiresJungleCoins: false,
   }
 } as const;
 
