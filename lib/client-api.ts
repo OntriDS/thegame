@@ -1433,14 +1433,26 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to save matrix state');
   },
 
-  exportDelegationMatrix: async (data: { tasks: any, rules: any }): Promise<{ success: boolean; path: string }> => {
+  exportDelegationMatrix: async (data: { tasks: any, rules: any }): Promise<{ success: boolean; path?: string }> => {
     const res = await request('/api/research/export-matrix', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
     if (!res.ok) throw new Error('Failed to export delegation matrix');
-    return await res.json();
+    
+    // Instead of expecting JSON, trigger a browser download for the text file
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tasks.delegation-matrix.md';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    return { success: true };
   },
 
 };

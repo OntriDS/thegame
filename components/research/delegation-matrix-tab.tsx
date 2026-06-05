@@ -1328,6 +1328,8 @@ export function DelegationMatrixTab() {
   const [tempRules, setTempRules] = useState(DEFAULT_RULES);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportSuccess, setExportSuccess] = useState(false);
   
   const [ownerModal, setOwnerModal] = useState<{
     isOpen: boolean;
@@ -1680,22 +1682,23 @@ export function DelegationMatrixTab() {
           <div className="flex gap-2">
             <button 
               onClick={async () => {
-                const btn = document.getElementById('export-btn');
-                if (btn) btn.innerText = 'Exporting...';
+                if (isExporting) return;
+                setIsExporting(true);
                 try {
                   await ClientAPI.exportDelegationMatrix({ tasks, rules });
-                  if (btn) btn.innerText = 'Exported!';
-                  setTimeout(() => { if (btn) btn.innerText = 'Export to Library'; }, 2000);
+                  setExportSuccess(true);
+                  setTimeout(() => setExportSuccess(false), 2000);
                 } catch(e) {
                   console.error(e);
-                  if (btn) btn.innerText = 'Error';
-                  setTimeout(() => { if (btn) btn.innerText = 'Export to Library'; }, 2000);
+                  alert('Failed to export matrix');
+                } finally {
+                  setIsExporting(false);
                 }
               }}
-              id="export-btn"
-              className="px-3 py-1 bg-secondary text-secondary-foreground text-sm font-medium rounded hover:bg-secondary/80"
+              disabled={isExporting}
+              className="px-3 py-1 bg-secondary text-secondary-foreground text-sm font-medium rounded hover:bg-secondary/80 disabled:opacity-50"
             >
-              Export to Library
+              {isExporting ? 'Exporting...' : exportSuccess ? 'Exported!' : 'Export to Library'}
             </button>
           </div>
         </CardHeader>

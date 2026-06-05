@@ -56,12 +56,14 @@ export async function POST(request: NextRequest) {
     
     const markdownContent = formatMarkdownTable(tasks, rules);
     
-    // Save to library
-    const filePath = path.join(process.cwd(), '..', 'library', 'admin', 'our-business-structure', 'tasks.delegation-matrix.md');
-    
-    await fs.writeFile(filePath, markdownContent, 'utf8');
-    
-    return NextResponse.json({ success: true, path: filePath });
+    // Send markdown back to the client so it can be downloaded locally, 
+    // avoiding the Vercel ephemeral filesystem issue.
+    return new NextResponse(markdownContent, {
+      headers: {
+        'Content-Type': 'text/markdown',
+        'Content-Disposition': 'attachment; filename="tasks.delegation-matrix.md"',
+      }
+    });
   } catch (error) {
     console.error('Matrix export POST error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
