@@ -34,14 +34,13 @@ function formatMarkdownTable(tasks: any[], rules: any): string {
         // This is a basic implementation of color/status based on your matrix logic
         // Ideally we fetch the same styling you have in UI, but this is a rough approximation for the markdown file
         
-        const safeReason = (task.reasons || '').replace(/\|/g, '-');
-        const safeCurrent = (task.currentOwner || '').replace(/\|/g, '-');
-        const safeIdeal = (task.idealOwner || '').replace(/\|/g, '-');
-        const safeDelegation = (task.delegation || '').replace(/\|/g, '-');
+        const safeReason = (task.computedReasons || task.reasons || '').replace(/\|/g, '-');
+        const safeCurrent = (task.computedCurrentOwner || task.currentOwner || '').replace(/\|/g, '-');
+        const safeIdeal = (task.computedIdealOwner || task.idealOwner || '').replace(/\|/g, '-');
+        const safeDelegation = (task.computedDelegation || task.delegation || '').replace(/\|/g, '-');
+        const safeStatusScore = task.computedStatusScore !== undefined ? task.computedStatusScore : (task.statusScore || '');
         
-        // Placeholder status for now, as calculateStatus requires rules
-        // For simplicity, we just dump the data
-        md += `| *${task.station}* > ${task.task} | ${task.f} | ${task.a} | ${task.i} | ${task.s} | **${dps}** | ${safeCurrent} | ${safeIdeal} | ${task.doc} | ${task.feed} | **_${safeDelegation}_** | ${task.statusScore || ''}% | ${safeReason} |\n`;
+        md += `| *${task.station}* > ${task.task} | ${task.f} | ${task.a} | ${task.i} | ${task.s} | **${dps}** | ${safeCurrent} | ${safeIdeal} | ${task.doc} | ${task.feed} | **_${safeDelegation}_** | ${safeStatusScore}% | ${safeReason} |\n`;
     });
 
     return md;

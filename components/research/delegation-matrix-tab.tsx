@@ -62,6 +62,12 @@ const DEFAULT_RULES = {
     mismatchIThreshold: 2, mismatchIPenalty: 10,
     mismatchSThreshold: 2, mismatchSPenalty: 10,
   },
+  reasonsThresholds: {
+    fMin: 3,
+    aMin: 3,
+    iMax: 2,
+    sMax: 3
+  },
   delegation: {
     targetFounder: "akiles",
     targetAI: "pixelbrain",
@@ -1255,16 +1261,16 @@ function SortableRow({
         />
       </td>
       <td className="p-1 align-top">
-        <Input type="number" min={0} max={5} value={task.f} onChange={(e) => updateTask(task.id, 'f', parseInt(e.target.value) || 0)} className="h-7 w-12 px-1 text-center border-transparent hover:border-input" />
+        <Input type="number" min={0} max={5} value={task.f} onChange={(e) => updateTask(task.id, 'f', parseInt(e.target.value) || 0)} className="h-7 w-14 px-1 text-center border-transparent hover:border-input" />
       </td>
       <td className="p-1 align-top">
-        <Input type="number" min={0} max={5} value={task.a} onChange={(e) => updateTask(task.id, 'a', parseInt(e.target.value) || 0)} className="h-7 w-12 px-1 text-center border-transparent hover:border-input" />
+        <Input type="number" min={0} max={5} value={task.a} onChange={(e) => updateTask(task.id, 'a', parseInt(e.target.value) || 0)} className="h-7 w-14 px-1 text-center border-transparent hover:border-input" />
       </td>
       <td className="p-1 align-top">
-        <Input type="number" min={0} max={5} value={task.i} onChange={(e) => updateTask(task.id, 'i', parseInt(e.target.value) || 0)} className="h-7 w-12 px-1 text-center border-transparent hover:border-input" />
+        <Input type="number" min={0} max={5} value={task.i} onChange={(e) => updateTask(task.id, 'i', parseInt(e.target.value) || 0)} className="h-7 w-14 px-1 text-center border-transparent hover:border-input" />
       </td>
       <td className="p-1 align-top">
-        <Input type="number" min={0} max={5} value={task.s} onChange={(e) => updateTask(task.id, 's', parseInt(e.target.value) || 0)} className="h-7 w-12 px-1 text-center border-transparent hover:border-input" />
+        <Input type="number" min={0} max={5} value={task.s} onChange={(e) => updateTask(task.id, 's', parseInt(e.target.value) || 0)} className="h-7 w-14 px-1 text-center border-transparent hover:border-input" />
       </td>
       <td className="p-1 align-top text-center font-bold bg-muted/30">
         <div className="mt-1">{dps}</div>
@@ -1446,6 +1452,15 @@ export function DelegationMatrixTab() {
     );
   };
 
+  const getOwnerString = (idOrName: string) => {
+    if (!idOrName) return '';
+    return idOrName.split(',').map(s => {
+      const trimmed = s.trim();
+      const char = characters.find(c => c.id === trimmed || c.name === trimmed);
+      return char ? char.name : trimmed;
+    }).join(', ');
+  };
+
   const handleOwnerSelect = async (characterIds: string[]) => {
     if (ownerModal.taskId) {
       const ownerString = characterIds.join(',');
@@ -1605,30 +1620,24 @@ export function DelegationMatrixTab() {
 
   const calculateReasons = (task: MatrixTask, dps: number) => {
     const d = rules.delegation;
+    const t = rules.reasonsThresholds || { fMin: 3, aMin: 3, iMax: 2, sMax: 3 };
     const reasons: string[] = [];
     
     // Human readable mapping for the reasons
-    if (dps >= d.highDpsMin) reasons.push('High Friction/Priority');
-    else if (dps >= d.midDpsMin && dps <= d.midDpsMax) reasons.push('Moderate Friction');
-    else reasons.push('Low Friction');
+    if (dps >= d.highDpsMin) reasons.push(`High DPS ${dps}`);
+    else if (dps >= d.midDpsMin && dps <= d.midDpsMax) reasons.push(`Mid DPS ${dps}`);
+    else reasons.push(`Low DPS ${dps}`);
 
-    if (task.a >= rules.statusPenalties.mismatchAThreshold) {
-      reasons.push('Frustrating to do');
-    }
-
-    if (task.i <= rules.statusPenalties.mismatchIThreshold) {
-       reasons.push('Critical for Growth');
-    }
-
-    if (task.s >= 3) { // Legacy rule just for reasons display
-       reasons.push(`Easily Proceduralized`);
-    }
+    if (task.f >= t.fMin) reasons.push(`F=${task.f}`);
+    if (task.a >= t.aMin) reasons.push(`A=${task.a}`);
+    if (task.i <= t.iMax) reasons.push(`-I=${task.i}`);
+    if (task.s <= t.sMax) reasons.push(`S=${task.s}`);
     
     if (task.currentOwner && task.idealOwner && task.currentOwner !== task.idealOwner) {
        reasons.push('Owner Mismatch');
     }
     
-    return reasons.join('. ');
+    return reasons.join(', ');
   };
 
   const requestSort = (key: string) => {
@@ -1702,7 +1711,18 @@ export function DelegationMatrixTab() {
                 if (isExporting) return;
                 setIsExporting(true);
                 try {
-                  await ClientAPI.exportDelegationMatrix({ tasks, rules });
+                  const enrichedTasks = tasks.map(task => {
+                    const dps = task.f + task.a + task.i + task.s;
+                    return {
+                      ...task,
+                      computedCurrentOwner: getOwnerString(task.currentOwner),
+                      computedIdealOwner: getOwnerString(task.idealOwner),
+                      computedDelegation: calculateDelegation(task, dps).text,
+                      computedReasons: calculateReasons(task, dps),
+                      computedStatusScore: calculateStatus(task)
+                    };
+                  });
+                  await ClientAPI.exportDelegationMatrix({ tasks: enrichedTasks, rules });
                   setExportSuccess(true);
                   setTimeout(() => setExportSuccess(false), 2000);
                 } catch(e) {
@@ -1725,10 +1745,10 @@ export function DelegationMatrixTab() {
               <tr className="border-b bg-muted/50">
                 <th className="p-2 w-8"></th>
                 <th className="p-2 text-left font-medium cursor-pointer hover:bg-muted/80" onClick={() => requestSort('area')}>Area &gt; Station &gt; Task{renderSortIndicator('area')}</th>
-                <th className="p-2 text-center font-medium w-12 cursor-pointer hover:bg-muted/80" title="Frequency" onClick={() => requestSort('f')}>F{renderSortIndicator('f')}</th>
-                <th className="p-2 text-center font-medium w-12 cursor-pointer hover:bg-muted/80" title="Annoyance" onClick={() => requestSort('a')}>A{renderSortIndicator('a')}</th>
-                <th className="p-2 text-center font-medium w-12 cursor-pointer hover:bg-muted/80" title="Impact" onClick={() => requestSort('i')}>I{renderSortIndicator('i')}</th>
-                <th className="p-2 text-center font-medium w-12 cursor-pointer hover:bg-muted/80" title="Simplicity" onClick={() => requestSort('s')}>S{renderSortIndicator('s')}</th>
+                <th className="p-2 text-center font-medium w-14 cursor-pointer hover:bg-muted/80" title="Frequency" onClick={() => requestSort('f')}>F{renderSortIndicator('f')}</th>
+                <th className="p-2 text-center font-medium w-14 cursor-pointer hover:bg-muted/80" title="Annoyance" onClick={() => requestSort('a')}>A{renderSortIndicator('a')}</th>
+                <th className="p-2 text-center font-medium w-14 cursor-pointer hover:bg-muted/80" title="Impact" onClick={() => requestSort('i')}>I{renderSortIndicator('i')}</th>
+                <th className="p-2 text-center font-medium w-14 cursor-pointer hover:bg-muted/80" title="Simplicity" onClick={() => requestSort('s')}>S{renderSortIndicator('s')}</th>
                 <th className="p-2 text-center font-medium w-16 bg-muted/80 cursor-pointer hover:bg-muted/100" onClick={() => requestSort('dps')}>DPS{renderSortIndicator('dps')}</th>
                 <th className="p-2 text-left font-medium w-32 cursor-pointer hover:bg-muted/80" onClick={() => requestSort('currentOwner')}>Current Owner{renderSortIndicator('currentOwner')}</th>
                 <th className="p-2 text-left font-medium w-32 cursor-pointer hover:bg-muted/80" onClick={() => requestSort('idealOwner')}>Ideal Owner{renderSortIndicator('idealOwner')}</th>
@@ -1877,7 +1897,7 @@ export function DelegationMatrixTab() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 text-sm">
               <div className="space-y-3">
                 <h4 className="font-semibold border-b pb-1">Edit Points Legend</h4>
                 <div className="space-y-2">
@@ -1983,6 +2003,28 @@ export function DelegationMatrixTab() {
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2 italic">Names calculate Delegation (Cyan/Orange/Purple). DPS ranges calculate &apos;Reasons&apos; friction strings.</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="font-semibold border-b pb-1">Edit Reasons Display</h4>
+                <div className="space-y-2 grid grid-cols-2 gap-x-2">
+                  <div>
+                    <label className="text-[10px] font-semibold block leading-tight">Show F if &ge;</label>
+                    <Input type="number" className="h-7 text-xs" value={tempRules.reasonsThresholds?.fMin ?? 3} onChange={e => setTempRules({...tempRules, reasonsThresholds: {...(tempRules.reasonsThresholds || DEFAULT_RULES.reasonsThresholds), fMin: parseInt(e.target.value)||0}})} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold block leading-tight">Show A if &ge;</label>
+                    <Input type="number" className="h-7 text-xs" value={tempRules.reasonsThresholds?.aMin ?? 3} onChange={e => setTempRules({...tempRules, reasonsThresholds: {...(tempRules.reasonsThresholds || DEFAULT_RULES.reasonsThresholds), aMin: parseInt(e.target.value)||0}})} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold block leading-tight">Show -I if &le;</label>
+                    <Input type="number" className="h-7 text-xs" value={tempRules.reasonsThresholds?.iMax ?? 2} onChange={e => setTempRules({...tempRules, reasonsThresholds: {...(tempRules.reasonsThresholds || DEFAULT_RULES.reasonsThresholds), iMax: parseInt(e.target.value)||0}})} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold block leading-tight">Show S if &le;</label>
+                    <Input type="number" className="h-7 text-xs" value={tempRules.reasonsThresholds?.sMax ?? 3} onChange={e => setTempRules({...tempRules, reasonsThresholds: {...(tempRules.reasonsThresholds || DEFAULT_RULES.reasonsThresholds), sMax: parseInt(e.target.value)||0}})} />
+                  </div>
                 </div>
               </div>
 
