@@ -1330,6 +1330,7 @@ export function DelegationMatrixTab() {
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
+  const [hasLocalBackup, setHasLocalBackup] = useState(false);
   
   const [ownerModal, setOwnerModal] = useState<{
     isOpen: boolean;
@@ -1342,16 +1343,64 @@ export function DelegationMatrixTab() {
     ClientAPI.getCharacters().then(setCharacters).catch(console.error);
     ClientAPI.getTasks().then(tasks => setAllTasks(tasks)).catch(console.error);
     
+    if (typeof window !== 'undefined' && window.localStorage) {
+      if (localStorage.getItem('delegation-matrix-tasks') || localStorage.getItem('delegation-matrix-rules')) {
+        setHasLocalBackup(true);
+      }
+    }
+    
     ClientAPI.getMatrixState().then(state => {
       if (state.rules) {
         setRules(state.rules);
         setTempRules(state.rules);
       }
-      if (state.tasks) {
+      if (state.tasks && state.tasks.length > 0) {
         setTasks(state.tasks);
       }
     }).catch(console.error);
   }, []);
+
+  const recoverFromLocalStorage = () => {
+    if (confirm('Are you sure you want to overwrite the current matrix with the version saved in your browser?')) {
+      try {
+        const localTasksStr = localStorage.getItem('delegation-matrix-tasks');
+        const localRulesStr = localStorage.getItem('delegation-matrix-rules');
+        
+        let updatedTasks = tasks;
+        let updatedRules = rules;
+
+        if (localTasksStr) {
+          const parsed = JSON.parse(localTasksStr);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            updatedTasks = parsed;
+            setTasks(parsed);
+          }
+        }
+        
+        if (localRulesStr) {
+          const parsed = JSON.parse(localRulesStr);
+          if (parsed) {
+            updatedRules = parsed;
+            setRules(parsed);
+            setTempRules(parsed);
+          }
+        }
+
+        ClientAPI.saveMatrixState({ tasks: updatedTasks, rules: updatedRules })
+          .then(() => {
+            alert('Successfully recovered your work from the browser!');
+            setHasLocalBackup(false);
+          })
+          .catch(e => {
+            console.error(e);
+            alert('Recovered locally, but failed to save to server.');
+          });
+      } catch (e) {
+        console.error('Failed to parse local storage', e);
+        alert('Failed to parse local backup.');
+      }
+    }
+  };
 
   const saveTasks = (newTasks: MatrixTask[] | ((prev: MatrixTask[]) => MatrixTask[])) => {
     setTasks((prev) => {
@@ -1680,6 +1729,14 @@ export function DelegationMatrixTab() {
             </CardDescription>
           </div>
           <div className="flex gap-2">
+            {hasLocalBackup && (
+              <button 
+                onClick={recoverFromLocalStorage}
+                className="px-3 py-1 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 transition-colors shadow-sm animate-pulse hover:animate-none"
+              >
+                Recover Lost Work (from Browser)
+              </button>
+            )}
             <button 
               onClick={async () => {
                 if (isExporting) return;
