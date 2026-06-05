@@ -1441,12 +1441,37 @@ export const ClientAPI = {
     });
     if (!res.ok) throw new Error('Failed to export delegation matrix');
     
-    // Instead of expecting JSON, trigger a browser download for the text file
-    const blob = await res.blob();
+    const textContent = await res.text();
+    const defaultFilename = 'tasks-delegation-matrix.md';
+
+    try {
+      // Use the File System Access API if supported by the browser to let the user pick the exact directory
+      if ('showSaveFilePicker' in window) {
+        // @ts-ignore - TS might not have types for showSaveFilePicker depending on compiler target
+        const handle = await window.showSaveFilePicker({
+          suggestedName: defaultFilename,
+          types: [{
+            description: 'Markdown File',
+            accept: {'text/markdown': ['.md']},
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(textContent);
+        await writable.close();
+        return { success: true };
+      }
+    } catch (err: any) {
+      // Return early if user simply cancelled the picker
+      if (err.name === 'AbortError') return { success: false };
+      console.error('File System Access API error:', err);
+    }
+
+    // Fallback to traditional download (which goes to Downloads folder)
+    const blob = new Blob([textContent], { type: 'text/markdown' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'tasks.delegation-matrix.md';
+    a.download = defaultFilename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

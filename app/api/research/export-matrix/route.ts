@@ -56,12 +56,10 @@ export async function POST(request: NextRequest) {
     
     const markdownContent = formatMarkdownTable(tasks, rules);
     
-    // Send markdown back to the client so it can be downloaded locally, 
-    // avoiding the Vercel ephemeral filesystem issue.
+    // Return the markdown content directly to the client
     return new NextResponse(markdownContent, {
       headers: {
         'Content-Type': 'text/markdown',
-        'Content-Disposition': 'attachment; filename="tasks.delegation-matrix.md"',
       }
     });
   } catch (error) {
