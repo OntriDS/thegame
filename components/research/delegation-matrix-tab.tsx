@@ -1261,16 +1261,16 @@ function SortableRow({
         />
       </td>
       <td className="p-1 align-top">
-        <Input type="number" min={0} max={5} value={task.f} onChange={(e) => updateTask(task.id, 'f', parseInt(e.target.value) || 0)} className="h-7 w-14 px-1 text-center border-transparent hover:border-input" />
+        <Input type="number" min={0} max={5} value={task.f} onChange={(e) => updateTask(task.id, 'f', parseInt(e.target.value) || 0)} className="h-7 w-20 px-1 text-center border-transparent hover:border-input" style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }} />
       </td>
       <td className="p-1 align-top">
-        <Input type="number" min={0} max={5} value={task.a} onChange={(e) => updateTask(task.id, 'a', parseInt(e.target.value) || 0)} className="h-7 w-14 px-1 text-center border-transparent hover:border-input" />
+        <Input type="number" min={0} max={5} value={task.a} onChange={(e) => updateTask(task.id, 'a', parseInt(e.target.value) || 0)} className="h-7 w-20 px-1 text-center border-transparent hover:border-input" style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }} />
       </td>
       <td className="p-1 align-top">
-        <Input type="number" min={0} max={5} value={task.i} onChange={(e) => updateTask(task.id, 'i', parseInt(e.target.value) || 0)} className="h-7 w-14 px-1 text-center border-transparent hover:border-input" />
+        <Input type="number" min={0} max={5} value={task.i} onChange={(e) => updateTask(task.id, 'i', parseInt(e.target.value) || 0)} className="h-7 w-20 px-1 text-center border-transparent hover:border-input" style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }} />
       </td>
       <td className="p-1 align-top">
-        <Input type="number" min={0} max={5} value={task.s} onChange={(e) => updateTask(task.id, 's', parseInt(e.target.value) || 0)} className="h-7 w-14 px-1 text-center border-transparent hover:border-input" />
+        <Input type="number" min={0} max={5} value={task.s} onChange={(e) => updateTask(task.id, 's', parseInt(e.target.value) || 0)} className="h-7 w-20 px-1 text-center border-transparent hover:border-input" style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }} />
       </td>
       <td className="p-1 align-top text-center font-bold bg-muted/30">
         <div className="mt-1">{dps}</div>
@@ -1618,6 +1618,18 @@ export function DelegationMatrixTab() {
     return { text, color: 'text-orange-500 font-bold' };
   };
 
+  const getLegendText = (legendString: string, value: number) => {
+    if (!legendString) return String(value);
+    const parts = legendString.split(',');
+    for (const part of parts) {
+      const [num, text] = part.split('=');
+      if (num && text && parseInt(num.trim()) === value) {
+        return text.trim();
+      }
+    }
+    return String(value);
+  };
+
   const calculateReasons = (task: MatrixTask, dps: number) => {
     const d = rules.delegation;
     const t = rules.reasonsThresholds || { fMin: 3, aMin: 3, iMax: 2, sMax: 3 };
@@ -1628,10 +1640,10 @@ export function DelegationMatrixTab() {
     else if (dps >= d.midDpsMin && dps <= d.midDpsMax) reasons.push(`Mid DPS ${dps}`);
     else reasons.push(`Low DPS ${dps}`);
 
-    if (task.f >= t.fMin) reasons.push(`F=${task.f}`);
-    if (task.a >= t.aMin) reasons.push(`A=${task.a}`);
-    if (task.i <= t.iMax) reasons.push(`-I=${task.i}`);
-    if (task.s <= t.sMax) reasons.push(`S=${task.s}`);
+    if (task.f >= t.fMin) reasons.push(getLegendText(rules.pointsLegend.f, task.f));
+    if (task.a >= t.aMin) reasons.push(getLegendText(rules.pointsLegend.a, task.a));
+    if (task.i <= t.iMax) reasons.push(`-I: ${getLegendText(rules.pointsLegend.i, task.i)}`);
+    if (task.s <= t.sMax) reasons.push(getLegendText(rules.pointsLegend.s, task.s));
     
     if (task.currentOwner && task.idealOwner && task.currentOwner !== task.idealOwner) {
        reasons.push('Owner Mismatch');
@@ -1745,11 +1757,11 @@ export function DelegationMatrixTab() {
               <tr className="border-b bg-muted/50">
                 <th className="p-2 w-8"></th>
                 <th className="p-2 text-left font-medium cursor-pointer hover:bg-muted/80" onClick={() => requestSort('area')}>Area &gt; Station &gt; Task{renderSortIndicator('area')}</th>
-                <th className="p-2 text-center font-medium w-14 cursor-pointer hover:bg-muted/80" title="Frequency" onClick={() => requestSort('f')}>F{renderSortIndicator('f')}</th>
-                <th className="p-2 text-center font-medium w-14 cursor-pointer hover:bg-muted/80" title="Annoyance" onClick={() => requestSort('a')}>A{renderSortIndicator('a')}</th>
-                <th className="p-2 text-center font-medium w-14 cursor-pointer hover:bg-muted/80" title="Impact" onClick={() => requestSort('i')}>I{renderSortIndicator('i')}</th>
-                <th className="p-2 text-center font-medium w-14 cursor-pointer hover:bg-muted/80" title="Simplicity" onClick={() => requestSort('s')}>S{renderSortIndicator('s')}</th>
-                <th className="p-2 text-center font-medium w-16 bg-muted/80 cursor-pointer hover:bg-muted/100" onClick={() => requestSort('dps')}>DPS{renderSortIndicator('dps')}</th>
+                <th className="p-2 text-center font-medium w-20 cursor-pointer hover:bg-muted/80" title="Frequency" onClick={() => requestSort('f')}>F{renderSortIndicator('f')}</th>
+                <th className="p-2 text-center font-medium w-20 cursor-pointer hover:bg-muted/80" title="Annoyance" onClick={() => requestSort('a')}>A{renderSortIndicator('a')}</th>
+                <th className="p-2 text-center font-medium w-20 cursor-pointer hover:bg-muted/80" title="Impact" onClick={() => requestSort('i')}>I{renderSortIndicator('i')}</th>
+                <th className="p-2 text-center font-medium w-20 cursor-pointer hover:bg-muted/80" title="Simplicity" onClick={() => requestSort('s')}>S{renderSortIndicator('s')}</th>
+                <th className="p-2 text-center font-medium w-20 bg-muted/80 cursor-pointer hover:bg-muted/100" onClick={() => requestSort('dps')}>DPS{renderSortIndicator('dps')}</th>
                 <th className="p-2 text-left font-medium w-32 cursor-pointer hover:bg-muted/80" onClick={() => requestSort('currentOwner')}>Current Owner{renderSortIndicator('currentOwner')}</th>
                 <th className="p-2 text-left font-medium w-32 cursor-pointer hover:bg-muted/80" onClick={() => requestSort('idealOwner')}>Ideal Owner{renderSortIndicator('idealOwner')}</th>
                 <th className="p-2 text-center font-medium w-12 cursor-pointer hover:bg-muted/80" onClick={() => requestSort('doc')}>Doc?{renderSortIndicator('doc')}</th>
@@ -1980,7 +1992,7 @@ export function DelegationMatrixTab() {
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-semibold border-b pb-1">Edit Delegation Targets & Config</h4>
+                <h4 className="font-semibold border-b pb-1 text-emerald-500">Edit Delegation Targets (v2)</h4>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <label className="text-xs font-semibold whitespace-nowrap">Target Founder Name:</label>
@@ -1992,14 +2004,14 @@ export function DelegationMatrixTab() {
                   </div>
                   <div className="flex items-center justify-between gap-2 mt-4">
                     <label className="text-xs font-semibold whitespace-nowrap">High DPS Min:</label>
-                    <Input type="number" className="h-7 text-xs w-20" value={tempRules.delegation.highDpsMin} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, highDpsMin: parseInt(e.target.value)||0}})} />
+                    <Input type="number" className="h-7 text-xs w-20" style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }} value={tempRules.delegation.highDpsMin} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, highDpsMin: parseInt(e.target.value)||0}})} />
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <label className="text-xs font-semibold whitespace-nowrap">Mid DPS Range:</label>
-                    <div className="flex gap-1 w-20">
-                      <Input type="number" className="h-7 text-xs w-9 px-1" value={tempRules.delegation.midDpsMin} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, midDpsMin: parseInt(e.target.value)||0}})} />
-                      <span className="text-xs">-</span>
-                      <Input type="number" className="h-7 text-xs w-9 px-1" value={tempRules.delegation.midDpsMax} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, midDpsMax: parseInt(e.target.value)||0}})} />
+                    <div className="flex gap-1 w-auto">
+                      <Input type="number" className="h-7 text-xs w-16 px-1 text-center" style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }} value={tempRules.delegation.midDpsMin} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, midDpsMin: parseInt(e.target.value)||0}})} />
+                      <span className="text-xs self-center">-</span>
+                      <Input type="number" className="h-7 text-xs w-16 px-1 text-center" style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }} value={tempRules.delegation.midDpsMax} onChange={e => setTempRules({...tempRules, delegation: {...tempRules.delegation, midDpsMax: parseInt(e.target.value)||0}})} />
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2 italic">Names calculate Delegation (Cyan/Orange/Purple). DPS ranges calculate &apos;Reasons&apos; friction strings.</p>
@@ -2007,23 +2019,23 @@ export function DelegationMatrixTab() {
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-semibold border-b pb-1">Edit Reasons Display</h4>
+                <h4 className="font-semibold border-b pb-1 text-emerald-500">Edit Reasons Display</h4>
                 <div className="space-y-2 grid grid-cols-2 gap-x-2">
                   <div>
                     <label className="text-[10px] font-semibold block leading-tight">Show F if &ge;</label>
-                    <Input type="number" className="h-7 text-xs" value={tempRules.reasonsThresholds?.fMin ?? 3} onChange={e => setTempRules({...tempRules, reasonsThresholds: {...(tempRules.reasonsThresholds || DEFAULT_RULES.reasonsThresholds), fMin: parseInt(e.target.value)||0}})} />
+                    <Input type="number" className="h-7 text-xs" style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }} value={tempRules.reasonsThresholds?.fMin ?? 3} onChange={e => setTempRules({...tempRules, reasonsThresholds: {...(tempRules.reasonsThresholds || DEFAULT_RULES.reasonsThresholds), fMin: parseInt(e.target.value)||0}})} />
                   </div>
                   <div>
                     <label className="text-[10px] font-semibold block leading-tight">Show A if &ge;</label>
-                    <Input type="number" className="h-7 text-xs" value={tempRules.reasonsThresholds?.aMin ?? 3} onChange={e => setTempRules({...tempRules, reasonsThresholds: {...(tempRules.reasonsThresholds || DEFAULT_RULES.reasonsThresholds), aMin: parseInt(e.target.value)||0}})} />
+                    <Input type="number" className="h-7 text-xs" style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }} value={tempRules.reasonsThresholds?.aMin ?? 3} onChange={e => setTempRules({...tempRules, reasonsThresholds: {...(tempRules.reasonsThresholds || DEFAULT_RULES.reasonsThresholds), aMin: parseInt(e.target.value)||0}})} />
                   </div>
                   <div>
                     <label className="text-[10px] font-semibold block leading-tight">Show -I if &le;</label>
-                    <Input type="number" className="h-7 text-xs" value={tempRules.reasonsThresholds?.iMax ?? 2} onChange={e => setTempRules({...tempRules, reasonsThresholds: {...(tempRules.reasonsThresholds || DEFAULT_RULES.reasonsThresholds), iMax: parseInt(e.target.value)||0}})} />
+                    <Input type="number" className="h-7 text-xs" style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }} value={tempRules.reasonsThresholds?.iMax ?? 2} onChange={e => setTempRules({...tempRules, reasonsThresholds: {...(tempRules.reasonsThresholds || DEFAULT_RULES.reasonsThresholds), iMax: parseInt(e.target.value)||0}})} />
                   </div>
                   <div>
                     <label className="text-[10px] font-semibold block leading-tight">Show S if &le;</label>
-                    <Input type="number" className="h-7 text-xs" value={tempRules.reasonsThresholds?.sMax ?? 3} onChange={e => setTempRules({...tempRules, reasonsThresholds: {...(tempRules.reasonsThresholds || DEFAULT_RULES.reasonsThresholds), sMax: parseInt(e.target.value)||0}})} />
+                    <Input type="number" className="h-7 text-xs" style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }} value={tempRules.reasonsThresholds?.sMax ?? 3} onChange={e => setTempRules({...tempRules, reasonsThresholds: {...(tempRules.reasonsThresholds || DEFAULT_RULES.reasonsThresholds), sMax: parseInt(e.target.value)||0}})} />
                   </div>
                 </div>
               </div>
