@@ -604,11 +604,11 @@ export function DelegationMatrixTab() {
                     const dps = task.f + task.a + task.i + task.s;
                     return {
                       ...task,
-                      computedCurrentOwner: getOwnerString(task.currentOwner),
-                      computedIdealOwner: getOwnerString(task.idealOwner),
-                      computedDelegation: calculateDelegation(task, dps).text,
-                      computedReasons: calculateReasons(task, dps),
-                      computedStatusScore: calculateStatus(task)
+                      currentOwner: getOwnerString(task.currentOwner),
+                      idealOwner: getOwnerString(task.idealOwner),
+                      delegation: calculateDelegation(task, dps).text,
+                      reasons: calculateReasons(task, dps),
+                      statusScore: calculateStatus(task)
                     };
                   });
                   await ClientAPI.exportDelegationMatrix({ tasks: enrichedTasks, rules });
