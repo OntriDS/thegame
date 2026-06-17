@@ -470,22 +470,22 @@ export enum CharacterRole {
   ADMIN = 'admin',
   DESIGNER = 'designer',
   MAKER = 'maker',
-  SELLER = 'seller', // Integrates with the Negotiator agent
+  SELLER = 'seller',
   RESEARCHER = 'researcher',
-  DEV = 'dev', // Integrates with the Builder agent
+  DEV = 'dev',
   ASSISTANT = 'assistant',
   COLLABORATOR = 'collaborator',
   STUDENT = 'student',
   ARTIST = 'artist',
-  ARCHITECT = 'architect', // Integrates with the Architect agent
-  ORCHESTRATOR = 'orchestrator', // Integrates with the Orchestrator agent
-  TEACHER = 'teacher', // Integrates with the Teacher agent
-  CYPHER = 'cypher', // Integrates with the Cypher agent
-  GAMER = 'gamer', // Integrates with the Gamer agent
-  COMMUNICATOR = 'communicator', // Integrates with the Communicator agent
-  PROMOTER = 'promoter', // Integrates with the Promoter agent
-  STRATEGIST = 'strategist', // Integrates with the Strategist agent
-  ANALYST = 'analyst' // Integrates with the Analyst agent
+  ARCHITECT = 'architect',
+  ORCHESTRATOR = 'orchestrator', 
+  TEACHER = 'teacher', 
+  CYPHER = 'cypher', 
+  GAMER = 'gamer', 
+  COMMUNICATOR = 'communicator', 
+  PROMOTER = 'promoter', 
+  STRATEGIST = 'strategist', 
+  ANALYST = 'analyst'
 }
 
 /** Character role types for UI organization and permissions */
