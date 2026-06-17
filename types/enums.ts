@@ -477,7 +477,7 @@ export enum CharacterRole {
   COLLABORATOR = 'collaborator',
   STUDENT = 'student',
   ARTIST = 'artist',
-  SYSTEMS_ARCHITECTURE = 'systems-architecture', // Integrates with the Architect agent
+  SYSTEMS_ARCHITECT = 'systems-architect', // Integrates with the Architect agent
   ORCHESTRATOR = 'orchestrator', // Integrates with the Orchestrator agent
   TEACHER = 'teacher', // Integrates with the Teacher agent
   WEB3_EXPERT = 'web3-expert', // Integrates with the Cypher agent
@@ -497,7 +497,7 @@ export const CHARACTER_ROLE_TYPES = {
     CharacterRole.ASSISTANT,
     CharacterRole.STUDENT,
     CharacterRole.ARTIST,
-    CharacterRole.SYSTEMS_ARCHITECTURE,
+    CharacterRole.SYSTEMS_ARCHITECT,
     CharacterRole.ORCHESTRATOR,
     CharacterRole.TEACHER,
     CharacterRole.WEB3_EXPERT,

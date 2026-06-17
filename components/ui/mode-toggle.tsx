@@ -8,6 +8,11 @@ import { useTheme } from '@/lib/hooks/use-theme';
 export function ModeToggle() {
   const { isDark, toggleDarkMode } = useTheme();
   const router = useRouter();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const swap = () => {
     toggleDarkMode();
@@ -18,8 +23,12 @@ export function ModeToggle() {
 
   return (
     <Button variant="outline" size="icon" onClick={swap}>
-      {isDark ? (
-        <span className="h-4 w-4 flex items-center justify-center font-mono">◐</span>
+      {mounted ? (
+        isDark ? (
+          <span className="h-4 w-4 flex items-center justify-center font-mono">◐</span>
+        ) : (
+          <span className="h-4 w-4 flex items-center justify-center font-mono">◑</span>
+        )
       ) : (
         <span className="h-4 w-4 flex items-center justify-center font-mono">◑</span>
       )}

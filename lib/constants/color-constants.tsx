@@ -177,18 +177,18 @@ export const ROLE_COLORS = {
   [toRoleKey(CharacterRole.AGENT)]: SPECIAL_ROLE_AGENT,
   [toRoleKey(CharacterRole.CUSTOMER)]: SPECIAL_ROLE_CUSTOMER,
   [toRoleKey(CharacterRole.BENEFICIARY)]: SPECIAL_ROLE_BENEFICIARY,
+  [toRoleKey(CharacterRole.COLLABORATOR)]: SPECIAL_ROLE_PARTNER,
   // Regular Roles - all use the same neutral styling
   [toRoleKey(CharacterRole.ADMIN)]: REGULAR_ROLE_DEFAULT,
   [toRoleKey(CharacterRole.DESIGNER)]: REGULAR_ROLE_DEFAULT,
   [toRoleKey(CharacterRole.MAKER)]: REGULAR_ROLE_DEFAULT,
   [toRoleKey(CharacterRole.SELLER)]: REGULAR_ROLE_DEFAULT,
   [toRoleKey(CharacterRole.RESEARCHER)]: REGULAR_ROLE_DEFAULT,
-  [toRoleKey(CharacterRole.DEVELOPER)]: REGULAR_ROLE_DEFAULT,
-  [toRoleKey(CharacterRole.COLLABORATOR)]: REGULAR_ROLE_DEFAULT,
-  [toRoleKey(CharacterRole.BOSS)]: REGULAR_ROLE_DEFAULT,
+  [toRoleKey(CharacterRole.DEV)]: REGULAR_ROLE_DEFAULT,
+  [toRoleKey(CharacterRole.SYSTEMS_ARCHITECT)]: REGULAR_ROLE_DEFAULT,
   [toRoleKey(CharacterRole.ASSISTANT)]: REGULAR_ROLE_DEFAULT,
   [toRoleKey(CharacterRole.STUDENT)]: REGULAR_ROLE_DEFAULT,
-  [toRoleKey(CharacterRole.FRIEND)]: REGULAR_ROLE_DEFAULT,
+  [toRoleKey(CharacterRole.ARTIST)]: REGULAR_ROLE_DEFAULT,
 } as const;
 
 // ============================================================================

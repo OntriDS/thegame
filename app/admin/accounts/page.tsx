@@ -106,7 +106,7 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
       admin: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
       team: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
       'agent': 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-      developer: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+      dev: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
       player: 'bg-violet-500/10 text-violet-500 border-violet-500/20',
       customer: 'bg-sky-500/10 text-sky-500 border-sky-500/20',
       beneficiary: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20',
