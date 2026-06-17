@@ -477,12 +477,15 @@ export enum CharacterRole {
   COLLABORATOR = 'collaborator',
   STUDENT = 'student',
   ARTIST = 'artist',
-  SYSTEMS_ARCHITECT = 'systems-architect', // Integrates with the Architect agent
+  ARCHITECT = 'architect', // Integrates with the Architect agent
   ORCHESTRATOR = 'orchestrator', // Integrates with the Orchestrator agent
   TEACHER = 'teacher', // Integrates with the Teacher agent
-  WEB3_EXPERT = 'web3-expert', // Integrates with the Cypher agent
-  GAME_DESIGNER = 'game-designer', // Integrates with the Gamer agent
-  COMMUNICATOR = 'communicator' // Integrates with the Communicator agent
+  CYPHER = 'cypher', // Integrates with the Cypher agent
+  GAMER = 'gamer', // Integrates with the Gamer agent
+  COMMUNICATOR = 'communicator', // Integrates with the Communicator agent
+  PROMOTER = 'promoter', // Integrates with the Promoter agent
+  STRATEGIST = 'strategist', // Integrates with the Strategist agent
+  ANALYST = 'analyst' // Integrates with the Analyst agent
 }
 
 /** Character role types for UI organization and permissions */
@@ -497,12 +500,15 @@ export const CHARACTER_ROLE_TYPES = {
     CharacterRole.ASSISTANT,
     CharacterRole.STUDENT,
     CharacterRole.ARTIST,
-    CharacterRole.SYSTEMS_ARCHITECT,
+    CharacterRole.ARCHITECT,
     CharacterRole.ORCHESTRATOR,
     CharacterRole.TEACHER,
-    CharacterRole.WEB3_EXPERT,
-    CharacterRole.GAME_DESIGNER,
-    CharacterRole.COMMUNICATOR
+    CharacterRole.CYPHER,
+    CharacterRole.GAMER,
+    CharacterRole.COMMUNICATOR,
+    CharacterRole.PROMOTER,
+    CharacterRole.STRATEGIST,
+    CharacterRole.ANALYST
   ],
   SPECIAL: [
     CharacterRole.FOUNDER,

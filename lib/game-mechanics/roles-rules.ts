@@ -307,10 +307,10 @@ export const ROLE_BENEFITS = {
 export const BUSINESS_ROLES = [
   CharacterRole.ADMIN,
   CharacterRole.DESIGNER,
+  CharacterRole.DEV,
   CharacterRole.MAKER,
-  CharacterRole.SELLER,
   CharacterRole.RESEARCHER,
-  CharacterRole.DEV
+  CharacterRole.SELLER
 ] as const;
 
 /**
