@@ -186,7 +186,7 @@ export const ROLE_COLORS = {
   [toRoleKey(CharacterRole.RESEARCHER)]: REGULAR_ROLE_DEFAULT,
   [toRoleKey(CharacterRole.DEV)]: REGULAR_ROLE_DEFAULT,
   [toRoleKey(CharacterRole.ARCHITECT)]: REGULAR_ROLE_DEFAULT,
-  [toRoleKey(CharacterRole.ASSISTANT)]: REGULAR_ROLE_DEFAULT,
+  [toRoleKey(CharacterRole.LIBRARIAN)]: REGULAR_ROLE_DEFAULT,
   [toRoleKey(CharacterRole.STUDENT)]: REGULAR_ROLE_DEFAULT,
   [toRoleKey(CharacterRole.ARTIST)]: REGULAR_ROLE_DEFAULT,
   [toRoleKey(CharacterRole.ORCHESTRATOR)]: REGULAR_ROLE_DEFAULT,
