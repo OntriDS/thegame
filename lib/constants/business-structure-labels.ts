@@ -31,7 +31,7 @@ export const STATION_DISPLAY_LABEL: Record<Station, string> = {
   innovation: 'Innovation',
   classes: 'Classes',
   'systems-dev': 'Systems-Dev',
-  paint: 'Paint',
+  art: 'Art',
   digitals: 'Digitals',
   design: 'Design',
   animation: 'Animation',

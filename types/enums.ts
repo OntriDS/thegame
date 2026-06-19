@@ -11,7 +11,7 @@ export const BUSINESS_STRUCTURE = {
   admin: ['strategy', 'finances', 'team', 'inventory', 'transport', 'rents', 'partnerships', 'projects', 'items'],
   research: ['library', 'studies', 'processes', 'reviews', 'ebooks', 'innovation', 'classes'],
   dev: ['systems-dev'],
-  'art-design': ['paint', 'digitals', 'design', 'animation'],
+  'art-design': ['art', 'digitals', 'design', 'animation'],
   'maker-space': ['craft'],
   sales: ['direct-sales', 'booth-sales', 'network', 'marketing', 'online-sales', 'portfolio', 'dispatches', 'gallery-store', 'bookings'],
   personal: ['family', 'food', 'health', 'rewards', 'transport-p', 'rent-p', 'other-p'],
