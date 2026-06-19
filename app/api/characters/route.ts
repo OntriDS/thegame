@@ -123,6 +123,10 @@ const buildDirectoryAmountTotals = async (characterIds: string[]): Promise<Map<s
   for (const financial of beneficiaryFinancials) {
     if (!financial) continue;
 
+      // Ensure that this cost is only attributed as a payout if they are NOT the customer in this transaction.
+      // E.g., gateway commissions on a sale should not be treated as a payout to the customer.
+      if (isCustomerRole(financial.customerCharacterRole)) continue;
+
       const amount = Number(financial.cost || 0);
       if (!Number.isFinite(amount) || amount === 0) continue;
 
