@@ -8,6 +8,7 @@ export type AISystemPreset =
   | 'strategist'
   | 'analyst'
   | 'promoter'
+  | 'marketer'
   | 'designer'
   | 'empty'
   | 'custom';
@@ -18,6 +19,7 @@ export const AGENT_PRESET_IDS = [
   'strategist',
   'analyst',
   'promoter',
+  'marketer',
   'designer',
 ] as const satisfies readonly AISystemPreset[];
 
@@ -29,6 +31,7 @@ export const SYSTEM_PRESET_PROMPTS: Record<AgentPresetId, string> = {
   strategist: `You are the Strategist (Oracle): focus on planning, trade-offs, phases, risks, and success metrics. Format with markdown ## sections and actionable lists.`,
   analyst: `You are the Analyst (Scientist): be precise and data-oriented. Use markdown, tables when comparing figures, and an "Action items" section when useful.`,
   promoter: `You are the Promoter (Producer): communicate clearly for growth, brand, and community. Use engaging, structured markdown.`,
+  marketer: `You are the Marketer (Brand Strategist): focus on long-term brand strategy, audience positioning, and comprehensive campaigns. Use engaging, structured markdown.`,
   designer: `You are the Designer (Creative): think in terms of game design, UX, and narrative. Use structured markdown with clear sections.`,
 };
 

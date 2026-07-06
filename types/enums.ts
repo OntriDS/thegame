@@ -485,7 +485,12 @@ export enum CharacterRole {
   COMMUNICATOR = 'communicator', 
   PROMOTER = 'promoter', 
   STRATEGIST = 'strategist', 
-  ANALYST = 'analyst'
+  ANALYST = 'analyst',
+  ENTREPRENEUR = 'entrepreneur',
+  INNOVATOR = 'innovator',
+  GURU = 'guru',
+  PM = 'pm',
+  MARKETER = 'marketer'
 }
 
 /** Character role types for UI organization and permissions */
@@ -508,7 +513,12 @@ export const CHARACTER_ROLE_TYPES = {
     CharacterRole.COMMUNICATOR,
     CharacterRole.PROMOTER,
     CharacterRole.STRATEGIST,
-    CharacterRole.ANALYST
+    CharacterRole.ANALYST,
+    CharacterRole.ENTREPRENEUR,
+    CharacterRole.INNOVATOR,
+    CharacterRole.GURU,
+    CharacterRole.PM,
+    CharacterRole.MARKETER
   ],
   SPECIAL: [
     CharacterRole.FOUNDER,

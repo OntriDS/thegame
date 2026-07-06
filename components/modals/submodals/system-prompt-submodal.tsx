@@ -28,6 +28,7 @@ const PRESET_LABELS: Record<Exclude<AISystemPreset, 'empty' | 'custom'>, string>
   strategist: 'Strategist (Oracle)',
   analyst: 'Analyst (Scientist)',
   promoter: 'Promoter (Producer)',
+  marketer: 'Marketer (Brand Strategist)',
   designer: 'Designer (Creative)',
 };
 
