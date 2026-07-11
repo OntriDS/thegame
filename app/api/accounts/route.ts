@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
         roles: [CharacterRole.AGENT],
         accountId: 'system',
         description: 'System-managed M2M Application',
-        achievementsCharacter: [],
+        achievements: [],
         purchasedAmount: 0,
         inventory: [],
         playerId: 'system',

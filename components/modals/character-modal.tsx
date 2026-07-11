@@ -42,7 +42,8 @@ import { getZIndexClass } from '@/lib/utils/z-index-utils';
 
 import { JungleCoinWallet } from '@/components/wallet/jungle-coin-wallet';
 import CharacterWalletSubmodal from './submodals/character-wallet-submodal';
-import { Wallet } from 'lucide-react';
+import CharacterProgressionSubmodal from './submodals/character-progression-submodal';
+import { Wallet, Star } from 'lucide-react';
 
 interface CharacterModalProps {
   character?: Character | null;
@@ -97,6 +98,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   const [showOwnedSitesModal, setShowOwnedSitesModal] = useState(false);
   const [showLegalEntityModal, setShowLegalEntityModal] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showProgressionModal, setShowProgressionModal] = useState(false);
 
   const [jungleCoinsBalance, setJungleCoinsBalance] = useState<number>(0);
 
@@ -152,7 +154,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           setRoles(initialRoles);
           setPurchasedAmount(character?.purchasedAmount ?? 0);
           setCP(character?.CP);
-          setAchievementsCharacter(character?.achievementsCharacter || []);
 
           // Reset init guard when editing
           didInitRef.current = false;
@@ -171,7 +172,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           setRoles([]); // Roles optional; CUSTOMER is granted via sales / store purchase, not by default
           setPurchasedAmount(0);
           setCP(undefined);
-          setAchievementsCharacter([]);
           setJungleCoinsBalance(0);
         }
       }
@@ -278,7 +278,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
 
         // Character Progression
         CP,
-        achievementsCharacter,
+        achievements: character?.achievements || [],
 
         // V0.1 required - Character-specific only
         purchasedAmount,
@@ -588,6 +588,18 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                 </Button>
               )}
 
+              {/* Progression Button */}
+              {character && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowProgressionModal(true)}
+                  className="h-8 text-xs"
+                >
+                  <Star className="w-3 h-3 mr-1" />
+                  Progression
+                </Button>
+              )}
+
               {/* Inventory Button - Only when editing existing character */}
               {character && (
                 <Button
@@ -735,6 +747,21 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
             onOpenChange={setShowWalletModal}
             characterId={character.id}
             characterName={character.name}
+          />
+        )
+      }
+
+      {/* Character Progression Submodal */}
+      {
+        character && (
+          <CharacterProgressionSubmodal
+            open={showProgressionModal}
+            onOpenChange={setShowProgressionModal}
+            character={character}
+            onSave={async (updatedCharacter) => {
+              // Note: Optimistic update can go here, but modal `onSave` triggers the backend patch anyway.
+              await onSave(updatedCharacter);
+            }}
           />
         )
       }

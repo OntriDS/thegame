@@ -227,7 +227,7 @@ async function createCustomerCharacter(input: {
     name: input.name,
     description: `Account created from akiles-ecosystem registration`,
     roles: [],
-    achievementsCharacter: [],
+    achievements: [],
     purchasedAmount: 0,
     inventory: [],
     playerId: null,

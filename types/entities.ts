@@ -42,9 +42,9 @@ import {
   DigitalSiteType,
   SystemSiteType,
   RecurrentFrequency,
-  IntelectualFunction,
-  Attribute,
-  Skill,
+  CognitiveSkill,
+  EmotionalSkill,
+  PracticalSkill,
   CommColor,
   SaleType,
   SaleStatus,
@@ -758,7 +758,6 @@ export interface Sale extends BaseEntity {
 
 /** Player Metrics - Performance tracking */
 export interface PlayerMetrics {
-  EXECUTIVE_FUNCTIONS: IntelectualFunction[];  // Updated to use correct enum name
   LATENCY: number;        // Time to complete a task
   EFFICIENCY: number;     // Coefficient of performance in Task Completion (10/10)
   DISCIPLINE: number;     // Coefficient of performance in Schedule Compliance (20/20) and Inhibition (-0)
@@ -766,11 +765,7 @@ export interface PlayerMetrics {
   REVIEW_DATE: Date;      // Last Date of the review
 }
 
-// V0.2: Skills, Functions, Attributes tracked as Record<enum, number>
-// This allows dynamic addition without schema changes
-export type PlayerSkillsMap = Partial<Record<Skill, number>>;          // 0-10 per skill
-export type PlayerIntellectualMap = Partial<Record<IntelectualFunction, number>>;  // 0-10 per function
-export type PlayerAttributesMap = Partial<Record<Attribute, number>>;  // 0-10 per attribute
+
 
 /** Relationship with another entity (future social graph) */
 export interface Relationship {
@@ -790,8 +785,8 @@ export interface PlayerBadge {
   createdAt: Date;
 }
 
-/** Player Achievement - User-defined milestones */
-export interface PlayerAchievement {
+/** Character Achievement - User-defined milestones */
+export interface CharacterAchievement {
   id: string;
   name: string;
   description?: string;
@@ -846,19 +841,13 @@ export interface Player extends BaseEntity {
   };
   // J$ is stored in FinancialRecord ledger via PLAYER_FINREC links, not on Player entity
 
-  // 3. RPG STATS - NOT YET IMPLEMENTED (V0.1 placeholders)
-  skills?: PlayerSkillsMap;              // { DESIGN_THINKING: 9, PROGRAMMING: 4, ... } - V0.2
-  intellectualFunctions?: PlayerIntellectualMap;  // { CREATIVITY: 8, PLANNING: 9, ... } - V0.2
-  attributes?: PlayerAttributesMap;      // { CHARISMA: 5, LOGIC: 9, ... } - V0.2
-
-  // 4. CHARACTER MANAGEMENT - Primary player character reference (Ambassador Fields)
+  // 3. CHARACTER MANAGEMENT - Primary player character reference (Ambassador Fields)
   characterId?: string | null;   // 🏛️ Main character managed by this player
 
-  // 5. BADGES & ACHIEVEMENTS - Player-specific accomplishments
+  // 4. BADGES - Player-specific accomplishments (Roles belong to Character, but user-assigned Badges are on Player)
   badges: PlayerBadge[];           // Role-based recognition badges (user-created)
-  achievements: PlayerAchievement[]; // User-defined milestones and goals
 
-  // 6. LIFECYCLE & METRICS
+  // 5. LIFECYCLE & METRICS
   lastActiveAt: Date;
   totalTasksCompleted: number;
   totalSalesCompleted: number;
@@ -917,7 +906,9 @@ export interface Character extends BaseEntity {
 
   // 6. CHARACTER PROGRESSION - Character-specific metrics (NOT Player points)
   CP?: number;                            // Character Points - character-specific points
-  achievementsCharacter: string[];        // Character-specific achievements tree (different from Player achievements)
+  MP?: number;                            // Mastery Points - learning app progression
+  skills?: Partial<Record<CognitiveSkill | EmotionalSkill | PracticalSkill, number>>; // Unlocked skills and their levels (0-10)
+  achievements: CharacterAchievement[];   // Character milestones/achievements
 
   // 7. BUSINESS METRICS
   wallet?: Wallet;               // THE VAULT: Holds J$ and other assets. Updated transactionally.

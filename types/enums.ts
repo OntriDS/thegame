@@ -535,38 +535,37 @@ export const CHARACTER_ROLE_TYPES = {
   ]
 } as const;
 
-export enum IntelectualFunction {
-  SELF_AWARE = 'self-awareness',     // Self-monitoring / error monitoring: Notice performance drift, catch mistakes, adjust in-flight.
-  EMOTION_CONTROL = 'emotion-control',    // Emotional regulation: Modulate frustration, stress, and reward-seeking so you can execute.
-  DECISION_MAKING = 'decision-making',    // Decision-making (valuation & risk): Choose under uncertainty; weigh cost/benefit and risk.
-  CREATIVITY = 'creativity',         // ability to generate original ideas, view situations from new perspectives, and produce novel outcomes. 
-  PROBLEM_SOLVING = 'problem-solving',    // Problem solving (strategy generation): Diagnose blockers, generate options, test and iterate.
-  SELF_CONTROL = 'self-control',       // Inhibitory control: Resist impulses and delay gratification to stay aligned with goals.
-  WORK_MEMORY = 'working-memory',     // Hold and manipulate information in mind while acting.
-  ADAPTABILITY = 'adaptability',       // Cognitive flexibility: Switch tasks/strategies and adapt when conditions change.
-  INITIATIVE = 'initiative',         // Task initiation: Start without over-prepping, perfectionism, or avoidance.
-  PLANNING = 'planning',           // Planning & prioritization: Choose strategy, order steps, and decide what matters now vs later.
-  ORGANIZATION = 'organization',       // Organization & sequencing: Structure info, assets, and steps into workable sequences.
-  TIME_MNGM = 'time-management',    // Time management & estimation: Estimate durations, pace work, respect timeboxes, finish on time.
-  CONCENTRATION = 'concentration',      // Sustained attention (focus): Maintain engagement, reduce distractibility.
-  DETERMINATION = 'determination',      // Goal-directed persistence: Keep advancing long arcs despite friction or boredom.
+export enum CognitiveSkill {
+  LOGIC = 'logic',          // Analytical reasoning and deduction
+  PERCEPTION = 'perception',     // Reaction and situational awareness
+  VISION = 'vision',          // Foresight and macro-perspective
+  WISDOM = 'wisdom',         // Deep knowledge and experiential understanding
+  DECISION_MAKING = 'decision-making',    // Decision-making (valuation & risk): Choose under uncertainty
+  CREATIVITY = 'creativity',         // Generate original ideas, view from new perspectives
+  PROBLEM_SOLVING = 'problem-solving',    // Strategy generation: Diagnose blockers, generate options
+  MEMORY = 'memory',              // Holding, manipulating, and recalling information
+  PLANNING = 'planning',           // Prioritization: Choose strategy, order steps
+  ORGANIZATION = 'organization',       // Sequencing: Structure info, assets, and steps
+  TIME_MNGM = 'time-management',    // Estimation: Estimate durations, pace work
+  CONCENTRATION = 'concentration',      // Sustained attention (focus)
 }
 
-export enum Attribute {
-  PERCEPTION = 'perception',     // also rection
-  LOGIC = 'logic',          // also analysis
-  FITNESS = 'fitness',        // also strength, physical attractiveness, physical health
-  CHARISMA = 'charisma',       // also charm
-  WISDOM = 'wisdom',         // also knowledge
-  LEADERSHIP = 'leadership',     // also authority
-  COMMUNICATION = 'communication',  // also rhetoric
-  VISION = 'vision',
-  RESILIENCE = 'resilience',     // also endurance
-  EMPATHY = 'empathy',
-  INTEGRITY = 'integrity',      // also honesty
+export enum EmotionalSkill {
+  SELF_AWARE = 'self-awareness',     // Self-monitoring: Notice performance drift, catch mistakes
+  EMOTION_CONTROL = 'emotion-control',    // Emotional regulation: Modulate frustration, stress
+  SELF_CONTROL = 'self-control',       // Inhibitory control: Resist impulses and delay gratification
+  DETERMINATION = 'determination',      // Goal-directed persistence: Keep advancing long arcs
+  INITIATIVE = 'initiative',         // Task initiation: Start without over-prepping
+  RESILIENCE = 'resilience',     // Endurance and bounce-back capacity
+  EMPATHY = 'empathy',         // Understanding and sharing feelings
+  INTEGRITY = 'integrity',      // Honesty and moral compass
+  CHARISMA = 'charisma',       // Charm and interpersonal magnetism
+  LEADERSHIP = 'leadership',     // Authority and guiding presence
+  COMMUNICATION = 'communication',  // Rhetoric and clear articulation
 }
 
-export enum Skill {
+export enum PracticalSkill {
+  FITNESS = 'fitness',        // Physical health and strength
   DESIGN_THINKING = 'design-thinking',
   PROJECT_MANAGEMENT = 'project-management',
   TEACHING = 'teaching',
@@ -580,41 +579,9 @@ export enum Skill {
 
 /** Skills categories for UI organization and SearchableSelect grouping */
 export const SKILLS_CATEGORIES = {
-  COGNITIVE: [
-    IntelectualFunction.SELF_AWARE,
-    IntelectualFunction.EMOTION_CONTROL,
-    IntelectualFunction.DECISION_MAKING,
-    IntelectualFunction.CREATIVITY,
-    IntelectualFunction.PROBLEM_SOLVING,
-    IntelectualFunction.SELF_CONTROL,
-    IntelectualFunction.WORK_MEMORY,
-    IntelectualFunction.ADAPTABILITY,
-    IntelectualFunction.INITIATIVE,
-    IntelectualFunction.PLANNING,
-  ],
-  CHARACTER: [
-    Attribute.PERCEPTION,
-    Attribute.LOGIC,
-    Attribute.FITNESS,
-    Attribute.CHARISMA,
-    Attribute.WISDOM,
-    Attribute.LEADERSHIP,
-    Attribute.COMMUNICATION,
-    Attribute.VISION,
-    Attribute.RESILIENCE,
-    Attribute.EMPATHY,
-  ],
-  PRACTICAL: [
-    Skill.DESIGN_THINKING,
-    Skill.PROJECT_MANAGEMENT,
-    Skill.TEACHING,
-    Skill.NEGOTIATION,
-    Skill.NARRATIVE,
-    Skill.DEVELOPING,
-    Skill.HANDCRAFTING,
-    Skill.PAINTING,
-    Skill.ILLUSTRATION,
-  ],
+  COGNITIVE: Object.values(CognitiveSkill),
+  EMOTIONAL: Object.values(EmotionalSkill),
+  PRACTICAL: Object.values(PracticalSkill),
 } as const;
 
 export enum CommColor {
