@@ -5,9 +5,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Trophy, Star, Plus, X, Award } from 'lucide-react';
+import { Trophy, Star, Plus, X, Award, ChevronDown } from 'lucide-react';
 import { Character, CharacterAchievement } from '@/types/entities';
 import { formatDisplayDate } from '@/lib/utils/date-utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PREDEFINED_ACHIEVEMENTS } from '@/lib/constants/achievements';
 
 interface CharacterProgressionSubmodalProps {
   open: boolean;
@@ -133,11 +135,30 @@ export default function CharacterProgressionSubmodal({
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                  <Input
-                    placeholder="Achievement name..."
-                    value={achievementName}
-                    onChange={(e) => setAchievementName(e.target.value)}
-                  />
+                  <div className="space-y-2">
+                    <Select 
+                      value={PREDEFINED_ACHIEVEMENTS.includes(achievementName) ? achievementName : (achievementName ? 'custom' : '')} 
+                      onValueChange={(val) => setAchievementName(val === 'custom' ? '' : val)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Quest/Achievement..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PREDEFINED_ACHIEVEMENTS.map(ach => (
+                          <SelectItem key={ach} value={ach}>{ach}</SelectItem>
+                        ))}
+                        <SelectItem value="custom" className="font-bold text-primary">-- Custom Achievement --</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    {(!PREDEFINED_ACHIEVEMENTS.includes(achievementName) && achievementName !== '' || !PREDEFINED_ACHIEVEMENTS.includes(achievementName) && achievementName === '') && (
+                      <Input
+                        placeholder="Type custom achievement name..."
+                        value={achievementName}
+                        onChange={(e) => setAchievementName(e.target.value)}
+                      />
+                    )}
+                  </div>
                   <Input
                     placeholder="Description (optional)..."
                     value={achievementDescription}
