@@ -1,9 +1,9 @@
 // lib/constants/player-taxonomy-labels.ts
 import {
   PointType,
-  IntelectualFunction,
-  Attribute,
-  Skill,
+  CognitiveSkill,
+  EmotionalSkill,
+  PracticalSkill,
   CommColor,
 } from '@/types/enums';
 
@@ -22,47 +22,46 @@ export const POINT_TYPE_LABEL: Record<PointType, string> = {
   [PointType.HP]: 'HP',
 };
 
-export const INTELECTUAL_FUNCTION_LABEL: Record<IntelectualFunction, string> = {
-  [IntelectualFunction.SELF_AWARE]: 'Self Awareness',
-  [IntelectualFunction.EMOTION_CONTROL]: 'Emotion Control',
-  [IntelectualFunction.DECISION_MAKING]: 'Decision Making',
-  [IntelectualFunction.CREATIVITY]: 'Creativity',
-  [IntelectualFunction.PROBLEM_SOLVING]: 'Problem Solving',
-  [IntelectualFunction.SELF_CONTROL]: 'Self Control',
-  [IntelectualFunction.WORK_MEMORY]: 'Working Memory',
-  [IntelectualFunction.ADAPTABILITY]: 'Adaptability',
-  [IntelectualFunction.INITIATIVE]: 'Initiative',
-  [IntelectualFunction.PLANNING]: 'Planning',
-  [IntelectualFunction.ORGANIZATION]: 'Organization',
-  [IntelectualFunction.TIME_MNGM]: 'Time Management',
-  [IntelectualFunction.CONCENTRATION]: 'Concentration',
-  [IntelectualFunction.DETERMINATION]: 'Determination',
+export const COGNITIVE_SKILL_LABEL: Record<CognitiveSkill, string> = {
+  [CognitiveSkill.LOGIC]: 'Logic',
+  [CognitiveSkill.PERCEPTION]: 'Perception',
+  [CognitiveSkill.VISION]: 'Vision',
+  [CognitiveSkill.WISDOM]: 'Wisdom',
+  [CognitiveSkill.DECISION_MAKING]: 'Decision Making',
+  [CognitiveSkill.CREATIVITY]: 'Creativity',
+  [CognitiveSkill.PROBLEM_SOLVING]: 'Problem Solving',
+  [CognitiveSkill.MEMORY]: 'Memory',
+  [CognitiveSkill.PLANNING]: 'Planning',
+  [CognitiveSkill.ORGANIZATION]: 'Organization',
+  [CognitiveSkill.TIME_MNGM]: 'Time Management',
+  [CognitiveSkill.CONCENTRATION]: 'Concentration',
 };
 
-export const ATTRIBUTE_LABEL: Record<Attribute, string> = {
-  [Attribute.PERCEPTION]: 'Perception',
-  [Attribute.LOGIC]: 'Logic',
-  [Attribute.FITNESS]: 'Fitness',
-  [Attribute.CHARISMA]: 'Charisma',
-  [Attribute.WISDOM]: 'Wisdom',
-  [Attribute.LEADERSHIP]: 'Leadership',
-  [Attribute.COMMUNICATION]: 'Communication',
-  [Attribute.VISION]: 'Vision',
-  [Attribute.RESILIENCE]: 'Resilience',
-  [Attribute.EMPATHY]: 'Empathy',
-  [Attribute.INTEGRITY]: 'Integrity',
+export const EMOTIONAL_SKILL_LABEL: Record<EmotionalSkill, string> = {
+  [EmotionalSkill.SELF_AWARE]: 'Self Awareness',
+  [EmotionalSkill.EMOTION_CONTROL]: 'Emotion Control',
+  [EmotionalSkill.SELF_CONTROL]: 'Self Control',
+  [EmotionalSkill.DETERMINATION]: 'Determination',
+  [EmotionalSkill.INITIATIVE]: 'Initiative',
+  [EmotionalSkill.RESILIENCE]: 'Resilience',
+  [EmotionalSkill.EMPATHY]: 'Empathy',
+  [EmotionalSkill.INTEGRITY]: 'Integrity',
+  [EmotionalSkill.CHARISMA]: 'Charisma',
+  [EmotionalSkill.LEADERSHIP]: 'Leadership',
+  [EmotionalSkill.COMMUNICATION]: 'Communication',
 };
 
-export const SKILL_LABEL: Record<Skill, string> = {
-  [Skill.DESIGN_THINKING]: 'Design Thinking',
-  [Skill.PROJECT_MANAGEMENT]: 'Project Management',
-  [Skill.TEACHING]: 'Teaching',
-  [Skill.NEGOTIATION]: 'Negotiation',
-  [Skill.NARRATIVE]: 'Narrative',
-  [Skill.DEVELOPING]: 'Developing',
-  [Skill.HANDCRAFTING]: 'Handcrafting',
-  [Skill.PAINTING]: 'Painting',
-  [Skill.ILLUSTRATION]: 'Illustration',
+export const PRACTICAL_SKILL_LABEL: Record<PracticalSkill, string> = {
+  [PracticalSkill.FITNESS]: 'Fitness',
+  [PracticalSkill.DESIGN_THINKING]: 'Design Thinking',
+  [PracticalSkill.PROJECT_MANAGEMENT]: 'Project Management',
+  [PracticalSkill.TEACHING]: 'Teaching',
+  [PracticalSkill.NEGOTIATION]: 'Negotiation',
+  [PracticalSkill.NARRATIVE]: 'Narrative',
+  [PracticalSkill.DEVELOPING]: 'Developing',
+  [PracticalSkill.HANDCRAFTING]: 'Handcrafting',
+  [PracticalSkill.PAINTING]: 'Painting',
+  [PracticalSkill.ILLUSTRATION]: 'Illustration',
 };
 
 export const COMM_COLOR_LABEL: Record<CommColor, string> = {
@@ -84,28 +83,28 @@ export function getPointTypeLabel(type: PointType | string | undefined | null): 
   return toTitle(String(type));
 }
 
-export function getIntelectualFunctionLabel(
-  value: IntelectualFunction | string | undefined | null
+export function getCognitiveSkillLabel(
+  value: CognitiveSkill | string | undefined | null
 ): string {
   if (!value) return '';
-  if (value in INTELECTUAL_FUNCTION_LABEL) {
-    return INTELECTUAL_FUNCTION_LABEL[value as IntelectualFunction];
+  if (value in COGNITIVE_SKILL_LABEL) {
+    return COGNITIVE_SKILL_LABEL[value as CognitiveSkill];
   }
   return toTitle(String(value));
 }
 
-export function getAttributeLabel(value: Attribute | string | undefined | null): string {
+export function getEmotionalSkillLabel(value: EmotionalSkill | string | undefined | null): string {
   if (!value) return '';
-  if (value in ATTRIBUTE_LABEL) {
-    return ATTRIBUTE_LABEL[value as Attribute];
+  if (value in EMOTIONAL_SKILL_LABEL) {
+    return EMOTIONAL_SKILL_LABEL[value as EmotionalSkill];
   }
   return toTitle(String(value));
 }
 
-export function getSkillLabel(value: Skill | string | undefined | null): string {
+export function getPracticalSkillLabel(value: PracticalSkill | string | undefined | null): string {
   if (!value) return '';
-  if (value in SKILL_LABEL) {
-    return SKILL_LABEL[value as Skill];
+  if (value in PRACTICAL_SKILL_LABEL) {
+    return PRACTICAL_SKILL_LABEL[value as PracticalSkill];
   }
   return toTitle(String(value));
 }
