@@ -46,7 +46,7 @@ export async function createCharacterFromEntity(
       description: `${customerRole} character created from ${entityType}: ${entityName}`,
       roles: [customerRole],
       inventory: [],
-      achievementsCharacter: [],
+      achievements: [],
       purchasedAmount: 0,
       playerId: FOUNDER_PLAYER_ID, // Use Founder Player ID for characters created from entities
       lastActiveAt: getUTCNow(),
