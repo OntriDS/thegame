@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: small-business-errors-easy
-domain: entrepreneurship-studies
----
-
 :::mechanic-data
-id: small-business-errors-easy-c2-m1
+id: 03-small-business-financial-failure-easy-c2-m1
 version: 1
 question: What do these five errors form?
 options:
@@ -18,7 +12,7 @@ options:
 :::
 
 :::mechanic-private
-id: small-business-errors-easy-c2-m1
+id: 03-small-business-financial-failure-easy-c2-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -26,7 +20,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: small-business-errors-easy-c2-m1
+id: 03-small-business-financial-failure-easy-c2-m1
 version: 1
 lessonSlug: small-business-errors-easy
 type: multiple-choice
@@ -60,7 +54,7 @@ active: true
 :::
 
 :::mechanic-data
-id: small-business-errors-easy-c3-m1
+id: 03-small-business-financial-failure-easy-c3-m1
 version: 1
 items:
   - id: i1
@@ -72,7 +66,7 @@ items:
 :::
 
 :::mechanic-private
-id: small-business-errors-easy-c3-m1
+id: 03-small-business-financial-failure-easy-c3-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -83,7 +77,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: small-business-errors-easy-c3-m1
+id: 03-small-business-financial-failure-easy-c3-m1
 version: 1
 lessonSlug: small-business-errors-easy
 type: sequence-builder
@@ -122,7 +116,7 @@ active: true
 :::
 
 :::mechanic-data
-id: small-business-errors-easy-c4-m1
+id: 03-small-business-financial-failure-easy-c4-m1
 version: 1
 categories:
   - id: fixed
@@ -145,7 +139,7 @@ items:
 :::
 
 :::mechanic-private
-id: small-business-errors-easy-c4-m1
+id: 03-small-business-financial-failure-easy-c4-m1
 version: 1
 kind: mapping
 matches:
@@ -159,7 +153,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: small-business-errors-easy-c4-m1
+id: 03-small-business-financial-failure-easy-c4-m1
 version: 1
 lessonSlug: small-business-errors-easy
 type: quick-classification
@@ -195,7 +189,7 @@ active: true
 :::
 
 :::mechanic-data
-id: small-business-errors-easy-c5-m1
+id: 03-small-business-financial-failure-easy-c5-m1
 version: 1
 scenario: >-
   Tune your small business operations to hit sustainable monthly cash flow
@@ -266,14 +260,14 @@ cards:
 :::
 
 :::mechanic-private
-id: small-business-errors-easy-c5-m1
+id: 03-small-business-financial-failure-easy-c5-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: small-business-errors-easy-c5-m1
+id: 03-small-business-financial-failure-easy-c5-m1
 version: 1
 lessonSlug: small-business-errors-easy
 type: parameter-tuner
@@ -312,7 +306,7 @@ active: true
 :::
 
 :::mechanic-data
-id: small-business-errors-easy-c6-m1
+id: 03-small-business-financial-failure-easy-c6-m1
 version: 1
 scenario: Sort each accounting term to the correct category.
 theories:
@@ -332,7 +326,7 @@ clues:
 :::
 
 :::mechanic-private
-id: small-business-errors-easy-c6-m1
+id: 03-small-business-financial-failure-easy-c6-m1
 version: 1
 kind: mapping
 matches:
@@ -344,7 +338,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: small-business-errors-easy-c6-m1
+id: 03-small-business-financial-failure-easy-c6-m1
 version: 1
 lessonSlug: small-business-errors-easy
 type: evidence-match
@@ -379,7 +373,7 @@ active: true
 :::
 
 :::mechanic-data
-id: small-business-errors-easy-c7-m1
+id: 03-small-business-financial-failure-easy-c7-m1
 version: 1
 scenario: >-
   A solo consultant needs to set the price for a one-day training engagement.
@@ -422,7 +416,7 @@ options:
 :::
 
 :::mechanic-private
-id: small-business-errors-easy-c7-m1
+id: 03-small-business-financial-failure-easy-c7-m1
 version: 1
 kind: rubric
 scoring:
@@ -444,7 +438,7 @@ hints:
 
 :::mechanic
 schemaVersion: 1
-id: small-business-errors-easy-c7-m1
+id: 03-small-business-financial-failure-easy-c7-m1
 version: 1
 lessonSlug: small-business-errors-easy
 type: tradeoff-decision
@@ -481,7 +475,7 @@ active: true
 :::
 
 :::mechanic-data
-id: small-business-errors-easy-c8-m1
+id: 03-small-business-financial-failure-easy-c8-m1
 version: 1
 scenario: >-
   A business with 40 customers paying $400 each reports a net loss of $3,000.
@@ -510,7 +504,7 @@ parameters:
 :::
 
 :::mechanic-private
-id: small-business-errors-easy-c8-m1
+id: 03-small-business-financial-failure-easy-c8-m1
 version: 1
 kind: invariants
 correctDiagnosis: d1
@@ -522,7 +516,7 @@ requirements:
 
 :::mechanic
 schemaVersion: 1
-id: small-business-errors-easy-c8-m1
+id: 03-small-business-financial-failure-easy-c8-m1
 version: 1
 lessonSlug: small-business-errors-easy
 type: diagnostic-lab
@@ -560,7 +554,7 @@ active: true
 :::
 
 :::mechanic-data
-id: small-business-errors-easy-c9-m1
+id: 03-small-business-financial-failure-easy-c9-m1
 version: 1
 layout: linear
 sequence:
@@ -586,7 +580,7 @@ options:
 :::
 
 :::mechanic-private
-id: small-business-errors-easy-c9-m1
+id: 03-small-business-financial-failure-easy-c9-m1
 version: 1
 kind: mapping
 matches:
@@ -596,7 +590,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: small-business-errors-easy-c9-m1
+id: 03-small-business-financial-failure-easy-c9-m1
 version: 1
 lessonSlug: small-business-errors-easy
 type: missing-step
@@ -632,7 +626,7 @@ active: true
 :::
 
 :::mechanic-data
-id: small-business-errors-easy-c10-m1
+id: 03-small-business-financial-failure-easy-c10-m1
 version: 1
 question: What % close within 5 years?
 options:
@@ -645,7 +639,7 @@ options:
 :::
 
 :::mechanic-private
-id: small-business-errors-easy-c10-m1
+id: 03-small-business-financial-failure-easy-c10-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -653,7 +647,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: small-business-errors-easy-c10-m1
+id: 03-small-business-financial-failure-easy-c10-m1
 version: 1
 lessonSlug: small-business-errors-easy
 type: multiple-choice
@@ -687,7 +681,7 @@ active: true
 :::
 
 :::mechanic-data
-id: small-business-errors-easy-c11-m1
+id: 03-small-business-financial-failure-easy-c11-m1
 version: 1
 sourceDomain: Small business entrepreneurship
 targetDomain: Public administration and government budgeting
@@ -714,7 +708,7 @@ options:
 :::
 
 :::mechanic-private
-id: small-business-errors-easy-c11-m1
+id: 03-small-business-financial-failure-easy-c11-m1
 version: 1
 kind: rubric
 scoring:
@@ -725,7 +719,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: small-business-errors-easy-c11-m1
+id: 03-small-business-financial-failure-easy-c11-m1
 version: 1
 lessonSlug: small-business-errors-easy
 type: abstract-transfer

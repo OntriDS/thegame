@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: agile-5-stages-methodology-easy
-domain: project-management-studies
----
-
 :::mechanic-data
-id: agile-5-stages-methodology-easy-c2-m1
+id: 05-agile-methodology-easy-c2-m1
 version: 1
 items:
   - id: i1
@@ -19,7 +13,7 @@ items:
 :::
 
 :::mechanic-private
-id: agile-5-stages-methodology-easy-c2-m1
+id: 05-agile-methodology-easy-c2-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -31,7 +25,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: agile-5-stages-methodology-easy-c2-m1
+id: 05-agile-methodology-easy-c2-m1
 version: 1
 lessonSlug: agile-5-stages-methodology-easy
 type: sequence-builder
@@ -67,7 +61,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-5-stages-methodology-easy-c3-m1
+id: 05-agile-methodology-easy-c3-m1
 version: 1
 question: When does the Envision stage occur?
 options:
@@ -80,7 +74,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-5-stages-methodology-easy-c3-m1
+id: 05-agile-methodology-easy-c3-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -88,7 +82,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: agile-5-stages-methodology-easy-c3-m1
+id: 05-agile-methodology-easy-c3-m1
 version: 1
 lessonSlug: agile-5-stages-methodology-easy
 type: multiple-choice
@@ -122,7 +116,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-5-stages-methodology-easy-c4-m1
+id: 05-agile-methodology-easy-c4-m1
 version: 1
 categories:
   - id: cat-a
@@ -145,7 +139,7 @@ items:
 :::
 
 :::mechanic-private
-id: agile-5-stages-methodology-easy-c4-m1
+id: 05-agile-methodology-easy-c4-m1
 version: 1
 kind: mapping
 matches:
@@ -159,7 +153,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-5-stages-methodology-easy-c4-m1
+id: 05-agile-methodology-easy-c4-m1
 version: 1
 lessonSlug: agile-5-stages-methodology-easy
 type: quick-classification
@@ -194,7 +188,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-5-stages-methodology-easy-c5-m1
+id: 05-agile-methodology-easy-c5-m1
 version: 1
 question: How long do stand-up meetings last?
 options:
@@ -207,7 +201,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-5-stages-methodology-easy-c5-m1
+id: 05-agile-methodology-easy-c5-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -215,7 +209,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: agile-5-stages-methodology-easy-c5-m1
+id: 05-agile-methodology-easy-c5-m1
 version: 1
 lessonSlug: agile-5-stages-methodology-easy
 type: multiple-choice
@@ -249,7 +243,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-5-stages-methodology-easy-c6-m1
+id: 05-agile-methodology-easy-c6-m1
 version: 1
 layout: linear
 sequence:
@@ -275,7 +269,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-5-stages-methodology-easy-c6-m1
+id: 05-agile-methodology-easy-c6-m1
 version: 1
 kind: mapping
 matches:
@@ -285,7 +279,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-5-stages-methodology-easy-c6-m1
+id: 05-agile-methodology-easy-c6-m1
 version: 1
 lessonSlug: agile-5-stages-methodology-easy
 type: missing-step
@@ -320,7 +314,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-5-stages-methodology-easy-c7-m1
+id: 05-agile-methodology-easy-c7-m1
 version: 1
 scenario: >-
   A project manager is sorting clues about which project lifecycle stage they
@@ -342,7 +336,7 @@ clues:
 :::
 
 :::mechanic-private
-id: agile-5-stages-methodology-easy-c7-m1
+id: 05-agile-methodology-easy-c7-m1
 version: 1
 kind: mapping
 matches:
@@ -354,7 +348,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-5-stages-methodology-easy-c7-m1
+id: 05-agile-methodology-easy-c7-m1
 version: 1
 lessonSlug: agile-5-stages-methodology-easy
 type: evidence-match
@@ -389,7 +383,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-5-stages-methodology-easy-c8-m1
+id: 05-agile-methodology-easy-c8-m1
 version: 1
 question: Daily stand-ups are for?
 options:
@@ -402,7 +396,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-5-stages-methodology-easy-c8-m1
+id: 05-agile-methodology-easy-c8-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -410,7 +404,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: agile-5-stages-methodology-easy-c8-m1
+id: 05-agile-methodology-easy-c8-m1
 version: 1
 lessonSlug: agile-5-stages-methodology-easy
 type: multiple-choice

@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: road-to-financial-freedom-easy
-domain: financial-freedom-studies
----
-
 :::mechanic-data
-id: road-to-financial-freedom-easy-c2-m1
+id: 05-financial-freedom-strategy-easy-c2-m1
 version: 1
 scenario: >-
   Tune your spending and savings so your financial freedom number fits your
@@ -69,14 +63,14 @@ cards:
 :::
 
 :::mechanic-private
-id: road-to-financial-freedom-easy-c2-m1
+id: 05-financial-freedom-strategy-easy-c2-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: road-to-financial-freedom-easy-c2-m1
+id: 05-financial-freedom-strategy-easy-c2-m1
 version: 1
 lessonSlug: road-to-financial-freedom-easy
 type: parameter-tuner
@@ -115,7 +109,7 @@ active: true
 :::
 
 :::mechanic-data
-id: road-to-financial-freedom-easy-c3-m1
+id: 05-financial-freedom-strategy-easy-c3-m1
 version: 1
 categories:
   - id: cat-big
@@ -136,7 +130,7 @@ items:
 :::
 
 :::mechanic-private
-id: road-to-financial-freedom-easy-c3-m1
+id: 05-financial-freedom-strategy-easy-c3-m1
 version: 1
 kind: mapping
 matches:
@@ -149,7 +143,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: road-to-financial-freedom-easy-c3-m1
+id: 05-financial-freedom-strategy-easy-c3-m1
 version: 1
 lessonSlug: road-to-financial-freedom-easy
 type: quick-classification
@@ -184,7 +178,7 @@ active: true
 :::
 
 :::mechanic-data
-id: road-to-financial-freedom-easy-c4-m1
+id: 05-financial-freedom-strategy-easy-c4-m1
 version: 1
 scenario: >-
   Two people with very different incomes show whether wealth is built by earning
@@ -206,7 +200,7 @@ clues:
 :::
 
 :::mechanic-private
-id: road-to-financial-freedom-easy-c4-m1
+id: 05-financial-freedom-strategy-easy-c4-m1
 version: 1
 kind: mapping
 matches:
@@ -218,7 +212,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: road-to-financial-freedom-easy-c4-m1
+id: 05-financial-freedom-strategy-easy-c4-m1
 version: 1
 lessonSlug: road-to-financial-freedom-easy
 type: evidence-match
@@ -253,7 +247,7 @@ active: true
 :::
 
 :::mechanic-data
-id: road-to-financial-freedom-easy-c5-m1
+id: 05-financial-freedom-strategy-easy-c5-m1
 version: 1
 items:
   - id: i1
@@ -269,7 +263,7 @@ items:
 :::
 
 :::mechanic-private
-id: road-to-financial-freedom-easy-c5-m1
+id: 05-financial-freedom-strategy-easy-c5-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -281,7 +275,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: road-to-financial-freedom-easy-c5-m1
+id: 05-financial-freedom-strategy-easy-c5-m1
 version: 1
 lessonSlug: road-to-financial-freedom-easy
 type: sequence-builder
@@ -319,7 +313,7 @@ active: true
 :::
 
 :::mechanic-data
-id: road-to-financial-freedom-easy-c6-m1
+id: 05-financial-freedom-strategy-easy-c6-m1
 version: 1
 scenario: >-
   You notice several old financial commitments — a large mortgage, a premium car
@@ -365,7 +359,7 @@ options:
 :::
 
 :::mechanic-private
-id: road-to-financial-freedom-easy-c6-m1
+id: 05-financial-freedom-strategy-easy-c6-m1
 version: 1
 kind: rubric
 scoring:
@@ -376,7 +370,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: road-to-financial-freedom-easy-c6-m1
+id: 05-financial-freedom-strategy-easy-c6-m1
 version: 1
 lessonSlug: road-to-financial-freedom-easy
 type: tradeoff-decision
@@ -413,7 +407,7 @@ active: true
 :::
 
 :::mechanic-data
-id: road-to-financial-freedom-easy-c7-m1
+id: 05-financial-freedom-strategy-easy-c7-m1
 version: 1
 layout: linear
 sequence:
@@ -437,7 +431,7 @@ options:
 :::
 
 :::mechanic-private
-id: road-to-financial-freedom-easy-c7-m1
+id: 05-financial-freedom-strategy-easy-c7-m1
 version: 1
 kind: mapping
 matches:
@@ -447,7 +441,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: road-to-financial-freedom-easy-c7-m1
+id: 05-financial-freedom-strategy-easy-c7-m1
 version: 1
 lessonSlug: road-to-financial-freedom-easy
 type: missing-step
@@ -482,7 +476,7 @@ active: true
 :::
 
 :::mechanic-data
-id: road-to-financial-freedom-easy-c8-m1
+id: 05-financial-freedom-strategy-easy-c8-m1
 version: 1
 attributes:
   - id: diversification
@@ -522,14 +516,14 @@ requirements:
 :::
 
 :::mechanic-private
-id: road-to-financial-freedom-easy-c8-m1
+id: 05-financial-freedom-strategy-easy-c8-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: road-to-financial-freedom-easy-c8-m1
+id: 05-financial-freedom-strategy-easy-c8-m1
 version: 1
 lessonSlug: road-to-financial-freedom-easy
 type: constraint-construction
@@ -567,7 +561,7 @@ active: true
 :::
 
 :::mechanic-data
-id: road-to-financial-freedom-easy-c9-m1
+id: 05-financial-freedom-strategy-easy-c9-m1
 version: 1
 scenario: >-
   Alex has $1,000 saved and limited free time. The market is hot and friends are
@@ -614,7 +608,7 @@ nodes:
 :::
 
 :::mechanic-private
-id: road-to-financial-freedom-easy-c9-m1
+id: 05-financial-freedom-strategy-easy-c9-m1
 version: 1
 kind: exact
 correctAnswer: a1,a2
@@ -622,7 +616,7 @@ correctAnswer: a1,a2
 
 :::mechanic
 schemaVersion: 1
-id: road-to-financial-freedom-easy-c9-m1
+id: 05-financial-freedom-strategy-easy-c9-m1
 version: 1
 lessonSlug: road-to-financial-freedom-easy
 type: prediction
@@ -657,7 +651,7 @@ active: true
 :::
 
 :::mechanic-data
-id: road-to-financial-freedom-easy-c10-m1
+id: 05-financial-freedom-strategy-easy-c10-m1
 version: 1
 question: What is the core tradeoff?
 options:
@@ -670,7 +664,7 @@ options:
 :::
 
 :::mechanic-private
-id: road-to-financial-freedom-easy-c10-m1
+id: 05-financial-freedom-strategy-easy-c10-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -678,7 +672,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: road-to-financial-freedom-easy-c10-m1
+id: 05-financial-freedom-strategy-easy-c10-m1
 version: 1
 lessonSlug: road-to-financial-freedom-easy
 type: multiple-choice
@@ -712,7 +706,7 @@ active: true
 :::
 
 :::mechanic-data
-id: road-to-financial-freedom-easy-c11-m1
+id: 05-financial-freedom-strategy-easy-c11-m1
 version: 1
 categories:
   - id: myth
@@ -735,7 +729,7 @@ items:
 :::
 
 :::mechanic-private
-id: road-to-financial-freedom-easy-c11-m1
+id: 05-financial-freedom-strategy-easy-c11-m1
 version: 1
 kind: mapping
 matches:
@@ -749,7 +743,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: road-to-financial-freedom-easy-c11-m1
+id: 05-financial-freedom-strategy-easy-c11-m1
 version: 1
 lessonSlug: road-to-financial-freedom-easy
 type: quick-classification

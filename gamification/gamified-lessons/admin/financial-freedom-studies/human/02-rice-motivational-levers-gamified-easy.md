@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: getting-rich-cia-rice-framework-easy
-domain: financial-freedom-studies
----
-
 :::mechanic-data
-id: getting-rich-cia-rice-framework-easy-c2-m1
+id: 02-rice-motivational-levers-easy-c2-m1
 version: 1
 categories:
   - id: internal
@@ -24,7 +18,7 @@ items:
 :::
 
 :::mechanic-private
-id: getting-rich-cia-rice-framework-easy-c2-m1
+id: 02-rice-motivational-levers-easy-c2-m1
 version: 1
 kind: mapping
 matches:
@@ -36,7 +30,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: getting-rich-cia-rice-framework-easy-c2-m1
+id: 02-rice-motivational-levers-easy-c2-m1
 version: 1
 lessonSlug: getting-rich-cia-rice-framework-easy
 type: quick-classification
@@ -75,7 +69,7 @@ active: true
 :::
 
 :::mechanic-data
-id: getting-rich-cia-rice-framework-easy-c3-m1
+id: 02-rice-motivational-levers-easy-c3-m1
 version: 1
 question: Why is ideology the strongest lever?
 options:
@@ -88,7 +82,7 @@ options:
 :::
 
 :::mechanic-private
-id: getting-rich-cia-rice-framework-easy-c3-m1
+id: 02-rice-motivational-levers-easy-c3-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -96,7 +90,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: getting-rich-cia-rice-framework-easy-c3-m1
+id: 02-rice-motivational-levers-easy-c3-m1
 version: 1
 lessonSlug: getting-rich-cia-rice-framework-easy
 type: multiple-choice
@@ -130,7 +124,7 @@ active: true
 :::
 
 :::mechanic-data
-id: getting-rich-cia-rice-framework-easy-c4-m1
+id: 02-rice-motivational-levers-easy-c4-m1
 version: 1
 scenario: Match each behavior to the perspective it best illustrates.
 theories:
@@ -156,7 +150,7 @@ clues:
 :::
 
 :::mechanic-private
-id: getting-rich-cia-rice-framework-easy-c4-m1
+id: 02-rice-motivational-levers-easy-c4-m1
 version: 1
 kind: mapping
 matches:
@@ -168,7 +162,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: getting-rich-cia-rice-framework-easy-c4-m1
+id: 02-rice-motivational-levers-easy-c4-m1
 version: 1
 lessonSlug: getting-rich-cia-rice-framework-easy
 type: evidence-match
@@ -203,7 +197,7 @@ active: true
 :::
 
 :::mechanic-data
-id: getting-rich-cia-rice-framework-easy-c5-m1
+id: 02-rice-motivational-levers-easy-c5-m1
 version: 1
 question: What does behaviorism focus on?
 options:
@@ -216,7 +210,7 @@ options:
 :::
 
 :::mechanic-private
-id: getting-rich-cia-rice-framework-easy-c5-m1
+id: 02-rice-motivational-levers-easy-c5-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -224,7 +218,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: getting-rich-cia-rice-framework-easy-c5-m1
+id: 02-rice-motivational-levers-easy-c5-m1
 version: 1
 lessonSlug: getting-rich-cia-rice-framework-easy
 type: multiple-choice
@@ -258,7 +252,7 @@ active: true
 :::
 
 :::mechanic-data
-id: getting-rich-cia-rice-framework-easy-c6-m1
+id: 02-rice-motivational-levers-easy-c6-m1
 version: 1
 scenario: >-
   Two approaches to understanding a person's behavior. Sort the clues by which
@@ -282,7 +276,7 @@ clues:
 :::
 
 :::mechanic-private
-id: getting-rich-cia-rice-framework-easy-c6-m1
+id: 02-rice-motivational-levers-easy-c6-m1
 version: 1
 kind: mapping
 matches:
@@ -294,7 +288,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: getting-rich-cia-rice-framework-easy-c6-m1
+id: 02-rice-motivational-levers-easy-c6-m1
 version: 1
 lessonSlug: getting-rich-cia-rice-framework-easy
 type: evidence-match
@@ -329,7 +323,7 @@ active: true
 :::
 
 :::mechanic-data
-id: getting-rich-cia-rice-framework-easy-c8-m1
+id: 02-rice-motivational-levers-easy-c8-m1
 version: 1
 scenario: >-
   A marketing team needs to persuade budget-conscious customers to try a new
@@ -371,7 +365,7 @@ options:
 :::
 
 :::mechanic-private
-id: getting-rich-cia-rice-framework-easy-c8-m1
+id: 02-rice-motivational-levers-easy-c8-m1
 version: 1
 kind: rubric
 scoring:
@@ -382,7 +376,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: getting-rich-cia-rice-framework-easy-c8-m1
+id: 02-rice-motivational-levers-easy-c8-m1
 version: 1
 lessonSlug: getting-rich-cia-rice-framework-easy
 type: tradeoff-decision
@@ -419,7 +413,7 @@ active: true
 :::
 
 :::mechanic-data
-id: getting-rich-cia-rice-framework-easy-c9-m1
+id: 02-rice-motivational-levers-easy-c9-m1
 version: 1
 question: What does the biological perspective focus on?
 options:
@@ -432,7 +426,7 @@ options:
 :::
 
 :::mechanic-private
-id: getting-rich-cia-rice-framework-easy-c9-m1
+id: 02-rice-motivational-levers-easy-c9-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -440,7 +434,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: getting-rich-cia-rice-framework-easy-c9-m1
+id: 02-rice-motivational-levers-easy-c9-m1
 version: 1
 lessonSlug: getting-rich-cia-rice-framework-easy
 type: multiple-choice
@@ -474,7 +468,7 @@ active: true
 :::
 
 :::mechanic-data
-id: getting-rich-cia-rice-framework-easy-c10-m1
+id: 02-rice-motivational-levers-easy-c10-m1
 version: 1
 scenario: Match each behavior to the perspective that best explains it.
 theories:
@@ -494,7 +488,7 @@ clues:
 :::
 
 :::mechanic-private
-id: getting-rich-cia-rice-framework-easy-c10-m1
+id: 02-rice-motivational-levers-easy-c10-m1
 version: 1
 kind: mapping
 matches:
@@ -506,7 +500,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: getting-rich-cia-rice-framework-easy-c10-m1
+id: 02-rice-motivational-levers-easy-c10-m1
 version: 1
 lessonSlug: getting-rich-cia-rice-framework-easy
 type: evidence-match
@@ -540,7 +534,7 @@ active: true
 :::
 
 :::mechanic-data
-id: getting-rich-cia-rice-framework-easy-c11-m1
+id: 02-rice-motivational-levers-easy-c11-m1
 version: 1
 scenario: >-
   A respected community leader wants to convince a skeptical neighbor to support
@@ -600,7 +594,7 @@ nodes:
 :::
 
 :::mechanic-private
-id: getting-rich-cia-rice-framework-easy-c11-m1
+id: 02-rice-motivational-levers-easy-c11-m1
 version: 1
 kind: exact
 correctAnswer: a1,a2,a3
@@ -608,7 +602,7 @@ correctAnswer: a1,a2,a3
 
 :::mechanic
 schemaVersion: 1
-id: getting-rich-cia-rice-framework-easy-c11-m1
+id: 02-rice-motivational-levers-easy-c11-m1
 version: 1
 lessonSlug: getting-rich-cia-rice-framework-easy
 type: prediction
@@ -645,7 +639,7 @@ active: true
 :::
 
 :::mechanic-data
-id: getting-rich-cia-rice-framework-easy-c12-m1
+id: 02-rice-motivational-levers-easy-c12-m1
 version: 1
 items:
   - id: i1
@@ -661,7 +655,7 @@ items:
 :::
 
 :::mechanic-private
-id: getting-rich-cia-rice-framework-easy-c12-m1
+id: 02-rice-motivational-levers-easy-c12-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -673,7 +667,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: getting-rich-cia-rice-framework-easy-c12-m1
+id: 02-rice-motivational-levers-easy-c12-m1
 version: 1
 lessonSlug: getting-rich-cia-rice-framework-easy
 type: sequence-builder
@@ -710,7 +704,7 @@ active: true
 :::
 
 :::mechanic-data
-id: getting-rich-cia-rice-framework-easy-c13-m1
+id: 02-rice-motivational-levers-easy-c13-m1
 version: 1
 scenario: >-
   A campaign strategist needs a specific group to take an action that also
@@ -743,7 +737,7 @@ options:
 :::
 
 :::mechanic-private
-id: getting-rich-cia-rice-framework-easy-c13-m1
+id: 02-rice-motivational-levers-easy-c13-m1
 version: 1
 kind: rubric
 scoring:
@@ -754,7 +748,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: getting-rich-cia-rice-framework-easy-c13-m1
+id: 02-rice-motivational-levers-easy-c13-m1
 version: 1
 lessonSlug: getting-rich-cia-rice-framework-easy
 type: tradeoff-decision
@@ -791,7 +785,7 @@ active: true
 :::
 
 :::mechanic-data
-id: getting-rich-cia-rice-framework-easy-c14-m1
+id: 02-rice-motivational-levers-easy-c14-m1
 version: 1
 categories:
   - id: price
@@ -814,7 +808,7 @@ items:
 :::
 
 :::mechanic-private
-id: getting-rich-cia-rice-framework-easy-c14-m1
+id: 02-rice-motivational-levers-easy-c14-m1
 version: 1
 kind: mapping
 matches:
@@ -828,7 +822,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: getting-rich-cia-rice-framework-easy-c14-m1
+id: 02-rice-motivational-levers-easy-c14-m1
 version: 1
 lessonSlug: getting-rich-cia-rice-framework-easy
 type: quick-classification
@@ -863,7 +857,7 @@ active: true
 :::
 
 :::mechanic-data
-id: getting-rich-cia-rice-framework-easy-c15-m1
+id: 02-rice-motivational-levers-easy-c15-m1
 version: 1
 scenario: >-
   A team only performs when a bonus is offered. The moment the reward
@@ -896,7 +890,7 @@ parameters:
 :::
 
 :::mechanic-private
-id: getting-rich-cia-rice-framework-easy-c15-m1
+id: 02-rice-motivational-levers-easy-c15-m1
 version: 1
 kind: invariants
 correctDiagnosis: d1
@@ -908,7 +902,7 @@ requirements:
 
 :::mechanic
 schemaVersion: 1
-id: getting-rich-cia-rice-framework-easy-c15-m1
+id: 02-rice-motivational-levers-easy-c15-m1
 version: 1
 lessonSlug: getting-rich-cia-rice-framework-easy
 type: diagnostic-lab
@@ -947,7 +941,7 @@ active: true
 :::
 
 :::mechanic-data
-id: getting-rich-cia-rice-framework-easy-c7-m1
+id: 02-rice-motivational-levers-easy-c7-m1
 version: 1
 question: What does the humanistic view focus on?
 options:
@@ -960,7 +954,7 @@ options:
 :::
 
 :::mechanic-private
-id: getting-rich-cia-rice-framework-easy-c7-m1
+id: 02-rice-motivational-levers-easy-c7-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -968,7 +962,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: getting-rich-cia-rice-framework-easy-c7-m1
+id: 02-rice-motivational-levers-easy-c7-m1
 version: 1
 lessonSlug: getting-rich-cia-rice-framework-easy
 type: multiple-choice

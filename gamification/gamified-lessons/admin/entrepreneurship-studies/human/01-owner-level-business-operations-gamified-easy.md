@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: ceo-three-jobs-easy
-domain: entrepreneurship-studies
----
-
 :::mechanic-data
-id: ceo-three-jobs-easy-c2-m1
+id: 01-owner-level-business-operations-easy-c2-m1
 version: 1
 question: What is the founder's job?
 options:
@@ -18,7 +12,7 @@ options:
 :::
 
 :::mechanic-private
-id: ceo-three-jobs-easy-c2-m1
+id: 01-owner-level-business-operations-easy-c2-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -26,7 +20,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: ceo-three-jobs-easy-c2-m1
+id: 01-owner-level-business-operations-easy-c2-m1
 version: 1
 lessonSlug: ceo-three-jobs-easy
 type: multiple-choice
@@ -60,7 +54,7 @@ active: true
 :::
 
 :::mechanic-data
-id: ceo-three-jobs-easy-c3-m1
+id: 01-owner-level-business-operations-easy-c3-m1
 version: 1
 sourceDomain: Business team-building and delegation
 targetDomain: Economics (division of labor and specialization)
@@ -88,7 +82,7 @@ options:
 :::
 
 :::mechanic-private
-id: ceo-three-jobs-easy-c3-m1
+id: 01-owner-level-business-operations-easy-c3-m1
 version: 1
 kind: rubric
 scoring:
@@ -112,7 +106,7 @@ hints:
 
 :::mechanic
 schemaVersion: 1
-id: ceo-three-jobs-easy-c3-m1
+id: 01-owner-level-business-operations-easy-c3-m1
 version: 1
 lessonSlug: ceo-three-jobs-easy
 type: abstract-transfer
@@ -149,7 +143,7 @@ active: true
 :::
 
 :::mechanic-data
-id: ceo-three-jobs-easy-c4-m1
+id: 01-owner-level-business-operations-easy-c4-m1
 version: 1
 items:
   - id: i1
@@ -163,7 +157,7 @@ items:
 :::
 
 :::mechanic-private
-id: ceo-three-jobs-easy-c4-m1
+id: 01-owner-level-business-operations-easy-c4-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -175,7 +169,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: ceo-three-jobs-easy-c4-m1
+id: 01-owner-level-business-operations-easy-c4-m1
 version: 1
 lessonSlug: ceo-three-jobs-easy
 type: sequence-builder
@@ -211,7 +205,7 @@ active: true
 :::
 
 :::mechanic-data
-id: ceo-three-jobs-easy-c5-m1
+id: 01-owner-level-business-operations-easy-c5-m1
 version: 1
 categories:
   - id: cat-timed
@@ -230,7 +224,7 @@ items:
 :::
 
 :::mechanic-private
-id: ceo-three-jobs-easy-c5-m1
+id: 01-owner-level-business-operations-easy-c5-m1
 version: 1
 kind: mapping
 matches:
@@ -242,7 +236,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: ceo-three-jobs-easy-c5-m1
+id: 01-owner-level-business-operations-easy-c5-m1
 version: 1
 lessonSlug: ceo-three-jobs-easy
 type: quick-classification
@@ -277,7 +271,7 @@ active: true
 :::
 
 :::mechanic-data
-id: ceo-three-jobs-easy-c6-m1
+id: 01-owner-level-business-operations-easy-c6-m1
 version: 1
 scenario: >-
   Your service business is racing toward its 1,000-member annual goal while
@@ -316,7 +310,7 @@ options:
 :::
 
 :::mechanic-private
-id: ceo-three-jobs-easy-c6-m1
+id: 01-owner-level-business-operations-easy-c6-m1
 version: 1
 kind: rubric
 scoring:
@@ -327,7 +321,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: ceo-three-jobs-easy-c6-m1
+id: 01-owner-level-business-operations-easy-c6-m1
 version: 1
 lessonSlug: ceo-three-jobs-easy
 type: tradeoff-decision
@@ -364,7 +358,7 @@ active: true
 :::
 
 :::mechanic-data
-id: ceo-three-jobs-easy-c7-m1
+id: 01-owner-level-business-operations-easy-c7-m1
 version: 1
 scenario: >-
   Match each clue to the idea it supports: the owner being the business's
@@ -394,7 +388,7 @@ clues:
 :::
 
 :::mechanic-private
-id: ceo-three-jobs-easy-c7-m1
+id: 01-owner-level-business-operations-easy-c7-m1
 version: 1
 kind: mapping
 matches:
@@ -406,7 +400,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: ceo-three-jobs-easy-c7-m1
+id: 01-owner-level-business-operations-easy-c7-m1
 version: 1
 lessonSlug: ceo-three-jobs-easy
 type: evidence-match
@@ -441,7 +435,7 @@ active: true
 :::
 
 :::mechanic-data
-id: ceo-three-jobs-easy-c8-m1
+id: 01-owner-level-business-operations-easy-c8-m1
 version: 1
 layout: linear
 sequence:
@@ -467,7 +461,7 @@ options:
 :::
 
 :::mechanic-private
-id: ceo-three-jobs-easy-c8-m1
+id: 01-owner-level-business-operations-easy-c8-m1
 version: 1
 kind: mapping
 matches:
@@ -477,7 +471,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: ceo-three-jobs-easy-c8-m1
+id: 01-owner-level-business-operations-easy-c8-m1
 version: 1
 lessonSlug: ceo-three-jobs-easy
 type: missing-step

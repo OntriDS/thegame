@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: budgeting-scheduling-projects-easy
-domain: project-management-studies
----
-
 :::mechanic-data
-id: budgeting-scheduling-projects-easy-c2-m1
+id: 11-budgeting-scheduling-frameworks-easy-c2-m1
 version: 1
 categories:
   - id: cat-task
@@ -28,7 +22,7 @@ items:
 :::
 
 :::mechanic-private
-id: budgeting-scheduling-projects-easy-c2-m1
+id: 11-budgeting-scheduling-frameworks-easy-c2-m1
 version: 1
 kind: mapping
 matches:
@@ -42,7 +36,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: budgeting-scheduling-projects-easy-c2-m1
+id: 11-budgeting-scheduling-frameworks-easy-c2-m1
 version: 1
 lessonSlug: budgeting-scheduling-projects-easy
 type: quick-classification
@@ -78,7 +72,7 @@ active: true
 :::
 
 :::mechanic-data
-id: budgeting-scheduling-projects-easy-c3-m1
+id: 11-budgeting-scheduling-frameworks-easy-c3-m1
 version: 1
 scenario: You're estimating a new software feature build using the PERT method.
 outputs:
@@ -126,14 +120,14 @@ cards:
 :::
 
 :::mechanic-private
-id: budgeting-scheduling-projects-easy-c3-m1
+id: 11-budgeting-scheduling-frameworks-easy-c3-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: budgeting-scheduling-projects-easy-c3-m1
+id: 11-budgeting-scheduling-frameworks-easy-c3-m1
 version: 1
 lessonSlug: budgeting-scheduling-projects-easy
 type: parameter-tuner
@@ -172,7 +166,7 @@ active: true
 :::
 
 :::mechanic-data
-id: budgeting-scheduling-projects-easy-c4-m1
+id: 11-budgeting-scheduling-frameworks-easy-c4-m1
 version: 1
 scenario: >-
   A project manager must choose a cost estimation technique for their current
@@ -198,7 +192,7 @@ clues:
 :::
 
 :::mechanic-private
-id: budgeting-scheduling-projects-easy-c4-m1
+id: 11-budgeting-scheduling-frameworks-easy-c4-m1
 version: 1
 kind: mapping
 matches:
@@ -210,7 +204,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: budgeting-scheduling-projects-easy-c4-m1
+id: 11-budgeting-scheduling-frameworks-easy-c4-m1
 version: 1
 lessonSlug: budgeting-scheduling-projects-easy
 type: evidence-match
@@ -245,7 +239,7 @@ active: true
 :::
 
 :::mechanic-data
-id: budgeting-scheduling-projects-easy-c5-m1
+id: 11-budgeting-scheduling-frameworks-easy-c5-m1
 version: 1
 categories:
   - id: cat-responsible
@@ -268,7 +262,7 @@ items:
 :::
 
 :::mechanic-private
-id: budgeting-scheduling-projects-easy-c5-m1
+id: 11-budgeting-scheduling-frameworks-easy-c5-m1
 version: 1
 kind: mapping
 matches:
@@ -282,7 +276,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: budgeting-scheduling-projects-easy-c5-m1
+id: 11-budgeting-scheduling-frameworks-easy-c5-m1
 version: 1
 lessonSlug: budgeting-scheduling-projects-easy
 type: quick-classification
@@ -317,7 +311,7 @@ active: true
 :::
 
 :::mechanic-data
-id: budgeting-scheduling-projects-easy-c6-m1
+id: 11-budgeting-scheduling-frameworks-easy-c6-m1
 version: 1
 question: QC focuses on what?
 options:
@@ -330,7 +324,7 @@ options:
 :::
 
 :::mechanic-private
-id: budgeting-scheduling-projects-easy-c6-m1
+id: 11-budgeting-scheduling-frameworks-easy-c6-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -338,7 +332,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: budgeting-scheduling-projects-easy-c6-m1
+id: 11-budgeting-scheduling-frameworks-easy-c6-m1
 version: 1
 lessonSlug: budgeting-scheduling-projects-easy
 type: multiple-choice
@@ -372,7 +366,7 @@ active: true
 :::
 
 :::mechanic-data
-id: budgeting-scheduling-projects-easy-c7-m1
+id: 11-budgeting-scheduling-frameworks-easy-c7-m1
 version: 1
 sourceDomain: Project Management
 targetDomain: Software Engineering
@@ -396,7 +390,7 @@ options:
 :::
 
 :::mechanic-private
-id: budgeting-scheduling-projects-easy-c7-m1
+id: 11-budgeting-scheduling-frameworks-easy-c7-m1
 version: 1
 kind: rubric
 scoring:
@@ -407,7 +401,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: budgeting-scheduling-projects-easy-c7-m1
+id: 11-budgeting-scheduling-frameworks-easy-c7-m1
 version: 1
 lessonSlug: budgeting-scheduling-projects-easy
 type: abstract-transfer

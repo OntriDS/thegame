@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: build-a-business-for-financial-freedom-easy
-domain: financial-freedom-studies
----
-
 :::mechanic-data
-id: build-a-business-for-financial-freedom-easy-c2-m1
+id: 01-e-myth-business-system-design-easy-c2-m1
 version: 1
 question: E-Myth says tech skill isn't what?
 options:
@@ -18,7 +12,7 @@ options:
 :::
 
 :::mechanic-private
-id: build-a-business-for-financial-freedom-easy-c2-m1
+id: 01-e-myth-business-system-design-easy-c2-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -26,7 +20,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: build-a-business-for-financial-freedom-easy-c2-m1
+id: 01-e-myth-business-system-design-easy-c2-m1
 version: 1
 lessonSlug: build-a-business-for-financial-freedom-easy
 type: multiple-choice
@@ -61,7 +55,7 @@ active: true
 :::
 
 :::mechanic-data
-id: build-a-business-for-financial-freedom-easy-c4-m1
+id: 01-e-myth-business-system-design-easy-c4-m1
 version: 1
 question: What does the fatal assumption confuse?
 options:
@@ -74,7 +68,7 @@ options:
 :::
 
 :::mechanic-private
-id: build-a-business-for-financial-freedom-easy-c4-m1
+id: 01-e-myth-business-system-design-easy-c4-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -82,7 +76,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: build-a-business-for-financial-freedom-easy-c4-m1
+id: 01-e-myth-business-system-design-easy-c4-m1
 version: 1
 lessonSlug: build-a-business-for-financial-freedom-easy
 type: multiple-choice
@@ -116,7 +110,7 @@ active: true
 :::
 
 :::mechanic-data
-id: build-a-business-for-financial-freedom-easy-c5-m1
+id: 01-e-myth-business-system-design-easy-c5-m1
 version: 1
 categories:
   - id: cat-a
@@ -139,7 +133,7 @@ items:
 :::
 
 :::mechanic-private
-id: build-a-business-for-financial-freedom-easy-c5-m1
+id: 01-e-myth-business-system-design-easy-c5-m1
 version: 1
 kind: mapping
 matches:
@@ -153,7 +147,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: build-a-business-for-financial-freedom-easy-c5-m1
+id: 01-e-myth-business-system-design-easy-c5-m1
 version: 1
 lessonSlug: build-a-business-for-financial-freedom-easy
 type: quick-classification
@@ -189,7 +183,7 @@ active: true
 :::
 
 :::mechanic-data
-id: build-a-business-for-financial-freedom-easy-c7-m1
+id: 01-e-myth-business-system-design-easy-c7-m1
 version: 1
 items:
   - id: i1
@@ -207,7 +201,7 @@ items:
 :::
 
 :::mechanic-private
-id: build-a-business-for-financial-freedom-easy-c7-m1
+id: 01-e-myth-business-system-design-easy-c7-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -219,7 +213,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: build-a-business-for-financial-freedom-easy-c7-m1
+id: 01-e-myth-business-system-design-easy-c7-m1
 version: 1
 lessonSlug: build-a-business-for-financial-freedom-easy
 type: sequence-builder
@@ -256,7 +250,7 @@ active: true
 :::
 
 :::mechanic-data
-id: build-a-business-for-financial-freedom-easy-c8-m1
+id: 01-e-myth-business-system-design-easy-c8-m1
 version: 1
 layout: linear
 sequence:
@@ -280,7 +274,7 @@ options:
 :::
 
 :::mechanic-private
-id: build-a-business-for-financial-freedom-easy-c8-m1
+id: 01-e-myth-business-system-design-easy-c8-m1
 version: 1
 kind: mapping
 matches:
@@ -290,7 +284,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: build-a-business-for-financial-freedom-easy-c8-m1
+id: 01-e-myth-business-system-design-easy-c8-m1
 version: 1
 lessonSlug: build-a-business-for-financial-freedom-easy
 type: missing-step
@@ -325,7 +319,7 @@ active: true
 :::
 
 :::mechanic-data
-id: build-a-business-for-financial-freedom-easy-c9-m1
+id: 01-e-myth-business-system-design-easy-c9-m1
 version: 1
 scenario: >-
   You're opening a new cake shop next month. How should you set it up so the
@@ -358,7 +352,7 @@ options:
 :::
 
 :::mechanic-private
-id: build-a-business-for-financial-freedom-easy-c9-m1
+id: 01-e-myth-business-system-design-easy-c9-m1
 version: 1
 kind: rubric
 scoring:
@@ -368,7 +362,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: build-a-business-for-financial-freedom-easy-c9-m1
+id: 01-e-myth-business-system-design-easy-c9-m1
 version: 1
 lessonSlug: build-a-business-for-financial-freedom-easy
 type: tradeoff-decision
@@ -405,7 +399,7 @@ active: true
 :::
 
 :::mechanic-data
-id: build-a-business-for-financial-freedom-easy-c10-m1
+id: 01-e-myth-business-system-design-easy-c10-m1
 version: 1
 scenario: Match each clue to the mindset it describes.
 theories:
@@ -425,7 +419,7 @@ clues:
 :::
 
 :::mechanic-private
-id: build-a-business-for-financial-freedom-easy-c10-m1
+id: 01-e-myth-business-system-design-easy-c10-m1
 version: 1
 kind: mapping
 matches:
@@ -437,7 +431,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: build-a-business-for-financial-freedom-easy-c10-m1
+id: 01-e-myth-business-system-design-easy-c10-m1
 version: 1
 lessonSlug: build-a-business-for-financial-freedom-easy
 type: evidence-match
@@ -472,7 +466,7 @@ active: true
 :::
 
 :::mechanic-data
-id: build-a-business-for-financial-freedom-easy-c11-m1
+id: 01-e-myth-business-system-design-easy-c11-m1
 version: 1
 attributes:
   - id: owner-hours
@@ -512,14 +506,14 @@ requirements:
 :::
 
 :::mechanic-private
-id: build-a-business-for-financial-freedom-easy-c11-m1
+id: 01-e-myth-business-system-design-easy-c11-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: build-a-business-for-financial-freedom-easy-c11-m1
+id: 01-e-myth-business-system-design-easy-c11-m1
 version: 1
 lessonSlug: build-a-business-for-financial-freedom-easy
 type: constraint-construction
@@ -557,7 +551,7 @@ active: true
 :::
 
 :::mechanic-data
-id: build-a-business-for-financial-freedom-easy-c12-m1
+id: 01-e-myth-business-system-design-easy-c12-m1
 version: 1
 scenario: >-
   An owner with 10 employees still has to personally finish the last 10% of
@@ -588,7 +582,7 @@ parameters:
 :::
 
 :::mechanic-private
-id: build-a-business-for-financial-freedom-easy-c12-m1
+id: 01-e-myth-business-system-design-easy-c12-m1
 version: 1
 kind: invariants
 correctDiagnosis: d1
@@ -600,7 +594,7 @@ requirements:
 
 :::mechanic
 schemaVersion: 1
-id: build-a-business-for-financial-freedom-easy-c12-m1
+id: 01-e-myth-business-system-design-easy-c12-m1
 version: 1
 lessonSlug: build-a-business-for-financial-freedom-easy
 type: diagnostic-lab
@@ -637,7 +631,7 @@ active: true
 :::
 
 :::mechanic-data
-id: build-a-business-for-financial-freedom-easy-c13-m1
+id: 01-e-myth-business-system-design-easy-c13-m1
 version: 1
 scenario: >-
   A cake shop owner is turning an improvised kitchen into a system-dependent
@@ -716,14 +710,14 @@ cards:
 :::
 
 :::mechanic-private
-id: build-a-business-for-financial-freedom-easy-c13-m1
+id: 01-e-myth-business-system-design-easy-c13-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: build-a-business-for-financial-freedom-easy-c13-m1
+id: 01-e-myth-business-system-design-easy-c13-m1
 version: 1
 lessonSlug: build-a-business-for-financial-freedom-easy
 type: parameter-tuner
@@ -762,7 +756,7 @@ active: true
 :::
 
 :::mechanic-data
-id: build-a-business-for-financial-freedom-easy-c14-m1
+id: 01-e-myth-business-system-design-easy-c14-m1
 version: 1
 items:
   - id: i1
@@ -774,7 +768,7 @@ items:
 :::
 
 :::mechanic-private
-id: build-a-business-for-financial-freedom-easy-c14-m1
+id: 01-e-myth-business-system-design-easy-c14-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -785,7 +779,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: build-a-business-for-financial-freedom-easy-c14-m1
+id: 01-e-myth-business-system-design-easy-c14-m1
 version: 1
 lessonSlug: build-a-business-for-financial-freedom-easy
 type: sequence-builder
@@ -822,7 +816,7 @@ active: true
 :::
 
 :::mechanic-data
-id: build-a-business-for-financial-freedom-easy-c15-m1
+id: 01-e-myth-business-system-design-easy-c15-m1
 version: 1
 question: What can innovation apply to?
 options:
@@ -835,7 +829,7 @@ options:
 :::
 
 :::mechanic-private
-id: build-a-business-for-financial-freedom-easy-c15-m1
+id: 01-e-myth-business-system-design-easy-c15-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -843,7 +837,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: build-a-business-for-financial-freedom-easy-c15-m1
+id: 01-e-myth-business-system-design-easy-c15-m1
 version: 1
 lessonSlug: build-a-business-for-financial-freedom-easy
 type: multiple-choice
@@ -877,7 +871,7 @@ active: true
 :::
 
 :::mechanic-data
-id: build-a-business-for-financial-freedom-easy-c16-m1
+id: 01-e-myth-business-system-design-easy-c16-m1
 version: 1
 scenario: >-
   A business owner wants to know whether a new sales approach actually works
@@ -927,7 +921,7 @@ nodes:
 :::
 
 :::mechanic-private
-id: build-a-business-for-financial-freedom-easy-c16-m1
+id: 01-e-myth-business-system-design-easy-c16-m1
 version: 1
 kind: exact
 correctAnswer: a1,a2,a3
@@ -935,7 +929,7 @@ correctAnswer: a1,a2,a3
 
 :::mechanic
 schemaVersion: 1
-id: build-a-business-for-financial-freedom-easy-c16-m1
+id: 01-e-myth-business-system-design-easy-c16-m1
 version: 1
 lessonSlug: build-a-business-for-financial-freedom-easy
 type: prediction
@@ -972,7 +966,7 @@ active: true
 :::
 
 :::mechanic-data
-id: build-a-business-for-financial-freedom-easy-c17-m1
+id: 01-e-myth-business-system-design-easy-c17-m1
 version: 1
 scenario: >-
   You are the operations lead. Test an improvement, measure its effect, then
@@ -1027,14 +1021,14 @@ controls:
 :::
 
 :::mechanic-private
-id: build-a-business-for-financial-freedom-easy-c17-m1
+id: 01-e-myth-business-system-design-easy-c17-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: build-a-business-for-financial-freedom-easy-c17-m1
+id: 01-e-myth-business-system-design-easy-c17-m1
 version: 1
 lessonSlug: build-a-business-for-financial-freedom-easy
 type: system-simulation
@@ -1073,7 +1067,7 @@ active: true
 :::
 
 :::mechanic-data
-id: build-a-business-for-financial-freedom-easy-c18-m1
+id: 01-e-myth-business-system-design-easy-c18-m1
 version: 1
 sourceDomain: Building a scalable, system-driven business
 targetDomain: Biology — designing a self-replicating cell colony
@@ -1098,7 +1092,7 @@ options:
 :::
 
 :::mechanic-private
-id: build-a-business-for-financial-freedom-easy-c18-m1
+id: 01-e-myth-business-system-design-easy-c18-m1
 version: 1
 kind: rubric
 scoring:
@@ -1109,7 +1103,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: build-a-business-for-financial-freedom-easy-c18-m1
+id: 01-e-myth-business-system-design-easy-c18-m1
 version: 1
 lessonSlug: build-a-business-for-financial-freedom-easy
 type: abstract-transfer
@@ -1146,7 +1140,7 @@ active: true
 :::
 
 :::mechanic-data
-id: build-a-business-for-financial-freedom-easy-c19-m1
+id: 01-e-myth-business-system-design-easy-c19-m1
 version: 1
 question: Skill at the work is ___ to run a business.
 options:
@@ -1159,7 +1153,7 @@ options:
 :::
 
 :::mechanic-private
-id: build-a-business-for-financial-freedom-easy-c19-m1
+id: 01-e-myth-business-system-design-easy-c19-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -1167,7 +1161,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: build-a-business-for-financial-freedom-easy-c19-m1
+id: 01-e-myth-business-system-design-easy-c19-m1
 version: 1
 lessonSlug: build-a-business-for-financial-freedom-easy
 type: multiple-choice

@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: gantt-charts-easy
-domain: project-management-studies
----
-
 :::mechanic-data
-id: gantt-charts-easy-c2-m1
+id: 09-gantt-chart-project-tracking-easy-c2-m1
 version: 1
 question: Who popularized the Gantt chart?
 options:
@@ -18,7 +12,7 @@ options:
 :::
 
 :::mechanic-private
-id: gantt-charts-easy-c2-m1
+id: 09-gantt-chart-project-tracking-easy-c2-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -26,7 +20,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: gantt-charts-easy-c2-m1
+id: 09-gantt-chart-project-tracking-easy-c2-m1
 version: 1
 lessonSlug: gantt-charts-easy
 type: multiple-choice
@@ -60,7 +54,7 @@ active: true
 :::
 
 :::mechanic-data
-id: gantt-charts-easy-c3-m1
+id: 09-gantt-chart-project-tracking-easy-c3-m1
 version: 1
 categories:
   - id: cat-a
@@ -83,7 +77,7 @@ items:
 :::
 
 :::mechanic-private
-id: gantt-charts-easy-c3-m1
+id: 09-gantt-chart-project-tracking-easy-c3-m1
 version: 1
 kind: mapping
 matches:
@@ -97,7 +91,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: gantt-charts-easy-c3-m1
+id: 09-gantt-chart-project-tracking-easy-c3-m1
 version: 1
 lessonSlug: gantt-charts-easy
 type: quick-classification
@@ -132,7 +126,7 @@ active: true
 :::
 
 :::mechanic-data
-id: gantt-charts-easy-c4-m1
+id: 09-gantt-chart-project-tracking-easy-c4-m1
 version: 1
 scenario: >-
   Each clue describes something a Gantt chart can show. Match it to the theory
@@ -154,7 +148,7 @@ clues:
 :::
 
 :::mechanic-private
-id: gantt-charts-easy-c4-m1
+id: 09-gantt-chart-project-tracking-easy-c4-m1
 version: 1
 kind: mapping
 matches:
@@ -166,7 +160,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: gantt-charts-easy-c4-m1
+id: 09-gantt-chart-project-tracking-easy-c4-m1
 version: 1
 lessonSlug: gantt-charts-easy
 type: evidence-match
@@ -201,7 +195,7 @@ active: true
 :::
 
 :::mechanic-data
-id: gantt-charts-easy-c5-m1
+id: 09-gantt-chart-project-tracking-easy-c5-m1
 version: 1
 items:
   - id: i1
@@ -221,7 +215,7 @@ items:
 :::
 
 :::mechanic-private
-id: gantt-charts-easy-c5-m1
+id: 09-gantt-chart-project-tracking-easy-c5-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -233,7 +227,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: gantt-charts-easy-c5-m1
+id: 09-gantt-chart-project-tracking-easy-c5-m1
 version: 1
 lessonSlug: gantt-charts-easy
 type: sequence-builder
@@ -269,7 +263,7 @@ active: true
 :::
 
 :::mechanic-data
-id: gantt-charts-easy-c6-m1
+id: 09-gantt-chart-project-tracking-easy-c6-m1
 version: 1
 question: What does a Gantt bar's length show?
 options:
@@ -282,7 +276,7 @@ options:
 :::
 
 :::mechanic-private
-id: gantt-charts-easy-c6-m1
+id: 09-gantt-chart-project-tracking-easy-c6-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -290,7 +284,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: gantt-charts-easy-c6-m1
+id: 09-gantt-chart-project-tracking-easy-c6-m1
 version: 1
 lessonSlug: gantt-charts-easy
 type: multiple-choice
@@ -325,7 +319,7 @@ active: true
 :::
 
 :::mechanic-data
-id: gantt-charts-easy-c8-m1
+id: 09-gantt-chart-project-tracking-easy-c8-m1
 version: 1
 question: What does a Gantt chart's vertical axis show?
 options:
@@ -338,7 +332,7 @@ options:
 :::
 
 :::mechanic-private
-id: gantt-charts-easy-c8-m1
+id: 09-gantt-chart-project-tracking-easy-c8-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -346,7 +340,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: gantt-charts-easy-c8-m1
+id: 09-gantt-chart-project-tracking-easy-c8-m1
 version: 1
 lessonSlug: gantt-charts-easy
 type: multiple-choice

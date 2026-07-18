@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: interaction-design-ux-specialization-easy
-domain: interactive-design-studies
----
-
 :::mechanic-data
-id: interaction-design-ux-specialization-easy-c3-m1
+id: 02-interaction-design-ux-architecture-easy-c3-m1
 version: 1
 question: What does a workaround reveal?
 options:
@@ -18,7 +12,7 @@ options:
 :::
 
 :::mechanic-private
-id: interaction-design-ux-specialization-easy-c3-m1
+id: 02-interaction-design-ux-architecture-easy-c3-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -26,7 +20,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-ux-specialization-easy-c3-m1
+id: 02-interaction-design-ux-architecture-easy-c3-m1
 version: 1
 lessonSlug: interaction-design-ux-specialization-easy
 type: multiple-choice
@@ -60,7 +54,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-ux-specialization-easy-c4-m1
+id: 02-interaction-design-ux-architecture-easy-c4-m1
 version: 1
 scenario: >-
   Your team is designing a new AI scheduling assistant. There are no engineers
@@ -104,7 +98,7 @@ options:
 :::
 
 :::mechanic-private
-id: interaction-design-ux-specialization-easy-c4-m1
+id: 02-interaction-design-ux-architecture-easy-c4-m1
 version: 1
 kind: rubric
 scoring:
@@ -115,7 +109,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-ux-specialization-easy-c4-m1
+id: 02-interaction-design-ux-architecture-easy-c4-m1
 version: 1
 lessonSlug: interaction-design-ux-specialization-easy
 type: tradeoff-decision
@@ -152,7 +146,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-ux-specialization-easy-c5-m1
+id: 02-interaction-design-ux-architecture-easy-c5-m1
 version: 1
 categories:
   - id: cat-a
@@ -175,7 +169,7 @@ items:
 :::
 
 :::mechanic-private
-id: interaction-design-ux-specialization-easy-c5-m1
+id: 02-interaction-design-ux-architecture-easy-c5-m1
 version: 1
 kind: mapping
 matches:
@@ -189,7 +183,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-ux-specialization-easy-c5-m1
+id: 02-interaction-design-ux-architecture-easy-c5-m1
 version: 1
 lessonSlug: interaction-design-ux-specialization-easy
 type: quick-classification
@@ -224,7 +218,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-ux-specialization-easy-c7-m1
+id: 02-interaction-design-ux-architecture-easy-c7-m1
 version: 1
 scenario: Match each UI design example to the principle it best illustrates.
 theories:
@@ -246,7 +240,7 @@ clues:
 :::
 
 :::mechanic-private
-id: interaction-design-ux-specialization-easy-c7-m1
+id: 02-interaction-design-ux-architecture-easy-c7-m1
 version: 1
 kind: mapping
 matches:
@@ -258,7 +252,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-ux-specialization-easy-c7-m1
+id: 02-interaction-design-ux-architecture-easy-c7-m1
 version: 1
 lessonSlug: interaction-design-ux-specialization-easy
 type: evidence-match
@@ -293,7 +287,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-ux-specialization-easy-c8-m1
+id: 02-interaction-design-ux-architecture-easy-c8-m1
 version: 1
 scenario: >-
   A designer is making decisions on a webpage. Decide whether each design choice
@@ -319,7 +313,7 @@ clues:
 :::
 
 :::mechanic-private
-id: interaction-design-ux-specialization-easy-c8-m1
+id: 02-interaction-design-ux-architecture-easy-c8-m1
 version: 1
 kind: mapping
 matches:
@@ -331,7 +325,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-ux-specialization-easy-c8-m1
+id: 02-interaction-design-ux-architecture-easy-c8-m1
 version: 1
 lessonSlug: interaction-design-ux-specialization-easy
 type: evidence-match
@@ -366,7 +360,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-ux-specialization-easy-c9-m1
+id: 02-interaction-design-ux-architecture-easy-c9-m1
 version: 1
 question: 'Unexpected user behavior is best seen as:'
 options:
@@ -379,7 +373,7 @@ options:
 :::
 
 :::mechanic-private
-id: interaction-design-ux-specialization-easy-c9-m1
+id: 02-interaction-design-ux-architecture-easy-c9-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -387,7 +381,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-ux-specialization-easy-c9-m1
+id: 02-interaction-design-ux-architecture-easy-c9-m1
 version: 1
 lessonSlug: interaction-design-ux-specialization-easy
 type: multiple-choice
@@ -421,7 +415,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-ux-specialization-easy-c10-m1
+id: 02-interaction-design-ux-architecture-easy-c10-m1
 version: 1
 sourceDomain: Social computing and software design
 targetDomain: Organizational behavior
@@ -446,7 +440,7 @@ options:
 :::
 
 :::mechanic-private
-id: interaction-design-ux-specialization-easy-c10-m1
+id: 02-interaction-design-ux-architecture-easy-c10-m1
 version: 1
 kind: rubric
 scoring:
@@ -457,7 +451,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-ux-specialization-easy-c10-m1
+id: 02-interaction-design-ux-architecture-easy-c10-m1
 version: 1
 lessonSlug: interaction-design-ux-specialization-easy
 type: abstract-transfer
@@ -493,7 +487,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-ux-specialization-easy-c11-m1
+id: 02-interaction-design-ux-architecture-easy-c11-m1
 version: 1
 scenario: >-
   Your product team is fully distributed across San Francisco, London, and
@@ -524,7 +518,7 @@ options:
 :::
 
 :::mechanic-private
-id: interaction-design-ux-specialization-easy-c11-m1
+id: 02-interaction-design-ux-architecture-easy-c11-m1
 version: 1
 kind: rubric
 scoring:
@@ -534,7 +528,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-ux-specialization-easy-c11-m1
+id: 02-interaction-design-ux-architecture-easy-c11-m1
 version: 1
 lessonSlug: interaction-design-ux-specialization-easy
 type: tradeoff-decision
@@ -570,7 +564,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-ux-specialization-easy-c12-m1
+id: 02-interaction-design-ux-architecture-easy-c12-m1
 version: 1
 attributes:
   - id: richness
@@ -610,14 +604,14 @@ requirements:
 :::
 
 :::mechanic-private
-id: interaction-design-ux-specialization-easy-c12-m1
+id: 02-interaction-design-ux-architecture-easy-c12-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-ux-specialization-easy-c12-m1
+id: 02-interaction-design-ux-architecture-easy-c12-m1
 version: 1
 lessonSlug: interaction-design-ux-specialization-easy
 type: constraint-construction
@@ -657,7 +651,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-ux-specialization-easy-c13-m1
+id: 02-interaction-design-ux-architecture-easy-c13-m1
 version: 1
 categories:
   - id: cat-platform
@@ -680,7 +674,7 @@ items:
 :::
 
 :::mechanic-private
-id: interaction-design-ux-specialization-easy-c13-m1
+id: 02-interaction-design-ux-architecture-easy-c13-m1
 version: 1
 kind: mapping
 matches:
@@ -694,7 +688,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-ux-specialization-easy-c13-m1
+id: 02-interaction-design-ux-architecture-easy-c13-m1
 version: 1
 lessonSlug: interaction-design-ux-specialization-easy
 type: quick-classification
@@ -729,7 +723,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-ux-specialization-easy-c14-m1
+id: 02-interaction-design-ux-architecture-easy-c14-m1
 version: 1
 items:
   - id: i1
@@ -743,7 +737,7 @@ items:
 :::
 
 :::mechanic-private
-id: interaction-design-ux-specialization-easy-c14-m1
+id: 02-interaction-design-ux-architecture-easy-c14-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -755,7 +749,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-ux-specialization-easy-c14-m1
+id: 02-interaction-design-ux-architecture-easy-c14-m1
 version: 1
 lessonSlug: interaction-design-ux-specialization-easy
 type: sequence-builder
@@ -791,7 +785,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-ux-specialization-easy-c15-m1
+id: 02-interaction-design-ux-architecture-easy-c15-m1
 version: 1
 scenario: >-
   Design a touchscreen button layout to minimize selection time using Fitts's
@@ -872,14 +866,14 @@ cards:
 :::
 
 :::mechanic-private
-id: interaction-design-ux-specialization-easy-c15-m1
+id: 02-interaction-design-ux-architecture-easy-c15-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-ux-specialization-easy-c15-m1
+id: 02-interaction-design-ux-architecture-easy-c15-m1
 version: 1
 lessonSlug: interaction-design-ux-specialization-easy
 type: parameter-tuner
@@ -919,7 +913,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-ux-specialization-easy-c16-m1
+id: 02-interaction-design-ux-architecture-easy-c16-m1
 version: 1
 scenario: >-
   You're leading IA design for a new online marketplace with thousands of
@@ -957,7 +951,7 @@ options:
 :::
 
 :::mechanic-private
-id: interaction-design-ux-specialization-easy-c16-m1
+id: 02-interaction-design-ux-architecture-easy-c16-m1
 version: 1
 kind: rubric
 scoring:
@@ -968,7 +962,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-ux-specialization-easy-c16-m1
+id: 02-interaction-design-ux-architecture-easy-c16-m1
 version: 1
 lessonSlug: interaction-design-ux-specialization-easy
 type: tradeoff-decision
@@ -1006,7 +1000,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-ux-specialization-easy-c17-m1
+id: 02-interaction-design-ux-architecture-easy-c17-m1
 version: 1
 scenario: >-
   Classify each interaction as belonging to a WIMP interface or a Post-WIMP
@@ -1030,7 +1024,7 @@ clues:
 :::
 
 :::mechanic-private
-id: interaction-design-ux-specialization-easy-c17-m1
+id: 02-interaction-design-ux-architecture-easy-c17-m1
 version: 1
 kind: mapping
 matches:
@@ -1042,7 +1036,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-ux-specialization-easy-c17-m1
+id: 02-interaction-design-ux-architecture-easy-c17-m1
 version: 1
 lessonSlug: interaction-design-ux-specialization-easy
 type: evidence-match
@@ -1077,7 +1071,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-ux-specialization-easy-c18-m1
+id: 02-interaction-design-ux-architecture-easy-c18-m1
 version: 1
 categories:
   - id: cat-a
@@ -1100,7 +1094,7 @@ items:
 :::
 
 :::mechanic-private
-id: interaction-design-ux-specialization-easy-c18-m1
+id: 02-interaction-design-ux-architecture-easy-c18-m1
 version: 1
 kind: mapping
 matches:
@@ -1114,7 +1108,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-ux-specialization-easy-c18-m1
+id: 02-interaction-design-ux-architecture-easy-c18-m1
 version: 1
 lessonSlug: interaction-design-ux-specialization-easy
 type: quick-classification
@@ -1149,7 +1143,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-ux-specialization-easy-c19-m1
+id: 02-interaction-design-ux-architecture-easy-c19-m1
 version: 1
 question: What does a generator produce?
 options:
@@ -1162,7 +1156,7 @@ options:
 :::
 
 :::mechanic-private
-id: interaction-design-ux-specialization-easy-c19-m1
+id: 02-interaction-design-ux-architecture-easy-c19-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -1170,7 +1164,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-ux-specialization-easy-c19-m1
+id: 02-interaction-design-ux-architecture-easy-c19-m1
 version: 1
 lessonSlug: interaction-design-ux-specialization-easy
 type: multiple-choice

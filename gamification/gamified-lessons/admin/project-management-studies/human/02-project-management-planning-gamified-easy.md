@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: project-management-12-steps-easy
-domain: project-management-studies
----
-
 :::mechanic-data
-id: project-management-12-steps-easy-c3-m1
+id: 02-project-management-planning-easy-c3-m1
 version: 1
 scenario: >-
   A boutique bakery wants a new e-commerce website to showcase their brand and
@@ -42,7 +36,7 @@ options:
 :::
 
 :::mechanic-private
-id: project-management-12-steps-easy-c3-m1
+id: 02-project-management-planning-easy-c3-m1
 version: 1
 kind: rubric
 scoring:
@@ -63,7 +57,7 @@ hints:
 
 :::mechanic
 schemaVersion: 1
-id: project-management-12-steps-easy-c3-m1
+id: 02-project-management-planning-easy-c3-m1
 version: 1
 lessonSlug: project-management-12-steps-easy
 type: tradeoff-decision
@@ -100,7 +94,7 @@ active: true
 :::
 
 :::mechanic-data
-id: project-management-12-steps-easy-c4-m1
+id: 02-project-management-planning-easy-c4-m1
 version: 1
 categories:
   - id: method
@@ -121,7 +115,7 @@ items:
 :::
 
 :::mechanic-private
-id: project-management-12-steps-easy-c4-m1
+id: 02-project-management-planning-easy-c4-m1
 version: 1
 kind: mapping
 matches:
@@ -134,7 +128,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: project-management-12-steps-easy-c4-m1
+id: 02-project-management-planning-easy-c4-m1
 version: 1
 lessonSlug: project-management-12-steps-easy
 type: quick-classification
@@ -169,7 +163,7 @@ active: true
 :::
 
 :::mechanic-data
-id: project-management-12-steps-easy-c5-m1
+id: 02-project-management-planning-easy-c5-m1
 version: 1
 question: What probability level should you use?
 options:
@@ -182,7 +176,7 @@ options:
 :::
 
 :::mechanic-private
-id: project-management-12-steps-easy-c5-m1
+id: 02-project-management-planning-easy-c5-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -190,7 +184,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: project-management-12-steps-easy-c5-m1
+id: 02-project-management-planning-easy-c5-m1
 version: 1
 lessonSlug: project-management-12-steps-easy
 type: multiple-choice
@@ -224,7 +218,7 @@ active: true
 :::
 
 :::mechanic-data
-id: project-management-12-steps-easy-c6-m1
+id: 02-project-management-planning-easy-c6-m1
 version: 1
 scenario: Match each clue to the PERT Chart task type it describes.
 theories:
@@ -244,7 +238,7 @@ clues:
 :::
 
 :::mechanic-private
-id: project-management-12-steps-easy-c6-m1
+id: 02-project-management-planning-easy-c6-m1
 version: 1
 kind: mapping
 matches:
@@ -256,7 +250,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: project-management-12-steps-easy-c6-m1
+id: 02-project-management-planning-easy-c6-m1
 version: 1
 lessonSlug: project-management-12-steps-easy
 type: evidence-match
@@ -291,7 +285,7 @@ active: true
 :::
 
 :::mechanic-data
-id: project-management-12-steps-easy-c7-m1
+id: 02-project-management-planning-easy-c7-m1
 version: 1
 scenario: >-
   Your software project is 3 weeks behind the client's desired deadline. You
@@ -324,7 +318,7 @@ options:
 :::
 
 :::mechanic-private
-id: project-management-12-steps-easy-c7-m1
+id: 02-project-management-planning-easy-c7-m1
 version: 1
 kind: rubric
 scoring:
@@ -335,7 +329,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: project-management-12-steps-easy-c7-m1
+id: 02-project-management-planning-easy-c7-m1
 version: 1
 lessonSlug: project-management-12-steps-easy
 type: tradeoff-decision
@@ -372,7 +366,7 @@ active: true
 :::
 
 :::mechanic-data
-id: project-management-12-steps-easy-c8-m1
+id: 02-project-management-planning-easy-c8-m1
 version: 1
 items:
   - id: i1
@@ -384,7 +378,7 @@ items:
 :::
 
 :::mechanic-private
-id: project-management-12-steps-easy-c8-m1
+id: 02-project-management-planning-easy-c8-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -395,7 +389,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: project-management-12-steps-easy-c8-m1
+id: 02-project-management-planning-easy-c8-m1
 version: 1
 lessonSlug: project-management-12-steps-easy
 type: sequence-builder
@@ -430,7 +424,7 @@ active: true
 :::
 
 :::mechanic-data
-id: project-management-12-steps-easy-c9-m1
+id: 02-project-management-planning-easy-c9-m1
 version: 1
 scenario: >-
   You are building a resource baseline for a project while drafting its Gantt
@@ -503,14 +497,14 @@ cards:
 :::
 
 :::mechanic-private
-id: project-management-12-steps-easy-c9-m1
+id: 02-project-management-planning-easy-c9-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: project-management-12-steps-easy-c9-m1
+id: 02-project-management-planning-easy-c9-m1
 version: 1
 lessonSlug: project-management-12-steps-easy
 type: parameter-tuner
@@ -549,7 +543,7 @@ active: true
 :::
 
 :::mechanic-data
-id: project-management-12-steps-easy-c10-m1
+id: 02-project-management-planning-easy-c10-m1
 version: 1
 categories:
   - id: high
@@ -572,7 +566,7 @@ items:
 :::
 
 :::mechanic-private
-id: project-management-12-steps-easy-c10-m1
+id: 02-project-management-planning-easy-c10-m1
 version: 1
 kind: mapping
 matches:
@@ -586,7 +580,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: project-management-12-steps-easy-c10-m1
+id: 02-project-management-planning-easy-c10-m1
 version: 1
 lessonSlug: project-management-12-steps-easy
 type: quick-classification
@@ -621,7 +615,7 @@ active: true
 :::
 
 :::mechanic-data
-id: project-management-12-steps-easy-c11-m1
+id: 02-project-management-planning-easy-c11-m1
 version: 1
 scenario: >-
   You are monitoring a project on a Gantt Chart. Mark completed sections to
@@ -670,14 +664,14 @@ controls:
 :::
 
 :::mechanic-private
-id: project-management-12-steps-easy-c11-m1
+id: 02-project-management-planning-easy-c11-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: project-management-12-steps-easy-c11-m1
+id: 02-project-management-planning-easy-c11-m1
 version: 1
 lessonSlug: project-management-12-steps-easy
 type: system-simulation
@@ -716,7 +710,7 @@ active: true
 :::
 
 :::mechanic-data
-id: project-management-12-steps-easy-c12-m1
+id: 02-project-management-planning-easy-c12-m1
 version: 1
 scenario: >-
   A project manager is monitoring project costs and progress using the traffic
@@ -771,7 +765,7 @@ nodes:
 :::
 
 :::mechanic-private
-id: project-management-12-steps-easy-c12-m1
+id: 02-project-management-planning-easy-c12-m1
 version: 1
 kind: exact
 correctAnswer: o1,o5,o8
@@ -779,7 +773,7 @@ correctAnswer: o1,o5,o8
 
 :::mechanic
 schemaVersion: 1
-id: project-management-12-steps-easy-c12-m1
+id: 02-project-management-planning-easy-c12-m1
 version: 1
 lessonSlug: project-management-12-steps-easy
 type: prediction
@@ -817,7 +811,7 @@ active: true
 :::
 
 :::mechanic-data
-id: project-management-12-steps-easy-c13-m1
+id: 02-project-management-planning-easy-c13-m1
 version: 1
 attributes:
   - id: daysRecovered
@@ -855,14 +849,14 @@ requirements:
 :::
 
 :::mechanic-private
-id: project-management-12-steps-easy-c13-m1
+id: 02-project-management-planning-easy-c13-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: project-management-12-steps-easy-c13-m1
+id: 02-project-management-planning-easy-c13-m1
 version: 1
 lessonSlug: project-management-12-steps-easy
 type: constraint-construction
@@ -899,7 +893,7 @@ active: true
 :::
 
 :::mechanic-data
-id: project-management-12-steps-easy-c14-m1
+id: 02-project-management-planning-easy-c14-m1
 version: 1
 categories:
   - id: cat-a
@@ -922,7 +916,7 @@ items:
 :::
 
 :::mechanic-private
-id: project-management-12-steps-easy-c14-m1
+id: 02-project-management-planning-easy-c14-m1
 version: 1
 kind: mapping
 matches:
@@ -936,7 +930,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: project-management-12-steps-easy-c14-m1
+id: 02-project-management-planning-easy-c14-m1
 version: 1
 lessonSlug: project-management-12-steps-easy
 type: quick-classification
@@ -972,7 +966,7 @@ active: true
 :::
 
 :::mechanic-data
-id: project-management-12-steps-easy-c15-m1
+id: 02-project-management-planning-easy-c15-m1
 version: 1
 question: What does the Iron Triangle mean?
 options:
@@ -985,7 +979,7 @@ options:
 :::
 
 :::mechanic-private
-id: project-management-12-steps-easy-c15-m1
+id: 02-project-management-planning-easy-c15-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -993,7 +987,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: project-management-12-steps-easy-c15-m1
+id: 02-project-management-planning-easy-c15-m1
 version: 1
 lessonSlug: project-management-12-steps-easy
 type: multiple-choice

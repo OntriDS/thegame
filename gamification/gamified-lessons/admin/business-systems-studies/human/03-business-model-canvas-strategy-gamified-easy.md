@@ -1,14 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: business-model-canvas-easy
-domain: business-systems-studies
----
-
-
-
-
 :::mechanic-data
-id: business-model-canvas-easy-c4-m1
+id: 03-business-model-canvas-strategy-easy-c4-m1
 version: 1
 categories:
   - id: cat-a
@@ -31,7 +22,7 @@ items:
 :::
 
 :::mechanic-private
-id: business-model-canvas-easy-c4-m1
+id: 03-business-model-canvas-strategy-easy-c4-m1
 version: 1
 kind: mapping
 matches:
@@ -45,7 +36,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: business-model-canvas-easy-c4-m1
+id: 03-business-model-canvas-strategy-easy-c4-m1
 version: 1
 lessonSlug: business-model-canvas-easy
 type: quick-classification
@@ -81,7 +72,7 @@ active: true
 :::
 
 :::mechanic-data
-id: business-model-canvas-easy-c5-m1
+id: 03-business-model-canvas-strategy-easy-c5-m1
 version: 1
 scenario: >-
   A startup is refining its value proposition. Match each customer benefit to
@@ -103,7 +94,7 @@ clues:
 :::
 
 :::mechanic-private
-id: business-model-canvas-easy-c5-m1
+id: 03-business-model-canvas-strategy-easy-c5-m1
 version: 1
 kind: mapping
 matches:
@@ -115,7 +106,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: business-model-canvas-easy-c5-m1
+id: 03-business-model-canvas-strategy-easy-c5-m1
 version: 1
 lessonSlug: business-model-canvas-easy
 type: evidence-match
@@ -150,7 +141,7 @@ active: true
 :::
 
 :::mechanic-data
-id: business-model-canvas-easy-c6-m1
+id: 03-business-model-canvas-strategy-easy-c6-m1
 version: 1
 items:
   - id: i1
@@ -166,7 +157,7 @@ items:
 :::
 
 :::mechanic-private
-id: business-model-canvas-easy-c6-m1
+id: 03-business-model-canvas-strategy-easy-c6-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -177,7 +168,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: business-model-canvas-easy-c6-m1
+id: 03-business-model-canvas-strategy-easy-c6-m1
 version: 1
 lessonSlug: business-model-canvas-easy
 type: sequence-builder
@@ -215,7 +206,7 @@ active: true
 :::
 
 :::mechanic-data
-id: business-model-canvas-easy-c7-m1
+id: 03-business-model-canvas-strategy-easy-c7-m1
 version: 1
 scenario: >-
   A new video streaming platform is preparing to launch and must decide how to
@@ -251,7 +242,7 @@ options:
 :::
 
 :::mechanic-private
-id: business-model-canvas-easy-c7-m1
+id: 03-business-model-canvas-strategy-easy-c7-m1
 version: 1
 kind: rubric
 scoring:
@@ -262,7 +253,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: business-model-canvas-easy-c7-m1
+id: 03-business-model-canvas-strategy-easy-c7-m1
 version: 1
 lessonSlug: business-model-canvas-easy
 type: tradeoff-decision
@@ -299,7 +290,7 @@ active: true
 :::
 
 :::mechanic-data
-id: business-model-canvas-easy-c8-m1
+id: 03-business-model-canvas-strategy-easy-c8-m1
 version: 1
 categories:
   - id: cat-a
@@ -322,7 +313,7 @@ items:
 :::
 
 :::mechanic-private
-id: business-model-canvas-easy-c8-m1
+id: 03-business-model-canvas-strategy-easy-c8-m1
 version: 1
 kind: mapping
 matches:
@@ -336,7 +327,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: business-model-canvas-easy-c8-m1
+id: 03-business-model-canvas-strategy-easy-c8-m1
 version: 1
 lessonSlug: business-model-canvas-easy
 type: quick-classification
@@ -372,7 +363,7 @@ active: true
 :::
 
 :::mechanic-data
-id: business-model-canvas-easy-c9-m1
+id: 03-business-model-canvas-strategy-easy-c9-m1
 version: 1
 scenario: Match each clue to the type of Key Resource it describes.
 theories:
@@ -402,7 +393,7 @@ clues:
 :::
 
 :::mechanic-private
-id: business-model-canvas-easy-c9-m1
+id: 03-business-model-canvas-strategy-easy-c9-m1
 version: 1
 kind: mapping
 matches:
@@ -414,7 +405,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: business-model-canvas-easy-c9-m1
+id: 03-business-model-canvas-strategy-easy-c9-m1
 version: 1
 lessonSlug: business-model-canvas-easy
 type: evidence-match
@@ -449,7 +440,7 @@ active: true
 :::
 
 :::mechanic-data
-id: business-model-canvas-easy-c10-m1
+id: 03-business-model-canvas-strategy-easy-c10-m1
 version: 1
 scenario: >-
   An online retailer promises 24-hour delivery, but orders routinely arrive 3-5
@@ -480,7 +471,7 @@ parameters:
 :::
 
 :::mechanic-private
-id: business-model-canvas-easy-c10-m1
+id: 03-business-model-canvas-strategy-easy-c10-m1
 version: 1
 kind: invariants
 correctDiagnosis: d1
@@ -492,7 +483,7 @@ requirements:
 
 :::mechanic
 schemaVersion: 1
-id: business-model-canvas-easy-c10-m1
+id: 03-business-model-canvas-strategy-easy-c10-m1
 version: 1
 lessonSlug: business-model-canvas-easy
 type: diagnostic-lab
@@ -530,7 +521,7 @@ active: true
 :::
 
 :::mechanic-data
-id: business-model-canvas-easy-c11-m1
+id: 03-business-model-canvas-strategy-easy-c11-m1
 version: 1
 scenario: >-
   Your food delivery startup has great software but needs restaurant listings
@@ -559,7 +550,7 @@ options:
 :::
 
 :::mechanic-private
-id: business-model-canvas-easy-c11-m1
+id: 03-business-model-canvas-strategy-easy-c11-m1
 version: 1
 kind: rubric
 scoring:
@@ -573,7 +564,7 @@ hints:
 
 :::mechanic
 schemaVersion: 1
-id: business-model-canvas-easy-c11-m1
+id: 03-business-model-canvas-strategy-easy-c11-m1
 version: 1
 lessonSlug: business-model-canvas-easy
 type: tradeoff-decision
@@ -610,7 +601,7 @@ active: true
 :::
 
 :::mechanic-data
-id: business-model-canvas-easy-c12-m1
+id: 03-business-model-canvas-strategy-easy-c12-m1
 version: 1
 question: Which cost stays the same regardless of sales?
 options:
@@ -623,7 +614,7 @@ options:
 :::
 
 :::mechanic-private
-id: business-model-canvas-easy-c12-m1
+id: 03-business-model-canvas-strategy-easy-c12-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -631,7 +622,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: business-model-canvas-easy-c12-m1
+id: 03-business-model-canvas-strategy-easy-c12-m1
 version: 1
 lessonSlug: business-model-canvas-easy
 type: multiple-choice
@@ -665,7 +656,7 @@ active: true
 :::
 
 :::mechanic-data
-id: business-model-canvas-easy-c14-m1
+id: 03-business-model-canvas-strategy-easy-c14-m1
 version: 1
 categories:
   - id: cat-a
@@ -688,7 +679,7 @@ items:
 :::
 
 :::mechanic-private
-id: business-model-canvas-easy-c14-m1
+id: 03-business-model-canvas-strategy-easy-c14-m1
 version: 1
 kind: mapping
 matches:
@@ -702,7 +693,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: business-model-canvas-easy-c14-m1
+id: 03-business-model-canvas-strategy-easy-c14-m1
 version: 1
 lessonSlug: business-model-canvas-easy
 type: quick-classification
@@ -738,7 +729,7 @@ active: true
 :::
 
 :::mechanic-data
-id: business-model-canvas-easy-c15-m1
+id: 03-business-model-canvas-strategy-easy-c15-m1
 version: 1
 question: A business model canvas is best described as?
 options:
@@ -751,7 +742,7 @@ options:
 :::
 
 :::mechanic-private
-id: business-model-canvas-easy-c15-m1
+id: 03-business-model-canvas-strategy-easy-c15-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -759,7 +750,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: business-model-canvas-easy-c15-m1
+id: 03-business-model-canvas-strategy-easy-c15-m1
 version: 1
 lessonSlug: business-model-canvas-easy
 type: multiple-choice
@@ -793,7 +784,7 @@ active: true
 :::
 
 :::mechanic-data
-id: business-model-canvas-easy-c2-m1
+id: 03-business-model-canvas-strategy-easy-c2-m1
 version: 1
 question: What does a business model do?
 options:
@@ -806,7 +797,7 @@ options:
 :::
 
 :::mechanic-private
-id: business-model-canvas-easy-c2-m1
+id: 03-business-model-canvas-strategy-easy-c2-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -814,7 +805,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: business-model-canvas-easy-c2-m1
+id: 03-business-model-canvas-strategy-easy-c2-m1
 version: 1
 lessonSlug: business-model-canvas-easy
 type: multiple-choice

@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: project-management-fundamentals-easy
-domain: project-management-studies
----
-
 :::mechanic-data
-id: project-management-fundamentals-easy-c2-m1
+id: 01-project-management-fundamentals-easy-c2-m1
 version: 1
 categories:
   - id: cat-a
@@ -26,7 +20,7 @@ items:
 :::
 
 :::mechanic-private
-id: project-management-fundamentals-easy-c2-m1
+id: 01-project-management-fundamentals-easy-c2-m1
 version: 1
 kind: mapping
 matches:
@@ -39,7 +33,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: project-management-fundamentals-easy-c2-m1
+id: 01-project-management-fundamentals-easy-c2-m1
 version: 1
 lessonSlug: project-management-fundamentals-easy
 type: quick-classification
@@ -74,7 +68,7 @@ active: true
 :::
 
 :::mechanic-data
-id: project-management-fundamentals-easy-c3-m1
+id: 01-project-management-fundamentals-easy-c3-m1
 version: 1
 scenario: >-
   A project manager is trying to understand two often-confused concepts: one is
@@ -97,7 +91,7 @@ clues:
 :::
 
 :::mechanic-private
-id: project-management-fundamentals-easy-c3-m1
+id: 01-project-management-fundamentals-easy-c3-m1
 version: 1
 kind: mapping
 matches:
@@ -109,7 +103,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: project-management-fundamentals-easy-c3-m1
+id: 01-project-management-fundamentals-easy-c3-m1
 version: 1
 lessonSlug: project-management-fundamentals-easy
 type: evidence-match
@@ -143,7 +137,7 @@ active: true
 :::
 
 :::mechanic-data
-id: project-management-fundamentals-easy-c4-m1
+id: 01-project-management-fundamentals-easy-c4-m1
 version: 1
 question: What's the minimum hours for a work package?
 options:
@@ -156,7 +150,7 @@ options:
 :::
 
 :::mechanic-private
-id: project-management-fundamentals-easy-c4-m1
+id: 01-project-management-fundamentals-easy-c4-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -164,7 +158,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: project-management-fundamentals-easy-c4-m1
+id: 01-project-management-fundamentals-easy-c4-m1
 version: 1
 lessonSlug: project-management-fundamentals-easy
 type: multiple-choice
@@ -198,7 +192,7 @@ active: true
 :::
 
 :::mechanic-data
-id: project-management-fundamentals-easy-c5-m1
+id: 01-project-management-fundamentals-easy-c5-m1
 version: 1
 question: PV in EVM means?
 options:
@@ -211,7 +205,7 @@ options:
 :::
 
 :::mechanic-private
-id: project-management-fundamentals-easy-c5-m1
+id: 01-project-management-fundamentals-easy-c5-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -219,7 +213,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: project-management-fundamentals-easy-c5-m1
+id: 01-project-management-fundamentals-easy-c5-m1
 version: 1
 lessonSlug: project-management-fundamentals-easy
 type: multiple-choice
@@ -253,7 +247,7 @@ active: true
 :::
 
 :::mechanic-data
-id: project-management-fundamentals-easy-c6-m1
+id: 01-project-management-fundamentals-easy-c6-m1
 version: 1
 question: What format is recommended for risk statements?
 options:
@@ -266,7 +260,7 @@ options:
 :::
 
 :::mechanic-private
-id: project-management-fundamentals-easy-c6-m1
+id: 01-project-management-fundamentals-easy-c6-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -274,7 +268,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: project-management-fundamentals-easy-c6-m1
+id: 01-project-management-fundamentals-easy-c6-m1
 version: 1
 lessonSlug: project-management-fundamentals-easy
 type: multiple-choice
@@ -308,7 +302,7 @@ active: true
 :::
 
 :::mechanic-data
-id: project-management-fundamentals-easy-c7-m1
+id: 01-project-management-fundamentals-easy-c7-m1
 version: 1
 categories:
   - id: cause
@@ -331,7 +325,7 @@ items:
 :::
 
 :::mechanic-private
-id: project-management-fundamentals-easy-c7-m1
+id: 01-project-management-fundamentals-easy-c7-m1
 version: 1
 kind: mapping
 matches:
@@ -345,7 +339,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: project-management-fundamentals-easy-c7-m1
+id: 01-project-management-fundamentals-easy-c7-m1
 version: 1
 lessonSlug: project-management-fundamentals-easy
 type: quick-classification
@@ -380,7 +374,7 @@ active: true
 :::
 
 :::mechanic-data
-id: project-management-fundamentals-easy-c8-m1
+id: 01-project-management-fundamentals-easy-c8-m1
 version: 1
 scenario: >-
   Your project is kicking off next week. You must choose the dominant approach
@@ -417,7 +411,7 @@ options:
 :::
 
 :::mechanic-private
-id: project-management-fundamentals-easy-c8-m1
+id: 01-project-management-fundamentals-easy-c8-m1
 version: 1
 kind: rubric
 scoring:
@@ -428,7 +422,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: project-management-fundamentals-easy-c8-m1
+id: 01-project-management-fundamentals-easy-c8-m1
 version: 1
 lessonSlug: project-management-fundamentals-easy
 type: tradeoff-decision

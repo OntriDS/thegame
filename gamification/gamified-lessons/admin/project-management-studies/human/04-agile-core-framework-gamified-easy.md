@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: agile-core-framework-easy
-domain: project-management-studies
----
-
 :::mechanic-data
-id: agile-core-framework-easy-c2-m1
+id: 04-agile-core-framework-easy-c2-m1
 version: 1
 categories:
   - id: cat-a
@@ -28,7 +22,7 @@ items:
 :::
 
 :::mechanic-private
-id: agile-core-framework-easy-c2-m1
+id: 04-agile-core-framework-easy-c2-m1
 version: 1
 kind: mapping
 matches:
@@ -42,7 +36,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-core-framework-easy-c2-m1
+id: 04-agile-core-framework-easy-c2-m1
 version: 1
 lessonSlug: agile-core-framework-easy
 type: quick-classification
@@ -78,7 +72,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-core-framework-easy-c3-m1
+id: 04-agile-core-framework-easy-c3-m1
 version: 1
 scenario: >-
   Determine whether each clue points to a project that thrives with Agile or a
@@ -102,7 +96,7 @@ clues:
 :::
 
 :::mechanic-private
-id: agile-core-framework-easy-c3-m1
+id: 04-agile-core-framework-easy-c3-m1
 version: 1
 kind: mapping
 matches:
@@ -114,7 +108,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-core-framework-easy-c3-m1
+id: 04-agile-core-framework-easy-c3-m1
 version: 1
 lessonSlug: agile-core-framework-easy
 type: evidence-match
@@ -148,7 +142,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-core-framework-easy-c4-m1
+id: 04-agile-core-framework-easy-c4-m1
 version: 1
 scenario: >-
   A mid-sized company is deciding how to manage its upcoming initiatives, which
@@ -190,7 +184,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-core-framework-easy-c4-m1
+id: 04-agile-core-framework-easy-c4-m1
 version: 1
 kind: rubric
 scoring:
@@ -211,7 +205,7 @@ hints:
 
 :::mechanic
 schemaVersion: 1
-id: agile-core-framework-easy-c4-m1
+id: 04-agile-core-framework-easy-c4-m1
 version: 1
 lessonSlug: agile-core-framework-easy
 type: tradeoff-decision
@@ -248,7 +242,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-core-framework-easy-c5-m1
+id: 04-agile-core-framework-easy-c5-m1
 version: 1
 question: When is the PDS created?
 options:
@@ -261,7 +255,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-core-framework-easy-c5-m1
+id: 04-agile-core-framework-easy-c5-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -269,7 +263,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: agile-core-framework-easy-c5-m1
+id: 04-agile-core-framework-easy-c5-m1
 version: 1
 lessonSlug: agile-core-framework-easy
 type: multiple-choice
@@ -303,7 +297,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-core-framework-easy-c6-m1
+id: 04-agile-core-framework-easy-c6-m1
 version: 1
 categories:
   - id: cat-type
@@ -326,7 +320,7 @@ items:
 :::
 
 :::mechanic-private
-id: agile-core-framework-easy-c6-m1
+id: 04-agile-core-framework-easy-c6-m1
 version: 1
 kind: mapping
 matches:
@@ -340,7 +334,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-core-framework-easy-c6-m1
+id: 04-agile-core-framework-easy-c6-m1
 version: 1
 lessonSlug: agile-core-framework-easy
 type: quick-classification
@@ -375,7 +369,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-core-framework-easy-c7-m1
+id: 04-agile-core-framework-easy-c7-m1
 version: 1
 scenario: >-
   Configure a new project's first Sprint to balance pure execution time against
@@ -441,14 +435,14 @@ cards:
 :::
 
 :::mechanic-private
-id: agile-core-framework-easy-c7-m1
+id: 04-agile-core-framework-easy-c7-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: agile-core-framework-easy-c7-m1
+id: 04-agile-core-framework-easy-c7-m1
 version: 1
 lessonSlug: agile-core-framework-easy
 type: parameter-tuner
@@ -487,7 +481,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-core-framework-easy-c8-m1
+id: 04-agile-core-framework-easy-c8-m1
 version: 1
 sourceDomain: Agile project management
 targetDomain: Academic research project management
@@ -512,7 +506,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-core-framework-easy-c8-m1
+id: 04-agile-core-framework-easy-c8-m1
 version: 1
 kind: rubric
 scoring:
@@ -522,7 +516,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: agile-core-framework-easy-c8-m1
+id: 04-agile-core-framework-easy-c8-m1
 version: 1
 lessonSlug: agile-core-framework-easy
 type: abstract-transfer
@@ -558,7 +552,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-core-framework-easy-c9-m1
+id: 04-agile-core-framework-easy-c9-m1
 version: 1
 scenario: Match each clue to the team belief it most obviously supports.
 theories:
@@ -578,7 +572,7 @@ clues:
 :::
 
 :::mechanic-private
-id: agile-core-framework-easy-c9-m1
+id: 04-agile-core-framework-easy-c9-m1
 version: 1
 kind: mapping
 matches:
@@ -590,7 +584,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-core-framework-easy-c9-m1
+id: 04-agile-core-framework-easy-c9-m1
 version: 1
 lessonSlug: agile-core-framework-easy
 type: evidence-match

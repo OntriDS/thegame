@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: agile-project-management-easy
-domain: project-management-studies
----
-
 :::mechanic-data
-id: agile-project-management-easy-c2-m1
+id: 03-agile-project-management-easy-c2-m1
 version: 1
 question: What are Agile's iterative cycles called?
 options:
@@ -18,7 +12,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-project-management-easy-c2-m1
+id: 03-agile-project-management-easy-c2-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -26,7 +20,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: agile-project-management-easy-c2-m1
+id: 03-agile-project-management-easy-c2-m1
 version: 1
 lessonSlug: agile-project-management-easy
 type: multiple-choice
@@ -60,7 +54,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-project-management-easy-c3-m1
+id: 03-agile-project-management-easy-c3-m1
 version: 1
 categories:
   - id: cat-sprint
@@ -84,7 +78,7 @@ shuffle: true
 :::
 
 :::mechanic-private
-id: agile-project-management-easy-c3-m1
+id: 03-agile-project-management-easy-c3-m1
 version: 1
 kind: mapping
 matches:
@@ -98,7 +92,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-project-management-easy-c3-m1
+id: 03-agile-project-management-easy-c3-m1
 version: 1
 lessonSlug: agile-project-management-easy
 type: quick-classification
@@ -135,7 +129,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-project-management-easy-c4-m1
+id: 03-agile-project-management-easy-c4-m1
 version: 1
 scenario: >-
   Your team is starting a new product project where business needs are expected
@@ -169,7 +163,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-project-management-easy-c4-m1
+id: 03-agile-project-management-easy-c4-m1
 version: 1
 kind: rubric
 scoring:
@@ -179,7 +173,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: agile-project-management-easy-c4-m1
+id: 03-agile-project-management-easy-c4-m1
 version: 1
 lessonSlug: agile-project-management-easy
 type: tradeoff-decision
@@ -216,7 +210,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-project-management-easy-c6-m1
+id: 03-agile-project-management-easy-c6-m1
 version: 1
 scenario: >-
   Decide whether each project clue points to an Agile approach or a traditional
@@ -238,7 +232,7 @@ clues:
 :::
 
 :::mechanic-private
-id: agile-project-management-easy-c6-m1
+id: 03-agile-project-management-easy-c6-m1
 version: 1
 kind: mapping
 matches:
@@ -250,7 +244,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-project-management-easy-c6-m1
+id: 03-agile-project-management-easy-c6-m1
 version: 1
 lessonSlug: agile-project-management-easy
 type: evidence-match
@@ -285,7 +279,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-project-management-easy-c8-m1
+id: 03-agile-project-management-easy-c8-m1
 version: 1
 items:
   - id: i1
@@ -301,7 +295,7 @@ items:
 :::
 
 :::mechanic-private
-id: agile-project-management-easy-c8-m1
+id: 03-agile-project-management-easy-c8-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -314,7 +308,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: agile-project-management-easy-c8-m1
+id: 03-agile-project-management-easy-c8-m1
 version: 1
 lessonSlug: agile-project-management-easy
 type: sequence-builder
@@ -349,7 +343,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-project-management-easy-c9-m1
+id: 03-agile-project-management-easy-c9-m1
 version: 1
 layout: linear
 sequence:
@@ -373,7 +367,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-project-management-easy-c9-m1
+id: 03-agile-project-management-easy-c9-m1
 version: 1
 kind: mapping
 matches:
@@ -383,7 +377,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-project-management-easy-c9-m1
+id: 03-agile-project-management-easy-c9-m1
 version: 1
 lessonSlug: agile-project-management-easy
 type: missing-step
@@ -418,7 +412,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-project-management-easy-c10-m1
+id: 03-agile-project-management-easy-c10-m1
 version: 1
 scenario: >-
   Your team is preparing the project delivery plan for an 8-week Item, balancing
@@ -491,14 +485,14 @@ cards:
 :::
 
 :::mechanic-private
-id: agile-project-management-easy-c10-m1
+id: 03-agile-project-management-easy-c10-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: agile-project-management-easy-c10-m1
+id: 03-agile-project-management-easy-c10-m1
 version: 1
 lessonSlug: agile-project-management-easy
 type: parameter-tuner
@@ -537,7 +531,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-project-management-easy-c11-m1
+id: 03-agile-project-management-easy-c11-m1
 version: 1
 scenario: >-
   Your team is in the Explore/Create stage. Daily meetings are dragging past 45
@@ -576,7 +570,7 @@ parameters:
 :::
 
 :::mechanic-private
-id: agile-project-management-easy-c11-m1
+id: 03-agile-project-management-easy-c11-m1
 version: 1
 kind: invariants
 correctDiagnosis: d1
@@ -588,7 +582,7 @@ requirements:
 
 :::mechanic
 schemaVersion: 1
-id: agile-project-management-easy-c11-m1
+id: 03-agile-project-management-easy-c11-m1
 version: 1
 lessonSlug: agile-project-management-easy
 type: diagnostic-lab
@@ -628,7 +622,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-project-management-easy-c12-m1
+id: 03-agile-project-management-easy-c12-m1
 version: 1
 scenario: >-
   You've finished a Sprint and entered the Adapt stage. Push Review Quality,
@@ -682,14 +676,14 @@ controls:
 :::
 
 :::mechanic-private
-id: agile-project-management-easy-c12-m1
+id: 03-agile-project-management-easy-c12-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: agile-project-management-easy-c12-m1
+id: 03-agile-project-management-easy-c12-m1
 version: 1
 lessonSlug: agile-project-management-easy
 type: system-simulation
@@ -729,7 +723,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-project-management-easy-c13-m1
+id: 03-agile-project-management-easy-c13-m1
 version: 1
 items:
   - id: i1
@@ -751,7 +745,7 @@ items:
 :::
 
 :::mechanic-private
-id: agile-project-management-easy-c13-m1
+id: 03-agile-project-management-easy-c13-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -763,7 +757,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: agile-project-management-easy-c13-m1
+id: 03-agile-project-management-easy-c13-m1
 version: 1
 lessonSlug: agile-project-management-easy
 type: sequence-builder
@@ -798,7 +792,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-project-management-easy-c14-m1
+id: 03-agile-project-management-easy-c14-m1
 version: 1
 attributes:
   - id: sprintFit
@@ -846,14 +840,14 @@ requirements:
 :::
 
 :::mechanic-private
-id: agile-project-management-easy-c14-m1
+id: 03-agile-project-management-easy-c14-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: agile-project-management-easy-c14-m1
+id: 03-agile-project-management-easy-c14-m1
 version: 1
 lessonSlug: agile-project-management-easy
 type: constraint-construction

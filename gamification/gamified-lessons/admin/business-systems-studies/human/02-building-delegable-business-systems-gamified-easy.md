@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: building-business-systems-easy
-domain: business-systems-studies
----
-
 :::mechanic-data
-id: building-business-systems-easy-c2-m1
+id: 02-building-delegable-business-systems-easy-c2-m1
 version: 1
 question: What makes a real business?
 options:
@@ -18,7 +12,7 @@ options:
 :::
 
 :::mechanic-private
-id: building-business-systems-easy-c2-m1
+id: 02-building-delegable-business-systems-easy-c2-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -26,7 +20,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: building-business-systems-easy-c2-m1
+id: 02-building-delegable-business-systems-easy-c2-m1
 version: 1
 lessonSlug: building-business-systems-easy
 type: multiple-choice
@@ -60,7 +54,7 @@ active: true
 :::
 
 :::mechanic-data
-id: building-business-systems-easy-c3-m1
+id: 02-building-delegable-business-systems-easy-c3-m1
 version: 1
 categories:
   - id: cat-a
@@ -81,7 +75,7 @@ items:
 :::
 
 :::mechanic-private
-id: building-business-systems-easy-c3-m1
+id: 02-building-delegable-business-systems-easy-c3-m1
 version: 1
 kind: mapping
 matches:
@@ -94,7 +88,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: building-business-systems-easy-c3-m1
+id: 02-building-delegable-business-systems-easy-c3-m1
 version: 1
 lessonSlug: building-business-systems-easy
 type: quick-classification
@@ -129,7 +123,7 @@ active: true
 :::
 
 :::mechanic-data
-id: building-business-systems-easy-c4-m1
+id: 02-building-delegable-business-systems-easy-c4-m1
 version: 1
 scenario: Match each clue to the theory it supports about how the business is run.
 theories:
@@ -149,7 +143,7 @@ clues:
 :::
 
 :::mechanic-private
-id: building-business-systems-easy-c4-m1
+id: 02-building-delegable-business-systems-easy-c4-m1
 version: 1
 kind: mapping
 matches:
@@ -161,7 +155,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: building-business-systems-easy-c4-m1
+id: 02-building-delegable-business-systems-easy-c4-m1
 version: 1
 lessonSlug: building-business-systems-easy
 type: evidence-match
@@ -196,7 +190,7 @@ active: true
 :::
 
 :::mechanic-data
-id: building-business-systems-easy-c5-m1
+id: 02-building-delegable-business-systems-easy-c5-m1
 version: 1
 items:
   - id: i1
@@ -210,7 +204,7 @@ items:
 :::
 
 :::mechanic-private
-id: building-business-systems-easy-c5-m1
+id: 02-building-delegable-business-systems-easy-c5-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -222,7 +216,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: building-business-systems-easy-c5-m1
+id: 02-building-delegable-business-systems-easy-c5-m1
 version: 1
 lessonSlug: building-business-systems-easy
 type: sequence-builder
@@ -257,7 +251,7 @@ active: true
 :::
 
 :::mechanic-data
-id: building-business-systems-easy-c6-m1
+id: 02-building-delegable-business-systems-easy-c6-m1
 version: 1
 scenario: Tune a business task so its score table supports delegation.
 outputs:
@@ -352,14 +346,14 @@ cards:
 :::
 
 :::mechanic-private
-id: building-business-systems-easy-c6-m1
+id: 02-building-delegable-business-systems-easy-c6-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: building-business-systems-easy-c6-m1
+id: 02-building-delegable-business-systems-easy-c6-m1
 version: 1
 lessonSlug: building-business-systems-easy
 type: parameter-tuner
@@ -400,7 +394,7 @@ active: true
 :::
 
 :::mechanic-data
-id: building-business-systems-easy-c7-m1
+id: 02-building-delegable-business-systems-easy-c7-m1
 version: 1
 categories:
   - id: cat-a
@@ -419,7 +413,7 @@ items:
 :::
 
 :::mechanic-private
-id: building-business-systems-easy-c7-m1
+id: 02-building-delegable-business-systems-easy-c7-m1
 version: 1
 kind: mapping
 matches:
@@ -431,7 +425,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: building-business-systems-easy-c7-m1
+id: 02-building-delegable-business-systems-easy-c7-m1
 version: 1
 lessonSlug: building-business-systems-easy
 type: quick-classification
@@ -465,7 +459,7 @@ active: true
 :::
 
 :::mechanic-data
-id: building-business-systems-easy-c8-m1
+id: 02-building-delegable-business-systems-easy-c8-m1
 version: 1
 scenario: >-
   You are documenting a task you want to delegate, but the ideal long-term owner
@@ -501,7 +495,7 @@ options:
 :::
 
 :::mechanic-private
-id: building-business-systems-easy-c8-m1
+id: 02-building-delegable-business-systems-easy-c8-m1
 version: 1
 kind: rubric
 scoring:
@@ -512,7 +506,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: building-business-systems-easy-c8-m1
+id: 02-building-delegable-business-systems-easy-c8-m1
 version: 1
 lessonSlug: building-business-systems-easy
 type: tradeoff-decision
@@ -548,7 +542,7 @@ active: true
 :::
 
 :::mechanic-data
-id: building-business-systems-easy-c9-m1
+id: 02-building-delegable-business-systems-easy-c9-m1
 version: 1
 attributes:
   - id: stepCoverage
@@ -590,14 +584,14 @@ requirements:
 :::
 
 :::mechanic-private
-id: building-business-systems-easy-c9-m1
+id: 02-building-delegable-business-systems-easy-c9-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: building-business-systems-easy-c9-m1
+id: 02-building-delegable-business-systems-easy-c9-m1
 version: 1
 lessonSlug: building-business-systems-easy
 type: constraint-construction
@@ -634,7 +628,7 @@ active: true
 :::
 
 :::mechanic-data
-id: building-business-systems-easy-c10-m1
+id: 02-building-delegable-business-systems-easy-c10-m1
 version: 1
 scenario: >-
   A business owner has delegated key processes and now needs to decide how to
@@ -676,7 +670,7 @@ nodes:
 :::
 
 :::mechanic-private
-id: building-business-systems-easy-c10-m1
+id: 02-building-delegable-business-systems-easy-c10-m1
 version: 1
 kind: exact
 correctAnswer: a1,a2
@@ -684,7 +678,7 @@ correctAnswer: a1,a2
 
 :::mechanic
 schemaVersion: 1
-id: building-business-systems-easy-c10-m1
+id: 02-building-delegable-business-systems-easy-c10-m1
 version: 1
 lessonSlug: building-business-systems-easy
 type: prediction
@@ -720,7 +714,7 @@ active: true
 :::
 
 :::mechanic-data
-id: building-business-systems-easy-c11-m1
+id: 02-building-delegable-business-systems-easy-c11-m1
 version: 1
 scenario: >-
   A manufacturing system works when inputs are ready, the process produces
@@ -775,14 +769,14 @@ controls:
 :::
 
 :::mechanic-private
-id: building-business-systems-easy-c11-m1
+id: 02-building-delegable-business-systems-easy-c11-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: building-business-systems-easy-c11-m1
+id: 02-building-delegable-business-systems-easy-c11-m1
 version: 1
 lessonSlug: building-business-systems-easy
 type: system-simulation
@@ -820,7 +814,7 @@ active: true
 :::
 
 :::mechanic-data
-id: building-business-systems-easy-c12-m1
+id: 02-building-delegable-business-systems-easy-c12-m1
 version: 1
 layout: linear
 sequence:
@@ -846,7 +840,7 @@ options:
 :::
 
 :::mechanic-private
-id: building-business-systems-easy-c12-m1
+id: 02-building-delegable-business-systems-easy-c12-m1
 version: 1
 kind: mapping
 matches:
@@ -856,7 +850,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: building-business-systems-easy-c12-m1
+id: 02-building-delegable-business-systems-easy-c12-m1
 version: 1
 lessonSlug: building-business-systems-easy
 type: missing-step
@@ -891,7 +885,7 @@ active: true
 :::
 
 :::mechanic-data
-id: building-business-systems-easy-c13-m1
+id: 02-building-delegable-business-systems-easy-c13-m1
 version: 1
 scenario: Simple and direct.
 theories:
@@ -919,7 +913,7 @@ clues:
 :::
 
 :::mechanic-private
-id: building-business-systems-easy-c13-m1
+id: 02-building-delegable-business-systems-easy-c13-m1
 version: 1
 kind: mapping
 matches:
@@ -931,7 +925,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: building-business-systems-easy-c13-m1
+id: 02-building-delegable-business-systems-easy-c13-m1
 version: 1
 lessonSlug: building-business-systems-easy
 type: evidence-match
@@ -965,7 +959,7 @@ active: true
 :::
 
 :::mechanic-data
-id: building-business-systems-easy-c14-m1
+id: 02-building-delegable-business-systems-easy-c14-m1
 version: 1
 sourceDomain: Business process delegation and scaling
 targetDomain: Systems engineering
@@ -989,7 +983,7 @@ options:
 :::
 
 :::mechanic-private
-id: building-business-systems-easy-c14-m1
+id: 02-building-delegable-business-systems-easy-c14-m1
 version: 1
 kind: rubric
 scoring:
@@ -1000,7 +994,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: building-business-systems-easy-c14-m1
+id: 02-building-delegable-business-systems-easy-c14-m1
 version: 1
 lessonSlug: building-business-systems-easy
 type: abstract-transfer

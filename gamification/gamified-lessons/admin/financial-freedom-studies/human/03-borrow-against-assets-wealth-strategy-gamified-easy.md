@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: how-rich-make-money-easy
-domain: financial-freedom-studies
----
-
 :::mechanic-data
-id: how-rich-make-money-easy-c2-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c2-m1
 version: 1
 question: What is the key mechanism for growing wealth?
 options:
@@ -18,7 +12,7 @@ options:
 :::
 
 :::mechanic-private
-id: how-rich-make-money-easy-c2-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c2-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -26,7 +20,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: how-rich-make-money-easy-c2-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c2-m1
 version: 1
 lessonSlug: how-rich-make-money-easy
 type: multiple-choice
@@ -60,7 +54,7 @@ active: true
 :::
 
 :::mechanic-data
-id: how-rich-make-money-easy-c3-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c3-m1
 version: 1
 categories:
   - id: cat-asset
@@ -81,7 +75,7 @@ items:
 :::
 
 :::mechanic-private
-id: how-rich-make-money-easy-c3-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c3-m1
 version: 1
 kind: mapping
 matches:
@@ -94,7 +88,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: how-rich-make-money-easy-c3-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c3-m1
 version: 1
 lessonSlug: how-rich-make-money-easy
 type: quick-classification
@@ -129,7 +123,7 @@ active: true
 :::
 
 :::mechanic-data
-id: how-rich-make-money-easy-c4-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c4-m1
 version: 1
 scenario: >-
   Three borrow-against-asset tools share a common pattern: keep the asset,
@@ -152,7 +146,7 @@ clues:
 :::
 
 :::mechanic-private
-id: how-rich-make-money-easy-c4-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c4-m1
 version: 1
 kind: mapping
 matches:
@@ -164,7 +158,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: how-rich-make-money-easy-c4-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c4-m1
 version: 1
 lessonSlug: how-rich-make-money-easy
 type: evidence-match
@@ -200,7 +194,7 @@ active: true
 :::
 
 :::mechanic-data
-id: how-rich-make-money-easy-c5-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c5-m1
 version: 1
 items:
   - id: i1
@@ -216,7 +210,7 @@ items:
 :::
 
 :::mechanic-private
-id: how-rich-make-money-easy-c5-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c5-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -228,7 +222,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: how-rich-make-money-easy-c5-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c5-m1
 version: 1
 lessonSlug: how-rich-make-money-easy
 type: sequence-builder
@@ -264,7 +258,7 @@ active: true
 :::
 
 :::mechanic-data
-id: how-rich-make-money-easy-c6-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c6-m1
 version: 1
 question: What rate do wealthy borrowers get?
 options:
@@ -277,7 +271,7 @@ options:
 :::
 
 :::mechanic-private
-id: how-rich-make-money-easy-c6-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c6-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -285,7 +279,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: how-rich-make-money-easy-c6-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c6-m1
 version: 1
 lessonSlug: how-rich-make-money-easy
 type: multiple-choice
@@ -319,7 +313,7 @@ active: true
 :::
 
 :::mechanic-data
-id: how-rich-make-money-easy-c7-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c7-m1
 version: 1
 categories:
   - id: cat-asset
@@ -342,7 +336,7 @@ items:
 :::
 
 :::mechanic-private
-id: how-rich-make-money-easy-c7-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c7-m1
 version: 1
 kind: mapping
 matches:
@@ -356,7 +350,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: how-rich-make-money-easy-c7-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c7-m1
 version: 1
 lessonSlug: how-rich-make-money-easy
 type: quick-classification
@@ -392,7 +386,7 @@ active: true
 :::
 
 :::mechanic-data
-id: how-rich-make-money-easy-c8-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c8-m1
 version: 1
 layout: linear
 sequence:
@@ -418,7 +412,7 @@ options:
 :::
 
 :::mechanic-private
-id: how-rich-make-money-easy-c8-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c8-m1
 version: 1
 kind: mapping
 matches:
@@ -428,7 +422,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: how-rich-make-money-easy-c8-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c8-m1
 version: 1
 lessonSlug: how-rich-make-money-easy
 type: missing-step
@@ -463,7 +457,7 @@ active: true
 :::
 
 :::mechanic-data
-id: how-rich-make-money-easy-c9-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c9-m1
 version: 1
 scenario: >-
   A borrower with appreciating collateral can access lower interest rates and
@@ -512,14 +506,14 @@ controls:
 :::
 
 :::mechanic-private
-id: how-rich-make-money-easy-c9-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c9-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: how-rich-make-money-easy-c9-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c9-m1
 version: 1
 lessonSlug: how-rich-make-money-easy
 type: system-simulation
@@ -558,7 +552,7 @@ active: true
 :::
 
 :::mechanic-data
-id: how-rich-make-money-easy-c10-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c10-m1
 version: 1
 scenario: >-
   Your business owns a high-value asset that has appreciated significantly. You
@@ -586,7 +580,7 @@ options:
 :::
 
 :::mechanic-private
-id: how-rich-make-money-easy-c10-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c10-m1
 version: 1
 kind: rubric
 scoring:
@@ -596,7 +590,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: how-rich-make-money-easy-c10-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c10-m1
 version: 1
 lessonSlug: how-rich-make-money-easy
 type: tradeoff-decision
@@ -633,7 +627,7 @@ active: true
 :::
 
 :::mechanic-data
-id: how-rich-make-money-easy-c11-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c11-m1
 version: 1
 question: Why aren't loan proceeds free money?
 options:
@@ -646,7 +640,7 @@ options:
 :::
 
 :::mechanic-private
-id: how-rich-make-money-easy-c11-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c11-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -654,7 +648,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: how-rich-make-money-easy-c11-m1
+id: 03-borrow-against-assets-wealth-strategy-easy-c11-m1
 version: 1
 lessonSlug: how-rich-make-money-easy
 type: multiple-choice

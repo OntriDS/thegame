@@ -1,14 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: business-plan-easy
-domain: business-systems-studies
----
-
-
-
-
 :::mechanic-data
-id: business-plan-easy-c3-m1
+id: 04-business-plan-creation-easy-c3-m1
 version: 1
 categories:
   - id: cat-sizing
@@ -31,7 +22,7 @@ items:
 :::
 
 :::mechanic-private
-id: business-plan-easy-c3-m1
+id: 04-business-plan-creation-easy-c3-m1
 version: 1
 kind: mapping
 matches:
@@ -45,7 +36,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: business-plan-easy-c3-m1
+id: 04-business-plan-creation-easy-c3-m1
 version: 1
 lessonSlug: business-plan-easy
 type: quick-classification
@@ -80,7 +71,7 @@ active: true
 :::
 
 :::mechanic-data
-id: business-plan-easy-c4-m1
+id: 04-business-plan-creation-easy-c4-m1
 version: 1
 scenario: >-
   A founder is describing their training offering. Decide whether each clue
@@ -105,7 +96,7 @@ clues:
 :::
 
 :::mechanic-private
-id: business-plan-easy-c4-m1
+id: 04-business-plan-creation-easy-c4-m1
 version: 1
 kind: mapping
 matches:
@@ -117,7 +108,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: business-plan-easy-c4-m1
+id: 04-business-plan-creation-easy-c4-m1
 version: 1
 lessonSlug: business-plan-easy
 type: evidence-match
@@ -151,7 +142,7 @@ active: true
 :::
 
 :::mechanic-data
-id: business-plan-easy-c5-m1
+id: 04-business-plan-creation-easy-c5-m1
 version: 1
 scenario: >-
   Your SaaS startup is finalizing its pricing strategy. Two approaches are on
@@ -184,7 +175,7 @@ options:
 :::
 
 :::mechanic-private
-id: business-plan-easy-c5-m1
+id: 04-business-plan-creation-easy-c5-m1
 version: 1
 kind: rubric
 scoring:
@@ -194,7 +185,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: business-plan-easy-c5-m1
+id: 04-business-plan-creation-easy-c5-m1
 version: 1
 lessonSlug: business-plan-easy
 type: tradeoff-decision
@@ -231,7 +222,7 @@ active: true
 :::
 
 :::mechanic-data
-id: business-plan-easy-c6-m1
+id: 04-business-plan-creation-easy-c6-m1
 version: 1
 scenario: >-
   A growing startup is missing deliveries and losing customers. Diagnose the
@@ -267,7 +258,7 @@ parameters:
 :::
 
 :::mechanic-private
-id: business-plan-easy-c6-m1
+id: 04-business-plan-creation-easy-c6-m1
 version: 1
 kind: invariants
 correctDiagnosis: d1
@@ -279,7 +270,7 @@ requirements:
 
 :::mechanic
 schemaVersion: 1
-id: business-plan-easy-c6-m1
+id: 04-business-plan-creation-easy-c6-m1
 version: 1
 lessonSlug: business-plan-easy
 type: diagnostic-lab
@@ -316,7 +307,7 @@ active: true
 :::
 
 :::mechanic-data
-id: business-plan-easy-c7-m1
+id: 04-business-plan-creation-easy-c7-m1
 version: 1
 question: Which describes a good org structure?
 options:
@@ -329,7 +320,7 @@ options:
 :::
 
 :::mechanic-private
-id: business-plan-easy-c7-m1
+id: 04-business-plan-creation-easy-c7-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -337,7 +328,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: business-plan-easy-c7-m1
+id: 04-business-plan-creation-easy-c7-m1
 version: 1
 lessonSlug: business-plan-easy
 type: multiple-choice
@@ -371,7 +362,7 @@ active: true
 :::
 
 :::mechanic-data
-id: business-plan-easy-c8-m1
+id: 04-business-plan-creation-easy-c8-m1
 version: 1
 attributes:
   - id: cac
@@ -419,14 +410,14 @@ requirements:
 :::
 
 :::mechanic-private
-id: business-plan-easy-c8-m1
+id: 04-business-plan-creation-easy-c8-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: business-plan-easy-c8-m1
+id: 04-business-plan-creation-easy-c8-m1
 version: 1
 lessonSlug: business-plan-easy
 type: constraint-construction
@@ -464,7 +455,7 @@ active: true
 :::
 
 :::mechanic-data
-id: business-plan-easy-c9-m1
+id: 04-business-plan-creation-easy-c9-m1
 version: 1
 question: What makes business communication professional?
 options:
@@ -477,7 +468,7 @@ options:
 :::
 
 :::mechanic-private
-id: business-plan-easy-c9-m1
+id: 04-business-plan-creation-easy-c9-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -485,7 +476,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: business-plan-easy-c9-m1
+id: 04-business-plan-creation-easy-c9-m1
 version: 1
 lessonSlug: business-plan-easy
 type: multiple-choice
@@ -520,7 +511,7 @@ active: true
 :::
 
 :::mechanic-data
-id: business-plan-easy-c2-m1
+id: 04-business-plan-creation-easy-c2-m1
 version: 1
 question: What should a problem statement name?
 options:
@@ -533,7 +524,7 @@ options:
 :::
 
 :::mechanic-private
-id: business-plan-easy-c2-m1
+id: 04-business-plan-creation-easy-c2-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -541,7 +532,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: business-plan-easy-c2-m1
+id: 04-business-plan-creation-easy-c2-m1
 version: 1
 lessonSlug: business-plan-easy
 type: multiple-choice

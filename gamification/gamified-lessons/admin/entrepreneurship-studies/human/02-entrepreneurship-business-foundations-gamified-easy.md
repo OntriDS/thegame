@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: entrepreneurship-foundations-easy
-domain: entrepreneurship-studies
----
-
 :::mechanic-data
-id: entrepreneurship-foundations-easy-c2-m1
+id: 02-entrepreneurship-business-foundations-easy-c2-m1
 version: 1
 categories:
   - id: cat-a
@@ -28,7 +22,7 @@ items:
 :::
 
 :::mechanic-private
-id: entrepreneurship-foundations-easy-c2-m1
+id: 02-entrepreneurship-business-foundations-easy-c2-m1
 version: 1
 kind: mapping
 matches:
@@ -42,7 +36,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: entrepreneurship-foundations-easy-c2-m1
+id: 02-entrepreneurship-business-foundations-easy-c2-m1
 version: 1
 lessonSlug: entrepreneurship-foundations-easy
 type: quick-classification
@@ -78,7 +72,7 @@ active: true
 :::
 
 :::mechanic-data
-id: entrepreneurship-foundations-easy-c3-m1
+id: 02-entrepreneurship-business-foundations-easy-c3-m1
 version: 1
 scenario: >-
   After researching three potential markets, a founder must choose where to
@@ -118,7 +112,7 @@ options:
 :::
 
 :::mechanic-private
-id: entrepreneurship-foundations-easy-c3-m1
+id: 02-entrepreneurship-business-foundations-easy-c3-m1
 version: 1
 kind: rubric
 scoring:
@@ -141,7 +135,7 @@ hints:
 
 :::mechanic
 schemaVersion: 1
-id: entrepreneurship-foundations-easy-c3-m1
+id: 02-entrepreneurship-business-foundations-easy-c3-m1
 version: 1
 lessonSlug: entrepreneurship-foundations-easy
 type: tradeoff-decision
@@ -179,7 +173,7 @@ active: true
 :::
 
 :::mechanic-data
-id: entrepreneurship-foundations-easy-c4-m1
+id: 02-entrepreneurship-business-foundations-easy-c4-m1
 version: 1
 scenario: Match each entrepreneur's action to the personal strategy it supports.
 theories:
@@ -199,7 +193,7 @@ clues:
 :::
 
 :::mechanic-private
-id: entrepreneurship-foundations-easy-c4-m1
+id: 02-entrepreneurship-business-foundations-easy-c4-m1
 version: 1
 kind: mapping
 matches:
@@ -211,7 +205,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: entrepreneurship-foundations-easy-c4-m1
+id: 02-entrepreneurship-business-foundations-easy-c4-m1
 version: 1
 lessonSlug: entrepreneurship-foundations-easy
 type: evidence-match
@@ -246,7 +240,7 @@ active: true
 :::
 
 :::mechanic-data
-id: entrepreneurship-foundations-easy-c5-m1
+id: 02-entrepreneurship-business-foundations-easy-c5-m1
 version: 1
 items:
   - id: i1
@@ -260,7 +254,7 @@ items:
 :::
 
 :::mechanic-private
-id: entrepreneurship-foundations-easy-c5-m1
+id: 02-entrepreneurship-business-foundations-easy-c5-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -272,7 +266,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: entrepreneurship-foundations-easy-c5-m1
+id: 02-entrepreneurship-business-foundations-easy-c5-m1
 version: 1
 lessonSlug: entrepreneurship-foundations-easy
 type: sequence-builder
@@ -308,7 +302,7 @@ active: true
 :::
 
 :::mechanic-data
-id: entrepreneurship-foundations-easy-c6-m1
+id: 02-entrepreneurship-business-foundations-easy-c6-m1
 version: 1
 layout: linear
 sequence:
@@ -332,7 +326,7 @@ options:
 :::
 
 :::mechanic-private
-id: entrepreneurship-foundations-easy-c6-m1
+id: 02-entrepreneurship-business-foundations-easy-c6-m1
 version: 1
 kind: mapping
 matches:
@@ -342,7 +336,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: entrepreneurship-foundations-easy-c6-m1
+id: 02-entrepreneurship-business-foundations-easy-c6-m1
 version: 1
 lessonSlug: entrepreneurship-foundations-easy
 type: missing-step
@@ -377,7 +371,7 @@ active: true
 :::
 
 :::mechanic-data
-id: entrepreneurship-foundations-easy-c7-m1
+id: 02-entrepreneurship-business-foundations-easy-c7-m1
 version: 1
 categories:
   - id: cat-a
@@ -400,7 +394,7 @@ items:
 :::
 
 :::mechanic-private
-id: entrepreneurship-foundations-easy-c7-m1
+id: 02-entrepreneurship-business-foundations-easy-c7-m1
 version: 1
 kind: mapping
 matches:
@@ -414,7 +408,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: entrepreneurship-foundations-easy-c7-m1
+id: 02-entrepreneurship-business-foundations-easy-c7-m1
 version: 1
 lessonSlug: entrepreneurship-foundations-easy
 type: quick-classification
@@ -450,7 +444,7 @@ active: true
 :::
 
 :::mechanic-data
-id: entrepreneurship-foundations-easy-c8-m1
+id: 02-entrepreneurship-business-foundations-easy-c8-m1
 version: 1
 scenario: A small business is choosing between two well-known pricing methods.
 theories:
@@ -470,7 +464,7 @@ clues:
 :::
 
 :::mechanic-private
-id: entrepreneurship-foundations-easy-c8-m1
+id: 02-entrepreneurship-business-foundations-easy-c8-m1
 version: 1
 kind: mapping
 matches:
@@ -482,7 +476,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: entrepreneurship-foundations-easy-c8-m1
+id: 02-entrepreneurship-business-foundations-easy-c8-m1
 version: 1
 lessonSlug: entrepreneurship-foundations-easy
 type: evidence-match
@@ -517,7 +511,7 @@ active: true
 :::
 
 :::mechanic-data
-id: entrepreneurship-foundations-easy-c9-m1
+id: 02-entrepreneurship-business-foundations-easy-c9-m1
 version: 1
 attributes:
   - id: cost
@@ -561,14 +555,14 @@ requirements:
 :::
 
 :::mechanic-private
-id: entrepreneurship-foundations-easy-c9-m1
+id: 02-entrepreneurship-business-foundations-easy-c9-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: entrepreneurship-foundations-easy-c9-m1
+id: 02-entrepreneurship-business-foundations-easy-c9-m1
 version: 1
 lessonSlug: entrepreneurship-foundations-easy
 type: constraint-construction
@@ -606,7 +600,7 @@ active: true
 :::
 
 :::mechanic-data
-id: entrepreneurship-foundations-easy-c10-m1
+id: 02-entrepreneurship-business-foundations-easy-c10-m1
 version: 1
 scenario: >-
   A small coffee shop is tuning its financial model to reach profitability
@@ -677,7 +671,7 @@ cards:
 :::
 
 :::mechanic-private
-id: entrepreneurship-foundations-easy-c10-m1
+id: 02-entrepreneurship-business-foundations-easy-c10-m1
 version: 1
 kind: invariants
 hints:
@@ -706,7 +700,7 @@ hints:
 
 :::mechanic
 schemaVersion: 1
-id: entrepreneurship-foundations-easy-c10-m1
+id: 02-entrepreneurship-business-foundations-easy-c10-m1
 version: 1
 lessonSlug: entrepreneurship-foundations-easy
 type: parameter-tuner
@@ -746,7 +740,7 @@ active: true
 :::
 
 :::mechanic-data
-id: entrepreneurship-foundations-easy-c11-m1
+id: 02-entrepreneurship-business-foundations-easy-c11-m1
 version: 1
 scenario: >-
   A startup has $30,000 in the bank and $5,000 in monthly expenses, with no
@@ -780,7 +774,7 @@ nodes:
 :::
 
 :::mechanic-private
-id: entrepreneurship-foundations-easy-c11-m1
+id: 02-entrepreneurship-business-foundations-easy-c11-m1
 version: 1
 kind: exact
 correctAnswer: a1,a2
@@ -788,7 +782,7 @@ correctAnswer: a1,a2
 
 :::mechanic
 schemaVersion: 1
-id: entrepreneurship-foundations-easy-c11-m1
+id: 02-entrepreneurship-business-foundations-easy-c11-m1
 version: 1
 lessonSlug: entrepreneurship-foundations-easy
 type: prediction
@@ -825,7 +819,7 @@ active: true
 :::
 
 :::mechanic-data
-id: entrepreneurship-foundations-easy-c12-m1
+id: 02-entrepreneurship-business-foundations-easy-c12-m1
 version: 1
 scenario: >-
   You are a solo founder launching a small consulting practice. Which legal
@@ -859,7 +853,7 @@ options:
 :::
 
 :::mechanic-private
-id: entrepreneurship-foundations-easy-c12-m1
+id: 02-entrepreneurship-business-foundations-easy-c12-m1
 version: 1
 kind: rubric
 scoring:
@@ -880,7 +874,7 @@ hints:
 
 :::mechanic
 schemaVersion: 1
-id: entrepreneurship-foundations-easy-c12-m1
+id: 02-entrepreneurship-business-foundations-easy-c12-m1
 version: 1
 lessonSlug: entrepreneurship-foundations-easy
 type: tradeoff-decision
@@ -919,7 +913,7 @@ active: true
 :::
 
 :::mechanic-data
-id: entrepreneurship-foundations-easy-c13-m1
+id: 02-entrepreneurship-business-foundations-easy-c13-m1
 version: 1
 question: Which protects trade secrets?
 options:
@@ -932,7 +926,7 @@ options:
 :::
 
 :::mechanic-private
-id: entrepreneurship-foundations-easy-c13-m1
+id: 02-entrepreneurship-business-foundations-easy-c13-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -940,7 +934,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: entrepreneurship-foundations-easy-c13-m1
+id: 02-entrepreneurship-business-foundations-easy-c13-m1
 version: 1
 lessonSlug: entrepreneurship-foundations-easy
 type: multiple-choice

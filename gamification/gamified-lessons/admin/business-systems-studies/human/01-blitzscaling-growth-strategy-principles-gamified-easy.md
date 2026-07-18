@@ -1,14 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: blitzscaling-easy
-domain: business-systems-studies
----
-
-
-
-
 :::mechanic-data
-id: blitzscaling-easy-c3-m1
+id: 01-blitzscaling-growth-strategy-principles-easy-c3-m1
 version: 1
 categories:
   - id: cat-a
@@ -27,7 +18,7 @@ items:
 :::
 
 :::mechanic-private
-id: blitzscaling-easy-c3-m1
+id: 01-blitzscaling-growth-strategy-principles-easy-c3-m1
 version: 1
 kind: mapping
 matches:
@@ -39,7 +30,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: blitzscaling-easy-c3-m1
+id: 01-blitzscaling-growth-strategy-principles-easy-c3-m1
 version: 1
 lessonSlug: blitzscaling-easy
 type: quick-classification
@@ -73,7 +64,7 @@ active: true
 :::
 
 :::mechanic-data
-id: blitzscaling-easy-c4-m1
+id: 01-blitzscaling-growth-strategy-principles-easy-c4-m1
 version: 1
 attributes:
   - id: focus
@@ -119,14 +110,14 @@ requirements:
 :::
 
 :::mechanic-private
-id: blitzscaling-easy-c4-m1
+id: 01-blitzscaling-growth-strategy-principles-easy-c4-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: blitzscaling-easy-c4-m1
+id: 01-blitzscaling-growth-strategy-principles-easy-c4-m1
 version: 1
 lessonSlug: blitzscaling-easy
 type: constraint-construction
@@ -162,7 +153,7 @@ active: true
 :::
 
 :::mechanic-data
-id: blitzscaling-easy-c5-m1
+id: 01-blitzscaling-growth-strategy-principles-easy-c5-m1
 version: 1
 items:
   - id: i1
@@ -176,7 +167,7 @@ items:
 :::
 
 :::mechanic-private
-id: blitzscaling-easy-c5-m1
+id: 01-blitzscaling-growth-strategy-principles-easy-c5-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -188,7 +179,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: blitzscaling-easy-c5-m1
+id: 01-blitzscaling-growth-strategy-principles-easy-c5-m1
 version: 1
 lessonSlug: blitzscaling-easy
 type: sequence-builder
@@ -223,7 +214,7 @@ active: true
 :::
 
 :::mechanic-data
-id: blitzscaling-easy-c6-m1
+id: 01-blitzscaling-growth-strategy-principles-easy-c6-m1
 version: 1
 scenario: Match each clue to the theory it supports.
 theories:
@@ -251,7 +242,7 @@ clues:
 :::
 
 :::mechanic-private
-id: blitzscaling-easy-c6-m1
+id: 01-blitzscaling-growth-strategy-principles-easy-c6-m1
 version: 1
 kind: mapping
 matches:
@@ -263,7 +254,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: blitzscaling-easy-c6-m1
+id: 01-blitzscaling-growth-strategy-principles-easy-c6-m1
 version: 1
 lessonSlug: blitzscaling-easy
 type: evidence-match
@@ -297,7 +288,7 @@ active: true
 :::
 
 :::mechanic-data
-id: blitzscaling-easy-c2-m1
+id: 01-blitzscaling-growth-strategy-principles-easy-c2-m1
 version: 1
 question: What does blitzscaling favor?
 options:
@@ -310,7 +301,7 @@ options:
 :::
 
 :::mechanic-private
-id: blitzscaling-easy-c2-m1
+id: 01-blitzscaling-growth-strategy-principles-easy-c2-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -318,7 +309,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: blitzscaling-easy-c2-m1
+id: 01-blitzscaling-growth-strategy-principles-easy-c2-m1
 version: 1
 lessonSlug: blitzscaling-easy
 type: multiple-choice

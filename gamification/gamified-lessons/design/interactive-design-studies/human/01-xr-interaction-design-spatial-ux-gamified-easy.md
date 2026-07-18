@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: interaction-design-for-xr-easy
-domain: interactive-design-studies
----
-
 :::mechanic-data
-id: interaction-design-for-xr-easy-c2-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c2-m1
 version: 1
 categories:
   - id: cat-vr
@@ -28,7 +22,7 @@ items:
 :::
 
 :::mechanic-private
-id: interaction-design-for-xr-easy-c2-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c2-m1
 version: 1
 kind: mapping
 matches:
@@ -42,7 +36,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-for-xr-easy-c2-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c2-m1
 version: 1
 lessonSlug: interaction-design-for-xr-easy
 type: quick-classification
@@ -79,7 +73,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-for-xr-easy-c3-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c3-m1
 version: 1
 question: What if an XR event has no sensory cues?
 options:
@@ -92,7 +86,7 @@ options:
 :::
 
 :::mechanic-private
-id: interaction-design-for-xr-easy-c3-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c3-m1
 version: 1
 kind: exact
 correctAnswer: b
@@ -100,7 +94,7 @@ correctAnswer: b
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-for-xr-easy-c3-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c3-m1
 version: 1
 lessonSlug: interaction-design-for-xr-easy
 type: multiple-choice
@@ -134,7 +128,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-for-xr-easy-c4-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c4-m1
 version: 1
 attributes:
   - id: neckStrain
@@ -182,14 +176,14 @@ requirements:
 :::
 
 :::mechanic-private
-id: interaction-design-for-xr-easy-c4-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c4-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-for-xr-easy-c4-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c4-m1
 version: 1
 lessonSlug: interaction-design-for-xr-easy
 type: constraint-construction
@@ -227,7 +221,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-for-xr-easy-c5-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c5-m1
 version: 1
 scenario: >-
   Your team is designing a new VR exploration experience that all users will use
@@ -259,7 +253,7 @@ options:
 :::
 
 :::mechanic-private
-id: interaction-design-for-xr-easy-c5-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c5-m1
 version: 1
 kind: rubric
 scoring:
@@ -269,7 +263,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-for-xr-easy-c5-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c5-m1
 version: 1
 lessonSlug: interaction-design-for-xr-easy
 type: tradeoff-decision
@@ -306,7 +300,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-for-xr-easy-c6-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c6-m1
 version: 1
 scenario: >-
   Match each clue to the VR/MR psychological impact concept or the AR privacy
@@ -336,7 +330,7 @@ clues:
 :::
 
 :::mechanic-private
-id: interaction-design-for-xr-easy-c6-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c6-m1
 version: 1
 kind: mapping
 matches:
@@ -348,7 +342,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-for-xr-easy-c6-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c6-m1
 version: 1
 lessonSlug: interaction-design-for-xr-easy
 type: evidence-match
@@ -383,7 +377,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-for-xr-easy-c7-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c7-m1
 version: 1
 scenario: >-
   Users feel nauseous and disoriented after about 15 minutes in a VR training
@@ -411,7 +405,7 @@ parameters:
 :::
 
 :::mechanic-private
-id: interaction-design-for-xr-easy-c7-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c7-m1
 version: 1
 kind: invariants
 correctDiagnosis: d1
@@ -423,7 +417,7 @@ requirements:
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-for-xr-easy-c7-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c7-m1
 version: 1
 lessonSlug: interaction-design-for-xr-easy
 type: diagnostic-lab
@@ -460,7 +454,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-for-xr-easy-c8-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c8-m1
 version: 1
 question: What is an equirectangular sketch?
 options:
@@ -473,7 +467,7 @@ options:
 :::
 
 :::mechanic-private
-id: interaction-design-for-xr-easy-c8-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c8-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -481,7 +475,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-for-xr-easy-c8-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c8-m1
 version: 1
 lessonSlug: interaction-design-for-xr-easy
 type: multiple-choice
@@ -515,7 +509,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-for-xr-easy-c9-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c9-m1
 version: 1
 items:
   - id: i1
@@ -529,7 +523,7 @@ items:
 :::
 
 :::mechanic-private
-id: interaction-design-for-xr-easy-c9-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c9-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -541,7 +535,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-for-xr-easy-c9-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c9-m1
 version: 1
 lessonSlug: interaction-design-for-xr-easy
 type: sequence-builder
@@ -576,7 +570,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-for-xr-easy-c10-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c10-m1
 version: 1
 sourceDomain: Paper dioramas as low-fidelity physical prototyping
 targetDomain: Architectural design education
@@ -603,7 +597,7 @@ options:
 :::
 
 :::mechanic-private
-id: interaction-design-for-xr-easy-c10-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c10-m1
 version: 1
 kind: rubric
 scoring:
@@ -614,7 +608,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-for-xr-easy-c10-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c10-m1
 version: 1
 lessonSlug: interaction-design-for-xr-easy
 type: abstract-transfer
@@ -651,7 +645,7 @@ active: true
 :::
 
 :::mechanic-data
-id: interaction-design-for-xr-easy-c11-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c11-m1
 version: 1
 scenario: >-
   A design team is moving an XR concept from early idea to final shipping build.
@@ -679,7 +673,7 @@ clues:
 :::
 
 :::mechanic-private
-id: interaction-design-for-xr-easy-c11-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c11-m1
 version: 1
 kind: mapping
 matches:
@@ -691,7 +685,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: interaction-design-for-xr-easy-c11-m1
+id: 01-xr-interaction-design-spatial-ux-easy-c11-m1
 version: 1
 lessonSlug: interaction-design-for-xr-easy
 type: evidence-match

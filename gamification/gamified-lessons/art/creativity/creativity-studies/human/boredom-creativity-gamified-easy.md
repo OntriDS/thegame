@@ -1,9 +1,3 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: boredom-creativity-easy
-domain: creativity
----
-
 :::mechanic-data
 id: boredom-creativity-easy-c2-m1
 version: 1

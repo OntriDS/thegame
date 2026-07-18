@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: agile-framework-execution-guide-easy
-domain: project-management-studies
----
-
 :::mechanic-data
-id: agile-framework-execution-guide-easy-c2-m1
+id: 06-agile-execution-guide-easy-c2-m1
 version: 1
 question: How long is a Medium work item?
 options:
@@ -18,7 +12,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-framework-execution-guide-easy-c2-m1
+id: 06-agile-execution-guide-easy-c2-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -26,7 +20,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: agile-framework-execution-guide-easy-c2-m1
+id: 06-agile-execution-guide-easy-c2-m1
 version: 1
 lessonSlug: agile-framework-execution-guide-easy
 type: multiple-choice
@@ -60,7 +54,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-framework-execution-guide-easy-c3-m1
+id: 06-agile-execution-guide-easy-c3-m1
 version: 1
 categories:
   - id: multi
@@ -79,7 +73,7 @@ items:
 :::
 
 :::mechanic-private
-id: agile-framework-execution-guide-easy-c3-m1
+id: 06-agile-execution-guide-easy-c3-m1
 version: 1
 kind: mapping
 matches:
@@ -91,7 +85,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-framework-execution-guide-easy-c3-m1
+id: 06-agile-execution-guide-easy-c3-m1
 version: 1
 lessonSlug: agile-framework-execution-guide-easy
 type: quick-classification
@@ -126,7 +120,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-framework-execution-guide-easy-c4-m1
+id: 06-agile-execution-guide-easy-c4-m1
 version: 1
 scenario: >-
   During today's stand-up, a developer raises a complex production database
@@ -156,7 +150,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-framework-execution-guide-easy-c4-m1
+id: 06-agile-execution-guide-easy-c4-m1
 version: 1
 kind: rubric
 scoring:
@@ -166,7 +160,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: agile-framework-execution-guide-easy-c4-m1
+id: 06-agile-execution-guide-easy-c4-m1
 version: 1
 lessonSlug: agile-framework-execution-guide-easy
 type: tradeoff-decision
@@ -203,7 +197,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-framework-execution-guide-easy-c5-m1
+id: 06-agile-execution-guide-easy-c5-m1
 version: 1
 scenario: Match each clue to the visual tracking tool it describes.
 theories:
@@ -223,7 +217,7 @@ clues:
 :::
 
 :::mechanic-private
-id: agile-framework-execution-guide-easy-c5-m1
+id: 06-agile-execution-guide-easy-c5-m1
 version: 1
 kind: mapping
 matches:
@@ -235,7 +229,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-framework-execution-guide-easy-c5-m1
+id: 06-agile-execution-guide-easy-c5-m1
 version: 1
 lessonSlug: agile-framework-execution-guide-easy
 type: evidence-match
@@ -270,7 +264,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-framework-execution-guide-easy-c6-m1
+id: 06-agile-execution-guide-easy-c6-m1
 version: 1
 scenario: >-
   Team velocity has dropped 30% over the last two sprints. Stand-ups run on
@@ -305,7 +299,7 @@ parameters:
 :::
 
 :::mechanic-private
-id: agile-framework-execution-guide-easy-c6-m1
+id: 06-agile-execution-guide-easy-c6-m1
 version: 1
 kind: invariants
 correctDiagnosis: d1
@@ -317,7 +311,7 @@ requirements:
 
 :::mechanic
 schemaVersion: 1
-id: agile-framework-execution-guide-easy-c6-m1
+id: 06-agile-execution-guide-easy-c6-m1
 version: 1
 lessonSlug: agile-framework-execution-guide-easy
 type: diagnostic-lab
@@ -354,7 +348,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-framework-execution-guide-easy-c7-m1
+id: 06-agile-execution-guide-easy-c7-m1
 version: 1
 items:
   - id: i1
@@ -368,7 +362,7 @@ items:
 :::
 
 :::mechanic-private
-id: agile-framework-execution-guide-easy-c7-m1
+id: 06-agile-execution-guide-easy-c7-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -380,7 +374,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: agile-framework-execution-guide-easy-c7-m1
+id: 06-agile-execution-guide-easy-c7-m1
 version: 1
 lessonSlug: agile-framework-execution-guide-easy
 type: sequence-builder
@@ -415,7 +409,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-framework-execution-guide-easy-c8-m1
+id: 06-agile-execution-guide-easy-c8-m1
 version: 1
 layout: linear
 sequence:
@@ -441,7 +435,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-framework-execution-guide-easy-c8-m1
+id: 06-agile-execution-guide-easy-c8-m1
 version: 1
 kind: mapping
 matches:
@@ -451,7 +445,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-framework-execution-guide-easy-c8-m1
+id: 06-agile-execution-guide-easy-c8-m1
 version: 1
 lessonSlug: agile-framework-execution-guide-easy
 type: missing-step
@@ -486,7 +480,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-framework-execution-guide-easy-c9-m1
+id: 06-agile-execution-guide-easy-c9-m1
 version: 1
 scenario: >-
   An Agile team must tune its adaptation process so feedback, prioritization,
@@ -572,14 +566,14 @@ cards:
 :::
 
 :::mechanic-private
-id: agile-framework-execution-guide-easy-c9-m1
+id: 06-agile-execution-guide-easy-c9-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: agile-framework-execution-guide-easy-c9-m1
+id: 06-agile-execution-guide-easy-c9-m1
 version: 1
 lessonSlug: agile-framework-execution-guide-easy
 type: parameter-tuner
@@ -620,7 +614,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-framework-execution-guide-easy-c10-m1
+id: 06-agile-execution-guide-easy-c10-m1
 version: 1
 scenario: >-
   A project manager's team has just completed the final item in the product
@@ -675,7 +669,7 @@ nodes:
 :::
 
 :::mechanic-private
-id: agile-framework-execution-guide-easy-c10-m1
+id: 06-agile-execution-guide-easy-c10-m1
 version: 1
 kind: exact
 correctAnswer: a1,a2,a3
@@ -683,7 +677,7 @@ correctAnswer: a1,a2,a3
 
 :::mechanic
 schemaVersion: 1
-id: agile-framework-execution-guide-easy-c10-m1
+id: 06-agile-execution-guide-easy-c10-m1
 version: 1
 lessonSlug: agile-framework-execution-guide-easy
 type: prediction
@@ -722,7 +716,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-framework-execution-guide-easy-c11-m1
+id: 06-agile-execution-guide-easy-c11-m1
 version: 1
 attributes:
   - id: disruption
@@ -762,14 +756,14 @@ requirements:
 :::
 
 :::mechanic-private
-id: agile-framework-execution-guide-easy-c11-m1
+id: 06-agile-execution-guide-easy-c11-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: agile-framework-execution-guide-easy-c11-m1
+id: 06-agile-execution-guide-easy-c11-m1
 version: 1
 lessonSlug: agile-framework-execution-guide-easy
 type: constraint-construction
@@ -809,7 +803,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-framework-execution-guide-easy-c12-m1
+id: 06-agile-execution-guide-easy-c12-m1
 version: 1
 sourceDomain: Agile project management
 targetDomain: Performance measurement in organizational behavior
@@ -836,7 +830,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-framework-execution-guide-easy-c12-m1
+id: 06-agile-execution-guide-easy-c12-m1
 version: 1
 kind: rubric
 scoring:
@@ -859,7 +853,7 @@ hints:
 
 :::mechanic
 schemaVersion: 1
-id: agile-framework-execution-guide-easy-c12-m1
+id: 06-agile-execution-guide-easy-c12-m1
 version: 1
 lessonSlug: agile-framework-execution-guide-easy
 type: abstract-transfer

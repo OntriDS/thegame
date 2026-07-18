@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: agile-team-frameworks-easy
-domain: project-management-studies
----
-
 :::mechanic-data
-id: agile-team-frameworks-easy-c2-m1
+id: 07-agile-team-management-easy-c2-m1
 version: 1
 categories:
   - id: outcome
@@ -28,7 +22,7 @@ items:
 :::
 
 :::mechanic-private
-id: agile-team-frameworks-easy-c2-m1
+id: 07-agile-team-management-easy-c2-m1
 version: 1
 kind: mapping
 matches:
@@ -42,7 +36,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-team-frameworks-easy-c2-m1
+id: 07-agile-team-management-easy-c2-m1
 version: 1
 lessonSlug: agile-team-frameworks-easy
 type: quick-classification
@@ -78,7 +72,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-team-frameworks-easy-c3-m1
+id: 07-agile-team-management-easy-c3-m1
 version: 1
 items:
   - id: i1
@@ -90,7 +84,7 @@ items:
 :::
 
 :::mechanic-private
-id: agile-team-frameworks-easy-c3-m1
+id: 07-agile-team-management-easy-c3-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -101,7 +95,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: agile-team-frameworks-easy-c3-m1
+id: 07-agile-team-management-easy-c3-m1
 version: 1
 lessonSlug: agile-team-frameworks-easy
 type: sequence-builder
@@ -137,7 +131,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-team-frameworks-easy-c4-m1
+id: 07-agile-team-management-easy-c4-m1
 version: 1
 scenario: >-
   A Scrum team just finished a sprint demo and stakeholders were visibly
@@ -175,7 +169,7 @@ parameters:
 :::
 
 :::mechanic-private
-id: agile-team-frameworks-easy-c4-m1
+id: 07-agile-team-management-easy-c4-m1
 version: 1
 kind: invariants
 correctDiagnosis: d1
@@ -187,7 +181,7 @@ requirements:
 
 :::mechanic
 schemaVersion: 1
-id: agile-team-frameworks-easy-c4-m1
+id: 07-agile-team-management-easy-c4-m1
 version: 1
 lessonSlug: agile-team-frameworks-easy
 type: diagnostic-lab
@@ -225,7 +219,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-team-frameworks-easy-c5-m1
+id: 07-agile-team-management-easy-c5-m1
 version: 1
 scenario: Match each XP practice to the area of XP it belongs to.
 theories:
@@ -245,7 +239,7 @@ clues:
 :::
 
 :::mechanic-private
-id: agile-team-frameworks-easy-c5-m1
+id: 07-agile-team-management-easy-c5-m1
 version: 1
 kind: mapping
 matches:
@@ -257,7 +251,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-team-frameworks-easy-c5-m1
+id: 07-agile-team-management-easy-c5-m1
 version: 1
 lessonSlug: agile-team-frameworks-easy
 type: evidence-match
@@ -292,7 +286,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-team-frameworks-easy-c6-m1
+id: 07-agile-team-management-easy-c6-m1
 version: 1
 question: What does 'Kanban' mean in Japanese?
 options:
@@ -305,7 +299,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-team-frameworks-easy-c6-m1
+id: 07-agile-team-management-easy-c6-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -313,7 +307,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: agile-team-frameworks-easy-c6-m1
+id: 07-agile-team-management-easy-c6-m1
 version: 1
 lessonSlug: agile-team-frameworks-easy
 type: multiple-choice
@@ -347,7 +341,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-team-frameworks-easy-c7-m1
+id: 07-agile-team-management-easy-c7-m1
 version: 1
 scenario: >-
   Your engineering team needs a new performance metric to report to leadership.
@@ -374,7 +368,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-team-frameworks-easy-c7-m1
+id: 07-agile-team-management-easy-c7-m1
 version: 1
 kind: rubric
 scoring:
@@ -384,7 +378,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: agile-team-frameworks-easy-c7-m1
+id: 07-agile-team-management-easy-c7-m1
 version: 1
 lessonSlug: agile-team-frameworks-easy
 type: tradeoff-decision
@@ -421,7 +415,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-team-frameworks-easy-c8-m1
+id: 07-agile-team-management-easy-c8-m1
 version: 1
 attributes:
   - id: data-evidence
@@ -467,14 +461,14 @@ requirements:
 :::
 
 :::mechanic-private
-id: agile-team-frameworks-easy-c8-m1
+id: 07-agile-team-management-easy-c8-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: agile-team-frameworks-easy-c8-m1
+id: 07-agile-team-management-easy-c8-m1
 version: 1
 lessonSlug: agile-team-frameworks-easy
 type: constraint-construction
@@ -511,7 +505,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-team-frameworks-easy-c9-m1
+id: 07-agile-team-management-easy-c9-m1
 version: 1
 layout: linear
 sequence:
@@ -537,7 +531,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-team-frameworks-easy-c9-m1
+id: 07-agile-team-management-easy-c9-m1
 version: 1
 kind: mapping
 matches:
@@ -547,7 +541,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-team-frameworks-easy-c9-m1
+id: 07-agile-team-management-easy-c9-m1
 version: 1
 lessonSlug: agile-team-frameworks-easy
 type: missing-step
@@ -582,7 +576,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-team-frameworks-easy-c10-m1
+id: 07-agile-team-management-easy-c10-m1
 version: 1
 scenario: Match each clue to the Agile framework it most obviously describes.
 theories:
@@ -602,7 +596,7 @@ clues:
 :::
 
 :::mechanic-private
-id: agile-team-frameworks-easy-c10-m1
+id: 07-agile-team-management-easy-c10-m1
 version: 1
 kind: mapping
 matches:
@@ -614,7 +608,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-team-frameworks-easy-c10-m1
+id: 07-agile-team-management-easy-c10-m1
 version: 1
 lessonSlug: agile-team-frameworks-easy
 type: evidence-match
@@ -649,7 +643,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-team-frameworks-easy-c11-m1
+id: 07-agile-team-management-easy-c11-m1
 version: 1
 scenario: >-
   A new team is told to 'go Agile' and a manager declares there will be no more
@@ -709,7 +703,7 @@ nodes:
 :::
 
 :::mechanic-private
-id: agile-team-frameworks-easy-c11-m1
+id: 07-agile-team-management-easy-c11-m1
 version: 1
 kind: exact
 correctAnswer: a1,a2,a3
@@ -717,7 +711,7 @@ correctAnswer: a1,a2,a3
 
 :::mechanic
 schemaVersion: 1
-id: agile-team-frameworks-easy-c11-m1
+id: 07-agile-team-management-easy-c11-m1
 version: 1
 lessonSlug: agile-team-frameworks-easy
 type: prediction

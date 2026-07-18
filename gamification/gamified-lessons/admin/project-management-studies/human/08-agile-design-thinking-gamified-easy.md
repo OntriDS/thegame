@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: agile-meets-design-thinking-easy
-domain: project-management-studies
----
-
 :::mechanic-data
-id: agile-meets-design-thinking-easy-c2-m1
+id: 08-agile-design-thinking-easy-c2-m1
 version: 1
 question: How many words are in the Agile Manifesto?
 options:
@@ -18,7 +12,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-meets-design-thinking-easy-c2-m1
+id: 08-agile-design-thinking-easy-c2-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -26,7 +20,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: agile-meets-design-thinking-easy-c2-m1
+id: 08-agile-design-thinking-easy-c2-m1
 version: 1
 lessonSlug: agile-meets-design-thinking-easy
 type: multiple-choice
@@ -60,7 +54,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-meets-design-thinking-easy-c3-m1
+id: 08-agile-design-thinking-easy-c3-m1
 version: 1
 categories:
   - id: cat-a
@@ -83,7 +77,7 @@ items:
 :::
 
 :::mechanic-private
-id: agile-meets-design-thinking-easy-c3-m1
+id: 08-agile-design-thinking-easy-c3-m1
 version: 1
 kind: mapping
 matches:
@@ -97,7 +91,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-meets-design-thinking-easy-c3-m1
+id: 08-agile-design-thinking-easy-c3-m1
 version: 1
 lessonSlug: agile-meets-design-thinking-easy
 type: quick-classification
@@ -133,7 +127,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-meets-design-thinking-easy-c4-m1
+id: 08-agile-design-thinking-easy-c4-m1
 version: 1
 items:
   - id: i1
@@ -147,7 +141,7 @@ items:
 :::
 
 :::mechanic-private
-id: agile-meets-design-thinking-easy-c4-m1
+id: 08-agile-design-thinking-easy-c4-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -159,7 +153,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: agile-meets-design-thinking-easy-c4-m1
+id: 08-agile-design-thinking-easy-c4-m1
 version: 1
 lessonSlug: agile-meets-design-thinking-easy
 type: sequence-builder
@@ -195,7 +189,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-meets-design-thinking-easy-c5-m1
+id: 08-agile-design-thinking-easy-c5-m1
 version: 1
 question: What does instrumenting observation capture?
 options:
@@ -208,7 +202,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-meets-design-thinking-easy-c5-m1
+id: 08-agile-design-thinking-easy-c5-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -216,7 +210,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: agile-meets-design-thinking-easy-c5-m1
+id: 08-agile-design-thinking-easy-c5-m1
 version: 1
 lessonSlug: agile-meets-design-thinking-easy
 type: multiple-choice
@@ -251,7 +245,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-meets-design-thinking-easy-c6-m1
+id: 08-agile-design-thinking-easy-c6-m1
 version: 1
 items:
   - id: i1
@@ -267,7 +261,7 @@ items:
 :::
 
 :::mechanic-private
-id: agile-meets-design-thinking-easy-c6-m1
+id: 08-agile-design-thinking-easy-c6-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -279,7 +273,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: agile-meets-design-thinking-easy-c6-m1
+id: 08-agile-design-thinking-easy-c6-m1
 version: 1
 lessonSlug: agile-meets-design-thinking-easy
 type: sequence-builder
@@ -317,7 +311,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-meets-design-thinking-easy-c7-m1
+id: 08-agile-design-thinking-easy-c7-m1
 version: 1
 categories:
   - id: cat-thinks
@@ -340,7 +334,7 @@ items:
 :::
 
 :::mechanic-private
-id: agile-meets-design-thinking-easy-c7-m1
+id: 08-agile-design-thinking-easy-c7-m1
 version: 1
 kind: mapping
 matches:
@@ -354,7 +348,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-meets-design-thinking-easy-c7-m1
+id: 08-agile-design-thinking-easy-c7-m1
 version: 1
 lessonSlug: agile-meets-design-thinking-easy
 type: quick-classification
@@ -389,7 +383,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-meets-design-thinking-easy-c8-m1
+id: 08-agile-design-thinking-easy-c8-m1
 version: 1
 scenario: >-
   Your team has finished interviewing customers about a pain point. Now you must
@@ -432,7 +426,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-meets-design-thinking-easy-c8-m1
+id: 08-agile-design-thinking-easy-c8-m1
 version: 1
 kind: rubric
 scoring:
@@ -443,7 +437,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: agile-meets-design-thinking-easy-c8-m1
+id: 08-agile-design-thinking-easy-c8-m1
 version: 1
 lessonSlug: agile-meets-design-thinking-easy
 type: tradeoff-decision
@@ -480,7 +474,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-meets-design-thinking-easy-c9-m1
+id: 08-agile-design-thinking-easy-c9-m1
 version: 1
 question: Which tests if your solution works?
 options:
@@ -493,7 +487,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-meets-design-thinking-easy-c9-m1
+id: 08-agile-design-thinking-easy-c9-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -501,7 +495,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: agile-meets-design-thinking-easy-c9-m1
+id: 08-agile-design-thinking-easy-c9-m1
 version: 1
 lessonSlug: agile-meets-design-thinking-easy
 type: multiple-choice
@@ -535,7 +529,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-meets-design-thinking-easy-c10-m1
+id: 08-agile-design-thinking-easy-c10-m1
 version: 1
 question: How should interview questions be ordered?
 options:
@@ -548,7 +542,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-meets-design-thinking-easy-c10-m1
+id: 08-agile-design-thinking-easy-c10-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -556,7 +550,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: agile-meets-design-thinking-easy-c10-m1
+id: 08-agile-design-thinking-easy-c10-m1
 version: 1
 lessonSlug: agile-meets-design-thinking-easy
 type: multiple-choice
@@ -590,7 +584,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-meets-design-thinking-easy-c11-m1
+id: 08-agile-design-thinking-easy-c11-m1
 version: 1
 categories:
   - id: setup
@@ -611,7 +605,7 @@ items:
 :::
 
 :::mechanic-private
-id: agile-meets-design-thinking-easy-c11-m1
+id: 08-agile-design-thinking-easy-c11-m1
 version: 1
 kind: mapping
 matches:
@@ -624,7 +618,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-meets-design-thinking-easy-c11-m1
+id: 08-agile-design-thinking-easy-c11-m1
 version: 1
 lessonSlug: agile-meets-design-thinking-easy
 type: quick-classification
@@ -659,7 +653,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-meets-design-thinking-easy-c12-m1
+id: 08-agile-design-thinking-easy-c12-m1
 version: 1
 question: What's needed before usability testing?
 options:
@@ -672,7 +666,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-meets-design-thinking-easy-c12-m1
+id: 08-agile-design-thinking-easy-c12-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -680,7 +674,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: agile-meets-design-thinking-easy-c12-m1
+id: 08-agile-design-thinking-easy-c12-m1
 version: 1
 lessonSlug: agile-meets-design-thinking-easy
 type: multiple-choice
@@ -714,7 +708,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-meets-design-thinking-easy-c13-m1
+id: 08-agile-design-thinking-easy-c13-m1
 version: 1
 items:
   - id: i1
@@ -728,7 +722,7 @@ items:
 :::
 
 :::mechanic-private
-id: agile-meets-design-thinking-easy-c13-m1
+id: 08-agile-design-thinking-easy-c13-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -740,7 +734,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: agile-meets-design-thinking-easy-c13-m1
+id: 08-agile-design-thinking-easy-c13-m1
 version: 1
 lessonSlug: agile-meets-design-thinking-easy
 type: sequence-builder
@@ -775,7 +769,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-meets-design-thinking-easy-c14-m1
+id: 08-agile-design-thinking-easy-c14-m1
 version: 1
 categories:
   - id: cat-a
@@ -798,7 +792,7 @@ items:
 :::
 
 :::mechanic-private
-id: agile-meets-design-thinking-easy-c14-m1
+id: 08-agile-design-thinking-easy-c14-m1
 version: 1
 kind: mapping
 matches:
@@ -812,7 +806,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: agile-meets-design-thinking-easy-c14-m1
+id: 08-agile-design-thinking-easy-c14-m1
 version: 1
 lessonSlug: agile-meets-design-thinking-easy
 type: quick-classification
@@ -847,7 +841,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-meets-design-thinking-easy-c15-m1
+id: 08-agile-design-thinking-easy-c15-m1
 version: 1
 scenario: >-
   Your team has a new app concept and needs to validate it with potential users
@@ -875,7 +869,7 @@ options:
 :::
 
 :::mechanic-private
-id: agile-meets-design-thinking-easy-c15-m1
+id: 08-agile-design-thinking-easy-c15-m1
 version: 1
 kind: rubric
 scoring:
@@ -885,7 +879,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: agile-meets-design-thinking-easy-c15-m1
+id: 08-agile-design-thinking-easy-c15-m1
 version: 1
 lessonSlug: agile-meets-design-thinking-easy
 type: tradeoff-decision
@@ -921,7 +915,7 @@ active: true
 :::
 
 :::mechanic-data
-id: agile-meets-design-thinking-easy-c16-m1
+id: 08-agile-design-thinking-easy-c16-m1
 version: 1
 items:
   - id: i1
@@ -939,7 +933,7 @@ items:
 :::
 
 :::mechanic-private
-id: agile-meets-design-thinking-easy-c16-m1
+id: 08-agile-design-thinking-easy-c16-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -950,7 +944,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: agile-meets-design-thinking-easy-c16-m1
+id: 08-agile-design-thinking-easy-c16-m1
 version: 1
 lessonSlug: agile-meets-design-thinking-easy
 type: sequence-builder

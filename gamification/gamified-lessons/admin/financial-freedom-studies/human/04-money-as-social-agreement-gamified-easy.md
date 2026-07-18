@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: map-of-money-easy
-domain: financial-freedom-studies
----
-
 :::mechanic-data
-id: map-of-money-easy-c2-m1
+id: 04-money-as-social-agreement-easy-c2-m1
 version: 1
 question: What makes something function as money?
 options:
@@ -18,7 +12,7 @@ options:
 :::
 
 :::mechanic-private
-id: map-of-money-easy-c2-m1
+id: 04-money-as-social-agreement-easy-c2-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -26,7 +20,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: map-of-money-easy-c2-m1
+id: 04-money-as-social-agreement-easy-c2-m1
 version: 1
 lessonSlug: map-of-money-easy
 type: multiple-choice
@@ -60,7 +54,7 @@ active: true
 :::
 
 :::mechanic-data
-id: map-of-money-easy-c3-m1
+id: 04-money-as-social-agreement-easy-c3-m1
 version: 1
 scenario: >-
   A student is comparing two historical approaches to keeping the monetary unit
@@ -82,7 +76,7 @@ clues:
 :::
 
 :::mechanic-private
-id: map-of-money-easy-c3-m1
+id: 04-money-as-social-agreement-easy-c3-m1
 version: 1
 kind: mapping
 matches:
@@ -94,7 +88,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: map-of-money-easy-c3-m1
+id: 04-money-as-social-agreement-easy-c3-m1
 version: 1
 lessonSlug: map-of-money-easy
 type: evidence-match
@@ -129,7 +123,7 @@ active: true
 :::
 
 :::mechanic-data
-id: map-of-money-easy-c4-m1
+id: 04-money-as-social-agreement-easy-c4-m1
 version: 1
 categories:
   - id: cat-myth
@@ -152,7 +146,7 @@ items:
 :::
 
 :::mechanic-private
-id: map-of-money-easy-c4-m1
+id: 04-money-as-social-agreement-easy-c4-m1
 version: 1
 kind: mapping
 matches:
@@ -166,7 +160,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: map-of-money-easy-c4-m1
+id: 04-money-as-social-agreement-easy-c4-m1
 version: 1
 lessonSlug: map-of-money-easy
 type: quick-classification
@@ -202,7 +196,7 @@ active: true
 :::
 
 :::mechanic-data
-id: map-of-money-easy-c5-m1
+id: 04-money-as-social-agreement-easy-c5-m1
 version: 1
 items:
   - id: i1
@@ -216,7 +210,7 @@ items:
 :::
 
 :::mechanic-private
-id: map-of-money-easy-c5-m1
+id: 04-money-as-social-agreement-easy-c5-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -228,7 +222,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: map-of-money-easy-c5-m1
+id: 04-money-as-social-agreement-easy-c5-m1
 version: 1
 lessonSlug: map-of-money-easy
 type: sequence-builder
@@ -265,7 +259,7 @@ active: true
 :::
 
 :::mechanic-data
-id: map-of-money-easy-c6-m1
+id: 04-money-as-social-agreement-easy-c6-m1
 version: 1
 categories:
   - id: cat-a
@@ -288,7 +282,7 @@ items:
 :::
 
 :::mechanic-private
-id: map-of-money-easy-c6-m1
+id: 04-money-as-social-agreement-easy-c6-m1
 version: 1
 kind: mapping
 matches:
@@ -302,7 +296,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: map-of-money-easy-c6-m1
+id: 04-money-as-social-agreement-easy-c6-m1
 version: 1
 lessonSlug: map-of-money-easy
 type: quick-classification
@@ -337,7 +331,7 @@ active: true
 :::
 
 :::mechanic-data
-id: map-of-money-easy-c7-m1
+id: 04-money-as-social-agreement-easy-c7-m1
 version: 1
 scenario: >-
   In Song China, iron coins are heavy and risky to transport for large
@@ -373,7 +367,7 @@ options:
 :::
 
 :::mechanic-private
-id: map-of-money-easy-c7-m1
+id: 04-money-as-social-agreement-easy-c7-m1
 version: 1
 kind: rubric
 scoring:
@@ -384,7 +378,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: map-of-money-easy-c7-m1
+id: 04-money-as-social-agreement-easy-c7-m1
 version: 1
 lessonSlug: map-of-money-easy
 type: tradeoff-decision
@@ -421,7 +415,7 @@ active: true
 :::
 
 :::mechanic-data
-id: map-of-money-easy-c8-m1
+id: 04-money-as-social-agreement-easy-c8-m1
 version: 1
 layout: linear
 sequence:
@@ -447,7 +441,7 @@ options:
 :::
 
 :::mechanic-private
-id: map-of-money-easy-c8-m1
+id: 04-money-as-social-agreement-easy-c8-m1
 version: 1
 kind: mapping
 matches:
@@ -457,7 +451,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: map-of-money-easy-c8-m1
+id: 04-money-as-social-agreement-easy-c8-m1
 version: 1
 lessonSlug: map-of-money-easy
 type: missing-step
@@ -492,7 +486,7 @@ active: true
 :::
 
 :::mechanic-data
-id: map-of-money-easy-c9-m1
+id: 04-money-as-social-agreement-easy-c9-m1
 version: 1
 sourceDomain: Central banking — the founding of the Bank of England in 1694
 targetDomain: Political science / institutional history
@@ -516,7 +510,7 @@ options:
 :::
 
 :::mechanic-private
-id: map-of-money-easy-c9-m1
+id: 04-money-as-social-agreement-easy-c9-m1
 version: 1
 kind: rubric
 scoring:
@@ -535,7 +529,7 @@ hints:
 
 :::mechanic
 schemaVersion: 1
-id: map-of-money-easy-c9-m1
+id: 04-money-as-social-agreement-easy-c9-m1
 version: 1
 lessonSlug: map-of-money-easy
 type: abstract-transfer
@@ -571,7 +565,7 @@ active: true
 :::
 
 :::mechanic-data
-id: map-of-money-easy-c10-m1
+id: 04-money-as-social-agreement-easy-c10-m1
 version: 1
 brokenState:
   - title: Gold Reserves
@@ -606,7 +600,7 @@ tools:
 :::
 
 :::mechanic-private
-id: map-of-money-easy-c10-m1
+id: 04-money-as-social-agreement-easy-c10-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -618,7 +612,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: map-of-money-easy-c10-m1
+id: 04-money-as-social-agreement-easy-c10-m1
 version: 1
 lessonSlug: map-of-money-easy
 type: complex-system-repair
@@ -658,7 +652,7 @@ active: true
 :::
 
 :::mechanic-data
-id: map-of-money-easy-c12-m1
+id: 04-money-as-social-agreement-easy-c12-m1
 version: 1
 scenario: >-
   A bank issues a $10,000 loan that the borrower must repay as $11,000 including
@@ -712,7 +706,7 @@ nodes:
 :::
 
 :::mechanic-private
-id: map-of-money-easy-c12-m1
+id: 04-money-as-social-agreement-easy-c12-m1
 version: 1
 kind: exact
 correctAnswer: b1,b2,b3
@@ -720,7 +714,7 @@ correctAnswer: b1,b2,b3
 
 :::mechanic
 schemaVersion: 1
-id: map-of-money-easy-c12-m1
+id: 04-money-as-social-agreement-easy-c12-m1
 version: 1
 lessonSlug: map-of-money-easy
 type: prediction
@@ -757,7 +751,7 @@ active: true
 :::
 
 :::mechanic-data
-id: map-of-money-easy-c13-m1
+id: 04-money-as-social-agreement-easy-c13-m1
 version: 1
 scenario: >-
   Adjust the inflation rate and policy levers to show how compounding inflation
@@ -815,14 +809,14 @@ cards:
 :::
 
 :::mechanic-private
-id: map-of-money-easy-c13-m1
+id: 04-money-as-social-agreement-easy-c13-m1
 version: 1
 kind: invariants
 :::
 
 :::mechanic
 schemaVersion: 1
-id: map-of-money-easy-c13-m1
+id: 04-money-as-social-agreement-easy-c13-m1
 version: 1
 lessonSlug: map-of-money-easy
 type: parameter-tuner
@@ -862,7 +856,7 @@ active: true
 :::
 
 :::mechanic-data
-id: map-of-money-easy-c14-m1
+id: 04-money-as-social-agreement-easy-c14-m1
 version: 1
 items:
   - id: i1
@@ -876,7 +870,7 @@ items:
 :::
 
 :::mechanic-private
-id: map-of-money-easy-c14-m1
+id: 04-money-as-social-agreement-easy-c14-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -888,7 +882,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: map-of-money-easy-c14-m1
+id: 04-money-as-social-agreement-easy-c14-m1
 version: 1
 lessonSlug: map-of-money-easy
 type: sequence-builder
@@ -925,7 +919,7 @@ active: true
 :::
 
 :::mechanic-data
-id: map-of-money-easy-c15-m1
+id: 04-money-as-social-agreement-easy-c15-m1
 version: 1
 question: What actually backs fiat money?
 options:
@@ -938,7 +932,7 @@ options:
 :::
 
 :::mechanic-private
-id: map-of-money-easy-c15-m1
+id: 04-money-as-social-agreement-easy-c15-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -946,7 +940,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: map-of-money-easy-c15-m1
+id: 04-money-as-social-agreement-easy-c15-m1
 version: 1
 lessonSlug: map-of-money-easy
 type: multiple-choice
@@ -980,7 +974,7 @@ active: true
 :::
 
 :::mechanic-data
-id: map-of-money-easy-c11-m1
+id: 04-money-as-social-agreement-easy-c11-m1
 version: 1
 scenario: Two competing explanations of how bank lending works today.
 theories:
@@ -1008,7 +1002,7 @@ clues:
 :::
 
 :::mechanic-private
-id: map-of-money-easy-c11-m1
+id: 04-money-as-social-agreement-easy-c11-m1
 version: 1
 kind: mapping
 matches:
@@ -1020,7 +1014,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: map-of-money-easy-c11-m1
+id: 04-money-as-social-agreement-easy-c11-m1
 version: 1
 lessonSlug: map-of-money-easy
 type: evidence-match

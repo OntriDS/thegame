@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: jobs-to-be-done-easy
-domain: project-management-studies
----
-
 :::mechanic-data
-id: jobs-to-be-done-easy-c2-m1
+id: 10-jobs-to-be-done-easy-c2-m1
 version: 1
 question: What do people do with products in JTBD?
 options:
@@ -18,7 +12,7 @@ options:
 :::
 
 :::mechanic-private
-id: jobs-to-be-done-easy-c2-m1
+id: 10-jobs-to-be-done-easy-c2-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -26,7 +20,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: jobs-to-be-done-easy-c2-m1
+id: 10-jobs-to-be-done-easy-c2-m1
 version: 1
 lessonSlug: jobs-to-be-done-easy
 type: multiple-choice
@@ -60,7 +54,7 @@ active: true
 :::
 
 :::mechanic-data
-id: jobs-to-be-done-easy-c4-m1
+id: 10-jobs-to-be-done-easy-c4-m1
 version: 1
 categories:
   - id: cat-a
@@ -83,7 +77,7 @@ items:
 :::
 
 :::mechanic-private
-id: jobs-to-be-done-easy-c4-m1
+id: 10-jobs-to-be-done-easy-c4-m1
 version: 1
 kind: mapping
 matches:
@@ -97,7 +91,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: jobs-to-be-done-easy-c4-m1
+id: 10-jobs-to-be-done-easy-c4-m1
 version: 1
 lessonSlug: jobs-to-be-done-easy
 type: quick-classification
@@ -133,7 +127,7 @@ active: true
 :::
 
 :::mechanic-data
-id: jobs-to-be-done-easy-c5-m1
+id: 10-jobs-to-be-done-easy-c5-m1
 version: 1
 scenario: >-
   You're sorting user-research notes into the correct Product Tier framework
@@ -155,7 +149,7 @@ clues:
 :::
 
 :::mechanic-private
-id: jobs-to-be-done-easy-c5-m1
+id: 10-jobs-to-be-done-easy-c5-m1
 version: 1
 kind: mapping
 matches:
@@ -167,7 +161,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: jobs-to-be-done-easy-c5-m1
+id: 10-jobs-to-be-done-easy-c5-m1
 version: 1
 lessonSlug: jobs-to-be-done-easy
 type: evidence-match
@@ -202,7 +196,7 @@ active: true
 :::
 
 :::mechanic-data
-id: jobs-to-be-done-easy-c6-m1
+id: 10-jobs-to-be-done-easy-c6-m1
 version: 1
 scenario: >-
   A product team is defining the Desired Outcome for a new photo-editing
@@ -233,7 +227,7 @@ options:
 :::
 
 :::mechanic-private
-id: jobs-to-be-done-easy-c6-m1
+id: 10-jobs-to-be-done-easy-c6-m1
 version: 1
 kind: rubric
 scoring:
@@ -243,7 +237,7 @@ scoring:
 
 :::mechanic
 schemaVersion: 1
-id: jobs-to-be-done-easy-c6-m1
+id: 10-jobs-to-be-done-easy-c6-m1
 version: 1
 lessonSlug: jobs-to-be-done-easy
 type: tradeoff-decision
@@ -280,7 +274,7 @@ active: true
 :::
 
 :::mechanic-data
-id: jobs-to-be-done-easy-c7-m1
+id: 10-jobs-to-be-done-easy-c7-m1
 version: 1
 question: What is Pillar 4 about?
 options:
@@ -293,7 +287,7 @@ options:
 :::
 
 :::mechanic-private
-id: jobs-to-be-done-easy-c7-m1
+id: 10-jobs-to-be-done-easy-c7-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -301,7 +295,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: jobs-to-be-done-easy-c7-m1
+id: 10-jobs-to-be-done-easy-c7-m1
 version: 1
 lessonSlug: jobs-to-be-done-easy
 type: multiple-choice
@@ -335,7 +329,7 @@ active: true
 :::
 
 :::mechanic-data
-id: jobs-to-be-done-easy-c9-m1
+id: 10-jobs-to-be-done-easy-c9-m1
 version: 1
 scenario: >-
   A product designer is mapping out why a user might keep or abandon a new
@@ -390,7 +384,7 @@ nodes:
 :::
 
 :::mechanic-private
-id: jobs-to-be-done-easy-c9-m1
+id: 10-jobs-to-be-done-easy-c9-m1
 version: 1
 kind: exact
 correctAnswer: a1,a2,a3
@@ -398,7 +392,7 @@ correctAnswer: a1,a2,a3
 
 :::mechanic
 schemaVersion: 1
-id: jobs-to-be-done-easy-c9-m1
+id: 10-jobs-to-be-done-easy-c9-m1
 version: 1
 lessonSlug: jobs-to-be-done-easy
 type: prediction
@@ -435,7 +429,7 @@ active: true
 :::
 
 :::mechanic-data
-id: jobs-to-be-done-easy-c10-m1
+id: 10-jobs-to-be-done-easy-c10-m1
 version: 1
 question: Is JTBD just asking users what they want?
 options:
@@ -448,7 +442,7 @@ options:
 :::
 
 :::mechanic-private
-id: jobs-to-be-done-easy-c10-m1
+id: 10-jobs-to-be-done-easy-c10-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -456,7 +450,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: jobs-to-be-done-easy-c10-m1
+id: 10-jobs-to-be-done-easy-c10-m1
 version: 1
 lessonSlug: jobs-to-be-done-easy
 type: multiple-choice

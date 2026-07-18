@@ -1,11 +1,5 @@
----
-type: gamified-lesson-mechanics
-lesson_slug: design-thinking-for-innovation-easy
-domain: design-thinking-studies
----
-
 :::mechanic-data
-id: design-thinking-for-innovation-easy-c2-m1
+id: 01-design-thinking-for-innovation-easy-c2-m1
 version: 1
 items:
   - id: i1
@@ -19,7 +13,7 @@ items:
 :::
 
 :::mechanic-private
-id: design-thinking-for-innovation-easy-c2-m1
+id: 01-design-thinking-for-innovation-easy-c2-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -31,7 +25,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: design-thinking-for-innovation-easy-c2-m1
+id: 01-design-thinking-for-innovation-easy-c2-m1
 version: 1
 lessonSlug: design-thinking-for-innovation-easy
 type: sequence-builder
@@ -66,7 +60,7 @@ active: true
 :::
 
 :::mechanic-data
-id: design-thinking-for-innovation-easy-c3-m1
+id: 01-design-thinking-for-innovation-easy-c3-m1
 version: 1
 scenario: Match each clue to the design thinking principle it clearly supports.
 theories:
@@ -86,7 +80,7 @@ clues:
 :::
 
 :::mechanic-private
-id: design-thinking-for-innovation-easy-c3-m1
+id: 01-design-thinking-for-innovation-easy-c3-m1
 version: 1
 kind: mapping
 matches:
@@ -98,7 +92,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: design-thinking-for-innovation-easy-c3-m1
+id: 01-design-thinking-for-innovation-easy-c3-m1
 version: 1
 lessonSlug: design-thinking-for-innovation-easy
 type: evidence-match
@@ -133,7 +127,7 @@ active: true
 :::
 
 :::mechanic-data
-id: design-thinking-for-innovation-easy-c4-m1
+id: 01-design-thinking-for-innovation-easy-c4-m1
 version: 1
 categories:
   - id: cat-a
@@ -156,7 +150,7 @@ items:
 :::
 
 :::mechanic-private
-id: design-thinking-for-innovation-easy-c4-m1
+id: 01-design-thinking-for-innovation-easy-c4-m1
 version: 1
 kind: mapping
 matches:
@@ -170,7 +164,7 @@ matches:
 
 :::mechanic
 schemaVersion: 1
-id: design-thinking-for-innovation-easy-c4-m1
+id: 01-design-thinking-for-innovation-easy-c4-m1
 version: 1
 lessonSlug: design-thinking-for-innovation-easy
 type: quick-classification
@@ -206,7 +200,7 @@ active: true
 :::
 
 :::mechanic-data
-id: design-thinking-for-innovation-easy-c5-m1
+id: 01-design-thinking-for-innovation-easy-c5-m1
 version: 1
 items:
   - id: i1
@@ -218,7 +212,7 @@ items:
 :::
 
 :::mechanic-private
-id: design-thinking-for-innovation-easy-c5-m1
+id: 01-design-thinking-for-innovation-easy-c5-m1
 version: 1
 kind: sequence
 correctSequence:
@@ -229,7 +223,7 @@ correctSequence:
 
 :::mechanic
 schemaVersion: 1
-id: design-thinking-for-innovation-easy-c5-m1
+id: 01-design-thinking-for-innovation-easy-c5-m1
 version: 1
 lessonSlug: design-thinking-for-innovation-easy
 type: sequence-builder
@@ -265,7 +259,7 @@ active: true
 :::
 
 :::mechanic-data
-id: design-thinking-for-innovation-easy-c6-m1
+id: 01-design-thinking-for-innovation-easy-c6-m1
 version: 1
 question: What does 'stay in the question' mean?
 options:
@@ -278,7 +272,7 @@ options:
 :::
 
 :::mechanic-private
-id: design-thinking-for-innovation-easy-c6-m1
+id: 01-design-thinking-for-innovation-easy-c6-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -286,7 +280,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: design-thinking-for-innovation-easy-c6-m1
+id: 01-design-thinking-for-innovation-easy-c6-m1
 version: 1
 lessonSlug: design-thinking-for-innovation-easy
 type: multiple-choice
@@ -320,7 +314,7 @@ active: true
 :::
 
 :::mechanic-data
-id: design-thinking-for-innovation-easy-c7-m1
+id: 01-design-thinking-for-innovation-easy-c7-m1
 version: 1
 scenario: >-
   Your product is technically reliable and generates steady revenue, but
@@ -358,7 +352,7 @@ options:
 :::
 
 :::mechanic-private
-id: design-thinking-for-innovation-easy-c7-m1
+id: 01-design-thinking-for-innovation-easy-c7-m1
 version: 1
 kind: rubric
 scoring:
@@ -370,7 +364,7 @@ hints: {}
 
 :::mechanic
 schemaVersion: 1
-id: design-thinking-for-innovation-easy-c7-m1
+id: 01-design-thinking-for-innovation-easy-c7-m1
 version: 1
 lessonSlug: design-thinking-for-innovation-easy
 type: tradeoff-decision
@@ -407,7 +401,7 @@ active: true
 :::
 
 :::mechanic-data
-id: design-thinking-for-innovation-easy-c8-m1
+id: 01-design-thinking-for-innovation-easy-c8-m1
 version: 1
 question: Which tool observes users in their setting?
 options:
@@ -420,7 +414,7 @@ options:
 :::
 
 :::mechanic-private
-id: design-thinking-for-innovation-easy-c8-m1
+id: 01-design-thinking-for-innovation-easy-c8-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -428,7 +422,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: design-thinking-for-innovation-easy-c8-m1
+id: 01-design-thinking-for-innovation-easy-c8-m1
 version: 1
 lessonSlug: design-thinking-for-innovation-easy
 type: multiple-choice
@@ -462,7 +456,7 @@ active: true
 :::
 
 :::mechanic-data
-id: design-thinking-for-innovation-easy-c9-m1
+id: 01-design-thinking-for-innovation-easy-c9-m1
 version: 1
 question: Is design thinking only for designers?
 options:
@@ -475,7 +469,7 @@ options:
 :::
 
 :::mechanic-private
-id: design-thinking-for-innovation-easy-c9-m1
+id: 01-design-thinking-for-innovation-easy-c9-m1
 version: 1
 kind: exact
 correctAnswer: a
@@ -483,7 +477,7 @@ correctAnswer: a
 
 :::mechanic
 schemaVersion: 1
-id: design-thinking-for-innovation-easy-c9-m1
+id: 01-design-thinking-for-innovation-easy-c9-m1
 version: 1
 lessonSlug: design-thinking-for-innovation-easy
 type: multiple-choice
