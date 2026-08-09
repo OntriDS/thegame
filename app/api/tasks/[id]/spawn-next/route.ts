@@ -53,7 +53,7 @@ export async function POST(
     }
 
     // 2. Validate template using unified validation
-    const { validateSpawnOperation } = await import('@/lib/utils/recurrent-validation');
+    const { validateSpawnOperation } = await import('@/lib/utils/recurrent-task-utils');
     const validation = await validateSpawnOperation(template);
     
     if (!validation.isValid) {

@@ -2,7 +2,7 @@
 import { Task } from '@/types/entities';
 import { TaskType, RecurrentFrequency } from '@/types/enums';
 import { fromRecurrentUTC, getUTCCivilDayStartMs } from '@/lib/utils/utc-utils';
-import { getTasksByParentId } from '@/data-store/datastore';
+
 import { utcCalendarDayKey } from '@/lib/utils/utc-utils';
 
 export enum SpawnErrorCode {
@@ -53,139 +53,7 @@ export function getSafetyLimitDate(template: Task): Date | null {
   return null;
 }
 
-/**
- * Comprehensive validation for recurrent template spawn operations.
- */
-export async function validateSpawnOperation(template: Task): Promise<ValidationResult> {
-  // 1. Check template type
-  if (template.type !== TaskType.RECURRENT_TEMPLATE) {
-    return {
-      isValid: false,
-      errorCode: SpawnErrorCode.INVALID_TYPE,
-      errorMessage: 'Not a RECURRENT_TEMPLATE'
-    };
-  }
 
-  // 1.5. Check template name
-  if (!template.name || !template.name.trim()) {
-    return {
-      isValid: false,
-      errorCode: 'NO_NAME' as SpawnErrorCode,
-      errorMessage: 'Template must have a name to spawn instances'
-    };
-  }
-
-  // 2. Check frequency configuration
-  if (!template.frequencyConfig) {
-    return {
-      isValid: false,
-      errorCode: SpawnErrorCode.NO_FREQUENCY_CONFIG,
-      errorMessage: 'Template has no repeat configuration'
-    };
-  }
-
-  // 3. Validate frequency config structure
-  const freqValidation = validateFrequencyConfig(template.frequencyConfig);
-  if (!freqValidation.isValid) {
-    return {
-      isValid: false,
-      errorCode: SpawnErrorCode.INVALID_FREQUENCY_CONFIG,
-      errorMessage: freqValidation.error
-    };
-  }
-
-  const config = template.frequencyConfig;
-
-  // 4. Check stop conditions
-  // (removed ONCE frequency check to allow manual spawning)
-
-  // Check stopsAfter times
-  const explicitLimit = config.stopsAfter?.type === 'times' ? (config.stopsAfter.value as number) : Infinity;
-  const HARD_SAFETY_LIMIT = 1000;
-  const effectiveLimit = Math.min(explicitLimit, HARD_SAFETY_LIMIT);
-
-  if (effectiveLimit !== Infinity) {
-    const existingInstances = await getTasksByParentId(template.id);
-    const instanceCount = existingInstances.filter(t => t.type === TaskType.RECURRENT_INSTANCE).length;
-    if (instanceCount >= effectiveLimit) {
-      return {
-        isValid: false,
-        errorCode: SpawnErrorCode.STOP_TIMES_REACHED,
-        errorMessage: instanceCount >= HARD_SAFETY_LIMIT 
-          ? `Hard safety limit of ${HARD_SAFETY_LIMIT} instances reached.`
-          : `Maximum ${explicitLimit} instances reached.`
-      };
-    }
-  }
-
-  // Check safety limit
-  const safetyLimit = getSafetyLimitDate(template);
-  if (safetyLimit) {
-    const lastSpawnedDay = template.lastSpawnedDate
-      ? getUTCCivilDayStartMs(template.lastSpawnedDate)
-      : null;
-    const safetyLimitDay = getUTCCivilDayStartMs(safetyLimit);
-
-    if (lastSpawnedDay !== null && lastSpawnedDay > safetyLimitDay) {
-      return {
-        isValid: false,
-        errorCode: SpawnErrorCode.SAFETY_LIMIT_EXCEEDED,
-        errorMessage: 'Beyond safety limit date'
-      };
-    }
-  }
-
-  // For CUSTOM, check remaining dates
-  if (config.type === RecurrentFrequency.CUSTOM) {
-    if (!config.customDays || config.customDays.length === 0) {
-      return {
-        isValid: false,
-        errorCode: SpawnErrorCode.NO_CUSTOM_DAYS,
-        errorMessage: 'No custom dates configured'
-      };
-    }
-
-    const referenceSource =
-      template.lastSpawnedDate ??
-      template.recurrenceStart ??
-      template.dueDate ??
-      new Date();
-    const refDayMs = getUTCCivilDayStartMs(
-      referenceSource instanceof Date ? referenceSource : new Date(referenceSource)
-    );
-    const hasLastSpawn = Boolean(template.lastSpawnedDate);
-
-    const customDates = config.customDays
-      .map((d: any) => (d instanceof Date ? d : new Date(d)))
-      .filter((d: Date) => !isNaN(d.getTime()))
-      .sort((a: Date, b: Date) => getUTCCivilDayStartMs(a) - getUTCCivilDayStartMs(b));
-
-    const nextDate = customDates.find((d: Date) => {
-      const dayMs = getUTCCivilDayStartMs(d);
-      return hasLastSpawn ? dayMs > refDayMs : dayMs >= refDayMs;
-    });
-    if (!nextDate) {
-      return {
-        isValid: false,
-        errorCode: SpawnErrorCode.NO_MORE_CUSTOM_DATES,
-        errorMessage: 'All custom dates used'
-      };
-    }
-
-    if (
-      safetyLimit &&
-      getUTCCivilDayStartMs(nextDate) > getUTCCivilDayStartMs(safetyLimit)
-    ) {
-      return {
-        isValid: false,
-        errorCode: SpawnErrorCode.CUSTOM_DATE_BEYOND_LIMIT,
-        errorMessage: 'Next custom date exceeds safety limit'
-      };
-    }
-  }
-
-  return { isValid: true };
-}
 
 export function validateFrequencyConfig(frequencyConfig: any): {
   isValid: boolean;
