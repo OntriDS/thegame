@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { MapContainer, Marker, Popup, TileLayer, Tooltip, useMap, useMapEvents, Circle, Rectangle, Polygon, Polyline } from 'react-leaflet';
 import L, { type LatLngBoundsExpression, type LatLngExpression, type LeafletMouseEvent } from 'leaflet';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -302,8 +302,14 @@ function createSingleMarkerIcon(theme: MarkerTheme): L.DivIcon {
 
 function MapBoardCameraController({ region }: { region: DisplayRegion }) {
   const map = useMap();
+  const lastRegionId = useRef<string | null>(null);
 
   useEffect(() => {
+    if (lastRegionId.current === region.id) {
+      return; // Only snap camera when switching to a different region
+    }
+    lastRegionId.current = region.id;
+
     const center: LatLngExpression = [region.center.lat, region.center.lng];
     map.setView(center, region.defaultZoom, {
       animate: false,
