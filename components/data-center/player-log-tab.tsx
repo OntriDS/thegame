@@ -320,12 +320,10 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
         {/* Links SubModal */}
         <LinksSubModal
           open={showLinksModal}
-          onOpenChange={setShowLinksModal}
-          entityType="player"
-          entityId={selectedPlayerId}
-          entityName="Player"
-          links={playerLinks}
-          logEntry={selectedLogEntry}
+          onClose={() => setShowLinksModal(false)}
+          entity={{ type: 'player"
+' as EntityType, id: selectedPlayerId, name: "Player"
+ }}
         />
       </CardContent>
     </Card>

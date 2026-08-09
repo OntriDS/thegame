@@ -246,12 +246,10 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
         {/* Links SubModal */}
         <LinksSubModal
           open={showLinksModal}
-          onOpenChange={setShowLinksModal}
-          entityType="character"
-          entityId={selectedCharacterId}
-          entityName="Character"
-          links={characterLinks}
-          logEntry={selectedLogEntry}
+          onClose={() => setShowLinksModal(false)}
+          entity={{ type: 'character"
+' as EntityType, id: selectedCharacterId, name: "Character"
+ }}
         />
       </CardContent>
     </Card>

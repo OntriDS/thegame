@@ -377,12 +377,10 @@ export function TasksLogTab({ tasksLog, onReload, isReloading }: TasksLifecycleT
         {/* Links SubModal */}
         <LinksSubModal
           open={showLinksModal}
-          onOpenChange={setShowLinksModal}
-          entityType="task"
-          entityId={selectedTaskId}
-          entityName="Task"
-          links={taskLinks}
-          logEntry={selectedLogEntry}
+          onClose={() => setShowLinksModal(false)}
+          entity={{ type: 'task"
+' as EntityType, id: selectedTaskId, name: "Task"
+ }}
         />
       </TabsContent>
 

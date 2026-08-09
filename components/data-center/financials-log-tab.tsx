@@ -317,12 +317,8 @@ export function FinancialsLogTab({ financialsLog, onReload, isReloading }: Finan
       {/* Links Modal */}
       <LinksSubModal
         open={showLinksModal}
-        onOpenChange={setShowLinksModal}
-        entityType="financial"
-        entityId={selectedFinancialId}
-        entityName="Financial Record"
-        links={financialLinks}
-        logEntry={selectedLogEntry}
+        onClose={() => setShowLinksModal(false)}
+        entity={{ type: EntityType.FINANCIAL, id: selectedFinancialId, name: "Financial Record" }}
       />
     </>
   );

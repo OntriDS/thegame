@@ -452,14 +452,12 @@ export function ItemsLogTab({
 
       {/* Links Modal */}
       <LinksSubModal
-        open={showLinksModal}
-        onOpenChange={setShowLinksModal}
-        entityType="item"
-        entityId={selectedItemId}
-        entityName="Item"
-        links={itemLinks}
-        logEntry={selectedLogEntry}
-      />
+          open={showLinksModal}
+          onClose={() => setShowLinksModal(false)}
+          entity={{ type: 'item"
+' as EntityType, id: selectedItemId, name: "Item"
+ }}
+        />
     </Tabs>
   );
 }

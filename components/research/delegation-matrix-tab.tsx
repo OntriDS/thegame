@@ -312,7 +312,7 @@ export function DelegationMatrixTab() {
     }
   };
 
-  const getOwnerDisplay = (idOrName: string) => {
+  const getOwnerDisplay = React.useCallback((idOrName: string) => {
     if (!idOrName) return <span className="text-muted-foreground opacity-50">Unassigned</span>;
     const owners = idOrName.split(',').map(s => s.trim());
     return (
@@ -327,7 +327,7 @@ export function DelegationMatrixTab() {
         })}
       </div>
     );
-  };
+  }, [characters]);
 
   const getOwnerString = (idOrName: string) => {
     if (!idOrName) return '';
@@ -575,7 +575,7 @@ export function DelegationMatrixTab() {
       if (aVal > bVal) return direction === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [tasks, sortConfig, rules, characters, calculateDelegation, calculateStatus]);
+  }, [tasks, sortConfig, rules, characters, calculateDelegation, calculateStatus, getOwnerDisplay]);
 
   const renderSortIndicator = (key: string) => {
     if (sortConfig?.key === key) {
