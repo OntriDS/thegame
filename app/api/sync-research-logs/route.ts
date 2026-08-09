@@ -310,7 +310,7 @@ async function getFileStats(logType: string): Promise<any> {
       filePath = path.join(process.cwd(), 'project-status', 'dev-log.json');
       break;
     case 'notes-log':
-      filePath = path.join(process.cwd(), 'logs-research', 'notes-log.json');
+      filePath = path.join(process.cwd(), 'notes', 'notes-log.json');
       break;
     default:
       throw new Error(`Unknown log type: ${logType}`);

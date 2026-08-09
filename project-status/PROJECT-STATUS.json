@@ -1,81 +1,23 @@
 {
-  "lastUpdated": "2026-03-14T23:19:25.162Z",
-  "currentSprint": "Sprint 14",
-  "currentSprintNumber": 14,
+  "lastUpdated": "2026-08-09T22:17:02.021Z",
+  "currentSprint": "Sprint 15",
+  "currentSprintNumber": 15,
   "phasePlan": {
-    "phase14.1": {
-      "phaseName": "Automation tasks, 'Pixelbrain' AI Agents and MCP",
-      "status": "done",
-      "description": "Automation tasks, Create 'Pixelbrain' project (AI Agents and MCP) and connect it to TheGame",
-      "deliverables": [
-        "Develop 'Pixelbrain', a 'Orchestrator Agent' to Manage a Set of 'AI Agents'",
-        "Define all the AI Agents Roles and Responsabilities",
-        "Implement the M2M Authentication between TheGame and Pixelbrain",
-        "Integrate MCP Pixelbrain Tools with TheGame and optimize the Chat Interface",
-        "Create one AI Agent for Data Integrity Validation that checks: Link consistency across all entity relationships",
-        "The Agent must checkCollected/Sold status consistency, Month index accuracy, Archive snapshot completeness"
-      ]
-    },
-    "phase14.2": {
-      "phaseName": "Maps and Accounts Sections, UI and Gameplay",
-      "status": "done",
-      "description": "Complete Maps and Accounts Sections, Improve UI and Gameplay (Player and Characters)",
-      "deliverables": [
-        "Make the Map and Sites visible in the Map Section",
-        "JungleCoins and its equivalent (Usd) Produced, visible in the Player Section",
-        "Personal Finances conected to Player Points and Personal Earnings",
-        "Accounts Section, Accounts Modal, for Accounts Managment (only Founder)",
-        "Account Creation Process, Accounts Section UI improvements and standarization",
-        "Character Ledger, Accounts Email + Password and Phone (Optional)"
-      ]
-    },
-    "phase14.3": {
-      "phaseName": "Debug and Optimize V0.1",
-      "status": "done",
-      "description": "",
-      "deliverables": [
-        "Network Sales in Sales Modal, Booth Sales Footer Fixes, Sales Summaries bugs",
-        "Basic Badges and Achievements systems improved",
-        "Personas to Characters Rollback, so Personas is a feature of Characters",
-        "Refactor the Authentication System with the IAM Service",
-        "Fix the Month Selector to show all the months with data (Archive + Summary)",
-        "Analyst Agent performing Data Integrity tasks, ai-chat reading markdown files",
-        "Tasks Indexes created, Agents upgraded, Database purged ghost tasks and agents cards",
-        "Calendar submodal bugs fixes, Bloated Logs Indexes in Upstash",
-        "Logging workflows update and points decimals bugs, Sorting in Items Sold, Financials and Logs",
-        "Refactor Recurrent Templates and fix Task Schedule inside Task Modal",
-        "AIM System 3 Project Integration, accounts creation and permissions"
-      ]
-    },
-    "phase14.4": {
-      "phaseName": "Clean Code and Documentation",
-      "status": "done",
-      "description": "",
-      "deliverables": [
-        "Clean and Update All the TheGame Documentation, Create Pixelbrain Documentation",
-        "Full Logs and Entities Data Cleanup; Tasks and Sales Modals self healing Financials",
-        "Links System cleanup plus Url links to its entities",
-        "Booth Sales Financials: Performance Ledger",
-        "UTC Standardization, UI dates translations, central UTC utility"
-      ]
-    }
-  },
-  "nextSprintPlan": {
-    "phaseX.1": {
+    "phase15.1": {
       "phaseName": "v0.2 Initialization",
       "status": "not-started",
       "description": "New Optimization & Agent-Ready Era",
       "deliverables": [
-      "Solve the God Object anti-pattern (Project wide), {Polymorphic Schema, Sparce Serialization or Event Sourcing}",
-      "Update all agents tools to work with new entities pattern",
-      "Create new agent tools, for promoter, marketer, timer, accounter, admin",
-      "Implement Monthly Close Automation Task for the admin",
-      "Implement Monthly Summary Analysis generation Automation Task (post Monthly Close) for Analyst",
-      "Pixelbrain: Debuger Agent + Local Automation Tasks",
-      "CognitiveGovernor, RequestChunker, and MCPGateway fully integrated"
-    ]
+        "Solve the God Object anti-pattern (Project wide), {Polymorphic Schema, Sparce Serialization or Event Sourcing}",
+        "Update all agents tools to work with new entities pattern",
+        "Create new agent tools, for promoter, marketer, timer, accounter, admin",
+        "Implement Monthly Close Automation Task for the admin",
+        "Implement Monthly Summary Analysis generation Automation Task (post Monthly Close) for Analyst",
+        "Pixelbrain: Debuger Agent + Local Automation Tasks",
+        "CognitiveGovernor, RequestChunker, and MCPGateway fully integrated"
+      ]
     },
-    "phaseX.2": {
+    "phase15.2": {
       "phaseName": "",
       "status": "not-started",
       "description": "",
@@ -88,17 +30,43 @@
         "Events temporarily take over regular workflow during time-bound campaigns (e.g. Special Week Sale)"
       ]
     },
-    "phaseX.3": {
+    "phase15.3": {
       "phaseName": "",
       "status": "not-started",
       "description": "",
       "deliverables": [
-      "Player: Player Progression and Points Balance (machinations)",
-      "Genesis flow for brand new app, with proper frontend setup wizard",
-      "System: Player-One Bootstrap process",
-      "Characters: Improve Ledger Wallet",
-      "Research: Machinations Display of Player Data"
+        "Player: Player Progression and Points Balance (machinations)",
+        "Genesis flow for brand new app, with proper frontend setup wizard",
+        "System: Player-One Bootstrap process",
+        "Characters: Improve Ledger Wallet",
+        "Research: Machinations Display of Player Data"
       ]
+    },
+    "phase15.4": {
+      "phaseName": "",
+      "status": "not-started",
+      "description": "",
+      "deliverables": []
+    }
+  },
+  "nextSprintPlan": {
+    "phaseX.1": {
+      "phaseName": "",
+      "status": "not-started",
+      "description": "",
+      "deliverables": []
+    },
+    "phaseX.2": {
+      "phaseName": "",
+      "status": "not-started",
+      "description": "",
+      "deliverables": []
+    },
+    "phaseX.3": {
+      "phaseName": "",
+      "status": "not-started",
+      "description": "",
+      "deliverables": []
     },
     "phaseX.4": {
       "phaseName": "",

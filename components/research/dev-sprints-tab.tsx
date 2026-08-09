@@ -39,6 +39,12 @@ export function DevSprintsTab({
   const { isDarkMode } = useThemeColors();
   const [activeSubTab, setActiveSubTab] = useState<string>('sprints');
   const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
+  const [activeCycle, setActiveCycle] = useState<string>('v0.1');
+
+  // Extract unique cycles from the nested devLog.cycles array
+  const cycles = devLog?.cycles 
+    ? devLog.cycles.map((c: any) => c.id) as string[]
+    : ['v0.1'];
 
   // Helper function to parse dates using our standard DD-MM-YYYY format (from date-constants.ts)
   const parseDate = (dateStr: string): Date => {
@@ -75,14 +81,17 @@ export function DevSprintsTab({
         .forEach(([phaseKey, phase]: [string, any]) => {
           // Check if this phase has a completion date in the dev log
           let completionDate = 'Current Sprint';
-          if (devLog && devLog.sprints) {
-            // Look for this phase in the dev log to get its actual completion date
-            for (const sprint of devLog.sprints) {
-              if (sprint.phases) {
-                const foundPhase = sprint.phases.find((p: any) => p.phaseKey === phaseKey);
-                if (foundPhase && foundPhase.completedAt) {
-                  completionDate = foundPhase.completedAt;
-                  break;
+          if (devLog && devLog.cycles) {
+            // Look for this phase in the active cycle's sprints to get its actual completion date
+            const activeCycleObj = devLog.cycles.find((c: any) => c.id === activeCycle) || devLog.cycles[devLog.cycles.length - 1];
+            if (activeCycleObj && activeCycleObj.sprints) {
+              for (const sprint of activeCycleObj.sprints) {
+                if (sprint.phases) {
+                  const foundPhase = sprint.phases.find((p: any) => p.phaseKey === phaseKey);
+                  if (foundPhase && foundPhase.completedAt) {
+                    completionDate = foundPhase.completedAt;
+                    break;
+                  }
                 }
               }
             }
@@ -113,10 +122,13 @@ export function DevSprintsTab({
         });
     }
 
-    // Add historical entries in the correct order
-    if (devLog && devLog.sprints) {
+    // Add historical entries in the correct order, filtered by activeCycle
+    if (devLog && devLog.cycles) {
+      const activeCycleObj = devLog.cycles.find((c: any) => c.id === activeCycle);
+      const cycleSprints = activeCycleObj?.sprints || [];
+
       // Sort sprints by completion date (newest first for logOrder === 'newest')
-      const sortedSprints = [...devLog.sprints].sort((a, b) => {
+      const sortedSprints = [...cycleSprints].sort((a, b) => {
         const dateA = parseDate(a.completedAt);
         const dateB = parseDate(b.completedAt);
         return logOrder === 'newest' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
@@ -165,8 +177,15 @@ export function DevSprintsTab({
       const dateA = parseDate(a.completedAt);
       const dateB = parseDate(b.completedAt);
 
-      // If dates are the same, use numeric ID as tie-breaker
+      // If dates are the same, determine correct order
       if (dateA.getTime() === dateB.getTime()) {
+        // Fix race condition: Sprint completed appears BEFORE its children phases when newest first
+        if (a.type !== b.type) {
+          // If newest first, we want the sprint to appear on top of the phases
+          if (a.type === 'sprint') return logOrder === 'newest' ? -1 : 1;
+          if (b.type === 'sprint') return logOrder === 'newest' ? 1 : -1;
+        }
+
         // Extract numeric parts for proper numeric sorting (supports decimals like 1.1, 1.2, etc.)
         const extractNumericId = (id: string) => {
           // Keep digits and dots for decimal numbers like "1.1", "11.2", etc.
@@ -344,31 +363,51 @@ export function DevSprintsTab({
 
       <TabsContent value="dev-log" className="space-y-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div>
-              <CardTitle>Development Log</CardTitle>
-              <CardDescription>
-                Complete development history and events
-              </CardDescription>
+          <CardHeader className="flex flex-col space-y-4 pb-2">
+            <div className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Development Log</CardTitle>
+                <CardDescription>
+                  Complete development history and events
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLogOrder(logOrder === 'newest' ? 'oldest' : 'newest')}
+                >
+                  <ArrowUpDown className="h-4 w-4 mr-2" />
+                  {logOrder === 'oldest' ? 'Oldest First' : 'Newest First'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onReload}
+                  disabled={isReloading}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isReloading ? 'animate-spin' : ''}`} />
+                  Reload
+                </Button>
+              </div>
             </div>
+            
+            {/* Pagination / Cycle Selector */}
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setLogOrder(logOrder === 'newest' ? 'oldest' : 'newest')}
-              >
-                <ArrowUpDown className="h-4 w-4 mr-2" />
-                {logOrder === 'oldest' ? 'Oldest First' : 'Newest First'}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onReload}
-                disabled={isReloading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isReloading ? 'animate-spin' : ''}`} />
-                Reload
-              </Button>
+              <span className="text-sm font-medium text-muted-foreground mr-2">Cycle:</span>
+              <div className="flex flex-wrap gap-2">
+                {cycles.map(cycle => (
+                  <Button 
+                    key={cycle}
+                    variant={activeCycle === cycle ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActiveCycle(cycle)}
+                    className="h-7 text-xs"
+                  >
+                    {cycle}
+                  </Button>
+                ))}
+              </div>
             </div>
           </CardHeader>
           <CardContent>

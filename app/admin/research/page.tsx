@@ -351,25 +351,31 @@ function ResearchPageContent() {
         }))
       };
 
-      // 2. Create individual phase completion entries (only for phases not already completed)
-      const existingPhaseKeys = new Set((currentDevLog.phases || []).map((p: any) => p.phaseKey));
-      const phaseCompletions = Object.entries(projectStatus.phasePlan)
-        .filter(([phaseKey, phase]: [string, any]) => !existingPhaseKeys.has(phaseKey))
-        .map(([phaseKey, phase]: [string, any]) => ({
-          id: `${Date.now()}-${phaseKey}`,
-          type: "phase_completion",
-          phaseKey: phaseKey,
-          phaseName: phase.phaseName || phaseKey,
-          completedAt: formatDateDDMMYYYY(new Date()),
-          description: `Phase "${phase.phaseName || phaseKey}" marked as completed`
-        }));
+      // 3. Update dev log with completed sprint
+      // Handle the new nested 'cycles' structure
+      let updatedCycles = [...(currentDevLog.cycles || [])];
+      
+      // If no cycles exist, create a default one
+      if (updatedCycles.length === 0) {
+        updatedCycles.push({ id: 'v0.1', sprints: [] });
+      }
+      
+      // Append the completed sprint to the latest cycle
+      const latestCycleIndex = updatedCycles.length - 1;
+      updatedCycles[latestCycleIndex] = {
+        ...updatedCycles[latestCycleIndex],
+        sprints: [...(updatedCycles[latestCycleIndex].sprints || []), completedSprint]
+      };
 
-      // 3. Update dev log with completed sprint and phase entries
       const updatedDevLog = {
         ...currentDevLog,
-        sprints: [...(currentDevLog.sprints || []), completedSprint],
-        phases: [...(currentDevLog.phases || []), ...phaseCompletions]
+        cycles: updatedCycles
       };
+      
+      // Clean up the redundant flat phases array if it exists
+      if (updatedDevLog.phases) {
+        delete updatedDevLog.phases;
+      }
 
       const devLogResponse = await fetch('/api/dev-log', {
         method: 'POST',
