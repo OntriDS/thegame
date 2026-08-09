@@ -372,6 +372,7 @@ function MapPageContent() {
     if (isNoneSite(site)) {
       return;
     }
+    setActiveView('sites');
     setSelectedSite(site);
     setShowSiteModal(true);
   }, []);

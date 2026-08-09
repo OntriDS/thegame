@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { ExternalLink } from 'lucide-react';
 
 const maxPolygonVertices = 8;
 
@@ -1169,12 +1170,22 @@ export default function MapBoard({
                           <img src={theme.iconPath} alt={theme.label} className="h-4 w-4" />
                         </div>
                         <div>
-                          <div className="font-semibold text-[13px]">{marker.siteName}</div>
+                          <div className="font-semibold text-[13px] flex items-center gap-1">
+                            {marker.siteName}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenSiteByMarker(marker.siteId)}
+                              className="text-muted-foreground hover:text-emerald-500 cursor-pointer"
+                              title="Edit Site in Sites tab"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </button>
+                          </div>
                           <div className="text-[10px] text-muted-foreground">{theme.label}</div>
                         </div>
                       </div>
                     </div>
-                    <div className="mt-2 mb-3 rounded border border-border p-2 bg-muted/20">
+                    <div className="mt-2 rounded border border-border p-2 bg-muted/20">
                       <div className="flex flex-col gap-1">
                         <div className="flex justify-between">
                           <span className="text-muted-foreground text-[11px]">Settlement</span>
@@ -1190,13 +1201,6 @@ export default function MapBoard({
                         </div>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      className="w-full rounded border border-emerald-300/40 bg-emerald-500/90 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 transition-colors"
-                      onClick={() => handleOpenSiteByMarker(marker.siteId)}
-                    >
-                      Edit Site
-                    </button>
                   </div>
                 </Popup>
               </Marker>

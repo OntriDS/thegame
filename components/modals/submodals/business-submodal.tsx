@@ -149,7 +149,7 @@ export function BusinessSubmodal({
                     </div>
 
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label className="text-right">Persona</Label>
+                        <Label className="text-right">Character</Label>
                         <div className="col-span-3">
                             <SearchableSelect
                                 value={linkedCharacterId}

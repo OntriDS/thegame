@@ -26,8 +26,10 @@ import {
 } from '@/lib/constants/site-taxonomy-labels';
 import { createSettlementOptions } from '@/lib/utils/searchable-select-utils';
 import SettlementSubmodal from './submodals/settlement-submodal';
-import { MapPin, Cloud, Sparkles, Trash2, Network, User } from 'lucide-react';
+import { MapPin, Cloud, Sparkles, Trash2, Network, User, MapPinned } from 'lucide-react';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
+import { NumericInput } from '@/components/ui/numeric-input';
+import { adminMapWindowEvents, type CoordPickResultDetail } from '@/lib/admin-map-events';
 // No complex categorization needed for site fields
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
@@ -61,6 +63,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
   const [regions, setRegions] = useState<Region[]>([]);
   const [businessType, setBusinessType] = useState<PhysicalBusinessType>(PhysicalBusinessType.STORAGE);
   const [googleMapsAddress, setGoogleMapsAddress] = useState('');
+  const [coordinates, setCoordinates] = useState<{lat: number; lng: number} | null>(null);
 
   // Digital site fields
   const [digitalUrl, setDigitalUrl] = useState('');
@@ -121,11 +124,11 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
 
       // Load type-specific fields
       if (site.metadata.type === SiteType.PHYSICAL) {
-        const physicalMeta = site.metadata as PhysicalSiteMetadata;
-        setSettlementId(physicalMeta.settlementId || '');
-        setBusinessType(physicalMeta.businessType || PhysicalBusinessType.STORAGE);
-        setGoogleMapsAddress(physicalMeta.googleMapsAddress || '');
-        setDigitalUrl('');
+        const pMeta = site.metadata as PhysicalSiteMetadata;
+        setSettlementId(pMeta.settlementId || '');
+        setBusinessType(pMeta.businessType);
+        setGoogleMapsAddress(pMeta.googleMapsAddress || '');
+        setCoordinates(pMeta.coordinates || null);
       } else if (site.metadata.type === SiteType.DIGITAL_SITE) {
         const digitalMeta = site.metadata as DigitalSiteMetadata;
         setDigitalType(digitalMeta.digitalType || DigitalSiteType.REPOSITORY);
@@ -148,6 +151,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
       setSettlementId('');
       setBusinessType(PhysicalBusinessType.STORAGE);
       setGoogleMapsAddress('');
+      setCoordinates(null);
       setDigitalUrl('');
       setDigitalType(DigitalSiteType.REPOSITORY);
       setSystemPurpose(SystemSiteType.UNIVERSAL_TRACKING);
@@ -180,7 +184,8 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
           type: SiteType.PHYSICAL,
           businessType,
           settlementId,
-          googleMapsAddress
+          googleMapsAddress,
+          coordinates: coordinates?.lat && coordinates?.lng ? coordinates : undefined
         } as PhysicalSiteMetadata;
       } else if (siteType === SiteType.DIGITAL_SITE) {
         metadata = {
@@ -275,6 +280,31 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
     // Dispatch UI update event after successful deletion
     dispatchEntityUpdated(entityTypeToKind(EntityType.SITE));
     onOpenChange(false);
+  };
+
+  const requestPickCoordsFromMap = () => {
+    window.dispatchEvent(
+      new CustomEvent(adminMapWindowEvents.requestCoordPick, {
+        detail: { pickId: 'site-modal' },
+      })
+    );
+    const handlePick = (ev: Event) => {
+      const ce = ev as CustomEvent<CoordPickResultDetail>;
+      if (ce.detail.pickId !== 'site-modal') return;
+      setCoordinates({ lat: ce.detail.lat, lng: ce.detail.lng });
+      window.removeEventListener(adminMapWindowEvents.coordPicked, handlePick);
+    };
+    window.addEventListener(adminMapWindowEvents.coordPicked, handlePick);
+    onOpenChange(false); // Close the modal temporarily so user can pick on map
+  };
+
+  const openGoogleMapsForCoords = () => {
+    if (coordinates?.lat && coordinates?.lng) {
+      window.open(
+        `https://www.google.com/maps?q=${encodeURIComponent(`${coordinates!.lat},${coordinates!.lng}`)}`,
+        '_blank'
+      );
+    }
   };
 
   return (
@@ -443,17 +473,73 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
               </div>
             )}
 
-            {/* Row 3: Google Maps (Physical only) - Full width */}
+            {/* Row 3: Google Maps & Coordinates (Physical only) */}
             {siteType === SiteType.PHYSICAL && (
-              <div className="space-y-2">
-                <Label htmlFor="googleMaps" className="text-xs">Google Maps Address</Label>
-                <Input
-                  id="googleMaps"
-                  value={googleMapsAddress}
-                  onChange={(e) => setGoogleMapsAddress(e.target.value)}
-                  placeholder="Google Maps URL or coordinates"
-                  className="h-8 text-sm"
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="googleMaps" className="text-xs">Google Maps Address</Label>
+                  <Input
+                    id="googleMaps"
+                    value={googleMapsAddress}
+                    onChange={(e) => setGoogleMapsAddress(e.target.value)}
+                    placeholder="URL or textual address"
+                    className="h-8 text-sm"
+                  />
+                </div>
+                
+                {/* Coordinates */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium">
+                    Map Coordinates
+                  </Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <NumericInput
+                      placeholder="Latitude"
+                      step="any"
+                      value={coordinates?.lat || 0}
+                      onChange={(value) => setCoordinates(prev => ({
+                        lat: value,
+                        lng: prev?.lng || 0
+                      }))}
+                      className="h-8 text-sm"
+                    />
+                    <NumericInput
+                      placeholder="Longitude"
+                      step="any"
+                      value={coordinates?.lng || 0}
+                      onChange={(value) => setCoordinates(prev => ({
+                        lat: prev?.lat || 0,
+                        lng: value
+                      }))}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Set coordinates to position this site independently on the map.
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-[11px]"
+                      onClick={openGoogleMapsForCoords}
+                    >
+                      <MapPinned className="h-3 w-3 mr-1.5" />
+                      Preview
+                    </Button>
+                    <Button 
+                      type="button" 
+                      size="sm" 
+                      variant="outline" 
+                      className="h-7 text-[11px]"
+                      onClick={requestPickCoordsFromMap}
+                    >
+                      <MapPin className="h-3 w-3 mr-1.5" />
+                      Set from map
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
 

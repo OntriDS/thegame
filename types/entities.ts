@@ -197,6 +197,7 @@ export interface PhysicalSiteMetadata extends BaseSiteMetadata {
   businessType: PhysicalBusinessType;
   settlementId: string; // Reference to Settlement entity
   googleMapsAddress: string;
+  coordinates?: { lat: number; lng: number }; // Optional precise coordinates on map
 }
 
 export interface DigitalSiteMetadata extends BaseSiteMetadata {

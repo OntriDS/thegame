@@ -18,7 +18,7 @@
     },
     "phase14.2": {
       "phaseName": "Maps and Accounts Sections, UI and Gameplay",
-      "status": "in-progress",
+      "status": "done",
       "description": "Complete Maps and Accounts Sections, Improve UI and Gameplay (Player and Characters)",
       "deliverables": [
         "Make the Map and Sites visible in the Map Section",

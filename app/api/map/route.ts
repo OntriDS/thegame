@@ -131,6 +131,10 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
+      // Use precise site coordinates if available, otherwise fall back to settlement coordinates
+      const siteLat = metadata.coordinates?.lat ?? settlement.coordinates.lat;
+      const siteLng = metadata.coordinates?.lng ?? settlement.coordinates.lng;
+
       markers.push({
         siteId: site.id,
         siteName: site.name,
@@ -138,8 +142,8 @@ export async function GET(req: NextRequest) {
         businessType: metadata.businessType,
         settlementId: settlement.id,
         regionId: settlement.regionId,
-        lat: settlement.coordinates.lat,
-        lng: settlement.coordinates.lng,
+        lat: siteLat,
+        lng: siteLng,
         owners
       });
     }
