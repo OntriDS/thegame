@@ -454,9 +454,7 @@ export function ItemsLogTab({
       <LinksSubModal
           open={showLinksModal}
           onClose={() => setShowLinksModal(false)}
-          entity={{ type: 'item"
-' as EntityType, id: selectedItemId, name: "Item"
- }}
+          entity={{ type: EntityType.ITEM, id: selectedItemId, name: "Item" }}
         />
     </Tabs>
   );

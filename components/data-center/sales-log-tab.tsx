@@ -355,9 +355,7 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
     <LinksSubModal
           open={showLinksModal}
           onClose={() => setShowLinksModal(false)}
-          entity={{ type: 'sale"
-' as EntityType, id: selectedSaleId, name: "Sale"
- }}
+          entity={{ type: EntityType.SALE, id: selectedSaleId, name: "Sale" }}
         />
     </>
   );

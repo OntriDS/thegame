@@ -272,9 +272,7 @@ export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProp
       <LinksSubModal
           open={showLinksModal}
           onClose={() => setShowLinksModal(false)}
-          entity={{ type: 'site"
-' as EntityType, id: selectedSiteId, name: "Site"
- }}
+          entity={{ type: EntityType.SITE, id: selectedSiteId, name: "Site" }}
         />
     </>
   );

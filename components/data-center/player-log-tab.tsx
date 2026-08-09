@@ -321,9 +321,7 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
         <LinksSubModal
           open={showLinksModal}
           onClose={() => setShowLinksModal(false)}
-          entity={{ type: 'player"
-' as EntityType, id: selectedPlayerId, name: "Player"
- }}
+          entity={{ type: EntityType.PLAYER, id: selectedPlayerId, name: "Player" }}
         />
       </CardContent>
     </Card>
