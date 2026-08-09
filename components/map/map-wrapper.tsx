@@ -10,6 +10,7 @@ type MapBoardProps = {
   onCoordinatePickComplete?: () => void;
   onRegionShapeSave?: (region: Region) => void;
   onSettlementShapeSave?: (settlement: Settlement) => void;
+  onSiteMarkerDragEnd?: (siteId: string, lat: number, lng: number) => void;
 };
 
 const MapBoard = dynamic<MapBoardProps>(() => import('./map-board'), {
@@ -22,6 +23,7 @@ export default function MapWrapper({
   onCoordinatePickComplete,
   onRegionShapeSave,
   onSettlementShapeSave,
+  onSiteMarkerDragEnd,
 }: MapBoardProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -31,6 +33,7 @@ export default function MapWrapper({
         onCoordinatePickComplete={onCoordinatePickComplete}
         onRegionShapeSave={onRegionShapeSave}
         onSettlementShapeSave={onSettlementShapeSave}
+        onSiteMarkerDragEnd={onSiteMarkerDragEnd}
       />
     </div>
   );

@@ -640,6 +640,7 @@ type MapBoardProps = {
   onCoordinatePickComplete?: () => void;
   onRegionShapeSave?: (region: Region) => void;
   onSettlementShapeSave?: (settlement: Settlement) => void;
+  onSiteMarkerDragEnd?: (siteId: string, lat: number, lng: number) => void;
 };
 
 export default function MapBoard({
@@ -648,6 +649,7 @@ export default function MapBoard({
   onCoordinatePickComplete,
   onRegionShapeSave,
   onSettlementShapeSave,
+  onSiteMarkerDragEnd,
 }: MapBoardProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -1147,6 +1149,14 @@ export default function MapBoard({
                 key={marker.siteId}
                 position={[marker.lat, marker.lng]}
                 icon={createSingleMarkerIcon(theme)}
+                draggable={!mapInteractionLocked}
+                eventHandlers={{
+                  dragend: (e) => {
+                    if (!onSiteMarkerDragEnd) return;
+                    const latLng = e.target.getLatLng();
+                    onSiteMarkerDragEnd(marker.siteId, latLng.lat, latLng.lng);
+                  },
+                }}
               >
                 <Tooltip direction="top" offset={[0, -14]}>
                   <div className="text-xs">
