@@ -33,13 +33,14 @@ import { SiteModal } from "@/components/modals/site-modal";
 import SettlementSubmodal from '@/components/modals/submodals/settlement-submodal';
 import RegionSubmodal from '@/components/modals/submodals/region-submodal';
 import MapWrapper from '@/components/map/map-wrapper';
-import type { Site, Settlement, Region } from "@/types/entities";
+import type { Site, Settlement, Region, PhysicalSiteMetadata } from "@/types/entities";
 import { SiteType, SiteStatus } from "@/types/enums";
 import type { MapReadModel } from '@/types/map-types';
 import { getSiteStatusLabel } from "@/lib/constants/status-display-labels";
 import { MapDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 import { OPEN_ENTITY_QUERY, OPEN_ID_QUERY } from '@/lib/utils/entity-admin-deep-links';
 import { adminMapWindowEvents, type CoordPickRequestDetail } from '@/lib/admin-map-events';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 
 type MapGeoDeleteTarget =
   | { kind: 'settlement'; entity: Settlement }
@@ -379,6 +380,32 @@ function MapPageContent() {
     setShowSiteModal(true);
   }, []);
 
+  const handleSiteMarkerDragEnd = useCallback(async (siteId: string, lat: number, lng: number) => {
+    try {
+      const site = await ClientAPI.getSiteById(siteId);
+      if (!site) return;
+      
+      const newSite = { ...site };
+      if (newSite.metadata.type === SiteType.PHYSICAL) {
+        const pMeta = newSite.metadata as PhysicalSiteMetadata;
+        if (pMeta.coordinates) {
+          pMeta.coordinates = { ...pMeta.coordinates, lat, lng };
+        } else {
+          pMeta.coordinates = { lat, lng };
+        }
+      }
+      newSite.updatedAt = getUTCNow();
+      await ClientAPI.upsertSite(newSite);
+      
+      console.log(`Moved ${newSite.name} to new coordinates.`);
+      
+      window.dispatchEvent(new Event('sitesUpdated'));
+      window.dispatchEvent(new Event('mapDataRefreshNeeded'));
+    } catch (e) {
+      console.error('Failed to update site location from drag:', e);
+    }
+  }, []);
+
   const clearSiteDeepLink = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString());
     if (!params.has(OPEN_ENTITY_QUERY) && !params.has(OPEN_ID_QUERY)) {
@@ -612,6 +639,7 @@ function MapPageContent() {
                   onCoordinatePickComplete={() => setCoordinatePickSession(null)}
                   onRegionShapeSave={handleMapRegionShapeSave}
                   onSettlementShapeSave={handleMapSettlementShapeSave}
+                  onSiteMarkerDragEnd={handleSiteMarkerDragEnd}
                 />
               ) : (
                 <div className="grid min-h-[16rem] flex-1 place-items-center rounded-lg border border-border bg-muted">

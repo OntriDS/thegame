@@ -83,6 +83,8 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
 
   // Guard for one-time initialization of new sites
   const didInitRef = useRef(false);
+  const lastInitSiteIdRef = useRef<string | null>(null);
+  const isPickingOnMapRef = useRef(false);
 
   // UI state
   const [showDescription, setShowDescription] = useState(false);
@@ -116,34 +118,49 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
   }, [open]);
 
   useEffect(() => {
-    if (site) {
-      setName(site.name || '');
-      setDescription(site.description || '');
-      setStatus((site.status as SiteStatus) || SiteStatus.ACTIVE);
-      setSiteType(site.metadata.type);
-
-      // Load type-specific fields
-      if (site.metadata.type === SiteType.PHYSICAL) {
-        const pMeta = site.metadata as PhysicalSiteMetadata;
-        setSettlementId(pMeta.settlementId || '');
-        setBusinessType(pMeta.businessType);
-        setGoogleMapsAddress(pMeta.googleMapsAddress || '');
-        setCoordinates(pMeta.coordinates || null);
-      } else if (site.metadata.type === SiteType.DIGITAL_SITE) {
-        const digitalMeta = site.metadata as DigitalSiteMetadata;
-        setDigitalType(digitalMeta.digitalType || DigitalSiteType.REPOSITORY);
-        setDigitalUrl(digitalMeta.url || '');
-      } else if (site.metadata.type === SiteType.SYSTEM) {
-        const systemMeta = site.metadata as SystemSiteMetadata;
-        setSystemPurpose(systemMeta.systemType || SystemSiteType.UNIVERSAL_TRACKING);
-        setDigitalUrl('');
-      }
-
-      // Reset init guard when editing
+    // If the modal is closed and we're NOT in map picking mode, reset init tracking
+    if (!open && !isPickingOnMapRef.current) {
       didInitRef.current = false;
+      lastInitSiteIdRef.current = null;
+      return;
+    }
+
+    if (open) {
+      // If we're opening back up from picking on map, clear the flag
+      isPickingOnMapRef.current = false;
+    }
+
+    if (site) {
+      if (lastInitSiteIdRef.current !== site.id) {
+        lastInitSiteIdRef.current = site.id;
+        setName(site.name || '');
+        setDescription(site.description || '');
+        setStatus((site.status as SiteStatus) || SiteStatus.ACTIVE);
+        setSiteType(site.metadata.type);
+
+        // Load type-specific fields
+        if (site.metadata.type === SiteType.PHYSICAL) {
+          const pMeta = site.metadata as PhysicalSiteMetadata;
+          setSettlementId(pMeta.settlementId || '');
+          setBusinessType(pMeta.businessType);
+          setGoogleMapsAddress(pMeta.googleMapsAddress || '');
+          setCoordinates(pMeta.coordinates || null);
+        } else if (site.metadata.type === SiteType.DIGITAL_SITE) {
+          const digitalMeta = site.metadata as DigitalSiteMetadata;
+          setDigitalType(digitalMeta.digitalType || DigitalSiteType.REPOSITORY);
+          setDigitalUrl(digitalMeta.url || '');
+        } else if (site.metadata.type === SiteType.SYSTEM) {
+          const systemMeta = site.metadata as SystemSiteMetadata;
+          setSystemPurpose(systemMeta.systemType || SystemSiteType.UNIVERSAL_TRACKING);
+          setDigitalUrl('');
+        }
+        
+        didInitRef.current = false;
+      }
     } else if (!didInitRef.current) {
-      // New site - initialize once only (don't reset again while user edits)
+      // New site - initialize once only
       didInitRef.current = true;
+      lastInitSiteIdRef.current = null;
       setName('');
       setDescription('');
       setStatus(SiteStatus.ACTIVE);
@@ -156,12 +173,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
       setDigitalType(DigitalSiteType.REPOSITORY);
       setSystemPurpose(SystemSiteType.UNIVERSAL_TRACKING);
     }
-
-    // Reset init guard when modal closes (allows fresh init on next open)
-    if (!open) {
-      didInitRef.current = false;
-    }
-  }, [site, open]); // open needed for init guard reset, site for data changes
+  }, [site, open]);
 
   const handleSave = async () => {
     if (isSaving) return;
@@ -283,6 +295,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
   };
 
   const requestPickCoordsFromMap = () => {
+    isPickingOnMapRef.current = true;
     window.dispatchEvent(
       new CustomEvent(adminMapWindowEvents.requestCoordPick, {
         detail: { pickId: 'site-modal' },
@@ -293,6 +306,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
       if (ce.detail.pickId !== 'site-modal') return;
       setCoordinates({ lat: ce.detail.lat, lng: ce.detail.lng });
       window.removeEventListener(adminMapWindowEvents.coordPicked, handlePick);
+      onOpenChange(true); // Re-open the modal after picking
     };
     window.addEventListener(adminMapWindowEvents.coordPicked, handlePick);
     onOpenChange(false); // Close the modal temporarily so user can pick on map
