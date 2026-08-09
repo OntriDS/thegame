@@ -11,6 +11,7 @@ import { Link as LinkIcon, ArrowRight, Network, Trash2 } from 'lucide-react';
 import { Link } from '@/types/entities';
 import { EntityType, LinkType } from '@/types/enums';
 import { ClientAPI } from '@/lib/client-api';
+import { buildAdminEntityDeepLink } from '@/lib/utils/entity-admin-deep-links';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 
 interface LinksRelationshipsModalProps {
@@ -291,8 +292,21 @@ function LinkCard({
           <ArrowRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
 
           <div className="flex-1">
-            <div className="text-sm font-medium">
-              {otherEntity.type.toUpperCase()}
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium">
+                {otherEntity.type.toUpperCase()}
+              </div>
+              {buildAdminEntityDeepLink(otherEntity.type, otherEntity.id) && (
+                <a
+                  href={buildAdminEntityDeepLink(otherEntity.type, otherEntity.id) as string}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs shrink-0 text-primary underline-offset-2 hover:underline"
+                  title="Open in admin (new tab)"
+                >
+                  Open
+                </a>
+              )}
             </div>
             <div className="text-xs text-muted-foreground truncate font-semibold">
               {getEntityDisplayName(otherEntity.type, otherEntity.id)}

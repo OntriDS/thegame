@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from '@/types/entities';
 import { EntityType } from '@/types/enums';
 import { ClientAPI } from '@/lib/client-api';
+import { buildAdminEntityDeepLink } from '@/lib/utils/entity-admin-deep-links';
 
 interface LinksTabProps {
   onReload: () => Promise<void>;
@@ -225,16 +226,42 @@ export function LinksTab({ onReload, isReloading }: LinksTabProps) {
                   </div>
                   <div className="flex flex-col gap-2 min-w-0 sm:flex-row sm:items-start sm:gap-3">
                     <div className="min-w-0 flex-1 space-y-0.5 rounded-md border border-border/60 bg-muted/20 p-2">
-                      <div className="text-[10px] font-semibold uppercase text-blue-600 dark:text-blue-400">
-                        {link.source.type}
+                      <div className="flex items-center justify-between">
+                        <div className="text-[10px] font-semibold uppercase text-blue-600 dark:text-blue-400">
+                          {link.source.type}
+                        </div>
+                        {buildAdminEntityDeepLink(link.source.type, link.source.id) && (
+                          <a
+                            href={buildAdminEntityDeepLink(link.source.type, link.source.id) as string}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] shrink-0 text-primary underline-offset-2 hover:underline"
+                            title="Open in admin (new tab)"
+                          >
+                            Open
+                          </a>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground break-words">{sourceLabel}</div>
                       <div className="text-[11px] font-mono break-all text-foreground">{link.source.id}</div>
                     </div>
                     <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 hidden sm:block mt-6" />
                     <div className="min-w-0 flex-1 space-y-0.5 rounded-md border border-border/60 bg-muted/20 p-2">
-                      <div className="text-[10px] font-semibold uppercase text-green-600 dark:text-green-400">
-                        {link.target.type}
+                      <div className="flex items-center justify-between">
+                        <div className="text-[10px] font-semibold uppercase text-green-600 dark:text-green-400">
+                          {link.target.type}
+                        </div>
+                        {buildAdminEntityDeepLink(link.target.type, link.target.id) && (
+                          <a
+                            href={buildAdminEntityDeepLink(link.target.type, link.target.id) as string}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] shrink-0 text-primary underline-offset-2 hover:underline"
+                            title="Open in admin (new tab)"
+                          >
+                            Open
+                          </a>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground break-words">{targetLabel}</div>
                       <div className="text-[11px] font-mono break-all text-foreground">{link.target.id}</div>

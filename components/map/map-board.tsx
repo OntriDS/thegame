@@ -266,27 +266,39 @@ const BUSINESS_TYPES_ORDER: PhysicalBusinessType[] = [
 
 
 
-function createSingleMarkerIcon(theme: MarkerTheme): L.DivIcon {
+function getMarkerScale(zoomLevel: number): number {
+  if (zoomLevel >= 13) return 1;
+  return Math.max(0.4, 1 - (13 - zoomLevel) * 0.2);
+}
+
+function createSingleMarkerIcon(theme: MarkerTheme, zoomLevel: number = 13): L.DivIcon {
+  const scale = getMarkerScale(zoomLevel);
+  const size = Math.round(32 * scale);
+  const iconSize = Math.round(16 * scale);
+  const inset = Math.round(4 * scale);
+  const ringWidth = Math.max(1, Math.round(2 * scale));
+  const glowWidth = Math.max(2, Math.round(4 * scale));
+
   const html = `
-    <div style="position: relative; width: 32px; height: 32px; transform: translate(-50%, -50%);">
+    <div style="position: relative; width: ${size}px; height: ${size}px; transform: translate(-50%, -50%);">
       <div style="
         position: absolute;
         inset: 0;
         border-radius: 999px;
         background: rgba(15, 23, 42, 0.92);
-        border: 2px solid ${theme.ringColor};
-        box-shadow: 0 0 0 4px ${theme.glowColor};
+        border: ${ringWidth}px solid ${theme.ringColor};
+        box-shadow: 0 0 0 ${glowWidth}px ${theme.glowColor};
       "></div>
       <div style="
         position: absolute;
-        inset: 4px;
+        inset: ${inset}px;
         border-radius: 999px;
         background: #0f172a;
         display: flex;
         align-items: center;
         justify-content: center;
       ">
-        <img src="${theme.iconPath}" alt="${theme.label}" style="width: 16px; height: 16px; border-radius: 2px;" />
+        <img src="${theme.iconPath}" alt="${theme.label}" style="width: ${iconSize}px; height: ${iconSize}px; border-radius: 2px;" />
       </div>
     </div>
   `;
@@ -294,9 +306,9 @@ function createSingleMarkerIcon(theme: MarkerTheme): L.DivIcon {
   return new L.DivIcon({
     className: 'leaflet-map-single-marker',
     html,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -14],
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -(size / 2) - 2],
   });
 }
 
@@ -638,6 +650,111 @@ function MapInteractionMode({ mapInteractionLocked }: { mapInteractionLocked: bo
   }, [map, mapInteractionLocked]);
 
   return null;
+}
+
+function MapMarkersLayer({
+  visibleMarkers,
+  mapInteractionLocked,
+  settlementNameById,
+  onSiteMarkerDragEnd,
+  handleOpenSiteByMarker,
+}: {
+  visibleMarkers: MapMarker[];
+  mapInteractionLocked: boolean;
+  settlementNameById: Map<string, string>;
+  onSiteMarkerDragEnd?: (siteId: string, lat: number, lng: number) => void;
+  handleOpenSiteByMarker: (siteId: string) => void;
+}) {
+  const map = useMap();
+  const [zoom, setZoom] = useState(map.getZoom());
+
+  useMapEvents({
+    zoomend: () => setZoom(map.getZoom()),
+  });
+
+  return (
+    <>
+      {visibleMarkers.map((marker) => {
+        const theme = BUSINESS_TYPE_THEME[marker.businessType];
+        const owners = marker.owners.map((owner) => owner.name).join(', ');
+        const settlementName = settlementNameById.get(marker.settlementId) ?? marker.settlementId;
+        const scale = getMarkerScale(zoom);
+        const tooltipOffset = Math.round(-16 * scale);
+
+        return (
+          <Marker
+            key={marker.siteId}
+            position={[marker.lat, marker.lng]}
+            icon={createSingleMarkerIcon(theme, zoom)}
+            draggable={!mapInteractionLocked}
+            eventHandlers={{
+              dragend: (e) => {
+                if (!onSiteMarkerDragEnd) return;
+                const latLng = e.target.getLatLng();
+                onSiteMarkerDragEnd(marker.siteId, latLng.lat, latLng.lng);
+              },
+            }}
+          >
+            <Tooltip direction="top" offset={[0, tooltipOffset]}>
+              <div className="text-xs">
+                <div className="font-semibold text-[13px]">{marker.siteName}</div>
+                <div className="text-muted-foreground mb-1">
+                  {theme.label} {settlementName && `• ${settlementName}`}
+                </div>
+                <div className="text-muted-foreground text-[10px]">
+                  Owners: {owners || 'Unassigned'}
+                </div>
+              </div>
+            </Tooltip>
+            <Popup>
+              <div className="min-w-[14rem] text-xs p-1">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="flex h-7 w-7 items-center justify-center rounded bg-slate-800"
+                      style={{ border: `1px solid ${theme.baseColor}` }}
+                    >
+                      <img src={theme.iconPath} alt={theme.label} className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-[13px] flex items-center gap-1">
+                        {marker.siteName}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenSiteByMarker(marker.siteId)}
+                          className="text-muted-foreground hover:text-emerald-500 cursor-pointer"
+                          title="Edit Site in Sites tab"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">{theme.label}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-2 rounded border border-border p-2 bg-muted/20">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground text-[11px]">Settlement</span>
+                      <span className="font-medium text-[11px] truncate max-w-[120px] text-right" title={settlementName}>
+                        {settlementName}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground text-[11px]">Owners</span>
+                      <span className="font-medium text-[11px] truncate max-w-[120px] text-right" title={owners}>
+                        {owners || 'None'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        );
+      })}
+    </>
+  );
 }
 
 type MapBoardProps = {
@@ -1146,82 +1263,13 @@ export default function MapBoard({
           />
           <MapBoardCameraController region={activeRegion} />
           <TileLayer url={tileUrl} attribution={tileAttribution} />
-          {visibleMarkers.map((marker) => {
-            const theme = BUSINESS_TYPE_THEME[marker.businessType];
-            const owners = marker.owners.map((owner) => owner.name).join(', ');
-            const settlementName = settlementNameById.get(marker.settlementId) ?? marker.settlementId;
-            return (
-              <Marker
-                key={marker.siteId}
-                position={[marker.lat, marker.lng]}
-                icon={createSingleMarkerIcon(theme)}
-                draggable={!mapInteractionLocked}
-                eventHandlers={{
-                  dragend: (e) => {
-                    if (!onSiteMarkerDragEnd) return;
-                    const latLng = e.target.getLatLng();
-                    onSiteMarkerDragEnd(marker.siteId, latLng.lat, latLng.lng);
-                  },
-                }}
-              >
-                <Tooltip direction="top" offset={[0, -14]}>
-                  <div className="text-xs">
-                    <div className="font-semibold text-[13px]">{marker.siteName}</div>
-                    <div className="text-muted-foreground mb-1">
-                      {theme.label} {settlementName && `• ${settlementName}`}
-                    </div>
-                    <div className="text-muted-foreground text-[10px]">
-                      Owners: {owners || 'Unassigned'}
-                    </div>
-                  </div>
-                </Tooltip>
-                <Popup>
-                  <div className="min-w-[14rem] text-xs p-1">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="flex h-7 w-7 items-center justify-center rounded bg-slate-800"
-                          style={{ border: `1px solid ${theme.baseColor}` }}
-                        >
-                          <img src={theme.iconPath} alt={theme.label} className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <div className="font-semibold text-[13px] flex items-center gap-1">
-                            {marker.siteName}
-                            <button
-                              type="button"
-                              onClick={() => handleOpenSiteByMarker(marker.siteId)}
-                              className="text-muted-foreground hover:text-emerald-500 cursor-pointer"
-                              title="Edit Site in Sites tab"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                            </button>
-                          </div>
-                          <div className="text-[10px] text-muted-foreground">{theme.label}</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-2 rounded border border-border p-2 bg-muted/20">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground text-[11px]">Settlement</span>
-                          <span className="font-medium text-[11px] truncate max-w-[120px] text-right" title={settlementName}>
-                            {settlementName}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground text-[11px]">Owners</span>
-                          <span className="font-medium text-[11px] truncate max-w-[120px] text-right" title={owners}>
-                            {owners || 'None'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          })}
+          <MapMarkersLayer
+            visibleMarkers={visibleMarkers}
+            mapInteractionLocked={mapInteractionLocked}
+            settlementNameById={settlementNameById}
+            onSiteMarkerDragEnd={onSiteMarkerDragEnd}
+            handleOpenSiteByMarker={handleOpenSiteByMarker}
+          />
           {effectiveShapePreview?.type === 'rectangle' && effectiveShapePreview.bounds && (
             <Rectangle
               bounds={effectiveShapePreview.bounds}
