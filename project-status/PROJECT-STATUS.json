@@ -139,7 +139,7 @@
       "description": "Track Sales from different sources"
     },
     "maps": {
-      "status": "in-progress",
+      "status": "done",
       "version": "v0.1",
       "description": "Basic Sites System and World Map"
     },
@@ -179,12 +179,12 @@
       "description": "Basic Settings System"
     },
     "pixelbrain-integration": {
-      "status": "in-progress",
+      "status": "done",
       "version": "v0.1",
       "description": "Basic MCP and AI Agents System"
     },
     "ecosystem-integration": {
-      "status": "in-progress",
+      "status": "done",
       "version": "v0.1",
       "description": "Available Items, Inventory and Accounts Integration"
     }

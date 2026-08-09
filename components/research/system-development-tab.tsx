@@ -63,8 +63,9 @@ export function SystemDevelopmentTab({ projectStatus }: SystemDevelopmentTabProp
                     <div key={systemKey} className="space-y-3 p-3 border rounded-lg">
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${
+                          system.status?.toLowerCase() === 'optimized' ? 'bg-cyan-500' :
                           system.status?.toLowerCase() === 'done' ? 'bg-green-500' : 
-                          system.status?.toLowerCase() === 'in progress' ? 'bg-yellow-500' : 'bg-red-500'
+                          (system.status?.toLowerCase() === 'in progress' || system.status?.toLowerCase() === 'in-progress') ? 'bg-yellow-500' : 'bg-red-500'
                         }`}></div>
                         <span className="font-medium capitalize">{systemKey.replace(/([A-Z])/g, ' $1').trim()}</span>
                       </div>
