@@ -577,6 +577,22 @@ export default function MissionTreeModalContent({
     setCustomerCharacterRole(role);
   };
 
+  const getOwnerName = () => {
+    if (!ownerId) return 'Owner';
+    const ids = Array.isArray(ownerId) ? ownerId : [ownerId as string];
+    if (ids.length === 0) return 'Owner';
+    const owners = allCharacters.filter(c => ids.includes(c.id));
+    if (owners.length === 0) return 'Owner';
+    if (owners.length === 1) return owners[0].name;
+    return `${owners[0].name} +${owners.length - 1}`;
+  };
+
+  const getPlayerName = () => {
+    if (!playerCharacterId) return 'Player';
+    const p = allCharacters.find(c => c.id === playerCharacterId);
+    return p ? p.name : 'Player';
+  };
+
   // Render the form
   return (
     <>
@@ -1073,7 +1089,7 @@ export default function MissionTreeModalContent({
             className="h-8 text-xs"
           >
             <User className="w-3 h-3 mr-1" />
-            Player
+            {getPlayerName()}
           </Button>
           <Button
             type="button"
@@ -1082,7 +1098,7 @@ export default function MissionTreeModalContent({
             className="h-8 text-xs"
           >
             <User className="w-3 h-3 mr-1" />
-            Owner
+            {getOwnerName()}
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-4">
