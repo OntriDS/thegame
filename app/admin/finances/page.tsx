@@ -38,7 +38,7 @@ import { getAreaDisplayLabel, getStationDisplayLabel } from '@/lib/constants/bus
 import type { Area, Station } from '@/types/type-aliases';
 import { CompanyRecordsList, PersonalRecordsList } from '@/components/finances/financial-records-components';
 import { MonthSelector } from '@/components/ui/month-selector';
-import { formatMonthKey, formatDisplayDate } from '@/lib/utils/date-utils';
+import { formatMonthKey, formatForDisplay } from '@/lib/utils/date-display-utils';;
 import { Switch } from '@/components/ui/switch';
 import {
   formatDecimal,
@@ -1164,7 +1164,7 @@ function FinancesPageContent() {
                         {treasuryData.buybacks.map((buyback: any) => (
                           <div key={buyback.id} className="text-xs border border-border/30 rounded-md p-2.5 bg-muted/20 hover:bg-muted/30 transition-colors">
                             <div className="flex justify-between items-start mb-1">
-                              <div className="font-medium text-foreground/90">{formatDisplayDate(buyback.date)}</div>
+                              <div className="font-medium text-foreground/90">{formatForDisplay(buyback.date)}</div>
                               <div className="text-right">
                                 <div className="font-semibold text-foreground">{buyback.j$BoughtBack.toFixed(2)} J$</div>
                                 {buyback.cashOutType === 'USD' ? (

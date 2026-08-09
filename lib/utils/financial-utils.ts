@@ -281,3 +281,28 @@ export const getTotalNetWorth = (
   return monetaryTotal + jungleCoinsTotal + inventoryTotal + otherTotal;
 };
 
+/**
+ * Calculates the exact UTC closing date based on business period configurations.
+ * Monthly closes at end of UTC month.
+ */
+export function calculateClosingDate(
+  periodType: 'monthly' | 'quarterly' | 'yearly',
+  currentDate: Date
+): Date {
+  if (!currentDate || isNaN(currentDate.getTime())) {
+    throw new Error('Invalid date provided to calculateClosingDate');
+  }
+
+  // Right now only monthly is used, but we keep the switch for future
+  switch (periodType) {
+    case 'monthly':
+      // Get the last day of the current month in UTC
+      const year = currentDate.getUTCFullYear();
+      const month = currentDate.getUTCMonth();
+      // Using 0 as the day for next month returns the last day of the current month
+      const lastDay = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
+      return lastDay;
+    default:
+      throw new Error(`Period type ${periodType} not implemented yet.`);
+  }
+}

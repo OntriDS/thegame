@@ -477,20 +477,47 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
             {siteType === SiteType.PHYSICAL && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="googleMaps" className="text-xs">Google Maps Address</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="googleMaps" className="text-xs">Location (Google Maps URL or Address)</Label>
+                    <Button 
+                      type="button" 
+                      size="sm" 
+                      variant="outline" 
+                      className="h-7 text-xs bg-primary/10 hover:bg-primary/20 text-primary border-primary/20"
+                      onClick={requestPickCoordsFromMap}
+                    >
+                      <MapPin className="h-3.5 w-3.5 mr-1.5" />
+                      Pick on Map
+                    </Button>
+                  </div>
                   <Input
                     id="googleMaps"
                     value={googleMapsAddress}
-                    onChange={(e) => setGoogleMapsAddress(e.target.value)}
-                    placeholder="URL or textual address"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setGoogleMapsAddress(val);
+                      // Auto-extract coordinates if full Google Maps URL is pasted
+                      const match = val.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+                      if (match) {
+                        const lat = parseFloat(match[1]);
+                        const lng = parseFloat(match[2]);
+                        if (!isNaN(lat) && !isNaN(lng)) {
+                          setCoordinates({ lat, lng });
+                        }
+                      }
+                    }}
+                    placeholder="Paste full Google Maps URL to auto-extract coordinates..."
                     className="h-8 text-sm"
                   />
+                  <p className="text-[11px] text-muted-foreground leading-tight">
+                    Paste a full Google Maps link (e.g. google.com/maps/.../@lat,lng) to automatically set the map pin, or use the Pick on Map button.
+                  </p>
                 </div>
                 
                 {/* Coordinates */}
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">
-                    Map Coordinates
+                <div className="space-y-2 pt-2 border-t border-border/50">
+                  <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                    Exact Map Coordinates (Auto-filled)
                   </Label>
                   <div className="grid grid-cols-2 gap-2">
                     <NumericInput
@@ -501,7 +528,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                         lat: value,
                         lng: prev?.lng || 0
                       }))}
-                      className="h-8 text-sm"
+                      className="h-8 text-sm bg-muted/50"
                     />
                     <NumericInput
                       placeholder="Longitude"
@@ -511,34 +538,23 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                         lat: prev?.lat || 0,
                         lng: value
                       }))}
-                      className="h-8 text-sm"
+                      className="h-8 text-sm bg-muted/50"
                     />
                   </div>
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    Set coordinates to position this site independently on the map.
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-[11px]"
-                      onClick={openGoogleMapsForCoords}
-                    >
-                      <MapPinned className="h-3 w-3 mr-1.5" />
-                      Preview
-                    </Button>
-                    <Button 
-                      type="button" 
-                      size="sm" 
-                      variant="outline" 
-                      className="h-7 text-[11px]"
-                      onClick={requestPickCoordsFromMap}
-                    >
-                      <MapPin className="h-3 w-3 mr-1.5" />
-                      Set from map
-                    </Button>
-                  </div>
+                  {!!(coordinates?.lat && coordinates?.lng) && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-[11px]"
+                        onClick={openGoogleMapsForCoords}
+                      >
+                        <MapPinned className="h-3 w-3 mr-1.5" />
+                        Preview Pin on Google Maps
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

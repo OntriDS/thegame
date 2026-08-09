@@ -44,7 +44,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { format } from 'date-fns';
 import { FrequencyConfig } from '@/components/ui/frequency-calendar';
 // UTC STANDARDIZATION: Using new UTC utilities
-import { validateFrequencyConfig } from '@/lib/utils/recurrent-date-utils';
+import { validateFrequencyConfig } from '@/lib/utils/recurrent-validation';;
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { formatForDisplay } from '@/lib/utils/date-display-utils';
 import DeleteModal from './submodals/delete-submodal';

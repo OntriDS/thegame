@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ClientAPI } from '@/lib/client-api';
 import { FinancialRecord } from '@/types/entities';
-import { formatMonthYear, reviveDates } from '@/lib/utils/date-utils';
+import { formatMonthYear } from '@/lib/utils/date-display-utils';
+import { reviveDates } from '@/lib/utils/date-parsers';;
 import FinancialsModal from '@/components/modals/financials-modal';
 import { ArrowUpDown, RefreshCw } from 'lucide-react';
 

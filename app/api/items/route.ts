@@ -7,7 +7,7 @@ import { getUTCNow } from '@/lib/utils/utc-utils';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { ItemStatus } from '@/types/enums';
 import { isSoldStatus } from '@/lib/utils/status-utils';
-import { parseFlexibleDate } from '@/lib/utils/date-utils';
+import { parseDateToUTC } from '@/lib/utils/date-parsers';;
 
 // Force dynamic rendering - this route accesses cookies
 export const dynamic = 'force-dynamic';
@@ -117,13 +117,13 @@ export async function GET(req: NextRequest) {
         // Fallback to updatedAt or createdAt if soldAt is missing (e.g. imported items)
         const dateStr = item.soldAt || item.updatedAt || item.createdAt;
         if (!dateStr) return false;
-        const d = parseFlexibleDate(dateStr);
+        const d = parseDateToUTC(dateStr);
         return d.getMonth() + 1 === month && d.getFullYear() === year;
       });
     } else {
       // For other items, use createdAt or similar logic if needed
       items = items.filter(item => {
-        const d = parseFlexibleDate(item.createdAt);
+        const d = parseDateToUTC(item.createdAt);
         return d.getMonth() + 1 === month && d.getFullYear() === year;
       });
     }

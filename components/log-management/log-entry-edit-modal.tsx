@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Edit2, Info } from 'lucide-react';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
-import { formatMonthKey } from '@/lib/utils/date-utils';
+import { formatMonthKey } from '@/lib/utils/date-display-utils';;
 import { buildLogMonthKey } from '@/data-store/keys';
 
 /** Value for `<input type="datetime-local" />` from stored log timestamp (ISO or DD-MM-YYYY). */

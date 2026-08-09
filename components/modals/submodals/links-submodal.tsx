@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { EntityType } from '@/types/enums';
 import { useEffect, useState } from 'react';
 import { ClientAPI } from '@/lib/client-api';
-import { formatDisplayDate } from '@/lib/utils/date-utils';
+import { formatForDisplay } from '@/lib/utils/date-display-utils';;
 import { buildAdminEntityDeepLink } from '@/lib/utils/entity-admin-deep-links';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 
@@ -273,7 +273,7 @@ function LinkCard({
         </span>
         {link.createdAt && (
           <span className="text-xs text-muted-foreground shrink-0 ml-2">
-            {formatDisplayDate(link.createdAt)}
+            {formatForDisplay(link.createdAt)}
           </span>
         )}
       </div>

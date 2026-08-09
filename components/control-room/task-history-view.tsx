@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MonthSelector } from '@/components/ui/month-selector';
 import { format } from 'date-fns';
 import { Loader2, Calendar, ChevronRight, FolderOpen, ArrowUpDown } from 'lucide-react';
-import { reviveDates } from '@/lib/utils/date-utils';
+import { reviveDates } from '@/lib/utils/date-parsers';;
 import { TASK_TYPE_ICONS } from '@/lib/constants/app-constants';
 import { TaskType, TaskStatus } from '@/types/enums';
 import { useMonthlySummary } from '@/lib/hooks/use-monthly-summary';

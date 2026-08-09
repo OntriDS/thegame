@@ -46,7 +46,7 @@ import { getCollectionLabel } from '@/lib/constants/collection-labels';
 // Side effects handled by parent component via API calls
 import { v4 as uuid } from 'uuid';
 import { PRICE_STEP, QUANTITY_STEP, J$_TO_USD_RATE } from '@/lib/constants/app-constants';
-import { formatMonthYear } from '@/lib/utils/date-utils';
+import { formatMonthYear } from '@/lib/utils/date-display-utils';;
 import { ItemStatus } from '@/types/enums';
 import { getItemStatusLabel } from '@/lib/constants/status-display-labels';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';

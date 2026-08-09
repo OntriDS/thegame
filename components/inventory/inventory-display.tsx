@@ -58,7 +58,7 @@ import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { MonthSelector } from '@/components/ui/month-selector';
 import { Switch } from '@/components/ui/switch';
-import { formatMonthKey, getCurrentMonthKey, sortMonthKeys, formatDisplayDate } from '@/lib/utils/date-utils';
+import { formatMonthKey, getCurrentMonthKey, sortMonthKeys, formatForDisplay } from '@/lib/utils/date-display-utils';;
 
 function inventoryTabForItem(item: Item): InventoryTab {
   if (isSoldStatus(item.status)) {

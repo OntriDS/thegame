@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { User } from 'lucide-react';
 import { Player } from '@/types/entities';
 import { ClientAPI } from '@/lib/client-api';
-import { formatDisplayDate } from '@/lib/utils/date-utils';
+import { formatForDisplay } from '@/lib/utils/date-display-utils';;
 import { getZIndexClass, getZIndexValue } from '@/lib/utils/z-index-utils';
 
 interface PersonalDataModalProps {
@@ -108,7 +108,7 @@ export default function PersonalDataModal({ player, open, onOpenChange, onSave }
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Last Active</span>
                   <span className="text-xs">
-                    {player.lastActiveAt ? formatDisplayDate(player.lastActiveAt) : 'N/A'}
+                    {player.lastActiveAt ? formatForDisplay(player.lastActiveAt) : 'N/A'}
                   </span>
                 </div>
               )}

@@ -2,7 +2,7 @@ import { parseEntityTypeParameter } from '@/lib/mcp/parse-entity-type-param';
 import { getLogEntryById, patchLogEntryById } from '@/workflows/entities-logging';
 import { getSaleById, getTaskById, getItemById, getFinancialById } from '@/data-store/datastore';
 import { getSaleLogDetails } from '@/lib/utils/sale-log-details';
-import { calculateClosingDate } from '@/lib/utils/date-utils';
+import { calculateClosingDate } from '@/lib/utils/financial-utils';;
 import { EntityType } from '@/types/enums';
 import { getUTCNow, toUTC } from '@/lib/utils/utc-utils';
 
@@ -29,7 +29,7 @@ export async function execute(parameters: any) {
       const d = sale.doneAt || (sale as { chargedAt?: Date }).chargedAt;
       timestampIso = d ? toUTC(d).toISOString() : undefined;
     } else if (targetEvent === 'COLLECTED') {
-      const raw = sale.collectedAt || calculateClosingDate(sale.saleDate ? toUTC(sale.saleDate) : getUTCNow());
+      const raw = sale.collectedAt || calculateClosingDate('monthly', sale.saleDate ? toUTC(sale.saleDate) : getUTCNow());
       timestampIso = raw ? toUTC(raw).toISOString() : undefined;
     }
     const patchResult = await patchLogEntryById(EntityType.SALE, {

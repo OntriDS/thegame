@@ -14,7 +14,7 @@ import {
 import { ChevronDown, Clipboard, Loader2, Trash2 } from "lucide-react";
 import type { AvailableArchiveMonth, PlayerArchiveRow } from "@/types/archive";
 import type { Task, Sale, FinancialRecord, Item } from "@/types/entities";
-import { formatDisplayDate } from "@/lib/utils/date-utils";
+import { formatForDisplay } from '@/lib/utils/date-display-utils';;
 import { formatCurrency } from "@/lib/utils/financial-utils";
 import { ClientAPI } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
@@ -78,7 +78,7 @@ const TaskColumns: ColumnConfig<Task>[] = [
   {
     key: "collectedAt",
     label: "Collected",
-    accessor: (row) => (row.collectedAt ? formatDisplayDate(row.collectedAt) : "—"),
+    accessor: (row) => (row.collectedAt ? formatForDisplay(row.collectedAt) : "—"),
     sortable: true,
     sortValue: (row) => row.collectedAt ? new Date(row.collectedAt).getTime() : 0,
   },
@@ -105,7 +105,7 @@ const SalesColumns: ColumnConfig<Sale>[] = [
   {
     key: "saleDate",
     label: "Sale Date",
-    accessor: (row) => formatDisplayDate(row.saleDate),
+    accessor: (row) => formatForDisplay(row.saleDate),
     sortable: true,
     sortValue: (row) => new Date(row.saleDate ?? new Date()).getTime(),
   },
@@ -132,7 +132,7 @@ const FinancialColumns: ColumnConfig<FinancialRecord>[] = [
   {
     key: "collectedAt",
     label: "Collected",
-    accessor: (row) => (row.collectedAt ? formatDisplayDate(row.collectedAt) : "—"),
+    accessor: (row) => (row.collectedAt ? formatForDisplay(row.collectedAt) : "—"),
     sortable: true,
     sortValue: (row) => row.collectedAt ? new Date(row.collectedAt).getTime() : 0,
   },

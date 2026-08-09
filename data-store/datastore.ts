@@ -105,7 +105,7 @@ import {
 import { SummaryService } from './services/summary.service';
 import { SummaryRepository } from './repositories/summary.repo';
 // UTC STANDARDIZATION: Using new UTC utilities
-import { reviveDates } from '@/lib/utils/date-utils';
+import { reviveDates } from '@/lib/utils/date-parsers';;
 import {
   getUTCNow,
   toUTCISOString,
@@ -584,7 +584,7 @@ export async function migrateUtcMonthlyRedisIndexes(options: {
 
 
   let sales = await repoGetAllSales();
-  sales = reviveDates(sales)
+  sales = reviveDates<Sale[]>(sales)
     .filter((s): s is Sale => s != null)
     .map((s) => normalizeSale(s));
 
@@ -1187,7 +1187,7 @@ export async function getSalesForMonth(year: number, month: number): Promise<Sal
   // The Vault specifically filters for CHARGED/COLLECTED.
   // I will leave filtering to the consumer if they want specific statuses, 
   // but for the "Sales Archive" tab, we should probably follow the existing logic.
-  return reviveDates(sales).map(s => normalizeSale(s));
+  return reviveDates<Sale[]>(sales).map(s => normalizeSale(s));
 }
 
 /**

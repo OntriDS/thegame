@@ -2,7 +2,7 @@ import { addDays, addWeeks, addMonths } from 'date-fns';
 import { Task } from '@/types/entities';
 import { RecurrentFrequency, TaskType } from '@/types/enums';
 import { FrequencyConfig } from '@/components/ui/frequency-calendar';
-import { fromRecurrentUTC, toRecurrentUTC, addDaysUTC, addWeeksUTC, addMonthsUTC } from './recurrent-date-utils';
+import { fromRecurrentUTC, toRecurrentUTC, addDaysUTC, addWeeksUTC, addMonthsUTC } from '@/lib/utils/utc-utils';;
 
 export interface TaskOccurrence {
   task: Task;

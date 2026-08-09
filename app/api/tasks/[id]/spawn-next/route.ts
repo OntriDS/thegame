@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTaskById, upsertTask } from '@/data-store/datastore';
 import { spawnNextRecurrentInstance, updateTemplateLastSpawnedDate, canSpawnMoreInstances } from '@/lib/utils/recurrent-task-utils';
 import { EntityType, TaskType } from '@/types/enums';
-import { toRecurrentUTC, fromRecurrentUTC } from '@/lib/utils/recurrent-date-utils';
+import { toRecurrentUTC, fromRecurrentUTC } from '@/lib/utils/utc-utils';;
 import { requireAdminOrM2MAuth } from '@/lib/api-auth';
 
 /**

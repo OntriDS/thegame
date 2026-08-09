@@ -193,3 +193,31 @@ export function tryParseToUTC(input: Date | string | number | null | undefined):
     return null;
   }
 }
+
+/**
+ * Deep traverse an object and parse string dates into Date objects.
+ * Assumes the strings are ISO or YYYY-MM-DD. Uses toUTC safely.
+ */
+export function reviveDates<T = any>(obj: any): T {
+  if (obj === null || obj === undefined) return obj as T;
+  if (obj instanceof Date) return obj as unknown as T;
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => reviveDates(item)) as unknown as T;
+  }
+
+  if (typeof obj === 'object') {
+    const revived: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[\+-]\d{2}:\d{2}))?$/)) {
+        // Fast test for ISO-like strings, then parse it safely to UTC
+        revived[key] = tryParseToUTC(value) || value;
+      } else {
+        revived[key] = reviveDates(value);
+      }
+    }
+    return revived as T;
+  }
+
+  return obj as T;
+}

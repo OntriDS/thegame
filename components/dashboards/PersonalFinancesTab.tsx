@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { User } from 'lucide-react';
 import { PersonalMonthlySummary } from '@/types/entities';
 import { formatCurrency } from '@/lib/utils/financial-utils';
-import { formatMonthKey } from '@/lib/utils/date-utils';
+import { formatMonthKey } from '@/lib/utils/date-display-utils';;
 import { BUSINESS_STRUCTURE } from '@/types/enums';
 import { getStationDisplayLabel } from '@/lib/constants/business-structure-labels';
 

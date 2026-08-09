@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Trophy, Star, Plus, X, Award, ChevronDown } from 'lucide-react';
 import { Character, CharacterAchievement } from '@/types/entities';
-import { formatDisplayDate } from '@/lib/utils/date-utils';
+import { formatForDisplay } from '@/lib/utils/date-display-utils';;
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PREDEFINED_ACHIEVEMENTS } from '@/lib/constants/achievements';
 
@@ -193,7 +193,7 @@ export default function CharacterProgressionSubmodal({
                             <div className="text-sm text-muted-foreground">{achievement.description}</div>
                           )}
                           <div className="text-xs text-muted-foreground mt-1">
-                            {formatDisplayDate(achievement.createdAt)}
+                            {formatForDisplay(achievement.createdAt)}
                           </div>
                         </div>
                       </div>

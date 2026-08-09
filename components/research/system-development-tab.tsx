@@ -4,7 +4,7 @@ import { TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Target, Zap } from 'lucide-react';
-import { formatDisplayDate } from '@/lib/utils/date-utils';
+import { formatForDisplay } from '@/lib/utils/date-display-utils';;
 
 interface SystemDevelopmentTabProps {
   projectStatus: any;
@@ -48,7 +48,7 @@ export function SystemDevelopmentTab({ projectStatus }: SystemDevelopmentTabProp
                 <div className="space-y-2">
                   <h4 className="font-semibold">Last Updated</h4>
                   <p className="text-sm text-muted-foreground">
-                    {formatDisplayDate(new Date(projectStatus.lastUpdated))}
+                    {formatForDisplay(new Date(projectStatus.lastUpdated))}
                   </p>
                 </div>
               </div>

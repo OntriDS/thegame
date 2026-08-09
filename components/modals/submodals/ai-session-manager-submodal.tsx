@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { getSessions, createSession, setActiveSession } from '@/lib/client/sessions';
 import { ClientAPI } from '@/lib/client-api';
-import { formatDisplayDate } from '@/lib/utils/date-utils';
+import { formatForDisplay } from '@/lib/utils/date-display-utils';;
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -79,7 +79,7 @@ export default function AiSessionManagerSubmodal({ open, onOpenChange, onSession
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays}d ago`;
-    return formatDisplayDate(d);
+    return formatForDisplay(d);
   };
 
   const handleLoadSession = async (sessionId: string) => {

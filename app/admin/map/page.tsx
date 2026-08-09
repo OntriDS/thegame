@@ -372,7 +372,9 @@ function MapPageContent() {
     if (isNoneSite(site)) {
       return;
     }
-    setActiveView('sites');
+    // Deliberately NOT switching to 'sites' view here.
+    // This allows users to click a marker on the map and edit the site right there
+    // without being forcefully switched away from the map tab.
     setSelectedSite(site);
     setShowSiteModal(true);
   }, []);

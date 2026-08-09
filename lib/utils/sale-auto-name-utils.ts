@@ -1,7 +1,7 @@
 import { SaleType } from '@/types/enums';
 import type { Site } from '@/types/entities';
 import { getSiteNameFromId } from '@/lib/utils/site-options-utils';
-import { parseFlexibleDate } from '@/lib/utils/date-utils';
+import { parseDateToUTC } from '@/lib/utils/date-parsers';;
 
 const TITLE_SEP = ' • ';
 
@@ -16,7 +16,7 @@ function timelinePartToDate(raw: unknown): Date | null {
   if (raw instanceof Date) {
     return Number.isFinite(raw.getTime()) ? raw : null;
   }
-  const d = parseFlexibleDate(raw as string);
+  const d = parseDateToUTC(raw as string);
   return Number.isFinite(d.getTime()) ? d : null;
 }
 

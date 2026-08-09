@@ -2,7 +2,7 @@
 import { FinancialRecord, Sale, Item, Task, ItemSaleLine, SummaryTotals } from '@/types/entities';
 import { SaleStatus, ItemStatus, TaskStatus } from '@/types/enums';
 import { SummaryRepository } from '../repositories/summary.repo';
-import { formatMonthKey } from '@/lib/utils/date-utils';
+import { formatMonthKey } from '@/lib/utils/date-display-utils';;
 import { formatArchiveMonthKeyUTC, formatArchiveMonthKeyUTCFromParts } from '@/lib/utils/utc-utils';
 import {
   cashflowCountableCost,
@@ -228,7 +228,7 @@ export class SummaryService {
    * Uses live month indexes (tasks, financials, sales). itemsSold is derived from sales lines.
    */
   static async rebuildAllSummaries(): Promise<{ success: boolean; count: number }> {
-    const { formatMonthKey } = await import('@/lib/utils/date-utils');
+    const { formatMonthKey } = await import('@/lib/utils/date-display-utils');
     const { kvDel, kvSAdd } = await import('@/lib/utils/kv');
     const { buildSummaryMonthsKey } = await import('@/data-store/keys');
     

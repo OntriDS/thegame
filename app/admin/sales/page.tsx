@@ -20,7 +20,7 @@ import SalesModal from "@/components/modals/sales-modal";
 import { MonthSelector } from "@/components/ui/month-selector";
 import { CurrencyExchangeRates, DEFAULT_CURRENCY_EXCHANGE_RATES } from "@/lib/constants/financial-constants";
 import { formatCurrency, roundCurrency2 } from "@/lib/utils/financial-utils";
-import { formatMonthKey } from "@/lib/utils/date-utils";
+import { formatMonthKey } from '@/lib/utils/date-display-utils';;
 import { SalesDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 import { useMonthlySummary } from '@/lib/hooks/use-monthly-summary';
 

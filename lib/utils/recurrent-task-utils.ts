@@ -8,19 +8,10 @@ import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { appendEntityLog } from '@/workflows/entities-logging';
 import { FrequencyConfig } from '@/components/ui/frequency-calendar';
 import { v4 as uuid } from 'uuid';
-import { formatDayMonth, formatDayMonthYear } from '@/lib/utils/date-utils';
+import { formatDayMonth, formatDayMonthYear } from '@/lib/utils/date-display-utils';;
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
 import { isTaskHistoryTerminal } from '@/lib/utils/task-active-utils';
-import { 
-  toRecurrentUTC,
-  fromRecurrentUTC,
-  getNextWeekdayFromDate,
-  addDaysUTC,
-  addWeeksUTC,
-  addMonthsUTC,
-  getUTCCivilDayStartMs,
-  utcCalendarDayKey,
-} from './recurrent-date-utils';
+import { toRecurrentUTC, fromRecurrentUTC, getNextWeekdayFromDate, addDaysUTC, addWeeksUTC, addMonthsUTC, getUTCCivilDayStartMs, utcCalendarDayKey } from '@/lib/utils/utc-utils';;
 import { validateSpawnOperation, getSafetyLimitDate, SpawnErrorCode } from './recurrent-validation';
 import { clampToValidUTC, toUTC } from './utc-utils';
 

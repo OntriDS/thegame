@@ -62,7 +62,7 @@ import {
 } from "@/types/entities";
 import { v4 as uuid } from "uuid";
 import { createSiteOptionsWithCategories } from "@/lib/utils/site-options-utils";
-import { formatDisplayDate } from "@/lib/utils/date-utils";
+import { formatForDisplay } from '@/lib/utils/date-display-utils';;
 import { buildAutoSaleName } from "@/lib/utils/sale-auto-name-utils";
 import SaleItemsSubModal from "./submodals/sale-items-submodal";
 import ConfirmationModal from "./submodals/confirmation-submodal";
@@ -923,7 +923,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                 >
                   <CalendarIcon className="mr-2 h-3 w-3" />
                   {saleDate ? (
-                    formatDisplayDate(saleDate)
+                    formatForDisplay(saleDate)
                   ) : (
                     <span>Pick a date</span>
                   )}

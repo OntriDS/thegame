@@ -20,8 +20,8 @@ import TaskModal from '@/components/modals/task-modal';
 import { useState, useRef, useEffect } from 'react';
 import { ClientAPI } from '@/lib/client-api';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
-import { formatDisplayDate } from '@/lib/utils/date-utils';
-import { fromRecurrentUTC } from '@/lib/utils/recurrent-date-utils';
+import { formatForDisplay } from '@/lib/utils/date-display-utils';;
+import { fromRecurrentUTC } from '@/lib/utils/utc-utils';;
 import { computeNextSiblingOrder } from '@/lib/utils/task-order-utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import ConfirmationModal from '@/components/modals/submodals/confirmation-submodal';
@@ -541,14 +541,14 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
                     {isNextSpawnLoading
                       ? 'Calculating...'
                       : nextSpawnDate
-                        ? `Next: ${formatDisplayDate(nextSpawnDate)}`
+                        ? `Next: ${formatForDisplay(nextSpawnDate)}`
                         : nextSpawnStatusMessage || 'No next date'}
                   </span>
                 </div>
                 {(task.recurrenceStart || task.recurrenceEnd) && (
                   <div className="flex gap-2 text-[9px] text-muted-foreground uppercase tracking-wider">
-                    {task.recurrenceStart && <span>Start: {formatDisplayDate(fromRecurrentUTC(task.recurrenceStart))}</span>}
-                    {task.recurrenceEnd && <span>End: {formatDisplayDate(fromRecurrentUTC(task.recurrenceEnd))}</span>}
+                    {task.recurrenceStart && <span>Start: {formatForDisplay(fromRecurrentUTC(task.recurrenceStart))}</span>}
+                    {task.recurrenceEnd && <span>End: {formatForDisplay(fromRecurrentUTC(task.recurrenceEnd))}</span>}
                   </div>
                 )}
               </div>

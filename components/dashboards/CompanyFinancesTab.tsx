@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2 } from 'lucide-react';
 import { CompanyMonthlySummary, SummaryTotals } from '@/types/entities';
 import { formatCurrency } from '@/lib/utils/financial-utils';
-import { formatMonthKey } from '@/lib/utils/date-utils';
+import { formatMonthKey } from '@/lib/utils/date-display-utils';;
 import { BUSINESS_STRUCTURE, FINANCE_DASHBOARD_COMPANY_AREA_KEYS } from '@/types/enums';
 import type { Area } from '@/types/type-aliases';
 import { getAreaDisplayLabel, getStationDisplayLabel } from '@/lib/constants/business-structure-labels';

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { ClientAPI } from '@/lib/client-api';
-import { getCurrentMonthKey, sortMonthKeys } from '@/lib/utils/date-utils';
+import { getCurrentMonthKey, sortMonthKeys } from '@/lib/utils/date-display-utils';;
 import { SummaryTotals } from '@/types/entities';
 
 interface UseMonthlySummaryOptions {

@@ -12,6 +12,7 @@
 
 import { format } from 'date-fns';
 import { formatInUserTimezone } from './user-timezone';
+import { tryParseToUTC } from './date-parsers';
 import { getUTCNow } from './utc-utils';
 
 // ============================================================================
@@ -56,7 +57,8 @@ export const FORMAT_ISO = "yyyy-MM-dd'T'HH:mm:ss'Z'";
  * @param utcDate - UTC Date object
  * @returns Formatted string in user's local timezone
  */
-export function formatForDisplay(utcDate: Date): string {
+export function formatForDisplay(input: Date | string | number | null | undefined): string {
+  const utcDate = tryParseToUTC(input);
   if (!utcDate) return '';
   // Use user-timezone utility which respects localStorage preference
   const formatted = formatInUserTimezone(utcDate, 'display');
@@ -71,7 +73,8 @@ export function formatForDisplay(utcDate: Date): string {
  * @param utcDate - UTC Date object
  * @returns Formatted string for HTML input
  */
-export function formatForInput(utcDate: Date): string {
+export function formatForInput(input: Date | string | number | null | undefined): string {
+  const utcDate = tryParseToUTC(input);
   if (!utcDate) return '';
   const formatted = formatInUserTimezone(utcDate, 'input');
   if (formatted) return formatted;
@@ -84,7 +87,8 @@ export function formatForInput(utcDate: Date): string {
  * @param utcDate - UTC Date object
  * @returns Formatted string
  */
-export function formatLong(utcDate: Date): string {
+export function formatLong(input: Date | string | number | null | undefined): string {
+  const utcDate = tryParseToUTC(input);
   if (!utcDate) return '';
   const formatted = formatInUserTimezone(utcDate, 'long');
   if (formatted) return formatted;
@@ -97,7 +101,8 @@ export function formatLong(utcDate: Date): string {
  * @param utcDate - UTC Date object
  * @returns Formatted string
  */
-export function formatShort(utcDate: Date): string {
+export function formatShort(input: Date | string | number | null | undefined): string {
+  const utcDate = tryParseToUTC(input);
   if (!utcDate) return '';
   const formatted = formatInUserTimezone(utcDate, 'short');
   if (formatted) return formatted;
@@ -110,7 +115,8 @@ export function formatShort(utcDate: Date): string {
  * @param utcDate - UTC Date object
  * @returns Formatted string
  */
-export function formatDayMonth(utcDate: Date): string {
+export function formatDayMonth(input: Date | string | number | null | undefined): string {
+  const utcDate = tryParseToUTC(input);
   if (!utcDate) return '';
   return format(utcDate, FORMAT_DAY_MONTH);
 }
@@ -121,7 +127,8 @@ export function formatDayMonth(utcDate: Date): string {
  * @param utcDate - UTC Date object
  * @returns Formatted string
  */
-export function formatDayMonthYear(utcDate: Date): string {
+export function formatDayMonthYear(input: Date | string | number | null | undefined): string {
+  const utcDate = tryParseToUTC(input);
   if (!utcDate) return '';
   return format(utcDate, FORMAT_DAY_MONTH_YEAR);
 }
@@ -132,7 +139,8 @@ export function formatDayMonthYear(utcDate: Date): string {
  * @param utcDate - UTC Date object
  * @returns Formatted string
  */
-export function formatMonthYear(utcDate: Date): string {
+export function formatMonthYear(input: Date | string | number | null | undefined): string {
+  const utcDate = tryParseToUTC(input);
   if (!utcDate) return '';
   return format(utcDate, FORMAT_MONTH_YEAR);
 }
@@ -147,7 +155,12 @@ export function formatMonthYear(utcDate: Date): string {
  * @param utcDate - UTC Date object
  * @returns Formatted string
  */
-export function formatMonthKey(utcDate: Date): string {
+export function formatMonthKey(input: Date | string | number | null | undefined): string {
+  if (typeof input === 'string' && /^\d{2}-\d{2}$/.test(input)) {
+    // Already formatted month key, return as is
+    return input;
+  }
+  const utcDate = tryParseToUTC(input);
   if (!utcDate) return '';
   const formatted = formatInUserTimezone(utcDate, 'monthKey');
   if (formatted) return formatted;
@@ -160,7 +173,8 @@ export function formatMonthKey(utcDate: Date): string {
  * @param utcDate - UTC Date object
  * @returns ISO string
  */
-export function formatISO(utcDate: Date): string {
+export function formatISO(input: Date | string | number | null | undefined): string {
+  const utcDate = tryParseToUTC(input);
   if (!utcDate) return '';
   return utcDate.toISOString();
 }
@@ -204,8 +218,10 @@ export function sortMonthKeys(keys: string[]): string[] {
  * @param referenceDate - Reference date (defaults to now)
  * @returns Relative time string
  */
-export function formatRelative(utcDate: Date, referenceDate?: Date): string {
-  const ref = referenceDate || getUTCNow();
+export function formatRelative(input: Date | string | number | null | undefined, referenceInput?: Date | string | number | null): string {
+  const utcDate = tryParseToUTC(input);
+  if (!utcDate) return '';
+  const ref = tryParseToUTC(referenceInput) || getUTCNow();
   const diffMs = ref.getTime() - utcDate.getTime();
   const diffSecs = Math.floor(diffMs / 1000);
   const diffMins = Math.floor(diffSecs / 60);

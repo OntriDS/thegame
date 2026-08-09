@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Flag, Award, Target, Star, Crown, Zap, Plus, Shield, X, Trophy } from 'lucide-react';
 import { Player, PlayerBadge } from '@/types/entities';
 import { CharacterRole, CHARACTER_ROLE_TYPES } from '@/types/enums';
-import { formatDisplayDate } from '@/lib/utils/date-utils';
+import { formatForDisplay } from '@/lib/utils/date-display-utils';;
 
 // ============================================================================
 // BADGES SECTION - Role-based recognition

@@ -459,3 +459,54 @@ export function clampToValidUTC(date: Date): Date {
 
   return new Date(Date.UTC(year, month, clampedDay));
 }
+
+// ============================================================================
+// RECURRENT UTC CALENDAR & ALIASES (Migrated from recurrent-date-utils)
+// ============================================================================
+
+/**
+ * Milliseconds for 00:00:00 of the **UTC calendar date** of this instant
+ * (getUTCFullYear / getUTCMonth / getUTCDate only — never the machine timezone).
+ */
+export function getUTCCivilDayStartMs(input: UTCalendarInput): number {
+  const u = toUTC(input);
+  return Date.UTC(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate());
+}
+
+/** `YYYY-MM-DD` from UTC calendar components — for idempotent spawn / duplicate checks. */
+export function utcCalendarDayKey(input: UTCalendarInput): string {
+  const u = toUTC(input);
+  return `${u.getUTCFullYear()}-${String(u.getUTCMonth() + 1).padStart(2, '0')}-${String(u.getUTCDate()).padStart(2, '0')}`;
+}
+
+/** Normalizes to a Date carrying the same absolute instant (alias for toUTC). */
+export function toRecurrentUTC(date: Date | string | number): Date {
+  return toUTC(date);
+}
+
+/** Converts a UTC midnight date back to local date components. */
+export function fromRecurrentUTC(utcDate: Date | string | number): Date {
+  const dateObj = toUTC(utcDate);
+  return new Date(dateObj.getUTCFullYear(), dateObj.getUTCMonth(), dateObj.getUTCDate());
+}
+
+/** Checks if two dates share the same UTC calendar day. */
+export function isSameRecurrentDate(date1: Date | string | number, date2: Date | string | number): boolean {
+  return isSameDayUTC(toUTC(date1), toUTC(date2));
+}
+
+/** Get next occurrence of a specific weekday (alias for getNextWeekdayUTC) */
+export function getNextWeekdayFromDate(referenceDate: Date, targetDayOfWeek: number): Date {
+  return getNextWeekdayUTC(referenceDate, targetDayOfWeek);
+}
+
+/** Check if candidateDate > referenceDate in UTC */
+export function isNextOccurrence(candidateDate: Date, referenceDate: Date): boolean {
+  return isAfterUTC(toUTC(candidateDate), toUTC(referenceDate));
+}
+
+/** Check if candidate <= safetyLimitDate */
+export function isWithinSafetyLimit(candidateDate: Date, safetyLimitDate: Date): boolean {
+  return !isAfterUTC(toUTC(candidateDate), toUTC(safetyLimitDate));
+}
+

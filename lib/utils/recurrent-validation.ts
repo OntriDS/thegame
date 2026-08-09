@@ -1,12 +1,9 @@
 // lib/utils/recurrent-validation.ts
 import { Task } from '@/types/entities';
 import { TaskType, RecurrentFrequency } from '@/types/enums';
-import { 
-  fromRecurrentUTC, 
-  validateFrequencyConfig,
-  getUTCCivilDayStartMs,
-} from './recurrent-date-utils';
+import { fromRecurrentUTC, getUTCCivilDayStartMs } from '@/lib/utils/utc-utils';
 import { getTasksByParentId } from '@/data-store/datastore';
+import { utcCalendarDayKey } from '@/lib/utils/utc-utils';
 
 export enum SpawnErrorCode {
   INVALID_TYPE = 'INVALID_TYPE',
@@ -183,6 +180,100 @@ export async function validateSpawnOperation(template: Task): Promise<Validation
         isValid: false,
         errorCode: SpawnErrorCode.CUSTOM_DATE_BEYOND_LIMIT,
         errorMessage: 'Next custom date exceeds safety limit'
+      };
+    }
+  }
+
+  return { isValid: true };
+}
+
+export function validateFrequencyConfig(frequencyConfig: any): {
+  isValid: boolean;
+  error?: string;
+} {
+  if (!frequencyConfig) {
+    return { isValid: true };
+  }
+
+  if (
+    !frequencyConfig.type ||
+    !Object.values(RecurrentFrequency).includes(frequencyConfig.type as RecurrentFrequency)
+  ) {
+    return {
+      isValid: false,
+      error: 'Frequency configuration must include a valid type',
+    };
+  }
+  const type = frequencyConfig.type as RecurrentFrequency;
+
+  if (!frequencyConfig.interval || !frequencyConfig.repeatMode) {
+    return {
+      isValid: false,
+      error: 'Frequency configuration must include interval and repeatMode'
+    };
+  }
+
+  if (frequencyConfig.interval < 1) {
+    return {
+      isValid: false,
+      error: 'Interval must be at least 1'
+    };
+  }
+
+  const validModes = ['after_done', 'periodically'];
+  if (!validModes.includes(frequencyConfig.repeatMode)) {
+    return {
+      isValid: false,
+      error: 'Repeat mode must be either "after_done" or "periodically"'
+    };
+  }
+
+  if (frequencyConfig.stopsAfter) {
+    if (frequencyConfig.stopsAfter.type === 'times' && frequencyConfig.stopsAfter.value < 1) {
+      return {
+        isValid: false,
+        error: 'Stops after value must be at least 1 when type is "times"'
+      };
+    }
+
+    if (frequencyConfig.stopsAfter.type === 'date' && !frequencyConfig.stopsAfter.value) {
+      return {
+        isValid: false,
+        error: 'Stop date must be specified when type is "date"'
+      };
+    }
+  }
+
+  if (type === RecurrentFrequency.CUSTOM && (!frequencyConfig.customDays || frequencyConfig.customDays.length === 0)) {
+    return {
+      isValid: false,
+      error: 'Custom frequency must specify at least one date'
+    };
+  }
+
+  if (type === RecurrentFrequency.CUSTOM && frequencyConfig.customDays?.length) {
+    const dayKeys: string[] = [];
+    for (const d of frequencyConfig.customDays) {
+      const raw = d instanceof Date ? d : new Date(d);
+      if (Number.isNaN(raw.getTime())) {
+        return {
+          isValid: false,
+          error: 'Custom frequency contains an invalid date',
+        };
+      }
+      try {
+        dayKeys.push(utcCalendarDayKey(raw));
+      } catch {
+        return {
+          isValid: false,
+          error: 'Custom frequency contains an invalid date',
+        };
+      }
+    }
+    if (dayKeys.length !== new Set(dayKeys).size) {
+      return {
+        isValid: false,
+        error: 'Custom dates cannot include the same calendar day more than once',
       };
     }
   }
