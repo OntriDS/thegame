@@ -8,7 +8,7 @@ import { RefreshCw, ShoppingCart, DollarSign, Calendar, Link as LinkIcon, Packag
 // UTC STANDARDIZATION: Using new UTC utilities
 import { formatForDisplay } from '@/lib/utils/date-display-utils';
 import { EntityType } from '@/types/enums';
-import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
+import LinksSubModal from '@/components/modals/submodals/links-relationships-submodal';
 import { useState } from 'react';
 import { processLogData } from '@/lib/utils/logging-utils';
 import { SaleType, LogEventType } from '@/types/enums';

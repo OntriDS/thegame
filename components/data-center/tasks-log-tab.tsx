@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RefreshCw, CheckSquare, Link } from 'lucide-react';
-import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
+import LinksSubModal from '@/components/modals/submodals/links-relationships-submodal';
 import { useState, useEffect } from 'react';
 import { TaskStatus, TaskType, EntityType, LogEventType } from '@/types/enums';
 import { TASK_STATUS_COLORS } from '@/lib/constants/color-constants';

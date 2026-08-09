@@ -10,7 +10,7 @@ import { SiteStatus, SiteType, EntityType } from '@/types/enums';
 import { getDigitalSiteTypeLabel, getPhysicalSiteTypeLabel, getSystemSiteTypeLabel } from '@/lib/constants/site-taxonomy-labels';
 import { SITE_STATUS_COLORS } from '@/lib/constants/color-constants';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
-import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
+import LinksSubModal from '@/components/modals/submodals/links-relationships-submodal';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { LogViewFilter } from '@/components/log-management/log-view-filter';
 import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';

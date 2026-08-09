@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Gamepad, Link as LinkIcon, User } from 'lucide-react';
-import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
+import LinksSubModal from '@/components/modals/submodals/links-relationships-submodal';
 import { useState, useEffect } from 'react';
 // UTC STANDARDIZATION: Using new UTC utilities
 import { formatForDisplay } from '@/lib/utils/date-display-utils';

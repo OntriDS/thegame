@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw, Link as LinkIcon, User } from 'lucide-react';
 import { useState } from 'react';
 import { processLogData } from '@/lib/utils/logging-utils';
-import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
+import LinksSubModal from '@/components/modals/submodals/links-relationships-submodal';
 import { CharacterRole, EntityType } from '@/types/enums';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { LogViewFilter } from '@/components/log-management/log-view-filter';
