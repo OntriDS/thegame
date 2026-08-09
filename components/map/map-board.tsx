@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { MapContainer, Marker, Popup, TileLayer, Tooltip, useMap, useMapEvents, Circle, Rectangle, Polygon, Polyline } from 'react-leaflet';
@@ -263,49 +263,39 @@ const BUSINESS_TYPES_ORDER: PhysicalBusinessType[] = [
   PhysicalBusinessType.BANK,
 ];
 
-type MapMarkerStack = {
-  settlementId: string;
-  settlementName: string;
-  lat: number;
-  lng: number;
-  markers: MapMarker[];
-};
 
-function createStackMarkerIcon(count: number): L.DivIcon {
-  const safeCount = Math.max(0, Math.min(9999, count));
-  const countLabel = safeCount > 999 ? '999+' : String(safeCount);
 
+function createSingleMarkerIcon(theme: MarkerTheme): L.DivIcon {
   const html = `
-    <div style="position: relative; width: ${STACK_MARKER_SIZE}px; height: ${STACK_MARKER_SIZE}px; transform: translate(-50%, -50%);">
+    <div style="position: relative; width: 32px; height: 32px; transform: translate(-50%, -50%);">
       <div style="
         position: absolute;
         inset: 0;
         border-radius: 999px;
         background: rgba(15, 23, 42, 0.92);
-        border: 3px solid #facc15;
-        box-shadow: 0 0 0 5px rgba(250, 204, 21, 0.22);
+        border: 2px solid ${theme.ringColor};
+        box-shadow: 0 0 0 4px ${theme.glowColor};
       "></div>
       <div style="
         position: absolute;
-        inset: 5px;
+        inset: 4px;
         border-radius: 999px;
         background: #0f172a;
-        border: 1px solid rgba(250, 204, 21, 0.8);
         display: flex;
         align-items: center;
         justify-content: center;
       ">
-        <span style="color: #facc15; font-size: 11px; font-weight: 700; letter-spacing: -0.05em;">${countLabel}</span>
+        <img src="${theme.iconPath}" alt="${theme.label}" style="width: 16px; height: 16px; border-radius: 2px;" />
       </div>
     </div>
   `;
 
   return new L.DivIcon({
-    className: 'leaflet-map-marker-stack',
+    className: 'leaflet-map-single-marker',
     html,
-    iconSize: [STACK_MARKER_SIZE, STACK_MARKER_SIZE],
-    iconAnchor: [Math.floor(STACK_MARKER_SIZE / 2), Math.floor(STACK_MARKER_SIZE / 2)],
-    popupAnchor: [0, -Math.floor(STACK_MARKER_SIZE / 2) + 2],
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -14],
   });
 }
 
@@ -786,25 +776,7 @@ export default function MapBoard({
     ? mapData.markers
     : mapData.markers.filter((marker) => marker.regionId === activeRegion.id);
 
-  const visibleMarkerStacks = useMemo<MapMarkerStack[]>(() => {
-    const grouped = new Map<string, MapMarkerStack>();
-    for (const marker of visibleMarkers) {
-      const current = grouped.get(marker.settlementId);
-      const displaySettlementName = settlementNameById.get(marker.settlementId) ?? marker.settlementId;
-      if (!current) {
-        grouped.set(marker.settlementId, {
-          settlementId: marker.settlementId,
-          settlementName: displaySettlementName,
-          lat: marker.lat,
-          lng: marker.lng,
-          markers: [marker],
-        });
-        continue;
-      }
-      current.markers.push(marker);
-    }
-    return Array.from(grouped.values()).sort((a, b) => a.settlementName.localeCompare(b.settlementName));
-  }, [visibleMarkers, settlementNameById]);
+
 
   const selectedEntity = useMemo(() => {
     if (!shapeEditTargetId) {
@@ -1165,70 +1137,69 @@ export default function MapBoard({
           />
           <MapBoardCameraController region={activeRegion} />
           <TileLayer url={tileUrl} attribution={tileAttribution} />
-          {visibleMarkerStacks.map((stack) => {
-            const settlementOwners = [
-              ...new Set(
-              stack.markers.flatMap((marker) => marker.owners.map((owner) => owner.name))
-              )
-            ];
-
+          {visibleMarkers.map((marker) => {
+            const theme = BUSINESS_TYPE_THEME[marker.businessType];
+            const owners = marker.owners.map((owner) => owner.name).join(', ');
+            const settlementName = settlementNameById.get(marker.settlementId) ?? marker.settlementId;
             return (
-            <Marker
-              key={stack.settlementId}
-              position={[stack.lat, stack.lng]}
-              icon={createStackMarkerIcon(stack.markers.length)}
-            >
-              <Tooltip direction="top" offset={[0, -8]}>
-                <div className="text-xs">
-                  <div className="font-semibold">{stack.settlementName}</div>
-                  <div>Sites: {stack.markers.length}</div>
-                  <div className="text-muted-foreground">
-                    Owners: {settlementOwners.join(', ') || 'Unassigned'}
+              <Marker
+                key={marker.siteId}
+                position={[marker.lat, marker.lng]}
+                icon={createSingleMarkerIcon(theme)}
+              >
+                <Tooltip direction="top" offset={[0, -14]}>
+                  <div className="text-xs">
+                    <div className="font-semibold text-[13px]">{marker.siteName}</div>
+                    <div className="text-muted-foreground mb-1">
+                      {theme.label} {settlementName && `• ${settlementName}`}
+                    </div>
+                    <div className="text-muted-foreground text-[10px]">
+                      Owners: {owners || 'Unassigned'}
+                    </div>
                   </div>
-                  <div className="text-muted-foreground">
-                    Preview: {stack.markers.slice(0, 3).map((site) => site.siteName).join(', ')}
-                  </div>
-                </div>
-              </Tooltip>
-              <Popup>
-                <div className="min-w-[14rem] text-xs">
-                  <div className="mb-2 font-semibold">{stack.settlementName}</div>
-                  <div className="text-muted-foreground">Sites on this point: {stack.markers.length}</div>
-                  <div className="mt-2 space-y-2">
-                    {stack.markers.map((marker) => {
-                      const theme = BUSINESS_TYPE_THEME[marker.businessType];
-                      const owners = marker.owners.map((owner) => owner.name).join(', ');
-                      return (
-                        <div key={marker.siteId} className="rounded border border-border p-2">
-                          <div className="flex items-center gap-2">
-                              <Image
-                                src={theme.iconPath}
-                                alt={theme.label}
-                                width={16}
-                                height={16}
-                                className="rounded-sm"
-                              />
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate font-medium">{marker.siteName}</p>
-                              <p className="text-[10px] text-muted-foreground">
-                                Owners: {owners.length > 0 ? owners : 'Unassigned'}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              className="inline-flex rounded border border-emerald-300/40 bg-emerald-500/90 px-2 py-1 text-[11px] font-medium text-white hover:bg-emerald-500"
-                              onClick={() => handleOpenSiteByMarker(marker.siteId)}
-                            >
-                              Edit
-                            </button>
-                          </div>
+                </Tooltip>
+                <Popup>
+                  <div className="min-w-[14rem] text-xs p-1">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="flex h-7 w-7 items-center justify-center rounded bg-slate-800"
+                          style={{ border: `1px solid ${theme.baseColor}` }}
+                        >
+                          <img src={theme.iconPath} alt={theme.label} className="h-4 w-4" />
                         </div>
-                      );
-                    })}
+                        <div>
+                          <div className="font-semibold text-[13px]">{marker.siteName}</div>
+                          <div className="text-[10px] text-muted-foreground">{theme.label}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-2 mb-3 rounded border border-border p-2 bg-muted/20">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground text-[11px]">Settlement</span>
+                          <span className="font-medium text-[11px] truncate max-w-[120px] text-right" title={settlementName}>
+                            {settlementName}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground text-[11px]">Owners</span>
+                          <span className="font-medium text-[11px] truncate max-w-[120px] text-right" title={owners}>
+                            {owners || 'None'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="w-full rounded border border-emerald-300/40 bg-emerald-500/90 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 transition-colors"
+                      onClick={() => handleOpenSiteByMarker(marker.siteId)}
+                    >
+                      Edit Site
+                    </button>
                   </div>
-                </div>
-              </Popup>
-            </Marker>
+                </Popup>
+              </Marker>
             );
           })}
           {effectiveShapePreview?.type === 'rectangle' && effectiveShapePreview.bounds && (
