@@ -89,8 +89,8 @@ export async function POST(request: NextRequest) {
     const nextSale = {
       ...sale,
       status: SaleStatus.CANCELLED,
-      metadata: {
-        ...sale.metadata,
+      context: {
+        ...(sale.context || { kind: 'sale-context', schemaVersion: 1 }),
         cancelReason: body.reason || 'Checkout abandoned or failed in ecosystem',
         cancelledAt: new Date().toISOString(),
       }

@@ -16,6 +16,7 @@ import { appendEntityLog, getMonthKeyFromTimestamp } from './entities-logging';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
 import { getItemCharacterId } from '@/lib/item-character-id';
 import { getSaleCharacterId } from '@/lib/sale-character-id';
+import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 
 /**
  * Process all sale lines in a sale
@@ -444,8 +445,13 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
           stock: [{ siteId: sale.siteId || item.stock?.[0]?.siteId || '', quantity: 0 }],
           quantitySold: working.quantity || 0,
           soldAt: refDate,
-          price: working.unitPrice,
-          value: (working.unitPrice || 0) * (working.quantity || 0),
+          pricing: {
+            ...item.pricing,
+            actualSaleValue: toMoney(
+              extractMoneyValue(working.unitPrice) * (working.quantity || 0),
+              item.pricing?.targetPrice?.currency || 'USD',
+            ),
+          },
           sourceRecordId: sale.id,
           characterId: getSaleCharacterId(sale) || getItemCharacterId(item) || null,
           updatedAt: getUTCNow(),

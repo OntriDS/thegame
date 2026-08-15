@@ -9,6 +9,13 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
 }
 
+/** Preserve canonical V1 Money values while accepting legacy numeric values. */
+function normalizeMoneyValue(value: unknown): unknown {
+  if (isRecord(value) && typeof value.minorUnits === 'string') return value;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
 export function normalizeSaleLine(line: unknown): SaleLine | null {
   if (!isRecord(line)) return null;
   const lineId = String(line.lineId ?? '');
@@ -17,27 +24,34 @@ export function normalizeSaleLine(line: unknown): SaleLine | null {
   const kind = String(line.kind ?? '');
 
   if (kind === 'service') {
-    return { ...(line as unknown as ServiceLine), kind: 'service' };
+    const { metadata, ...withoutLegacyMetadata } = line as any;
+    return {
+      ...withoutLegacyMetadata,
+      kind: 'service',
+      ...(withoutLegacyMetadata.settlement || metadata
+        ? { settlement: withoutLegacyMetadata.settlement || metadata }
+        : {}),
+    } as ServiceLine;
   }
 
   if (kind === 'bundle') {
     const itemId = line.itemId;
     if (typeof itemId === 'string' && itemId.length > 0) {
-      const meta =
+      const settlement =
         typeof line.metadata === 'object' && line.metadata !== null && !Array.isArray(line.metadata)
           ? { ...(line.metadata as Record<string, unknown>) }
           : {};
-      meta.migratedFromBundleLine = true;
+      settlement.migratedFromBundleLine = true;
       const out: ItemSaleLine = {
         lineId,
         kind: 'item',
         itemId,
         quantity: Number(line.quantity) || 1,
-        unitPrice: Number(line.unitPrice) || 0,
+        unitPrice: normalizeMoneyValue(line.unitPrice),
         description: typeof line.description === 'string' ? line.description : undefined,
-        taxAmount: typeof line.taxAmount === 'number' ? line.taxAmount : undefined,
+        taxAmount: line.taxAmount !== undefined ? normalizeMoneyValue(line.taxAmount) : undefined,
         discount: line.discount as ItemSaleLine['discount'],
-        metadata: meta,
+        settlement,
       };
       return out;
     }
@@ -48,14 +62,18 @@ export function normalizeSaleLine(line: unknown): SaleLine | null {
   if (kind === 'item' || (typeof line.itemId === 'string' && line.itemId.length > 0)) {
     const itemId = String(line.itemId ?? '');
     if (!itemId) return null;
+    const { metadata, ...withoutLegacyMetadata } = line as any;
     return {
-      ...(line as unknown as ItemSaleLine),
+      ...withoutLegacyMetadata,
       kind: 'item',
       lineId,
       itemId,
       quantity: Number(line.quantity) || 1,
-      unitPrice: Number(line.unitPrice) || 0,
-    };
+      unitPrice: normalizeMoneyValue(line.unitPrice),
+      ...(withoutLegacyMetadata.settlement || metadata
+        ? { settlement: withoutLegacyMetadata.settlement || metadata }
+        : {}),
+    } as ItemSaleLine;
   }
 
   return null;

@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
     const targetStatus = statusFilter;
 
     // If 'all' is explicitly requested, bypass status filtering entirely to fetch everything (including SOLD)
-    if (targetStatus !== 'all') {
+    if (targetStatus !== 'all' && targetStatus !== 'active') {
       items = items.filter(item => {
         const isSold = isSoldStatus(item.status);
           
@@ -103,7 +103,7 @@ export async function GET(req: NextRequest) {
         return (item.status || '').toString().toLowerCase() === targetStatus;
       });
     }
-  } else if (!month && !year && statusFilter !== ItemStatus.LEGACY) {
+  } else if ((!statusFilter || statusFilter === 'active') && !month && !year && statusFilter !== ItemStatus.LEGACY) {
     // Default behavior for Active Inventory (no month/year specified AND no explicit status):
     // Show only active items (unsold). The active index already excludes sold/legacy,
     // so this is just a safety catch for any strategy leaks.

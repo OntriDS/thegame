@@ -30,6 +30,7 @@ import { getUTCNow } from '@/lib/utils/utc-utils';
 import { parseDateToUTC } from '@/lib/utils/date-parsers';
 import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution';
 import { getSaleCharacterId } from '@/lib/sale-character-id';
+import { extractMoneyValue } from '@/lib/utils/financial-utils';
 
 /**
  * Get the current J$ Balance for an entity (Character or Player)
@@ -382,7 +383,9 @@ export interface BoothFinancialSplit {
  * NEW: Calculate components for Performance Ledger split (Option C)
  */
 export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinancialSplit> {
-  const boothFee = sale.boothFee ?? sale.metadata?.boothSaleContext?.boothCost ?? 0;
+  const boothFee = extractMoneyValue(sale.context?.boothFee)
+    || sale.context?.boothSaleContext?.boothCost
+    || 0;
   const rates = await getFinancialConversionRates();
   const rate = rates?.colonesToUsd ?? DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd;
   const boothFeeUSD = boothFee / rate;
@@ -395,7 +398,7 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
   let shareOfExpenses_Me = 1.0;
 
   // Fetch Contract Clauses
-  const contractId = sale.metadata?.boothSaleContext?.contractId;
+  const contractId = sale.context?.boothSaleContext?.contractId;
   if (contractId) {
     const contract = await getContractById(contractId);
     if (contract && contract.status === ContractStatus.ACTIVE && Array.isArray(contract.clauses)) {
@@ -417,13 +420,13 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
     const founderEntityIds = new Set<string>(
       [
         sale.playerCharacterId,
-        sale.metadata?.boothSaleContext?.principalBusinessId
+        sale.context?.boothSaleContext?.principalBusinessId
       ].filter(Boolean) as string[]
     );
 
     sale.lines.forEach(line => {
       // Determine if it's a Partner line from explicit partner/counterparty metadata
-      const linePartnerId = (line.metadata as any)?.partnerId || (line.metadata as any)?.customerCharacterId;
+      const linePartnerId = (line.settlement as any)?.partnerId || (line.settlement as any)?.customerCharacterId;
       const isPartnerItem = !!(
         linePartnerId &&
         typeof linePartnerId === 'string' &&
@@ -431,8 +434,8 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
       );
       
       let lineTotal = 0;
-      if (line.kind === 'item') lineTotal = ((line as ItemSaleLine).unitPrice || 0) * ((line as ItemSaleLine).quantity || 0);
-      else if (line.kind === 'service') lineTotal = (line as ServiceLine).revenue || 0;
+      if (line.kind === 'item') lineTotal = extractMoneyValue((line as ItemSaleLine).unitPrice) * ((line as ItemSaleLine).quantity || 0);
+      else if (line.kind === 'service') lineTotal = extractMoneyValue((line as ServiceLine).revenue);
 
       if (isPartnerItem) partnerItemsTotal += lineTotal;
       else myItemsTotal += lineTotal;

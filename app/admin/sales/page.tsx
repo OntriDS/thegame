@@ -11,8 +11,6 @@ import { ClientAPI } from "@/lib/client-api";
 import { Sale, Character } from "@/types/entities";
 import { getSaleCharacterId } from '@/lib/sale-character-id';
 import { 
-  getSaleMetadata,
-  getSaleBoothFee,
   getSaleLinks
 } from '@/lib/compatibility/sale-selectors';
 import { SaleType, SaleStatus } from "@/types/enums";
@@ -200,9 +198,7 @@ function SalesPageContent() {
     if (sale.type === SaleType.BOOTH) {
       const exchangeRate = exchangeRates?.colonesToUsd || DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd;
 
-      const metadata = getSaleMetadata(sale);
-      const myNetCRCRaw = metadata?.boothSaleContext?.calculatedTotals?.myNet ??
-        (sale as any).archiveMetadata?.boothSaleContext?.calculatedTotals?.myNet;
+      const myNetCRCRaw = sale.context?.boothSaleContext?.calculatedTotals?.myNet;
 
       const myNetCRC = extractMoneyValue(myNetCRCRaw);
 
@@ -211,8 +207,9 @@ function SalesPageContent() {
         // Reverse-engineer apparent cost for consistent UI structure in dashboards
         cost = grossRevenue - netProfit;
       } else {
-        // Legacy calculation fallback
-        const boothFeeValue = extractMoneyValue(getSaleBoothFee(sale));
+        // Canonical calculation fallback when older V1 booth records lack the
+        // precomputed split: derive it from canonical context and lines.
+        const boothFeeValue = extractMoneyValue(sale.context?.boothFee);
         const boothFeeUSD = boothFeeValue / exchangeRate;
         const partnerPayouts = sale.lines
           .filter(l => l.kind === 'service' && (l as any).station === 'booth-sales')

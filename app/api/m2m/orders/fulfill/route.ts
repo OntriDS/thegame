@@ -6,6 +6,7 @@ import { getSaleById, upsertSale } from '@/data-store/datastore';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync-server';
 import { getSaleCharacterId } from '@/lib/sale-character-id';
+import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 
 type FulfillOrderRequest = {
   orderId?: string;
@@ -96,12 +97,12 @@ export async function POST(request: NextRequest) {
       chargedAt: getUTCNow(),
       totals: {
         ...(sale.totals || {}),
-        totalCost: (sale.totals?.totalCost || 0) + commission,
+        totalCost: toMoney(extractMoneyValue(sale.totals?.totalCost) + commission),
       },
-      metadata: {
-        ...(sale.metadata || {}),
+      context: {
+        ...(sale.context || { kind: 'sale-context', schemaVersion: 1 }),
         m2m: {
-          ...(sale.metadata?.m2m as Record<string, unknown> || {}),
+          ...(sale.context?.m2m || {}),
           tokenTrans: normalizeString(body.tokenTrans) || null,
           reference: normalizeString(body.reference) || null,
         },

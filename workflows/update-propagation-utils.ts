@@ -15,6 +15,7 @@ import { resolveToPlayerIdMaybeCharacter } from './points-rewards-utils';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { getLinksFor } from '@/links/link-registry';
 import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution';
+import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 
 const normalizeDate = (value: Date | string | null | undefined): Date => {
   const parsed = parseDateOrNull(value);
@@ -540,7 +541,7 @@ export async function updateFinancialRecordsFromSale(
     if (!previousSale) {
       if (sale.type === SaleType.BOOTH) {
         await createFinancialRecordFromBoothSale(sale);
-      } else if ((sale.totals?.totalRevenue as any) > 0) {
+      } else if (extractMoneyValue(sale.totals?.totalRevenue) > 0) {
         const effectKey = EffectKeys.sideEffect('sale', sale.id, 'financialCreated');
         if (!(await hasEffect(effectKey))) {
           await createFinancialRecordFromSale(sale);
@@ -571,7 +572,7 @@ export async function updateFinancialRecordsFromSale(
 
     // STANDARD LOGIC (Non-Booth-Sales): createFinancialRecordFromSale is the single writer
     // (upsert, correct name/month from sale, dedupe legacy duplicates — do not also create from processSaleLines).
-  if (sale.totals.totalRevenue > 0) {
+  if (extractMoneyValue(sale.totals.totalRevenue) > 0) {
       await createFinancialRecordFromSale(sale);
       const effectKey = EffectKeys.sideEffect('sale', sale.id, 'financialCreated');
       if (!(await hasEffect(effectKey))) {
@@ -611,7 +612,8 @@ export async function updateItemsFromSale(
     for (const line of sale.lines || []) {
       if (line.kind === 'item' && 'itemId' in line && line.itemId) {
         const lineId = line.lineId || line.itemId;
-        const lineSig = `${line.itemId}:${line.quantity ?? 0}:${line.unitPrice ?? 0}`;
+        const linePrice = extractMoneyValue(line.unitPrice);
+        const lineSig = `${line.itemId}:${line.quantity ?? 0}:${linePrice}`;
         const updateKey = EffectKeys.sideEffect('sale', sale.id, `updateItem:${lineId}:${lineSig}`);
 
         if (await hasEffect(updateKey)) {
@@ -625,12 +627,18 @@ export async function updateItemsFromSale(
           continue;
         }
 
+        const lineValue = linePrice * (line.quantity || 0);
         const updatedItem = {
           ...item,
           quantitySold: (item.quantitySold || 0) + (line.quantity || 0),
-          soldAt: item.soldAt || (sale.lifecycle?.doneAt || sale.saleDate || getUTCNow()),
-          value: (line.unitPrice as any) * line.quantity,
-          price: (line.unitPrice as any),
+          context: {
+            ...item.context,
+            soldAt: item.context?.soldAt || (sale.lifecycle?.doneAt || sale.saleDate || getUTCNow()),
+          },
+          pricing: {
+            ...item.pricing,
+            actualSaleValue: toMoney(lineValue, item.pricing?.targetPrice?.currency || 'USD'),
+          },
           updatedAt: getUTCNow()
         };
 
@@ -810,11 +818,11 @@ export function hasRewardsChanged(newEntity: any, oldEntity: any): boolean {
 }
 
 export function hasRevenueChanged(newEntity: any, oldEntity: any): boolean {
-  return (newEntity.totals?.totalRevenue || 0) !== (oldEntity.totals?.totalRevenue || 0);
+  return extractMoneyValue(newEntity.totals?.totalRevenue) !== extractMoneyValue(oldEntity.totals?.totalRevenue);
 }
 
 export function hasCostChanged(newEntity: any, oldEntity: any): boolean {
-  return (newEntity.totals?.totalCost || 0) !== (oldEntity.totals?.totalCost || 0);
+  return extractMoneyValue(newEntity.totals?.totalCost) !== extractMoneyValue(oldEntity.totals?.totalCost);
 }
 
 export function hasLinesChanged(newEntity: any, oldEntity: any): boolean {

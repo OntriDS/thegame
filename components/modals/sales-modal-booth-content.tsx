@@ -60,6 +60,7 @@ import {
   ItemSaleLine,
   Business,
   Contract,
+  BoothSaleContextV1,
 } from "@/types/entities";
 import { v4 as uuid } from "uuid";
 import { createSiteOptionsWithCategories } from "@/lib/utils/site-options-utils";
@@ -109,6 +110,18 @@ export interface BoothSalesViewProps {
 
   // Financial
   exchangeRate?: number;
+}
+
+function getBoothContext(sale?: Sale | null): BoothSaleContextV1 {
+  return sale?.context?.boothSaleContext || { boothCost: 0 };
+}
+
+function getSaleAmount(value: unknown): number {
+  if (value && typeof value === "object" && "minorUnits" in value) {
+    return extractMoneyValue(value as any);
+  }
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : 0;
 }
 
 /** Parent DialogFooter calls this so booth saves use fullSale (metadata, payments, partner context). */
@@ -180,9 +193,9 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
     const [showItemPicker, setShowItemPicker] = useState(false);
     // State for Single Contract (Global for this sale)
     const [selectedContractId, setSelectedContractId] = useState<string>(() => {
+      const boothContext = getBoothContext(sale);
       return (
-      (sale as any)?.metadata?.boothSaleContext?.contractId ||
-      (sale as any)?.archiveMetadata?.boothSaleContext?.contractId ||
+      boothContext.contractId ||
         ""
       );
     });
@@ -190,27 +203,18 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
     // State for Founder Business (Us)
     const [selectedFounderBusinessId, setSelectedFounderBusinessId] =
       useState<string>(() => {
+        const boothContext = getBoothContext(sale);
         return (
-          (sale as any)?.metadata?.boothSaleContext?.principalBusinessId ||
-          (sale as any)?.archiveMetadata?.boothSaleContext
-            ?.principalBusinessId ||
+          boothContext.principalBusinessId ||
           ""
         );
       });
 
     // State for Partner (Them)
     const [selectedPartnerId, setSelectedPartnerId] = useState<string>(() => {
+      const boothContext = getBoothContext(sale);
       // 1. Try modern metadata first
-      if ((sale as any)?.metadata?.boothSaleContext?.counterpartyBusinessId) {
-        return (sale as any).metadata.boothSaleContext.counterpartyBusinessId;
-      }
-      // 2. Try archiveMetadata context
-      if (
-        (sale as any)?.archiveMetadata?.boothSaleContext?.counterpartyBusinessId
-      ) {
-        return (sale as any).archiveMetadata.boothSaleContext
-          .counterpartyBusinessId;
-      }
+      if (boothContext.counterpartyBusinessId) return boothContext.counterpartyBusinessId;
       // 3. Fallback for older sales records (migrate Character ID to Business ID or preexisting Business ID)
       const charId = sale?.partnerId || "";
       if (charId) {
@@ -245,9 +249,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         ].includes((l as any).station as string);
         const hasHistoricalDescription = l.description?.includes("[Partner:");
         const hasPartnerVault = Boolean(
-          (l as any).metadata?.partnerId ||
-          (l as any).metadata?.customerCharacterId ||
-          (l as any).metadata?.characterId,
+          l.settlement?.partnerId,
         );
 
         return (
@@ -259,9 +261,9 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         // Safely cast to 'any' to dynamically extract either ServiceLine or ItemSaleLine values
         const line = sl as any;
         const amountCRC =
-          line.metadata?.originalAmountCRC ?? line.salePriceCrc ?? 0;
+          line.settlement?.originalAmountCRC ?? line.salePriceCrc ?? 0;
         const amountUSD =
-          (line.metadata?.originalAmountUSD ??
+          (line.settlement?.originalAmountUSD ??
             line.revenue ??
             line.quantity * line.unitPrice) ||
           0;
@@ -273,11 +275,9 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
           description: desc,
           amountCRC: Number.isFinite(amountCRC) ? amountCRC : 0,
           amountUSD: Number.isFinite(amountUSD) ? amountUSD : 0,
-          category: line.metadata?.category || categoryMatch || "Other",
+          category: line.settlement?.category || categoryMatch || "Other",
           partnerId:
-            line.metadata?.partnerId ||
-            line.metadata?.customerCharacterId ||
-            line.metadata?.characterId ||
+            line.settlement?.partnerId ||
             "",
         };
       });
@@ -297,18 +297,20 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
 
     // Payment Distribution State
     // Modifiable Financials State (First-Class Fields)
-    const [boothCost, setBoothCost] = useState<number>((sale as any)?.boothFee || 0);
+    const [boothCost, setBoothCost] = useState<number>(() =>
+      getSaleAmount(sale?.context?.boothFee),
+    );
     const [paymentBitcoin, setPaymentBitcoin] = useState<number>(
-      (sale as any)?.paymentBreakdown?.bitcoin || 0,
+      getSaleAmount(sale?.context?.paymentBreakdown?.bitcoin),
     );
     const [paymentCard, setPaymentCard] = useState<number>(
-      (sale as any)?.paymentBreakdown?.card || 0,
+      getSaleAmount(sale?.context?.paymentBreakdown?.card),
     );
     const [paymentCashCRC, setPaymentCashCRC] = useState<number>(
-      (sale as any)?.paymentBreakdown?.cashCRC || 0,
+      getSaleAmount(sale?.context?.paymentBreakdown?.cashCRC),
     );
     const [paymentCashUSD, setPaymentCashUSD] = useState<number>(
-      (sale as any)?.paymentBreakdown?.cashUSD || 0,
+      getSaleAmount(sale?.context?.paymentBreakdown?.cashUSD),
     );
 
     // Effect to auto-calculate Cash remainder initially (OPTIONAL)
@@ -332,8 +334,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       // 2. Load Default Founder Business
       if (!selectedFounderBusinessId && businesses.length > 0) {
         // First try to find a founder business from metadata
-        const metaFounderId =
-          (sale as any)?.metadata?.boothSaleContext?.principalBusinessId;
+        const metaFounderId = getBoothContext(sale).principalBusinessId;
         if (metaFounderId && businesses.some((b) => b.id === metaFounderId)) {
           setSelectedFounderBusinessId(metaFounderId);
         } else {
@@ -574,8 +575,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
           let total = 0;
           let category = "Other";
 
-          const metaUSD = (itemLine as any).metadata?.totalUSD ?? 0;
-          const metaCRC = (itemLine as any).metadata?.totalCRC ?? 0;
+          const metaUSD = (itemLine as any).settlement?.totalUSD ?? 0;
+          const metaCRC = (itemLine as any).settlement?.totalCRC ?? 0;
 
           if (metaUSD > 0 || metaCRC > 0) {
             total = (itemLine.quantity || 0) * (extractMoneyValue(itemLine.unitPrice) || 0);
@@ -732,8 +733,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         description: `[Partner: ${getPartnerName(selectedPartnerId)}] ${quickCat}`,
         taxAmount: toMoney(0),
         createTask: false,
-        // Metadata stores the raw inputs and relationship info
-        metadata: {
+        settlement: {
           originalAmountCRC: amountCRC,
           originalAmountUSD: amountUSD,
           category: quickCat,
@@ -777,8 +777,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         if (line.kind === "service" && line.station === "booth-sales") {
           return {
             ...line,
-            metadata: {
-              ...(line as any).metadata,
+            settlement: {
+              ...(line as any).settlement,
               partnerShare: !Number.isNaN(
                 totals.breakdown.partnerSharePct_Partner,
               )
@@ -862,21 +862,18 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
           totalRevenue: toMoney(totals.grossSales / safeExchangeRate),
         },
 
-        // First-Class Fields
-        boothFee: boothCost,
-        paymentBreakdown: {
-          bitcoin: paymentBitcoin,
-          card: paymentCard,
-          cashCRC: paymentCashCRC,
-          cashUSD: paymentCashUSD,
-        },
-
-        // Metadata Extension Payload
-        metadata: {
-          ...((sale as any)?.metadata || {}),
-          boothSaleContext: {
-            ...boothMetadata.boothSaleContext,
+        context: {
+          ...(sale?.context || {}),
+          kind: "sale-context",
+          schemaVersion: 1,
+          boothFee: toMoney(boothCost, "CRC"),
+          paymentBreakdown: {
+            bitcoin: toMoney(paymentBitcoin, "USD"),
+            card: toMoney(paymentCard, "USD"),
+            cashCRC: toMoney(paymentCashCRC, "CRC"),
+            cashUSD: toMoney(paymentCashUSD, "USD"),
           },
+          boothSaleContext: boothMetadata.boothSaleContext,
         },
         links: (sale as any)?.links || [],
 
@@ -1066,7 +1063,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                           const item = items.find(
                             (i) => i.id === (line as ItemSaleLine).itemId,
                           );
-                          const meta = (line as any).metadata || {};
+                          const meta = (line as any).settlement || {};
                           return (
                             <tr
                               key={line.lineId}
@@ -1763,7 +1760,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                     unitPrice: saleItem.unitPrice,
                     quantity: saleItem.quantity,
                     description: saleItem.itemName,
-                    metadata: {
+                    settlement: {
                       usdExpression: saleItem.usdExpression,
                       crcExpression: saleItem.crcExpression,
                       totalUSD: saleItem.totalUSD,
@@ -1796,10 +1793,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                   unitPrice: extractMoneyValue(il.unitPrice) || 0,
                   total: (il.quantity || 0) * (extractMoneyValue(il.unitPrice) || 0),
                   siteId: siteId,
-                  usdExpression: (il as any).metadata?.usdExpression,
-                  crcExpression: (il as any).metadata?.crcExpression,
-                  totalUSD: (il as any).metadata?.totalUSD,
-                  totalCRC: (il as any).metadata?.totalCRC,
+                  usdExpression: (il as any).settlement?.usdExpression,
+                  crcExpression: (il as any).settlement?.crcExpression,
+                  totalUSD: (il as any).settlement?.totalUSD,
+                  totalCRC: (il as any).settlement?.totalCRC,
                 };
               })}
             defaultSiteId={siteId}

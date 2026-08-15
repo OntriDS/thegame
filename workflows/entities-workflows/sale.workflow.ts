@@ -270,7 +270,8 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       linesChanged ||
       hasRevenueChanged(sale, previousSale) ||
       hasCostChanged(sale, previousSale) ||
-      sale.boothFee !== previousSale.boothFee ||
+      (sale.context?.boothSaleContext?.boothCost ?? null) !==
+        (previousSale.context?.boothSaleContext?.boothCost ?? null) ||
       sale.partnerId !== previousSale.partnerId ||
       getSaleCharacterId(sale) !== getSaleCharacterId(previousSale) ||
       sale.name !== previousSale.name ||
@@ -672,5 +673,4 @@ async function removeSoldItemRowsForDeletedSale(saleId: string, sale: Sale | nul
     console.error(`[removeSoldItemRowsForDeletedSale] ❌ Failed for sale ${saleId}:`, error);
   }
 }
-
 

@@ -188,7 +188,7 @@ export class SummaryService {
     await SummaryRepository.updateCounters({
       monthYear: formatArchiveMonthKeyUTC(new Date(date)),
       salesVolumeDelta: -1,
-      salesRevenueDelta: -(sale.totals.totalRevenue || 0)
+      salesRevenueDelta: -extractMoneyValue(sale.totals.totalRevenue)
     });
   }
 

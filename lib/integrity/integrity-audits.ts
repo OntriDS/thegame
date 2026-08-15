@@ -23,6 +23,7 @@ import {
 import { getLinksFor } from '@/links/link-registry';
 import { EntityType, SaleStatus } from '@/types/enums';
 import type { Sale, FinancialRecord } from '@/types/entities';
+import { extractMoneyValue } from '@/lib/utils/financial-utils';
 import { INTEGRITY_ISSUES_CAP, type IntegrityAuditResult, type IntegrityIssue } from './types';
 
 const MAX_ENTITIES_SCAN = 400;
@@ -159,9 +160,9 @@ export async function auditLinkConsistency(month: number, year: number): Promise
 }
 
 function paymentLooksPresent(sale: Sale): boolean {
-  const pb = sale.paymentBreakdown;
+  const pb = sale.context?.paymentBreakdown;
   const breakdownSum = pb
-    ? (pb.cashUSD || 0) + (pb.cashCRC || 0) + (pb.card || 0) + (pb.bitcoin || 0)
+    ? extractMoneyValue(pb.cashUSD) + extractMoneyValue(pb.cashCRC) + extractMoneyValue(pb.card) + extractMoneyValue(pb.bitcoin)
     : 0;
   const payArr = sale.payments?.length ?? 0;
   return breakdownSum > 0 || payArr > 0;

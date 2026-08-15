@@ -149,12 +149,17 @@ export async function POST(req: NextRequest) {
           : requestedStatus === TaskStatus.COLLECTED
             ? (existingTask?.collectedAt || getUTCNow())
             : existingTask?.collectedAt;
+    const existingProgress = typeof existingTask?.progress === 'object'
+      ? Number((existingTask.progress as { percentage?: unknown }).percentage ?? 0)
+      : Number(existingTask?.progress ?? 0);
     const nextProgress =
       taskBody.progress !== undefined
-        ? Number(taskBody.progress)
+        ? (typeof taskBody.progress === 'object'
+          ? Number((taskBody.progress as { percentage?: unknown }).percentage ?? 0)
+          : Number(taskBody.progress))
         : isRevertingFromTerminal
           ? 0
-          : existingTask?.progress;
+          : existingProgress;
 
     const task = {
       ...cleanTaskBody,
@@ -167,7 +172,7 @@ export async function POST(req: NextRequest) {
       dueDate: taskBody.dueDate ? parseDateToUTC(taskBody.dueDate) : undefined,
       doneAt: nextDoneAt,
       collectedAt: nextCollectedAt,
-      progress: nextProgress,
+      progress: { percentage: Number.isFinite(nextProgress) ? nextProgress : 0 },
       isCollected: isRevertingFromTerminal
         ? false
         : ((taskBody as Task).isCollected ?? existingTask?.isCollected),

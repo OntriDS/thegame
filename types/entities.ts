@@ -870,12 +870,26 @@ export interface Payment {
 }
 
 /** Base for sale lines */
+export interface SaleLineSettlementV1 {
+  usdExpression?: string;
+  crcExpression?: string;
+  totalUSD?: number;
+  totalCRC?: number;
+  originalAmountUSD?: number;
+  originalAmountCRC?: number;
+  category?: string;
+  partnerId?: EntityId | null;
+  partnerShare?: number;
+  myCommission?: number;
+}
+
 export interface SaleLineBase {
   lineId: string;
   kind: 'item' | 'service';
   description?: string;
   taxAmount?: Money;
   discount?: Discount;     // line-level discount
+  settlement?: SaleLineSettlementV1;
 }
 
 /** Product line: one inventory row */
@@ -922,7 +936,51 @@ export interface SaleContextV1 {
     bitcoin?: Money;
   };
   newCustomerName?: string;
+  source?: string;
+  cancelReason?: string;
+  cancelledAt?: UtcIsoString;
+  m2m?: {
+    tokenTrans?: string | null;
+    reference?: string | null;
+  };
+  boothSaleContext?: BoothSaleContextV1;
   rewardIntent?: RewardIntentFacetV1; // Staged rewards
+}
+
+export interface BoothSaleBreakdownV1 {
+  principalSharePct_Me: number;
+  principalSharePct_Partner: number;
+  partnerSharePct_Me: number;
+  partnerSharePct_Partner: number;
+  mySales: number;
+  partnerSales: number;
+  costMe: number;
+  costPartner: number;
+}
+
+export interface BoothSaleCalculatedTotalsV1 {
+  grossSales: number;
+  myNet: number;
+  partnerNet: number;
+  myCommissions: number;
+  partnerCommissions: number;
+  breakdown: BoothSaleBreakdownV1;
+}
+
+export interface BoothPaymentDistributionV1 {
+  bitcoin: number;
+  card: number;
+  cashCRC: number;
+  cashUSD: number;
+}
+
+export interface BoothSaleContextV1 {
+  principalBusinessId?: EntityId | null;
+  counterpartyBusinessId?: EntityId | null;
+  contractId?: EntityId | null;
+  boothCost: number;
+  calculatedTotals?: BoothSaleCalculatedTotalsV1;
+  paymentDistribution?: BoothPaymentDistributionV1;
 }
 
 export interface SaleLifecycleV1 {
