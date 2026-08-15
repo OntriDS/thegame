@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
-import { Site, Link } from '@/types/entities';
+import { Site } from '@/types/entities';
 import { MapPin, Loader2, Plus, Trash2 } from 'lucide-react';
 import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
 import { ClientAPI } from '@/lib/client-api';
@@ -40,18 +40,18 @@ export default function CharacterSitesSubmodal({
             // Get all links for this character
             const links = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: characterId });
 
-            // Filter for ownership links (canonical: SITE_CHARACTER)
-            // Site -> Character ownership
-            const siteLinks = links.filter((l: Link) =>
-                (l.linkType === LinkType.SITE_CHARACTER) &&
-                (l.target.type === EntityType.CHARACTER && l.target.id === characterId)
+            // Filter for ownership links (canonical: CHARACTER_SITE)
+            // Character -> Site ownership
+            const siteLinks = links.filter((l: any) =>
+                (l.linkType === LinkType.CHARACTER_SITE) &&
+                (l.source.type === EntityType.CHARACTER && l.source.id === characterId)
             );
 
-            // Get site IDs from link SOURCE (site is the source)
+            // Get site IDs from link TARGET (site is the target)
             const siteIds = new Set<string>();
-            siteLinks.forEach((link: Link) => {
-                if (link.source.type === EntityType.SITE) {
-                    siteIds.add(link.source.id);
+            siteLinks.forEach((link: any) => {
+                if (link.target.type === EntityType.SITE) {
+                    siteIds.add(link.target.id);
                 }
             });
 
@@ -83,12 +83,12 @@ export default function CharacterSitesSubmodal({
         try {
             setLoading(true);
 
-            // Create CANONICAL link: Site -> Character
+            // Create CANONICAL link: Character -> Site
             await ClientAPI.createLink({
                 id: crypto.randomUUID(),
-                source: { type: EntityType.SITE, id: selectedSiteId },
-                target: { type: EntityType.CHARACTER, id: characterId },
-                linkType: LinkType.SITE_CHARACTER,
+                source: { type: EntityType.CHARACTER, id: characterId },
+                target: { type: EntityType.SITE, id: selectedSiteId },
+                linkType: LinkType.CHARACTER_SITE,
                 createdAt: new Date().toISOString()
             });
 
@@ -110,12 +110,12 @@ export default function CharacterSitesSubmodal({
         try {
             setLoading(true);
 
-            // Find SITE_CHARACTER link where site is SOURCE
+            // Find CHARACTER_SITE link where site is TARGET
             const links = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: characterId });
             const linkToDelete = links.find(l =>
-                l.linkType === LinkType.SITE_CHARACTER &&
-                l.source.id === siteId &&
-                l.target.id === characterId
+                l.linkType === LinkType.CHARACTER_SITE &&
+                l.source.id === characterId &&
+                l.target.id === siteId
             );
 
             if (linkToDelete) {

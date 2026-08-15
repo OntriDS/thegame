@@ -257,7 +257,7 @@ export default function AccountModal({ account, character, open, onOpenChange, o
         loginAttempts: account?.loginAttempts || 0,
         createdAt: account?.createdAt || new Date(),
         updatedAt: new Date(),
-        links: account?.links || [],
+        links: (account as any)?.links || [],
       } as any; // Cast to any to include password for API
 
       await ClientAPI.upsertAccount(accountData);

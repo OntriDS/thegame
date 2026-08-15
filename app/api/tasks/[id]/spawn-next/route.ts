@@ -80,11 +80,19 @@ export async function POST(
       );
     }
 
+    const nextDueDate = 'schedule' in instance ? instance.schedule?.dueDate : undefined;
+    if (!nextDueDate) {
+      return NextResponse.json(
+        { error: 'Spawned instance has no canonical schedule due date.' },
+        { status: 500 }
+      );
+    }
+
     // If this is just a preview, return the calculated date without side effects
     if (isPreview) {
       return NextResponse.json({
         success: true,
-        nextDate: (instance.dueDate as Date).toISOString()
+        nextDate: new Date(nextDueDate).toISOString()
       });
     }
 
@@ -93,7 +101,7 @@ export async function POST(
     const savedInstance = await upsertTask(instance);
 
     // 6. Update template's lastSpawnedDate
-    await updateTemplateLastSpawnedDate(templateId, (instance.dueDate as Date) || new Date());
+    await updateTemplateLastSpawnedDate(templateId, new Date(nextDueDate));
 
     return NextResponse.json({
       success: true,

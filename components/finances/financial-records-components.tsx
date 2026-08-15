@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ClientAPI } from '@/lib/client-api';
 import { FinancialRecord } from '@/types/entities';
+import { FinancialStatus } from '@/types/enums';
 import { formatMonthYear } from '@/lib/utils/date-display-utils';
 import { reviveDates } from '@/lib/utils/date-parsers';;
 import FinancialsModal from '@/components/modals/financials-modal';
+import { extractMoneyValue } from '@/lib/utils/financial-utils';
 import { ArrowUpDown, RefreshCw } from 'lucide-react';
 
 export type FinancialSortOption =
@@ -71,15 +73,15 @@ const sortFinancialRecords = (records: FinancialRecord[], sortOption: FinancialS
 
     case 'profit-high':
       return sortedRecords.sort((a, b) => {
-        const profitA = (a.revenue || 0) - (a.cost || 0);
-        const profitB = (b.revenue || 0) - (b.cost || 0);
+        const profitA = (extractMoneyValue(a.revenue) || 0) - (extractMoneyValue(a.cost) || 0);
+        const profitB = (extractMoneyValue(b.revenue) || 0) - (extractMoneyValue(b.cost) || 0);
         return profitB - profitA;
       });
 
     case 'profit-low':
       return sortedRecords.sort((a, b) => {
-        const profitA = (a.revenue || 0) - (a.cost || 0);
-        const profitB = (b.revenue || 0) - (b.cost || 0);
+        const profitA = (extractMoneyValue(a.revenue) || 0) - (extractMoneyValue(a.cost) || 0);
+        const profitB = (extractMoneyValue(b.revenue) || 0) - (extractMoneyValue(b.cost) || 0);
         return profitA - profitB;
       });
 
@@ -209,10 +211,12 @@ export function CompanyRecordsList({
           ) : (
             <div className="space-y-2">
               {records.map(record => {
-                const isWaiting = record.isNotPaid || record.isNotCharged;
-                const waitingText = record.isNotPaid ? '⏳ Not Paid' : record.isNotCharged ? '⏳ Not Charged' : '';
-                const cost = record.cost || 0;
-                const revenue = record.revenue || 0;
+                const productionPlan = record.context?.productionPlan;
+                const jungleCoins = record.context?.jungleCoins ?? 0;
+                const isWaiting = (record.status === FinancialStatus.PENDING);
+                const waitingText = isWaiting ? '⏳ Pending' : '';
+                const cost = extractMoneyValue(record.cost) || 0;
+                const revenue = extractMoneyValue(record.revenue) || 0;
                 const profit = revenue - cost;
 
                 return (
@@ -241,19 +245,19 @@ export function CompanyRecordsList({
                               <span className="text-orange-600 text-xs font-medium">{waitingText}</span>
                             </>
                           )}
-                          {record.outputItemName && (
+                          {productionPlan?.outputItemName && (
                             <>
                               <span className="text-muted-foreground">•</span>
                               <span className="text-xs">
-                                {record.outputItemName}
-                                {record.outputQuantity && record.outputQuantity > 1 && ` (${record.outputQuantity}x)`}
+                                {productionPlan.outputItemName}
+                                {productionPlan.outputQuantity && productionPlan.outputQuantity > 1 && ` (${productionPlan.outputQuantity}x)`}
                               </span>
                             </>
                           )}
-                          {record.jungleCoins > 0 && (
+                          {jungleCoins > 0 && (
                             <>
                               <span className="text-muted-foreground">•</span>
-                              <span className="text-blue-600 text-xs">J$: {record.jungleCoins}</span>
+                              <span className="text-blue-600 text-xs">J$: {jungleCoins}</span>
                             </>
                           )}
                         </div>
@@ -431,10 +435,12 @@ export function PersonalRecordsList({
           ) : (
             <div className="space-y-2">
               {records.map(record => {
-                const isWaiting = record.isNotPaid || record.isNotCharged;
-                const waitingText = record.isNotPaid ? '⏳ Not Paid' : record.isNotCharged ? '⏳ Not Charged' : '';
-                const cost = record.cost || 0;
-                const revenue = record.revenue || 0;
+                const productionPlan = record.context?.productionPlan;
+                const jungleCoins = record.context?.jungleCoins ?? 0;
+                const isWaiting = (record.status === FinancialStatus.PENDING);
+                const waitingText = isWaiting ? '⏳ Pending' : '';
+                const cost = extractMoneyValue(record.cost) || 0;
+                const revenue = extractMoneyValue(record.revenue) || 0;
                 const profit = revenue - cost;
 
                 return (
@@ -463,19 +469,19 @@ export function PersonalRecordsList({
                               <span className="text-orange-600 text-xs font-medium">{waitingText}</span>
                             </>
                           )}
-                          {record.outputItemName && (
+                          {productionPlan?.outputItemName && (
                             <>
                               <span className="text-muted-foreground">•</span>
                               <span className="text-xs">
-                                {record.outputItemName}
-                                {record.outputQuantity && record.outputQuantity > 1 && ` (${record.outputQuantity}x)`}
+                                {productionPlan.outputItemName}
+                                {productionPlan.outputQuantity && productionPlan.outputQuantity > 1 && ` (${productionPlan.outputQuantity}x)`}
                               </span>
                             </>
                           )}
-                          {record.jungleCoins > 0 && (
+                          {jungleCoins > 0 && (
                             <>
                               <span className="text-muted-foreground">•</span>
-                              <span className="text-blue-600 text-xs">J$: {record.jungleCoins}</span>
+                              <span className="text-blue-600 text-xs">J$: {jungleCoins}</span>
                             </>
                           )}
                         </div>

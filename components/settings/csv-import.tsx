@@ -255,7 +255,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         createdAt: new Date(),
         updatedAt: new Date(),
         links: [] // initialize links array
-      };
+      } as unknown as Item;
     }));
 
     return { items, warnings };
@@ -316,9 +316,9 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         if (item.collection && !Object.values(Collection).includes(item.collection)) {
           validationErrors.push(`Row ${index + 1}: Invalid collection "${item.collection}"`);
         }
-        if (item.subItemType && !isValidSubItemType(item.type, item.subItemType)) {
+        if ((item as any).subItemType && !isValidSubItemType(item.type, (item as any).subItemType)) {
           const validSubtypes = getSubTypesForItemType(item.type);
-          validationErrors.push(`Row ${index + 1}: Invalid subtype "${item.subItemType}" for type "${item.type}". Valid subtypes are: ${validSubtypes.join(', ')}`);
+          validationErrors.push(`Row ${index + 1}: Invalid subtype "${(item as any).subItemType}" for type "${item.type}". Valid subtypes are: ${validSubtypes.join(', ')}`);
         }
       });
 

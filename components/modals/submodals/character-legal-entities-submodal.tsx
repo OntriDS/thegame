@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
-import { Business, Link } from '@/types/entities';
+import { Business } from '@/types/entities';
 import { Building2, Loader2, Plus, Trash2, Link as LinkIcon } from 'lucide-react';
 import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
 import { ClientAPI } from '@/lib/client-api';
@@ -45,14 +45,14 @@ export default function CharacterLegalEntitiesSubmodal({
             const links = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: characterId });
 
             // Filter for legal entity links
-            const entityLinks = links.filter((l: Link) =>
+            const entityLinks = links.filter((l: any) =>
                 (l.linkType === LinkType.CHARACTER_BUSINESS) &&
                 (l.source.type === EntityType.CHARACTER && l.source.id === characterId)
             );
 
             // Get entity IDs from Links
             const entityIds = new Set<string>();
-            entityLinks.forEach((link: Link) => {
+            entityLinks.forEach((link: any) => {
                 if (link.target.type === EntityType.BUSINESS) {
                     entityIds.add(link.target.id);
                 }

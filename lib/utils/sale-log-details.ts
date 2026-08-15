@@ -29,7 +29,7 @@ export function getSaleLogDetails(sale: Sale) {
  * Note: We DO NOT prefer collectedAt because that timestamp strictly relates to gamification points, not the physical transaction.
  */
 export function saleReferenceDateForItemSoldAndLog(
-  sale: Pick<Sale, 'status' | 'doneAt' | 'saleDate'>
+  sale: Pick<Sale, 'status' | 'saleDate' | 'lifecycle'>
 ): Date {
   const toValid = (v: unknown): Date | null => {
     if (v == null || v === '') return null;
@@ -41,7 +41,7 @@ export function saleReferenceDateForItemSoldAndLog(
     }
   };
 
-  const done = toValid(sale.doneAt);
+  const done = toValid(sale.lifecycle?.doneAt);
   if (done) return done;
   const sd = toValid(sale.saleDate);
   if (sd) return sd;

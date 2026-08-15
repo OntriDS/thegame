@@ -18,12 +18,12 @@ interface TaskHistoryViewProps {
     refreshKey?: number;
 }
 
-interface EnrichedTask extends Task {
+type EnrichedTask = Task & {
     _parentTrail?: string[];
     _hasCollectedParent?: boolean;
     _displayParentId?: string | null | undefined;
     parentName?: string;
-}
+};
 
 // Build hierarchy from collected tasks + all tasks
 const buildTaskHierarchy = (collectedTasks: Task[], allTasks: Task[]): EnrichedTask[] => {
@@ -50,7 +50,7 @@ const buildTaskHierarchy = (collectedTasks: Task[], allTasks: Task[]): EnrichedT
             const parent = allTaskMap.get(currentId);
             if (parent) {
                 parentTrail.unshift(parent.name || 'Unknown Parent');
-                if (parent.isCollected) {
+                if (parent.status === TaskStatus.COLLECTED) {
                     hasCollectedParentInChain = true;
                 }
                 currentId = parent.parentId;
@@ -85,18 +85,19 @@ function formatTaskHistoryDate(value: unknown): string {
 
 /** Timeline line for History rows: Done + Collected, or Failed (no collection). */
 function TaskHistoryDoneCollectedLine({ task }: { task: Task | EnrichedTask }) {
-    if (task.status === TaskStatus.FAILED) {
-        const failedLabel = formatTaskHistoryDate(task.doneAt);
+    const t = task as any;
+    if (t.status === TaskStatus.FAILED) {
+        const failedLabel = formatTaskHistoryDate(t.doneAt);
         return (
             <div className="flex items-center gap-1.5 font-medium whitespace-nowrap text-red-600 dark:text-red-400/80">
                 <span>Failed: {failedLabel}</span>
             </div>
         );
     }
-    const doneLabel = formatTaskHistoryDate(task.doneAt);
-    const collectedLabel = formatTaskHistoryDate(task.collectedAt);
+    const doneLabel = formatTaskHistoryDate(t.doneAt);
+    const collectedLabel = formatTaskHistoryDate(t.collectedAt);
     const tone =
-        task.status === TaskStatus.COLLECTED
+        t.status === TaskStatus.COLLECTED
             ? 'text-emerald-600 dark:text-emerald-400/80'
             : 'text-green-600 dark:text-green-400/80';
     return (
@@ -109,8 +110,9 @@ function TaskHistoryDoneCollectedLine({ task }: { task: Task | EnrichedTask }) {
 }
 
 function taskHistoryBorderClass(task: Task | EnrichedTask): string {
-    if (task.status === TaskStatus.COLLECTED) return 'border-l-emerald-500';
-    if (task.status === TaskStatus.FAILED) return 'border-l-red-500';
+    const t = task as any;
+    if (t.status === TaskStatus.COLLECTED) return 'border-l-emerald-500';
+    if (t.status === TaskStatus.FAILED) return 'border-l-red-500';
     return 'border-l-green-400';
 }
 
@@ -119,8 +121,8 @@ const sortOrphanTasks = (tasks: EnrichedTask[], sortOption: TaskHistorySort): En
     const sortedTasks = [...tasks];
     if (sortOption === 'done-date') {
         return sortedTasks.sort((a, b) => {
-            const dateA = new Date(a.doneAt || 0).getTime();
-            const dateB = new Date(b.doneAt || 0).getTime();
+            const dateA = new Date((a as any).doneAt || 0).getTime();
+            const dateB = new Date((b as any).doneAt || 0).getTime();
             return dateB - dateA; // Newest first
         });
     } else {
@@ -140,14 +142,14 @@ const sortGroupedTasks = (groupedTasks: Map<string, EnrichedTask[]>, sortOption:
     if (sortOption === 'done-date') {
         // Sort by parent done date (use first child's done date as proxy for parent)
         return entries.sort(([parentNameA, childTasksA], [parentNameB, childTasksB]) => {
-            const doneDateA = childTasksA.length > 0 ? new Date(childTasksA[0].doneAt || 0).getTime() : 0;
-            const doneDateB = childTasksB.length > 0 ? new Date(childTasksB[0].doneAt || 0).getTime() : 0;
+            const doneDateA = childTasksA.length > 0 ? new Date((childTasksA[0] as any).doneAt || 0).getTime() : 0;
+            const doneDateB = childTasksB.length > 0 ? new Date((childTasksB[0] as any).doneAt || 0).getTime() : 0;
             return doneDateB - doneDateA; // Newest parent first
         }).map(([parentName, childTasks]) => {
             // Sort child tasks within each parent group by done date
             const sortedChildren = [...childTasks].sort((a, b) => {
-                const doneDateA = new Date(a.doneAt || 0).getTime();
-                const doneDateB = new Date(b.doneAt || 0).getTime();
+                const doneDateA = new Date((a as any).doneAt || 0).getTime();
+                const doneDateB = new Date((b as any).doneAt || 0).getTime();
                 return doneDateB - doneDateA; // Newest first
             });
             return [parentName, sortedChildren];
@@ -183,7 +185,7 @@ function renderTaskHierarchy(
         // Group by the name of the parent to display it cleanly, or fallback to 'Unknown Parent' if it has an ID but wasn't mapped
         const parentKey = task._hasCollectedParent
             ? task._displayParentId
-            : (task.parentId ? (task as any).parentName || 'Unknown Parent' : undefined);
+            : ((task as any).parentId ? (task as any).parentName || 'Unknown Parent' : undefined);
 
         if (parentKey && groupedTasks.has(parentKey)) {
             groupedTasks.get(parentKey)!.push(task);
@@ -209,12 +211,12 @@ function renderTaskHierarchy(
                 <>
                     {/* Orphaned tasks at top level */}
                     {sortedOrphanTasks.map((task) => {
-                        const Icon = TASK_TYPE_ICONS[task.type as TaskType] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT];
+                        const Icon = TASK_TYPE_ICONS[(task as any).type as TaskType] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT];
                         return (
                             <Card
-                                key={task.id}
+                                key={(task as any).id}
                                 className={`hover:bg-muted/50 transition-colors cursor-pointer border-l-4 ${taskHistoryBorderClass(task)}`}
-                                onClick={() => onSelectTask?.(task)}
+                                onClick={() => onSelectTask?.(task as unknown as Task)}
                             >
                                 <CardContent className="p-3 flex items-center gap-3">
                                     <Icon className="h-4 w-4 text-muted-foreground" />
@@ -245,14 +247,15 @@ function renderTaskHierarchy(
                                 {/* Child tasks */}
                                 <div className="ml-4 space-y-2">
                                     {childTasks.map((task, index) => {
-                                        const Icon = TASK_TYPE_ICONS[task.type as TaskType] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT];
+                                        const t = task as any;
+                                        const Icon = TASK_TYPE_ICONS[t.type as TaskType] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT];
                                         const isFirstChild = index === 0;
 
                                         return (
                                             <Card
-                                                key={task.id}
+                                                key={t.id}
                                                 className={`hover:bg-muted/50 transition-colors cursor-pointer border-l-4 ${taskHistoryBorderClass(task)}`}
-                                                onClick={() => onSelectTask?.(task)}
+                                                onClick={() => onSelectTask?.(task as unknown as Task)}
                                             >
                                                 <CardContent className="p-3 flex items-center gap-3">
                                                     <div className="flex items-center">
@@ -260,16 +263,16 @@ function renderTaskHierarchy(
                                                         <Icon className="h-4 w-4 text-muted-foreground" />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="font-medium truncate">{(task as any)?.name?.toString()?.trim() || '(Untitled Task)'}</div>
+                                                        <div className="font-medium truncate">{t.name?.toString()?.trim() || '(Untitled Task)'}</div>
                                                         <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
                                                             <span className="px-1.5 py-0.5 bg-muted rounded-sm text-[10px] font-semibold uppercase tracking-wider">
-                                                                {(task as any)?.station?.toString()?.trim() || 'Unknown'}
+                                                                {t.station?.toString()?.trim() || 'Unknown'}
                                                             </span>
-                                                            {task.ownerId ? (
+                                                            {t.ownerId ? (
                                                                 <span className="text-muted-foreground">
-                                                                    owner: {Array.isArray(task.ownerId) 
-                                                                        ? task.ownerId.map(id => ownerNameById[id] || id).join(', ')
-                                                                        : ownerNameById[task.ownerId] || task.ownerId}
+                                                                    owner: {Array.isArray(t.ownerId) 
+                                                                        ? t.ownerId.map((id: string) => ownerNameById[id] || id).join(', ')
+                                                                        : ownerNameById[t.ownerId] || t.ownerId}
                                                                 </span>
                                                             ) : null}
                                                             <TaskHistoryDoneCollectedLine task={task} />

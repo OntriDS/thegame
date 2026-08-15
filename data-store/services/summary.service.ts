@@ -1,5 +1,5 @@
 // @/data-store/services/summary.service.ts
-import { FinancialRecord, Sale, Item, Task, ItemSaleLine, SummaryTotals } from '@/types/entities';
+import { FinancialRecord, Sale, Item, Task, ItemSaleLine, SummaryTotals, Money } from '@/types/entities';
 import { SaleStatus, ItemStatus, TaskStatus } from '@/types/enums';
 import { SummaryRepository } from '../repositories/summary.repo';
 import { formatMonthKey } from '@/lib/utils/date-display-utils';;
@@ -8,6 +8,7 @@ import {
   cashflowCountableCost,
   cashflowCountableJungleCoins,
   cashflowCountableRevenue,
+  extractMoneyValue,
 } from '@/lib/utils/financial-utils';
 
 export class SummaryService {
@@ -79,7 +80,7 @@ export class SummaryService {
     newSale: Sale,
     oldSale?: Sale
   ): Promise<void> {
-    const date = newSale.collectedAt || newSale.saleDate || new Date();
+    const date = newSale.lifecycle?.collectedAt || newSale.saleDate || new Date();
     const monthYear = formatArchiveMonthKeyUTC(new Date(date));
     let salesVolumeDelta = 0;
     let salesRevenueDelta = 0;
@@ -92,13 +93,13 @@ export class SummaryService {
 
     if (!wasCountable && isNowCountable) {
       salesVolumeDelta = 1;
-      salesRevenueDelta = newSale.totals.totalRevenue || 0;
+      salesRevenueDelta = extractMoneyValue(newSale.totals.totalRevenue);
     } else if (wasCountable && !isNowCountable) {
       salesVolumeDelta = -1;
-      salesRevenueDelta = -(oldSale?.totals.totalRevenue || 0);
+      salesRevenueDelta = -extractMoneyValue(oldSale?.totals.totalRevenue);
     } else if (wasCountable && isNowCountable) {
       salesVolumeDelta = 0; // Count stays the same
-      salesRevenueDelta = (newSale.totals.totalRevenue || 0) - (oldSale?.totals.totalRevenue || 0);
+      salesRevenueDelta = extractMoneyValue(newSale.totals.totalRevenue) - extractMoneyValue(oldSale?.totals.totalRevenue);
     }
 
     if (salesVolumeDelta !== 0 || salesRevenueDelta !== 0) {
@@ -113,7 +114,7 @@ export class SummaryService {
     newItem: Item,
     oldItem?: Item
   ): Promise<void> {
-    const date = newItem.soldAt || newItem.updatedAt || new Date();
+    const date = newItem.context?.soldAt || newItem.updatedAt || new Date();
     const monthYear = formatArchiveMonthKeyUTC(new Date(date));
     let itemsSoldDelta = 0;
 
@@ -145,15 +146,15 @@ export class SummaryService {
     newTask: Task,
     oldTask?: Task
   ): Promise<void> {
-    const date = newTask.collectedAt || newTask.doneAt || newTask.updatedAt || new Date();
+    const date = (newTask as any).collectedAt || (newTask as any).doneAt || newTask.updatedAt || new Date();
     const monthYear = formatArchiveMonthKeyUTC(new Date(date));
     let taskCountDelta = 0;
 
-    const isDone = (status?: string, isCollected?: boolean) => 
-      status === TaskStatus.DONE || status === TaskStatus.COLLECTED || !!isCollected;
+    const isDone = (status?: string) => 
+      status === TaskStatus.DONE || status === TaskStatus.COLLECTED;
 
-    const wasDone = oldTask ? isDone(oldTask.status, oldTask.isCollected) : false;
-    const isNowDone = isDone(newTask.status, newTask.isCollected);
+    const wasDone = oldTask ? isDone(oldTask.status) : false;
+    const isNowDone = isDone(newTask.status);
 
     if (!wasDone && isNowDone) taskCountDelta = 1;
     else if (wasDone && !isNowDone) taskCountDelta = -1;
@@ -183,7 +184,7 @@ export class SummaryService {
       return;
     }
 
-    const date = sale.collectedAt || sale.saleDate || new Date();
+    const date = sale.lifecycle?.collectedAt || sale.saleDate || new Date();
     await SummaryRepository.updateCounters({
       monthYear: formatArchiveMonthKeyUTC(new Date(date)),
       salesVolumeDelta: -1,
@@ -192,7 +193,7 @@ export class SummaryService {
   }
 
   static async handleItemDeletion(item: Item) {
-    const date = item.soldAt || new Date();
+    const date = item.context?.soldAt || new Date();
     await SummaryRepository.updateCounters({
       monthYear: formatArchiveMonthKeyUTC(new Date(date)),
       itemsSoldDelta: -(item.quantitySold || 0)
@@ -200,7 +201,7 @@ export class SummaryService {
   }
 
   static async handleTaskDeletion(task: Task) {
-    const date = task.collectedAt || task.doneAt || new Date();
+    const date = (task as any).collectedAt || (task as any).doneAt || new Date();
     await SummaryRepository.updateCounters({
       monthYear: formatArchiveMonthKeyUTC(new Date(date)),
       taskCountDelta: -1
@@ -303,13 +304,12 @@ export class SummaryService {
 
     const countableSales = sales.filter(s =>
       s.status === SaleStatus.CHARGED ||
-      s.status === SaleStatus.COLLECTED ||
-      s.isCollected
+      s.status === SaleStatus.COLLECTED
     );
     const countableTasks = tasks.filter(t =>
       t.status === TaskStatus.DONE ||
       t.status === TaskStatus.COLLECTED ||
-      t.isCollected
+      (t as any).isCollected
     );
     const withCashflow = financials.filter(
       (f) =>
@@ -325,7 +325,7 @@ export class SummaryService {
       revenue: financials.reduce((sum, f) => sum + cashflowCountableRevenue(f), 0),
       costs: financials.reduce((sum, f) => sum + cashflowCountableCost(f), 0),
       profit: 0,
-      salesRevenue: countableSales.reduce((sum, s) => sum + (s.totals.totalRevenue || 0), 0),
+      salesRevenue: countableSales.reduce((sum, s) => sum + extractMoneyValue(s.totals.totalRevenue), 0),
       salesVolume: countableSales.length,
       itemsSold: this.sumPhysicalUnitsFromSales(countableSales),
       taskCount: countableTasks.length,

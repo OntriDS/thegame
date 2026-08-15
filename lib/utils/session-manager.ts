@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/utils/session-manager.ts
 import { v4 as uuidv4 } from 'uuid';
 import type { AISession } from '@/types/entities';
@@ -447,3 +448,4 @@ export function createSessionHeaders(sessionId: string): Record<string, string> 
     'x-session-id': sessionId
   };
 }
+

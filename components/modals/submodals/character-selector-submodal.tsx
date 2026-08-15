@@ -59,7 +59,7 @@ export default function CharacterSelectorSubmodal({
   const filteredCharacters = characters.filter((c: Character) =>
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.contactEmail?.toLowerCase().includes(searchTerm.toLowerCase())
+    (c as any).contactEmail?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleSelect = () => {
@@ -158,9 +158,9 @@ export default function CharacterSelectorSubmodal({
                             </span>
                           )}
 
-                          {character.contactEmail && (
+                          {(character as any).contactEmail && (
                             <span className="truncate max-w-[200px]">
-                              {character.contactEmail}
+                              {(character as any).contactEmail}
                             </span>
                           )}
                         </div>

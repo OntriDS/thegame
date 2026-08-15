@@ -17,6 +17,7 @@ import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import CharacterModal from '@/components/modals/character-modal';
 import type { Character } from '@/types/entities';
 import { CharacterRole } from '@/types/enums';
+import { getCharacterEmail, getCharacterPhone } from '@/lib/compatibility/character-selectors';
 import { ROLE_COLORS } from '@/lib/constants/color-constants';
 import { ChevronLeft, ChevronRight, Mail, Phone, Plus, RefreshCw } from 'lucide-react';
 import { CharactersDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
@@ -337,7 +338,9 @@ function CharactersPageContent() {
                 <tbody className="divide-y divide-muted/20">
                   {characters.map((character) => {
                     const roles = getSortedRoleList(character.roles);
-                    const hasContactInfo = character.contactEmail || character.contactPhone;
+                    const email = getCharacterEmail(character);
+                    const phone = getCharacterPhone(character);
+                    const hasContactInfo = email || phone;
                         const purchasedAmount = character.purchasedAmount ?? 0;
                         const beneficiaryPaidAmount = character.beneficiaryPaidAmount ?? 0;
                     return (
@@ -364,16 +367,16 @@ function CharactersPageContent() {
                         </td>
                         <td className="px-3 py-3">
                           <div className="space-y-1 text-xs">
-                            {character.contactEmail && (
+                            {email && (
                               <div className="flex items-center gap-2 text-muted-foreground">
                                 <Mail className="h-3 w-3" />
-                                <span>{character.contactEmail}</span>
+                                <span>{email}</span>
                               </div>
                             )}
-                            {character.contactPhone && (
+                            {phone && (
                               <div className="flex items-center gap-2 text-muted-foreground">
                                 <Phone className="h-3 w-3" />
-                                <span>{character.contactPhone}</span>
+                                <span>{phone}</span>
                               </div>
                             )}
                             {!hasContactInfo && <span className="text-muted-foreground">No contact info</span>}

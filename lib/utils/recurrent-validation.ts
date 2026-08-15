@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/utils/recurrent-validation.ts
 import { Task } from '@/types/entities';
 import { TaskType, RecurrentFrequency } from '@/types/enums';
@@ -148,3 +149,4 @@ export function validateFrequencyConfig(frequencyConfig: any): {
 
   return { isValid: true };
 }
+

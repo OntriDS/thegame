@@ -100,6 +100,18 @@ export function toUTCISOString(date: Date): string {
   return date.toISOString();
 }
 
+import type { UtcIsoString } from '@/types/entities';
+
+/**
+ * Casts a Date or string to the strict UtcIsoString brand type.
+ */
+export function toUtcIsoString(input: Date | string): any {
+  if (typeof input === 'string') {
+    return input;
+  }
+  return input.toISOString();
+}
+
 /**
  * Parse UTC ISO string to Date object.
  * Ensures strict UTC parsing.

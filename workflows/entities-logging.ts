@@ -17,19 +17,19 @@ import { v4 as uuid } from 'uuid';
  * Collected sales use collectedAt; otherwise doneAt → saleDate → now.
  */
 function saleReferenceDateForItemSoldAndLog(
-  sale: Pick<Sale, 'status' | 'isCollected' | 'collectedAt' | 'doneAt' | 'saleDate'>
+  sale: Pick<Sale, 'status' | 'saleDate'>
 ): Date {
-  const isCollected = sale.status === SaleStatus.COLLECTED || !!sale.isCollected;
+  const isCollected = sale.status === SaleStatus.COLLECTED ;
   const toValid = (v: unknown): Date | null => {
     if (v == null || v === '') return null;
     const d = v instanceof Date ? v : new Date(v as string);
     return Number.isFinite(d.getTime()) ? d : null;
   };
   if (isCollected) {
-    const c = toValid(sale.collectedAt);
+    const c = toValid((sale as any).lifecycle?.collectedAt);
     if (c) return c;
   }
-  const done = toValid(sale.doneAt);
+  const done = toValid((sale as any).lifecycle?.doneAt);
   if (done) return done;
   const sd = toValid(sale.saleDate);
   if (sd) return sd;
@@ -337,7 +337,7 @@ export async function getEntityLogs(
  * Idempotent: skips entityIds that already have any SOLD entry in that month.
  */
 export async function ensureItemSoldLogsFromSale(sale: Sale): Promise<void> {
-  if (sale.isNotPaid || sale.isNotCharged || sale.status === SaleStatus.CANCELLED) return;
+  if ((sale.status === SaleStatus.PENDING) || sale.status === SaleStatus.CANCELLED) return;
 
   const ts = saleReferenceDateForItemSoldAndLog(sale);
   const monthKey = getMonthKeyFromTimestamp(ts);
@@ -367,7 +367,7 @@ export async function ensureItemSoldLogsFromSale(sale: Sale): Promise<void> {
       {
         name: item.name,
         itemType: item.type,
-        subItemType: item.subItemType,
+        subItemType: (item as any).subItemType,
         quantity: (line as { quantity?: number }).quantity
       },
       ts

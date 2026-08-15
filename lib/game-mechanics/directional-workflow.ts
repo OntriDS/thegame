@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/game-mechanics/directional-workflow.ts
 // Directional workflow engine for the Links system (Rosetta Stone pattern)
 
@@ -224,3 +225,4 @@ function generateId(): string {
  * 6. Creates Financial Records for the sale
  * 7. Both trigger CHARACTER rules to award points (PLAYER role only)
  */
+

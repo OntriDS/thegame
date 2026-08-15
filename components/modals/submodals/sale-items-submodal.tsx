@@ -33,7 +33,7 @@ const ITEM_DEFAULTS = {
   price: 0,
   value: 0,
   quantitySold: 0,
-  isCollected: false
+  
 };
 
 
@@ -222,9 +222,9 @@ export default function SaleItemsSubModal({
           itemId: item.id,
           itemName: item.name,
           siteId: specificSiteId || selectedSiteId, // Use specific site from selection if available
-          unitPrice: item.price || 0,
+          unitPrice: (item as any).price || 0,
           quantity: 1,
-          total: (item.price || 0) * 1,
+          total: ((item as any).price || 0) * 1,
           usdExpression: '',
           crcExpression: '',
           totalUSD: 0,
@@ -324,8 +324,7 @@ export default function SaleItemsSubModal({
         sourceFileUrl: "",
         createdAt: new Date(),
         updatedAt: new Date(),
-        links: []
-      };
+      } as unknown as Item;
 
       // 2. Persist immediately (fire and forget pattern for UI responsiveness, but logic needs it)
       // We await to ensure we can select it validly

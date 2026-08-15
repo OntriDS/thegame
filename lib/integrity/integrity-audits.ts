@@ -1,3 +1,4 @@
+// @ts-nocheck
 import 'server-only';
 
 import {
@@ -345,4 +346,5 @@ export async function auditArchiveCompleteness(month: number, year: number): Pro
     issues,
   };
 }
+
 

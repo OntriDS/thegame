@@ -205,8 +205,10 @@ export enum TaskPriority {
 
 /** Status of Records (completed tasks) */
 export enum FinancialStatus {
-  PENDING = 'pending',  // When isNotPaid or isNotCharged - excluded from cashflow
-  DONE = 'done',        // When paid/charged and processed
+  PENDING = 'pending',
+  DONE = 'done',
+  COLLECTED = 'collected',
+  VOIDED = 'voided',
 }
 
 /** In-game currency system */
@@ -606,7 +608,7 @@ export enum LinkType {
   // TASK relationships
   TASK_ITEM = 'TASK_ITEM',      // Task created Item
   TASK_FINREC = 'TASK_FINREC',    // Task linked to Financial Record
-  TASK_SALE = 'TASK_SALE',      // Task spawned from Sale
+
   TASK_PLAYER = 'TASK_PLAYER',    // Task earned Player points (only for PLAYERS)
   TASK_CHARACTER = 'TASK_CHARACTER', // Task assigned to Character (customer, team member, etc.)
   TASK_AGENT = 'TASK_AGENT',    // Task assigned to AI Agent
@@ -646,13 +648,13 @@ export enum LinkType {
   CHARACTER_ITEM = 'CHARACTER_ITEM',     // Character owns/possesses this Item (customer, team member, etc.)
   CHARACTER_SALE = 'CHARACTER_SALE',     // Character is customer of this Sale (customer, team member, etc.)
   CHARACTER_FINREC = 'CHARACTER_FINREC',   // Character is assigned to this Financial Record (customer, team member, etc.)
-  CHARACTER_SITE = 'CHARACTER_SITE',     // Character is related to a Site (owner, lives at, works at, customer of, etc.)
+  CHARACTER_SITE = 'CHARACTER_SITE',     // Character owns/controls a Site (canonical direction)
   CHARACTER_PLAYER = 'CHARACTER_PLAYER',   // When a Character belongs to a Player
   CHARACTER_BUSINESS = 'CHARACTER_BUSINESS', // Character is related to a Business (owner, rep, etc.)
 
   // SITE relationships (locations and places)
   SITE_TASK = 'SITE_TASK', // Site has Tasks performed there (reverse)
-  SITE_CHARACTER = 'SITE_CHARACTER', // Site has a related Character (reverse)
+  SITE_CHARACTER = 'SITE_CHARACTER', // Reverse alias: Site -> Character
   SITE_FINREC = 'SITE_FINREC',    // Site has a related Financial Record (reverse)
   SITE_ITEM = 'SITE_ITEM',      // Site has a related Item (reverse)
   SITE_SALE = 'SITE_SALE',      // Site has a related Sale (reverse)
@@ -826,6 +828,116 @@ export enum DevSprintStatus {
   IN_PROGRESS = 'in-progress',
   DONE = 'done',
 }
+
+// ============================================================================
+// INFRASTRUCTURE & LIFECYCLE ENUMS
+// ============================================================================
+
+export enum EntitySchemaVersion {
+  V1 = 1,
+}
+
+export enum LinkStatus {
+  ACTIVE = 'active',
+  ENDED = 'ended',
+}
+
+export enum EffectClaimStatus {
+  CLAIMED = 'claimed',
+  COMPLETED = 'completed',
+  FAILED_RETRYABLE = 'failed-retryable',
+  FAILED_TERMINAL = 'failed-terminal',
+  AWAITING_RECONCILIATION = 'awaiting-reconciliation',
+  COMPENSATED = 'compensated',
+}
+
+export enum WorkflowStatus {
+  PENDING = 'pending',
+  RUNNING = 'running',
+  WAITING = 'waiting',
+  COMPLETED = 'completed',
+  FAILED_RETRYABLE = 'failed-retryable',
+  FAILED_TERMINAL = 'failed-terminal',
+  COMPENSATING = 'compensating',
+  COMPENSATED = 'compensated',
+}
+
+export const WORKFLOW_TYPES = [
+  'task-completion',
+  'task-collection',
+  'sale-settlement',
+  'monthly-close',
+  'item-production',
+  'item-acquisition',
+  'account-triforce-migration',
+  'link-normalization',
+] as const;
+
+export type WorkflowType = typeof WORKFLOW_TYPES[number];
+
+export enum CanonicalLinkType {
+  ACCOUNT_CHARACTER = 'ACCOUNT_CHARACTER',
+  ACCOUNT_PLAYER = 'ACCOUNT_PLAYER',
+  PLAYER_CHARACTER = 'PLAYER_CHARACTER',
+
+  TASK_PARENT = 'TASK_PARENT',
+  TASK_SITE = 'TASK_SITE',
+  TASK_CHARACTER = 'TASK_CHARACTER',
+  TASK_PLAYER = 'TASK_PLAYER',
+  TASK_ITEM = 'TASK_ITEM',
+  TASK_FINREC = 'TASK_FINREC',
+
+
+  ITEM_SITE = 'ITEM_SITE',
+  ITEM_CHARACTER = 'ITEM_CHARACTER',
+  ITEM_SALE = 'ITEM_SALE',
+  ITEM_FINREC = 'ITEM_FINREC',
+
+  SALE_SITE = 'SALE_SITE',
+  SALE_CHARACTER = 'SALE_CHARACTER',
+  SALE_BUSINESS = 'SALE_BUSINESS',
+  SALE_ITEM = 'SALE_ITEM',
+  SALE_TASK = 'SALE_TASK',
+  SALE_FINREC = 'SALE_FINREC',
+
+  FINREC_SITE = 'FINREC_SITE',
+  FINREC_CHARACTER = 'FINREC_CHARACTER',
+  FINREC_BUSINESS = 'FINREC_BUSINESS',
+  FINREC_ITEM = 'FINREC_ITEM',
+  FINREC_TASK = 'FINREC_TASK',
+  FINREC_SALE = 'FINREC_SALE',
+
+  CHARACTER_SITE = 'CHARACTER_SITE',
+  CHARACTER_BUSINESS = 'CHARACTER_BUSINESS',
+
+  SITE_SETTLEMENT = 'SITE_SETTLEMENT',
+  SITE_SITE = 'SITE_SITE',
+
+  CONTRACT_CHARACTER = 'CONTRACT_CHARACTER',
+}
+
+export const LEGACY_LINK_NORMALIZATION = {
+  PLAYER_ACCOUNT: 'ACCOUNT_PLAYER',
+  CHARACTER_ACCOUNT: 'ACCOUNT_CHARACTER',
+  CHARACTER_PLAYER: 'PLAYER_CHARACTER',
+
+  ITEM_TASK: 'TASK_ITEM',
+  ITEM_SALE: 'SALE_ITEM',
+  ITEM_FINREC: 'FINREC_ITEM',
+
+  SITE_TASK: 'TASK_SITE',
+  SITE_ITEM: 'ITEM_SITE',
+  SITE_SALE: 'SALE_SITE',
+  SITE_FINREC: 'FINREC_SITE',
+  SITE_CHARACTER: 'CHARACTER_SITE',
+
+  PLAYER_TASK: 'TASK_PLAYER',
+  PLAYER_SALE: 'SALE_PLAYER',
+  PLAYER_FINREC: 'FINREC_PLAYER',
+  CHARACTER_TASK: 'TASK_CHARACTER',
+  CHARACTER_SALE: 'SALE_CHARACTER',
+  CHARACTER_FINREC: 'FINREC_CHARACTER',
+} as const;
 
 // ============================================================================
 // BOOTSTRAP CONSTANTS

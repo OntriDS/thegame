@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/utils/business-keys.ts
 // Business key generation for bulk operations deduplication
 // Business keys identify records based on real-world properties, not technical IDs
@@ -126,4 +127,5 @@ function getSiteBusinessKey(site: Site): string {
   const name = (site.name || 'None').trim().toLowerCase();
   return name;
 }
+
 

@@ -70,7 +70,7 @@ export async function updateItem(id: string, updates: Partial<Item>): Promise<It
     name: updates.name ?? existing.name,
     status: updates.status ?? existing.status,
     description: updates.description ?? existing.description,
-    price: updates.price ?? existing.price,
+    pricing: updates.pricing ?? existing.pricing,
     updatedAt: new Date(),
   };
 
@@ -192,8 +192,8 @@ export async function getItemsBySubType(subItemTypes: string | string[]): Promis
   return items.filter((item): item is Item =>
     item !== null &&
     item !== undefined &&
-    item.subItemType !== undefined &&
-    subTypes.includes(item.subItemType)
+    (item as any).subItemType !== undefined &&
+    subTypes.includes((item as any).subItemType)
   );
 }
 
@@ -295,7 +295,7 @@ export async function upsertItem(item: Item): Promise<Item> {
   // 3. Maintain month index (soldAt → createdAt)
   // CRITICAL: Sold items must be indexed by their soldAt date to appear in the correct "Sold Items" month tab
   // Legacy items are intentionally EXCLUDED from month indexing so they stay fully hidden
-  const dateForIndex = toSave.soldAt || toSave.createdAt;
+  const dateForIndex = toSave.context?.soldAt || toSave.createdAt;
   if (!isLegacy && dateForIndex) {
     const currentMonthKey = formatArchiveMonthKeyUTC(dateForIndex);
     await kvSAdd(buildMonthIndexKey(ENTITY, currentMonthKey), item.id);
@@ -314,23 +314,23 @@ export async function upsertItem(item: Item): Promise<Item> {
   }
 
   // Maintain subItemType index
-  if (toSave.subItemType) {
-    const subItemTypeIndexKey = buildEntityIndexKey(ENTITY, 'subItemType', toSave.subItemType);
+  if (toSave.context?.subItemType) {
+    const subItemTypeIndexKey = buildEntityIndexKey(ENTITY, 'subItemType', toSave.context.subItemType);
     await kvSAdd(subItemTypeIndexKey, item.id);
   }
 
   // Clean up old subItemType index if it changed or was removed
-  if (previousItem?.subItemType !== toSave.subItemType) {
-    if (previousItem?.subItemType) {
-      const oldSubItemTypeIndexKey = buildEntityIndexKey(ENTITY, 'subItemType', previousItem.subItemType);
+  if (previousItem?.context?.subItemType !== toSave.context?.subItemType) {
+    if (previousItem?.context?.subItemType) {
+      const oldSubItemTypeIndexKey = buildEntityIndexKey(ENTITY, 'subItemType', previousItem.context.subItemType);
       await kvSRem(oldSubItemTypeIndexKey, item.id);
     }
   }
 
   // Clean up old month index if month changed
   if (previousItem) {
-    const prevDateForIndex = previousItem.soldAt || previousItem.createdAt;
-    const currDateForIndex = toSave.soldAt || toSave.createdAt;
+    const prevDateForIndex = previousItem.context?.soldAt || previousItem.createdAt;
+    const currDateForIndex = toSave.context?.soldAt || toSave.createdAt;
 
     if (prevDateForIndex && currDateForIndex) {
       const prevMonthKey = formatArchiveMonthKeyUTC(prevDateForIndex);
@@ -391,7 +391,7 @@ export async function deleteItem(id: string): Promise<void> {
   // Get item to clean up indexes
   const item = await kvGet<Item>(key);
   if (item) {
-    const dateForIndex = item.soldAt || item.createdAt;
+    const dateForIndex = (item as any).soldAt || item.createdAt;
     if (dateForIndex) {
       const prevMonthKey = formatArchiveMonthKeyUTC(dateForIndex);
       await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), id);
@@ -400,8 +400,8 @@ export async function deleteItem(id: string): Promise<void> {
     const typeIndexKey = buildEntityIndexKey(ENTITY, 'type', item.type);
     await kvSRem(typeIndexKey, id);
 
-    if (item.subItemType) {
-      const subItemTypeIndexKey = buildEntityIndexKey(ENTITY, 'subItemType', item.subItemType);
+    if ((item as any).subItemType) {
+      const subItemTypeIndexKey = buildEntityIndexKey(ENTITY, 'subItemType', (item as any).subItemType);
       await kvSRem(subItemTypeIndexKey, id);
     }
 

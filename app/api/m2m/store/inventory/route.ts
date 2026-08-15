@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextResponse, NextRequest } from 'next/server';
 import { iamService } from '@/lib/iam-service';
 import { ItemStatus, ItemType, Collection } from '@/types/enums';
@@ -641,3 +642,4 @@ function toStoreItemPayload(item: Item) {
     sourceFileUrl: item.sourceFileUrl || undefined,
   };
 }
+

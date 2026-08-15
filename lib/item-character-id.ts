@@ -8,6 +8,6 @@ const normalizeId = (value: unknown): string | null => {
 
 export function getItemCharacterId(item?: Item | null): string | null {
   if (!item) return null;
-  return normalizeId(item.characterId);
+  return normalizeId((item as any).characterId);
 }
 

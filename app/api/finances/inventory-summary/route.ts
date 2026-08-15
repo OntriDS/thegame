@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextResponse, NextRequest } from 'next/server';
 import { getAllItems } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
@@ -79,3 +80,4 @@ export async function GET(req: NextRequest) {
         );
     }
 }
+

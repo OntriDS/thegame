@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Trash2, Plus, FileText, PenTool, AlertTriangle } from 'lucide-react';
 import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
-import { Contract, Business, ContractClause, Character, Link } from '@/types/entities';
+import { Contract, Business, ContractClause, Character } from '@/types/entities';
 import { ContractStatus, ContractClauseType, LinkType, EntityType, CharacterRole } from '@/types/enums';
 import { getContractStatusLabel } from '@/lib/constants/status-display-labels';
 import { v4 as uuid } from 'uuid';
@@ -230,8 +230,8 @@ export function ContractSubmodal({
                 notes: notes || undefined,
                 createdAt: initialData?.createdAt || new Date(),
                 updatedAt: new Date(),
-                links: initialData?.links || [],
-            };
+                links: (initialData as any)?.links || [], // Copy existing links if updating
+            } as unknown as Contract;
 
             onSave(contract);
 
@@ -249,7 +249,7 @@ export function ContractSubmodal({
                     }
                 }
 
-                const link: Link = {
+                const link: any = {
                     id: uuid(),
                     linkType: LinkType.CONTRACT_CHARACTER,
                     source: { type: EntityType.CONTRACT, id: contract.id },

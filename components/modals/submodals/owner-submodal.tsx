@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Character, Link } from '@/types/entities';
+import { Character } from '@/types/entities';
 import { Search, User, X, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ClientAPI } from '@/lib/client-api';
@@ -17,7 +17,7 @@ interface OwnerModalProps {
   entityType: EntityType;
   entityId: string;
   entityName: string;
-  linkType: LinkType.SITE_CHARACTER | LinkType.ITEM_CHARACTER;
+  linkType: LinkType.SITE_CHARACTER | LinkType.CHARACTER_SITE | LinkType.ITEM_CHARACTER;
   onOwnersChanged?: () => void;
   isDraft?: boolean;
   currentOwnerId?: string | null;
@@ -67,11 +67,11 @@ export default function OwnerSubmodal({
 
       // Load ALL owners from links (no primary/additional distinction)
       const links = await ClientAPI.getLinksFor({ type: entityType, id: entityId });
-      const ownerLinks = links.filter((l: Link) => l.linkType === linkType);
+      const ownerLinks = links.filter((l: any) => l.linkType === linkType);
 
       // Get character IDs from links (check both directions for bidirectional query support)
       const ownerIds = new Set<string>();
-      ownerLinks.forEach((link: Link) => {
+      ownerLinks.forEach((link: any) => {
         if (link.source.type === entityType && link.source.id === entityId) {
           ownerIds.add(link.target.id);
         } else if (link.target.type === entityType && link.target.id === entityId) {
@@ -101,7 +101,7 @@ export default function OwnerSubmodal({
   const availableCharacters = characters.filter((c: Character) => {
     const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.contactEmail?.toLowerCase().includes(searchTerm.toLowerCase());
+      (c as any).contactEmail?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch && !currentOwnerIds.has(c.id);
   });
 
@@ -121,11 +121,16 @@ export default function OwnerSubmodal({
       }
 
       // Create link in canonical direction
+      const characterOwnsSite = linkType === LinkType.CHARACTER_SITE;
       const link = {
         id: crypto.randomUUID(),
         linkType: linkType,
-        source: { type: entityType, id: entityId },
-        target: { type: EntityType.CHARACTER, id: selectedOwnerId },
+        source: characterOwnsSite
+          ? { type: EntityType.CHARACTER, id: selectedOwnerId }
+          : { type: entityType, id: entityId },
+        target: characterOwnsSite
+          ? { type: entityType, id: entityId }
+          : { type: EntityType.CHARACTER, id: selectedOwnerId },
         createdAt: new Date().toISOString()
       };
 
@@ -161,7 +166,7 @@ export default function OwnerSubmodal({
 
       // Find the link to remove
       const links = await ClientAPI.getLinksFor({ type: entityType, id: entityId });
-      const ownerLink = links.find((l: Link) => {
+      const ownerLink = links.find((l: any) => {
         if (l.linkType !== linkType) return false;
         // Check both directions (canonical and reverse)
         const isCanonical = l.source.type === entityType && l.source.id === entityId &&
@@ -242,9 +247,9 @@ export default function OwnerSubmodal({
               </Badge>
             )}
 
-            {character.contactEmail && (
+            {(character as any).contactEmail && (
               <span className="truncate max-w-[200px]">
-                {character.contactEmail}
+                {(character as any).contactEmail}
               </span>
             )}
           </div>

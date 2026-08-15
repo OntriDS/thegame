@@ -65,7 +65,7 @@ export async function auditTaskTimelineVsMonthIndex(month: number, year: number)
       );
       continue;
     }
-    const ca = toDate(task.collectedAt as unknown);
+    const ca = toDate((task as any).collectedAt as unknown);
     if (ca == null) {
       pushIssue(
         issues,

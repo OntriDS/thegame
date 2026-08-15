@@ -6,6 +6,8 @@ import { createLink } from '@/links/link-registry';
 import { EntityType, LinkType, Station } from '@/types/enums';
 import { FinancialRecord } from '@/types/entities';
 import { AdminStation } from '@/lib/storage/taxonomy';
+import { getCharacterWallet } from '@/lib/compatibility/character-selectors';
+import { toMoney } from '@/lib/utils/financial-utils';
 
 // POST /api/character/[id]/wallet/transaction
 // Body: { type: 'transfer' | 'exchange', amount: number, note?: string }
@@ -40,18 +42,16 @@ export async function POST(
                 station: AdminStation.FINANCES as Station,
                 type: 'company',
                 siteId: undefined,
-                cost: 0,
-                revenue: 0,
+                cost: toMoney(0),
+                revenue: toMoney(0),
                 jungleCoins: amount, // Positive = Added to wallet
                 isNotPaid: false,
                 isNotCharged: false, // Instant
-                netCashflow: 0,
-                jungleCoinsValue: amount * 10,
+                netCashflow: toMoney(0),
                 isCollected: false,
                 createdAt: new Date(),
-                updatedAt: new Date(),
-                links: []
-            };
+                updatedAt: new Date()
+            } as unknown as FinancialRecord;
 
         } else if (type === 'exchange') {
             // Exchange OUT (Spend)
@@ -64,18 +64,16 @@ export async function POST(
                 station: AdminStation.FINANCES as Station,
                 type: 'company',
                 siteId: undefined,
-                cost: 0,
-                revenue: 0,
+                cost: toMoney(0),
+                revenue: toMoney(0),
                 jungleCoins: -amount, // Negative = Deducted
                 isNotPaid: false,
                 isNotCharged: false,
-                netCashflow: 0,
-                jungleCoinsValue: amount * 10,
+                netCashflow: toMoney(0),
                 isCollected: false,
                 createdAt: new Date(),
-                updatedAt: new Date(),
-                links: []
-            };
+                updatedAt: new Date()
+            } as unknown as FinancialRecord;
         } else {
             return NextResponse.json({ error: 'Invalid transaction type' }, { status: 400 });
         }
@@ -85,7 +83,7 @@ export async function POST(
 
         // UPDATE WALLET (The "Write-Through" Logic)
         // 1. Initialize Wallet if missing (The Vault)
-        const currentWallet = character.wallet || { jungleCoins: 0 };
+        const currentWallet = getCharacterWallet(character) || { jungleCoins: 0 };
 
         // 2. Calculate new balance
         const currentBalance = currentWallet.jungleCoins;
@@ -101,7 +99,7 @@ export async function POST(
                 jungleCoins: newBalance
             },
             updatedAt: new Date()
-        };
+        } as unknown as typeof character;
 
         await upsertCharacter(updatedCharacter);
 

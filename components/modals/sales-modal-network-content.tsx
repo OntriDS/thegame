@@ -60,7 +60,7 @@ const UNKNOWN_SALE_ITEM_LABEL = 'Unknown item';
 function formatItemTypeSubtypeLabel(itemId: string, catalog: Item[]): string {
   const it = catalog.find((i) => i.id === itemId);
   if (!it) return '—';
-  const sub = it.subItemType != null && String(it.subItemType).trim() !== '' ? String(it.subItemType) : '';
+  const sub = (it as any).subItemType != null && String((it as any).subItemType).trim() !== '' ? String((it as any).subItemType) : '';
   return sub ? `${it.type} / ${sub}` : String(it.type);
 }
 

@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ItemNameField } from '@/components/ui/item-name-field';
 import { Switch } from '@/components/ui/switch';
-import { FileReference, Item, Link, Site, StockPoint, Sale, SaleLine } from '@/types/entities';
-import { ItemType, ItemStatus, Collection, EntityType, STATION_CATEGORIES, SaleType, SaleStatus, PaymentMethod, Currency } from '@/types/enums';
+import { FileReference, Item, Site, StockPoint, Sale, SaleLine } from '@/types/entities';
+import type { Money } from '@/types/entities';
+import { ItemType, ItemStatus, Collection, EntityType, EntitySchemaVersion, STATION_CATEGORIES, SaleType, SaleStatus, PaymentMethod, Currency } from '@/types/enums';
 import { getItemStatusLabel } from '@/lib/constants/status-display-labels';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, createStationCategoryOptions, getStationFromCombined, getCategoryFromCombined, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined } from '@/lib/utils/searchable-select-utils';
@@ -47,6 +48,21 @@ interface ItemModalProps {
 
 const DEFAULT_NEW_ITEM_STATION: Station = 'items';
 const DEFAULT_NONE_SITE = 'None';
+
+// Links are loaded from the registry/API as relationship records. They are
+// deliberately not embedded in Item; keep this boundary type limited to the
+// fields needed by the modal while the legacy registry is being canonicalized.
+type ItemRelationshipLink = {
+  linkType: LinkType;
+  source: { type: EntityType; id: string };
+  target: { type: EntityType; id: string };
+};
+
+/** Convert the modal's decimal inputs into the canonical money value object. */
+const toMoney = (amount: number, currency: Currency = Currency.USD): Money => ({
+  minorUnits: String(Math.round(amount * 100)),
+  currency,
+});
 
 export default function ItemModal({ item, defaultItemType, open, onOpenChange, onSave, initialSiteId }: ItemModalProps) {
   const { getPreference, setPreference } = useUserPreferences();
@@ -106,7 +122,9 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [quickSellLoading, setQuickSellLoading] = useState(false);
   const [showSoldConfirmation, setShowSoldConfirmation] = useState(false);
   const [pendingSoldStatus, setPendingSoldStatus] = useState(false);
-  const [localSoldAt, setLocalSoldAt] = useState<Date | undefined>(item?.soldAt ? new Date(item.soldAt) : undefined);
+  const [localSoldAt, setLocalSoldAt] = useState<Date | undefined>(
+    item?.context?.soldAt ? new Date(item.context.soldAt) : undefined
+  );
 
   // Item selection states for compound field
   const [isNameFieldNewItem, setIsNameFieldNewItem] = useState(true);
@@ -376,7 +394,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           setName(formData.name || '');
           setDescription(formData.description || '');
           const loadedType = formData.type || defaultItemType || ItemType.STICKER;
-          const loadedSub = formData.subItemType || '';
+          const loadedSub = (formData as any).subItemType || '';
           setType(loadedType);
           setStation(formData.station || DEFAULT_NEW_ITEM_STATION);
           setSubItemType(loadedSub);
@@ -384,27 +402,27 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           setCollection(formData.collection || Collection.NO_COLLECTION);
           setStatus(formData.status || ItemStatus.FOR_SALE);
           setQuantity(formData.quantity || 0);
-          setUnitCost(formData.unitCost || 0);
-          setPrice(formData.price || 0);
+          setUnitCost((formData as any).unitCost || 0);
+          setPrice((formData as any).price || 0);
           setKeepInInventoryAfterSold(
-            typeof formData.keepInInventoryAfterSold === 'boolean'
-              ? formData.keepInInventoryAfterSold
+            typeof (formData as any).keepInInventoryAfterSold === 'boolean'
+              ? (formData as any).keepInInventoryAfterSold
               : false // Default to false for all item types
           );
           setRestockToTarget(
-            typeof formData.restockToTarget === 'boolean'
-              ? formData.restockToTarget
+            typeof (formData as any).restockToTarget === 'boolean'
+              ? (formData as any).restockToTarget
               : false // Default to false
           );
-          setYear(formData.year || new Date().getFullYear());
+          setYear((formData as any).year || new Date().getFullYear());
           setMediaMain(formData.mediaMain || '');
           setMediaThumb(formData.mediaThumb || '');
           setMediaGallery(formData.mediaGallery || '');
-          setSourceFileUrl(formData.sourceFileUrl || '');
+          setSourceFileUrl((formData as any).sourceFileUrl || '');
           setWidth(formData.width || '');
           setHeight(formData.height || '');
-          setSize(formData.size || '');
-          setTargetAmount(formData.targetAmount || '');
+          setSize((formData as any).size || '');
+          setTargetAmount((formData as any).targetAmount || '');
           setSite(formData.site || DEFAULT_NONE_SITE);
         } catch (error) {
           console.error('Error loading form data from preferences:', error);
@@ -458,7 +476,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
   const executeQuickSale = useCallback(async (targetItem: Item, siteId: string, quantity: number) => {
     const now = new Date();
-    const unitPrice = targetItem.price ?? 0;
+    const unitPrice = (targetItem as any).price ?? 0;
     const subtotal = unitPrice * quantity;
     const sale: Sale = {
       id: uuid(),
@@ -475,7 +493,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           kind: 'item',
           itemId: targetItem.id,
           quantity,
-          unitPrice,
+          unitPrice: toMoney(unitPrice),
           description: `Quick sale of ${targetItem.name}`
         } as SaleLine
       ],
@@ -486,18 +504,22 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         receivedAt: now
       }] : undefined,
       totals: {
-        subtotal,
-        discountTotal: 0,
-        taxTotal: 0,
-        totalRevenue: subtotal
+        subtotal: toMoney(subtotal),
+        discountTotal: toMoney(0),
+        taxTotal: toMoney(0),
+        totalRevenue: toMoney(subtotal)
       },
-      isNotPaid: false,
-      isNotCharged: false,
       createdAt: now,
       updatedAt: now,
-      doneAt: now,
-      isCollected: false,
-      links: []
+      schemaVersion: EntitySchemaVersion.V1,
+      version: 0,
+      lifecycle: {
+        chargedAt: now,
+      },
+      context: {
+        kind: 'sale-context',
+        schemaVersion: 1,
+      },
     };
     await ClientAPI.upsertSale(sale);
   }, []);
@@ -531,7 +553,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       status: totalRemaining <= 0 ? ItemStatus.SOLD : targetItem.status,
       updatedAt: new Date(),
       createdAt: targetItem.createdAt ? new Date(targetItem.createdAt) : new Date(),
-      links: targetItem.links || []
     };
 
     await ClientAPI.upsertItem(updatedItem);
@@ -543,23 +564,23 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       id: snapshotId,
       stock: [{ siteId, quantity }],
       quantitySold: quantity,
-      unitCost: targetItem.unitCost ?? 0,
-      price: targetItem.price ?? 0,
-      value: (targetItem.price ?? 0) * quantity,
+      unitCost: (targetItem as any).unitCost ?? 0,
+      price: (targetItem as any).price ?? 0,
+      value: ((targetItem as any).price ?? 0) * quantity,
       status: ItemStatus.SOLD,
       createdAt: soldAt,
       updatedAt: soldAt,
-      keepInInventoryAfterSold: targetItem.keepInInventoryAfterSold ?? false,
-      restockToTarget: targetItem.restockToTarget ?? false,
+      keepInInventoryAfterSold: (targetItem as any).keepInInventoryAfterSold ?? false,
+      restockToTarget: (targetItem as any).restockToTarget ?? false,
       links: [],
       metadata: {
         source: 'item-modal',
         mode: 'archive-only',
         siteId,
         quantity,
-        unitPrice: targetItem.price ?? 0,
+        unitPrice: (targetItem as any).price ?? 0,
       },
-    } as Item;
+    } as any;
 
     try {
       const response = await fetch('/api/archive/items', {
@@ -595,17 +616,17 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         const remainingQuantity = refreshed.stock?.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0) || 0;
         setQuantity(remainingQuantity);
         setStatus(refreshed.status || ItemStatus.FOR_SALE);
-        setPrice(refreshed.price || 0);
-        setUnitCost(refreshed.unitCost || 0);
+        setPrice((refreshed as any).price || 0);
+        setUnitCost((refreshed as any).unitCost || 0);
         setCollection(refreshed.collection || Collection.NO_COLLECTION);
         setKeepInInventoryAfterSold(
-          typeof refreshed.keepInInventoryAfterSold === 'boolean'
-            ? refreshed.keepInInventoryAfterSold
+          typeof (refreshed as any).keepInInventoryAfterSold === 'boolean'
+            ? (refreshed as any).keepInInventoryAfterSold
             : false // Default to false
         );
         setRestockToTarget(
-          typeof refreshed.restockToTarget === 'boolean'
-            ? refreshed.restockToTarget
+          typeof (refreshed as any).restockToTarget === 'boolean'
+            ? (refreshed as any).restockToTarget
             : false // Default to false
         );
 
@@ -747,7 +768,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setName(item.name || '');
       setDescription(item.description || '');
       const itemType = item.type || defaultItemType || ItemType.STICKER;
-      const itemSubType = item.subItemType || '';
+      const itemSubType = (item as any).subItemType || '';
       setType(itemType);
       setSubItemType(itemSubType);
       setItemTypeSubType(`${itemType}:${itemSubType}`);
@@ -767,27 +788,27 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setQuantity(item.stock?.reduce((total: number, stockPoint) => total + stockPoint.quantity, 0) || 0);
       }
 
-      setUnitCost(item.unitCost || 0);
-      setPrice(item.price || 0);
+      setUnitCost((item as any).unitCost || 0);
+      setPrice((item as any).price || 0);
       setKeepInInventoryAfterSold(
-        typeof item.keepInInventoryAfterSold === 'boolean'
-          ? item.keepInInventoryAfterSold
+        typeof (item as any).keepInInventoryAfterSold === 'boolean'
+          ? (item as any).keepInInventoryAfterSold
           : false // Default to false
       );
       setRestockToTarget(
-        typeof item.restockToTarget === 'boolean'
-          ? item.restockToTarget
+        typeof (item as any).restockToTarget === 'boolean'
+          ? (item as any).restockToTarget
           : false // Default to false
       );
-      setYear(item.year || new Date().getFullYear());
-      setMediaMain(item.media?.main || '');
-      setMediaThumb(item.media?.thumb || '');
-      setMediaGallery(item.media?.gallery?.join(';') || '');
-      setSourceFileUrl(item.sourceFileUrl || '');
-      setWidth(item.dimensions?.width?.toString() || '');
-      setHeight(item.dimensions?.height?.toString() || '');
-      setSize(item.size || '');
-      setTargetAmount(item.targetAmount?.toString() || '');
+      setYear((item as any).year || new Date().getFullYear());
+      setMediaMain(item.media?.mainUrl || '');
+      setMediaThumb(item.media?.thumbUrl || '');
+      setMediaGallery(item.media?.galleryUrls?.join(';') || '');
+      setSourceFileUrl((item as any).sourceFileUrl || '');
+      setWidth((item as any).dimensions?.width?.toString() || '');
+      setHeight((item as any).dimensions?.height?.toString() || '');
+      setSize((item as any).size || '');
+      setTargetAmount((item as any).targetAmount?.toString() || '');
       setQuantitySold(item.quantitySold || 0);
 
       setOwnerId(getItemCharacterId(item) || null);
@@ -859,7 +880,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setDescription(selectedItem.description || '');
         setType(selectedItem.type);
         setStation(selectedItem.station || 'strategy');
-        setSubItemType(selectedItem.subItemType || '');
+        setSubItemType((selectedItem as any).subItemType || '');
         setCollection(selectedItem.collection || Collection.NO_COLLECTION);
         setStatus(selectedItem.status || ItemStatus.FOR_SALE);
         // Calculate quantity: use site-specific if initialSiteId is set, otherwise total
@@ -873,30 +894,30 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           setSite(selectedItem.stock?.[0]?.siteId || '');
         }
 
-        setUnitCost(selectedItem.unitCost || 0);
-        setPrice(selectedItem.price || 0);
+        setUnitCost((selectedItem as any).unitCost || 0);
+        setPrice((selectedItem as any).price || 0);
         setKeepInInventoryAfterSold(
-          typeof selectedItem.keepInInventoryAfterSold === 'boolean'
-            ? selectedItem.keepInInventoryAfterSold
+          typeof (selectedItem as any).keepInInventoryAfterSold === 'boolean'
+            ? (selectedItem as any).keepInInventoryAfterSold
             : false // Default to false
         );
         setRestockToTarget(
-          typeof selectedItem.restockToTarget === 'boolean'
-            ? selectedItem.restockToTarget
+          typeof (selectedItem as any).restockToTarget === 'boolean'
+            ? (selectedItem as any).restockToTarget
             : false // Default to false
         );
-        setYear(selectedItem.year || new Date().getFullYear());
-        setMediaMain(selectedItem.media?.main || '');
-        setMediaThumb(selectedItem.media?.thumb || '');
-        setMediaGallery(selectedItem.media?.gallery?.join(';') || '');
-        setSourceFileUrl(selectedItem.sourceFileUrl || '');
+        setYear((selectedItem as any).year || new Date().getFullYear());
+        setMediaMain(selectedItem.media?.mainUrl || '');
+        setMediaThumb(selectedItem.media?.thumbUrl || '');
+        setMediaGallery(selectedItem.media?.galleryUrls?.join(';') || '');
+        setSourceFileUrl((selectedItem as any).sourceFileUrl || '');
         // Extract dimensions
-        setWidth(selectedItem.dimensions?.width?.toString() || '');
-        setHeight(selectedItem.dimensions?.height?.toString() || '');
-        setSize(selectedItem.size || '');
-        setTargetAmount(selectedItem.targetAmount?.toString() || '');
+        setWidth((selectedItem as any).dimensions?.width?.toString() || '');
+        setHeight((selectedItem as any).dimensions?.height?.toString() || '');
+        setSize((selectedItem as any).size || '');
+        setTargetAmount((selectedItem as any).targetAmount?.toString() || '');
         setQuantitySold(selectedItem.quantitySold || 0);
-        setLocalSoldAt(selectedItem.soldAt ? new Date(selectedItem.soldAt) : undefined);
+        setLocalSoldAt(selectedItem.context?.soldAt ? new Date(selectedItem.context.soldAt) : undefined);
         setOwnerId(getItemCharacterId(selectedItem) || null);
       }
     }
@@ -994,39 +1015,51 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         }
       }
 
+      const existingItem = item || existingItems.find(i => i.id === selectedItemId);
+      const soldAt = status === ItemStatus.SOLD
+        ? (localSoldAt ?? existingItem?.context?.soldAt ?? getUTCNow())
+        : undefined;
+
       const newItem: Item = {
         id: finalId,
+        schemaVersion: EntitySchemaVersion.V1,
         name,
         description,
         type,
         station,
-        subItemType: subItemType || undefined,
         collection: collection as Collection,
         status,
-        unitCost,
-        additionalCost: 0,
-        price,
-        value: 0,
-        keepInInventoryAfterSold,
-        restockToTarget,
         quantitySold,
-        year,
         media: {
-          main: finalMediaMain,
-          thumb: finalMediaThumb || undefined,
-          gallery: finalMediaGalleryArray,
+          mainUrl: finalMediaMain,
+          thumbUrl: finalMediaThumb || undefined,
+          galleryUrls: finalMediaGalleryArray,
         },
-        sourceFileUrl: sourceFileUrl || undefined,
+        pricing: {
+          unitCost: toMoney(unitCost),
+          additionalCost: toMoney(0),
+          targetPrice: toMoney(price),
+        },
         stock: updatedStock,
-        dimensions,
-        size: parsedSize,
-        targetAmount: targetAmount && !isNaN(parseFloat(targetAmount)) ? parseFloat(targetAmount) : undefined,
-        characterId: ownerId || null,
-        // Preserve creation date if editing, otherwise new date
-        createdAt: (item || existingItems.find(i => i.id === selectedItemId))?.createdAt || getUTCNow(),
+        context: {
+          kind: 'item-context',
+          schemaVersion: 1,
+          subItemType: subItemType || undefined,
+          dimensions,
+          size: parsedSize,
+          year,
+          sourceFileUrl: sourceFileUrl || undefined,
+          keepInInventoryAfterSold,
+          restockToTarget,
+          targetAmount: targetAmount && !isNaN(parseFloat(targetAmount)) ? parseFloat(targetAmount) : undefined,
+          soldAt,
+        },
+        sourceTaskId: existingItem?.sourceTaskId ?? null,
+        sourceRecordId: existingItem?.sourceRecordId ?? null,
+        // Preserve creation date and optimistic-concurrency version when editing.
+        createdAt: existingItem?.createdAt || getUTCNow(),
         updatedAt: getUTCNow(),
-        soldAt: status === ItemStatus.SOLD ? (localSoldAt ?? item?.soldAt ?? getUTCNow()) : undefined,
-        links: (item || existingItems.find(i => i.id === selectedItemId))?.links || [],  // preserve embedded mirror
+        version: existingItem?.version ?? 0,
       };
 
       // Clear saved form data when item is successfully saved (only for truly new items)
@@ -1678,7 +1711,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
             // Refresh owner display
             const loadOwner = async () => {
               const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: ownerEntityIdForLinks });
-              const ownerLink = links.find((link: Link) => {
+              const ownerLink = links.find((link: ItemRelationshipLink) => {
                 if (link.linkType !== LinkType.ITEM_CHARACTER) return false;
                 const isCanonical = link.source.type === EntityType.ITEM && link.source.id === ownerEntityIdForLinks && link.target.type === EntityType.CHARACTER;
                 const isReverse = link.target.type === EntityType.ITEM && link.target.id === ownerEntityIdForLinks && link.source.type === EntityType.CHARACTER;

@@ -3,12 +3,24 @@
 
 import { kvGet, kvSet, kvScan, kvDelMany, kvMGet } from './kv';
 import { buildEffectKey } from './keys';
+import { getClaim } from './workflow-store';
+import { EffectClaimStatus } from '@/types/enums';
+import type { EffectClaimV1 } from '@/types/entities';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 import { PROCESSING_CONSTANTS } from '@/lib/constants/app-constants';
 
 export async function hasEffect(effectKey: string): Promise<boolean> {
   const key = buildEffectKey(effectKey);
   const val = await kvGet<boolean>(key);
-  return val === true;
+  if (val === true) return true;
+
+  // Check if a claim exists and is COMPLETED
+  const claim = await getClaim(effectKey);
+  if (claim && claim.status === EffectClaimStatus.COMPLETED) {
+    return true;
+  }
+  
+  return false;
 }
 
 /**
@@ -26,6 +38,20 @@ export async function hasEffects(effectKeys: string[]): Promise<boolean[]> {
 export async function markEffect(effectKey: string, ttl?: number): Promise<void> {
   const key = buildEffectKey(effectKey);
   await kvSet(key, true);
+
+  // Create a completed claim so new workflow readers see it
+  const claim: EffectClaimV1 = {
+    idempotencyKey: effectKey,
+    status: EffectClaimStatus.COMPLETED,
+    commandId: 'legacy-bridge',
+    ownerId: 'legacy-system',
+    attempts: 1,
+    createdAt: getUTCNow(),
+    updatedAt: getUTCNow(),
+    leaseToken: 'legacy-token',
+    leaseExpiresAt: getUTCNow()
+  };
+  await kvSet(`effect:${effectKey}`, claim);
 }
 
 export async function clearEffect(effectKey: string): Promise<void> {

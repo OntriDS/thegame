@@ -116,8 +116,8 @@ export async function logPlayerUpdateFromTask(task: Task, oldTask: Task): Promis
   try {
     // J$ no longer awarded as task rewards - only earned via Points Exchange
     
-    const oldRewards = oldTask.rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
-    const newRewards = task.rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
+    const oldRewards = oldTask.context?.rewardIntent?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
+    const newRewards = task.context?.rewardIntent?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
     
     // Check if rewards actually changed
     const rewardsChanged = JSON.stringify(oldRewards) !== JSON.stringify(newRewards);
@@ -160,8 +160,8 @@ export async function updatePlayerPointsFromTask(task: Task, oldTask: Task): Pro
   try {
     // Update player points from task rewards
     
-    const oldRewards = oldTask.rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
-    const newRewards = task.rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
+    const oldRewards = oldTask.context?.rewardIntent?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
+    const newRewards = task.context?.rewardIntent?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
     
     // Calculate point delta
     const delta = {

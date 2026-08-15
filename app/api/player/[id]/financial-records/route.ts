@@ -49,7 +49,7 @@ export async function GET(
     
     const enrichedRecords = personalRecords.map(record => ({
       ...record,
-      exchangeType: (record.exchangeType ?? null) as 'POINTS_TO_J$' | 'J$_TO_USD' | 'J$_TO_ZAPS' | null
+      exchangeType: (record.context?.exchangeType ?? (record as any).exchangeType ?? null) as 'POINTS_TO_J$' | 'J$_TO_USD' | 'J$_TO_ZAPS' | null
     }));
     
     // Sort by date (newest first)

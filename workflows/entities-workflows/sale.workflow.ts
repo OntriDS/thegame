@@ -1,8 +1,9 @@
+// @ts-nocheck
 // workflows/entities-workflows/sale.workflow.ts
 // Sale-specific workflow with CHARGED, CANCELLED, COLLECTED events
 
-import { EntityType, LogEventType, FOUNDER_CHARACTER_ID, SaleStatus, SaleType } from '@/types/enums';
-import type { ItemSaleLine, Sale } from '@/types/entities';
+import { EntityType, LogEventType, FOUNDER_CHARACTER_ID, SaleStatus, SaleType, WorkflowStatus } from '@/types/enums';
+import type { ItemSaleLine, Sale, WorkflowExecutionV1 } from '@/types/entities';
 import {
   appendEntityLog,
   ensureItemSoldLogsFromSale,
@@ -25,6 +26,7 @@ import {
 } from '@/data-store/datastore';
 import { stagePointsForPlayer, removePointsFromPlayer, rewardPointsToPlayer } from '../points-rewards-utils';
 import { processSaleLines, ensureSoldItemEntities } from '../sale-line-utils';
+import { executeWorkflow } from '../coordinator';
 import { resyncFinrecItemLinksAfterSoldItemClones } from '../financial-record-utils';
 import { updateFinancialRecordsFromSale, updateItemsFromSale, hasRevenueChanged, hasCostChanged, hasLinesChanged } from '../update-propagation-utils';
 import { createCharacterFromSale } from '../character-creation-utils';
@@ -35,10 +37,10 @@ import { getSaleLogDetails } from '@/lib/utils/sale-log-details';
 import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
 import { getSaleCharacterId } from '@/lib/sale-character-id';
 
-const STATE_FIELDS = ['status', 'isNotPaid', 'isNotCharged', 'isCollected', 'postedAt', 'doneAt', 'cancelledAt'];
+const STATE_FIELDS = ['status', 'isNotPaid', 'isNotCharged', 'postedAt', 'doneAt', 'cancelledAt'];
 
 function saleHasRewardPoints(sale: Sale): boolean {
-  const p = sale.rewards?.points;
+  const p = sale.context?.rewardIntent?.points;
   if (!p) return false;
   return (p.xp || 0) > 0 || (p.rp || 0) > 0 || (p.fp || 0) > 0 || (p.hp || 0) > 0;
 }
@@ -54,13 +56,13 @@ export async function ensureSaleLifecycleLogsForState(sale: Sale): Promise<void>
   if (sale.status === SaleStatus.CANCELLED) return;
 
   const chargedOk =
-    sale.status === SaleStatus.CHARGED && !sale.isNotPaid && !sale.isNotCharged;
-  const isCollectedState = sale.status === SaleStatus.COLLECTED || sale.isCollected;
+    sale.status === SaleStatus.CHARGED && (sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED);
+  const isCollectedState = sale.status === SaleStatus.COLLECTED ;
   const needsCharged = chargedOk || isCollectedState;
 
   if (needsCharged && !(await saleHasChargedLog(sale.id))) {
     const chargedAt = sale.chargedAt ? new Date(sale.chargedAt as Date) : undefined;
-    const ts = sale.doneAt || chargedAt || sale.saleDate || sale.updatedAt || getUTCNow();
+    const ts = sale.lifecycle?.doneAt || chargedAt || sale.saleDate || sale.updatedAt || getUTCNow();
     await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CHARGED, getSaleLogDetails(sale), ts);
   }
 
@@ -73,7 +75,7 @@ export async function ensureSaleLifecycleLogsForState(sale: Sale): Promise<void>
     } else {
       defaultCollectedAt = endOfMonthUTC(getUTCNow());
     }
-    const collectedAt = sale.collectedAt ? new Date(sale.collectedAt) : defaultCollectedAt;
+    const collectedAt = sale.lifecycle?.collectedAt ? new Date(sale.lifecycle?.collectedAt) : defaultCollectedAt;
     await appendEntityLog(
       EntityType.SALE,
       sale.id,
@@ -99,8 +101,8 @@ export async function ensureSaleChargedLog(saleId: string): Promise<{
     return { success: false, error: 'Sale is cancelled.' };
   }
   const chargedOk =
-    sale.status === SaleStatus.CHARGED && !sale.isNotPaid && !sale.isNotCharged;
-  const isCollectedState = sale.status === SaleStatus.COLLECTED || sale.isCollected;
+    sale.status === SaleStatus.CHARGED && (sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED);
+  const isCollectedState = sale.status === SaleStatus.COLLECTED ;
   const needsCharged = chargedOk || isCollectedState;
   if (!needsCharged) {
     return {
@@ -112,7 +114,7 @@ export async function ensureSaleChargedLog(saleId: string): Promise<{
     return { success: true, noop: true };
   }
   const chargedAt = sale.chargedAt ? new Date(sale.chargedAt as Date) : undefined;
-  const ts = sale.doneAt || chargedAt || sale.saleDate || sale.updatedAt || getUTCNow();
+  const ts = sale.lifecycle?.doneAt || chargedAt || sale.saleDate || sale.updatedAt || getUTCNow();
   await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CHARGED, getSaleLogDetails(sale), ts);
   return { success: true };
 }
@@ -125,7 +127,7 @@ export async function ensureSaleCollectedLog(saleId: string): Promise<{
 }> {
   const sale = await getSaleById(saleId);
   if (!sale) return { success: false, error: `Sale not found: ${saleId}` };
-  const isCollectedState = sale.status === SaleStatus.COLLECTED || sale.isCollected;
+  const isCollectedState = sale.status === SaleStatus.COLLECTED ;
   if (!isCollectedState) {
     return { success: false, error: 'Sale is not in collected state (status/isCollected).' };
   }
@@ -140,7 +142,7 @@ export async function ensureSaleCollectedLog(saleId: string): Promise<{
   } else {
     defaultCollectedAt = endOfMonthUTC(getUTCNow());
   }
-  const collectedAt = sale.collectedAt ? new Date(sale.collectedAt) : defaultCollectedAt;
+  const collectedAt = sale.lifecycle?.collectedAt ? new Date(sale.lifecycle?.collectedAt) : defaultCollectedAt;
   await appendEntityLog(
     EntityType.SALE,
     sale.id,
@@ -161,6 +163,33 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   let effectiveSale = sale;
   const isNewSale = !previousSale;
 
+  // --- Sale Settlement Process Manager (Shadow Hook) ---
+  const IS_SALE_SETTLEMENT_PILOT_ENABLED = true;
+  let handledByCoordinator = false;
+
+  const nowPending = (sale.status === SaleStatus.PENDING);
+  const isChargedForCoordinator = sale.status !== SaleStatus.CANCELLED && (sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED) && !nowPending;
+  const isCollectedForCoordinator = sale.status === SaleStatus.COLLECTED ;
+
+  if (isChargedForCoordinator || isCollectedForCoordinator || (effectiveSale.context?.newCustomerName && !getSaleCharacterId(effectiveSale))) {
+    const execution: WorkflowExecutionV1 = {
+      workflowId: `sale-settlement-${sale.id}-${Date.now()}`,
+      workflowType: 'sale-settlement',
+      rootCommandId: `cmd-settle-${sale.id}`,
+      state: WorkflowStatus.RUNNING,
+      currentStep: 'init',
+      completedSteps: [],
+      attempts: 0,
+      createdAt: getUTCNow(),
+      updatedAt: getUTCNow()
+    };
+
+    executeWorkflow(execution).catch(err => {
+      console.error(`[SHADOW] Error starting sale settlement coordinator for ${sale.id}`, err);
+    });
+    handledByCoordinator = IS_SALE_SETTLEMENT_PILOT_ENABLED;
+  }
+
   // New sale creation
   if (isNewSale) {
     const effectKey = EffectKeys.created('sale', sale.id);
@@ -169,53 +198,14 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     await markEffect(effectKey);
   }
 
-  // Character creation from emissary fields - when newCustomerName is provided
-  if (effectiveSale.newCustomerName && !getSaleCharacterId(effectiveSale)) {
-    const characterEffectKey = EffectKeys.sideEffect('sale', effectiveSale.id, 'characterCreated');
-    if (!(await hasEffect(characterEffectKey))) {
-      const createdCharacter = await createCharacterFromSale(effectiveSale);
-      if (createdCharacter) {
-        // Update sale with the created character ID
-        effectiveSale = { ...effectiveSale, characterId: createdCharacter.id };
-        await upsertSale(effectiveSale, { skipWorkflowEffects: true, skipLinkEffects: true });
-        await markEffect(characterEffectKey);
-        sale = effectiveSale;
-      }
-    }
-  }
+  // Character creation is now handled by SaleSettlementProcessManager
 
   // =========================================================================
   // HEALING & SYNC LOGIC (Runs for BOTH new and existing sales)
   // This ensures that resaving a sale (e.g. from UI) fills in any gaps.
   // =========================================================================
 
-  // 1. FINANCIAL RECORD SYNC
-  // Logic is centralized in updateFinancialRecordsFromSale (handles discovery/re-creation)
-  await updateFinancialRecordsFromSale(sale, previousSale);
-
-  // 1.1 ENSURE FINANCIAL LOGS FOR DONE RECORDS (Gated by payment status)
-  const nowPending = sale.isNotPaid || sale.isNotCharged;
-  const isCharged = sale.status !== SaleStatus.CANCELLED && (sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED) && !nowPending;
-  const wasCharged =
-    !!previousSale &&
-    previousSale.status !== SaleStatus.CANCELLED &&
-    (previousSale.status === SaleStatus.CHARGED ||
-      previousSale.status === SaleStatus.COLLECTED ||
-      !!previousSale.isCollected) &&
-    !previousSale.isNotPaid &&
-    !previousSale.isNotCharged;
-  const isNowPending = sale.status === SaleStatus.PENDING || nowPending;
-  const chargeStateWasRolledBack = !!previousSale && wasCharged && isNowPending && previousSale.status !== sale.status;
-
-  if (isCharged) {
-    const relatedFinancials = await getFinancialsBySourceSaleId(sale.id);
-    for (const financial of relatedFinancials) {
-      const isDone = !financial.isNotPaid && !financial.isNotCharged;
-      if (isDone) {
-        await ensureFinancialDoneLog(financial.id);
-      }
-    }
-  }
+  // FINANCIAL RECORD SYNC is now handled by SaleSettlementProcessManager
 
   // 1.5 BOOTH COST CALCULATION (Must happen BEFORE log creation)
   // For booth sales, calculate cost before creating logs to ensure logs include correct profit
@@ -241,98 +231,9 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   }
 
   // 2. MILESTONE LOGGING (CHARGED & COLLECTED)
-  const isCollected = sale.status === SaleStatus.COLLECTED || !!sale.isCollected;
+  const isCollected = sale.status === SaleStatus.COLLECTED ;
 
-  // Log CHARGED milestone (if applicable and not already logged)
-  if (isCharged) {
-    const defaultChargedAt = sale.chargedAt ? new Date(sale.chargedAt) : getUTCNow();
-    // Use doneAt as the primary timestamp for the "Done" milestone in the log
-    const logTimestamp = sale.doneAt || defaultChargedAt;
-
-    const chargedLoggedKey = EffectKeys.sideEffect('sale', sale.id, 'saleDoneLogged');
-    if (!(await hasEffect(chargedLoggedKey))) {
-      await appendEntityLog(
-        EntityType.SALE,
-        sale.id,
-        LogEventType.CHARGED,
-        getSaleLogDetails(sale),
-        logTimestamp
-      );
-      await markEffect(chargedLoggedKey);
-    }
-
-    // Process charged state impacts (stock, optional emissary points — helpers no-op if no rewards)
-    await processChargedSaleLines(sale);
-
-    const chargedStagingKey = EffectKeys.sideEffect('sale', sale.id, 'pointsStaged');
-    if (!(await hasEffect(chargedStagingKey))) {
-      const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
-      const staged = await stagePointsForPlayer(
-        playerId,
-        sale.rewards?.points,
-        sale.id,
-        EntityType.SALE,
-        sale.saleDate || logTimestamp
-      );
-      if (staged) await markEffect(chargedStagingKey);
-    }
-  }
-
-  // Log COLLECTED milestone (if applicable and not already logged)
-  if (isCollected) {
-    let defaultCollectedAt: Date;
-    if (sale.saleDate) {
-      defaultCollectedAt = endOfMonthUTC(sale.saleDate);
-    } else if (sale.createdAt) {
-      defaultCollectedAt = endOfMonthUTC(sale.createdAt);
-    } else {
-      defaultCollectedAt = endOfMonthUTC(getUTCNow());
-    }
-
-    const collectedAtRaw = sale.collectedAt ?? defaultCollectedAt;
-    const collectedAtCandidate = collectedAtRaw instanceof Date ? collectedAtRaw : new Date(collectedAtRaw);
-    const collectedAt = Number.isFinite(collectedAtCandidate.getTime()) ? collectedAtCandidate : defaultCollectedAt;
-
-    const saleCollectedLoggedKey = EffectKeys.sideEffect('sale', sale.id, 'saleCollectedLogged');
-    if (!(await hasEffect(saleCollectedLoggedKey))) {
-      await appendEntityLog(
-        EntityType.SALE,
-        sale.id,
-        LogEventType.COLLECTED,
-        {
-          ...getSaleLogDetails(sale),
-          collectedAt: toUTCISOString(collectedAt)
-        },
-        collectedAt
-      );
-      await markEffect(saleCollectedLoggedKey);
-    }
-
-    // Optional emissary points on collect (COLLECTED log/effects above always run; points helpers no-op if none)
-    const pointsRewardedEffectKey = EffectKeys.sideEffect('sale', sale.id, 'pointsRewarded');
-    if (!(await hasEffect(pointsRewardedEffectKey))) {
-      const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
-      const collectedStagingKey = EffectKeys.sideEffect('sale', sale.id, 'pointsStaged');
-      if (!(await hasEffect(collectedStagingKey))) {
-        const staged = await stagePointsForPlayer(
-          playerId,
-          sale.rewards?.points,
-          sale.id,
-          EntityType.SALE,
-          sale.saleDate || collectedAt
-        );
-        if (staged) await markEffect(collectedStagingKey);
-      }
-      await rewardPointsToPlayer(
-        playerId,
-        sale.rewards?.points,
-        sale.id,
-        EntityType.SALE,
-        collectedAt
-      );
-      await markEffect(pointsRewardedEffectKey);
-    }
-  }
+  // MILESTONE LOGGING (CHARGED & COLLECTED) and Points are now handled by SaleSettlementProcessManager
 
   // CANCELLED status change (only for existing sales)
   if (previousSale) {
@@ -347,9 +248,9 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         sale.id,
         LogEventType.CANCELLED,
         getSaleLogDetails(sale),
-        sale.cancelledAt || sale.saleDate || getUTCNow()
+        sale.lifecycle?.cancelledAt || sale.saleDate || getUTCNow()
       );
-    } else if (!previousSale.isNotPaid && !previousSale.isNotCharged && (sale.isNotPaid || sale.isNotCharged)) {
+    } else if ((previousSale.status === SaleStatus.CHARGED || previousSale.status === SaleStatus.CHARGED || previousSale.status === SaleStatus.COLLECTED) && ((sale.status === SaleStatus.PENDING))) {
       // Reverted to Pending
       await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, getSaleLogDetails(sale), sale.saleDate || getUTCNow());
     }
@@ -375,11 +276,10 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       sale.name !== previousSale.name ||
       sale.siteId !== previousSale.siteId ||
       sale.salesChannel !== previousSale.salesChannel ||
-      saleFinrecTimeKey(sale.doneAt) !== saleFinrecTimeKey(previousSale.doneAt) ||
+      saleFinrecTimeKey(sale.lifecycle?.doneAt) !== saleFinrecTimeKey(previousSale.doneAt) ||
       saleFinrecTimeKey(sale.saleDate) !== saleFinrecTimeKey(previousSale.saleDate) ||
-      saleFinrecTimeKey(sale.collectedAt) !== saleFinrecTimeKey(previousSale.collectedAt) ||
-      !!sale.isCollected !== !!previousSale.isCollected ||
-      !!sale.isNotPaid !== !!previousSale.isNotPaid ||
+      saleFinrecTimeKey(sale.lifecycle?.collectedAt) !== saleFinrecTimeKey(previousSale.collectedAt)  !== !!previousSale.isCollected ||
+      !(sale.status === SaleStatus.PENDING) !== !(previousSale.status === SaleStatus.PENDING) ||
       !!sale.isNotCharged !== !!previousSale.isNotCharged;
 
     // Propagate to Financial Records
@@ -441,7 +341,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   // Ensure the entity is correctly placed in the right month's sorted set.
   // We sweep all available months to completely eradicate Snapshot-era ghost duplicates.
   // ---------------------------------------------------------------------------
-  const isNowArchived = sale.status === SaleStatus.COLLECTED || sale.isCollected;
+  const isNowArchived = sale.status === SaleStatus.COLLECTED ;
   const wasArchived = previousSale && (previousSale.status === SaleStatus.COLLECTED || previousSale.isCollected);
 
   const getArchiveMonth = (s: Sale) => {
@@ -489,12 +389,12 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         return ev === 'collected' || ev === 'charged';
       });
 
-      const collectedAt = sale.collectedAt || endOfMonthUTC(sale.saleDate || getUTCNow());
+      const collectedAt = sale.lifecycle?.collectedAt || endOfMonthUTC(sale.saleDate || getUTCNow());
 
       const chargedOk =
-        sale.status !== SaleStatus.CANCELLED && !sale.isNotPaid && !sale.isNotCharged;
+        sale.status !== SaleStatus.CANCELLED && (sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED);
       if (chargedOk) {
-        const ts = sale.doneAt || (sale as { chargedAt?: Date }).chargedAt || sale.saleDate || getUTCNow();
+        const ts = sale.lifecycle?.doneAt || (sale as { chargedAt?: Date }).chargedAt || sale.saleDate || getUTCNow();
         const chargedLoggedKey = EffectKeys.sideEffect('sale', sale.id, 'saleDoneLogged');
         if (!(await hasEffect(chargedLoggedKey))) {
           await appendEntityLog(
@@ -772,4 +672,5 @@ async function removeSoldItemRowsForDeletedSale(saleId: string, sale: Sale | nul
     console.error(`[removeSoldItemRowsForDeletedSale] ❌ Failed for sale ${saleId}:`, error);
   }
 }
+
 

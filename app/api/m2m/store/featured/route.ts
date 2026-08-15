@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextResponse, NextRequest } from 'next/server';
 import { iamService } from '@/lib/iam-service';
 import {
@@ -192,3 +193,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

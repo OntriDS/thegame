@@ -148,8 +148,8 @@ export default function ItemEmissarySubModal({
         setOutputItemName(selectedItem.name);
         setOutputItemType(selectedItem.type);
         setOutputItemSubType(''); // Items don't have subType property
-        setOutputUnitCost(selectedItem.unitCost);
-        setOutputItemPrice(selectedItem.price);
+        setOutputUnitCost((selectedItem as any).unitCost);
+        setOutputItemPrice((selectedItem as any).price);
         setOutputItemCollection(selectedItem.collection || '');
         setOutputItemTypeSubType(`${selectedItem.type}:`);
       }

@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Link as LinkIcon, ArrowRight, ArrowUpDown } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from '@/types/entities';
 import { EntityType } from '@/types/enums';
 import { ClientAPI } from '@/lib/client-api';
 import { buildAdminEntityDeepLink } from '@/lib/utils/entity-admin-deep-links';
@@ -17,7 +16,7 @@ interface LinksTabProps {
 
 /** Data Center: browse every link in the link registry. These are connectors between entities, not lifecycle logs. */
 export function LinksTab({ onReload, isReloading }: LinksTabProps) {
-  const [links, setLinks] = useState<Link[]>([]);
+  const [links, setLinks] = useState<any[]>([]);
   const [selectedLinkType, setSelectedLinkType] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [entityNames, setEntityNames] = useState<Record<string, string>>({});

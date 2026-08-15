@@ -220,8 +220,8 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
         metadata,
         createdAt: site?.createdAt || new Date(),
         updatedAt: new Date(),
-        links: site?.links || []
-      };
+        links: (site as any)?.links || [], // embedded mirror; registry is source of truthe;
+      } as unknown as Site;
 
       await onSave(siteData);
 
@@ -711,7 +711,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
           entityType={EntityType.SITE}
           entityId={site.id}
           entityName={site.name}
-          linkType={LinkType.SITE_CHARACTER}
+          linkType={LinkType.CHARACTER_SITE}
           onOwnersChanged={() => {
             dispatchEntityUpdated(entityTypeToKind(EntityType.SITE));
           }}

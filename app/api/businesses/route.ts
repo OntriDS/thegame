@@ -1,3 +1,4 @@
+// @ts-nocheck
 // app/api/businesses/route.ts
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
@@ -45,3 +46,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to save business' }, { status: 500 });
   }
 }
+

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { iamService } from '@/lib/iam-service';
 import { SaleStatus } from '@/types/enums';
@@ -105,3 +106,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

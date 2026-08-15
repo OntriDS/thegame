@@ -30,7 +30,10 @@ async function getPlayerJ$Balance(playerId: string): Promise<number> {
   const validRecords = financialRecords.filter((record): record is NonNullable<typeof record> => record !== null);
   // Only sum personal records (company records are for buyback tracking)
   const personalRecords = validRecords.filter(record => record.type === 'personal');
-  const totalJ$ = personalRecords.reduce((sum, record) => sum + (record.jungleCoins || 0), 0);
+  const totalJ$ = personalRecords.reduce(
+    (sum, record) => sum + (record.context?.jungleCoins ?? 0),
+    0
+  );
   
   return totalJ$;
 }

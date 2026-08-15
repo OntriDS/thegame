@@ -20,6 +20,7 @@ import { SmartSchedulerSubmodal } from './submodals/smart-scheduler-submodal';
 import { Task, Item, Site } from '@/types/entities';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
 import { TaskType, TaskStatus, TaskPriority, ItemType, ItemStatus, FOUNDER_CHARACTER_ID, EntityType, CharacterRole } from '@/types/enums';
+import { getTaskIsRecurrentGroup, getTaskIsTemplate, getTaskOwnerIds, getTaskProgress, getTaskScheduledEnd, getTaskScheduledStart } from '@/lib/compatibility/task-selectors';
 import { getItemStatusLabel, getTaskStatusLabel } from '@/lib/constants/status-display-labels';
 import { getTaskPriorityLabel, getTaskTypeLabel } from '@/lib/constants/task-taxonomy-labels';
 import { getStationFromCombined, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined, createCharacterOptions, createStationCategoryOptions, getCategoryFromCombined } from '@/lib/utils/searchable-select-utils';
@@ -180,27 +181,31 @@ export default function MissionTreeModalContent({
       setStatus(existingTask.status);
       setPriority(existingTask.priority);
       setType(existingTask.type);
+      const execTask = existingTask as any;
       const rawStation =
         existingTask.station != null && String(existingTask.station).trim() !== ''
           ? existingTask.station
           : (((getPreference('task-modal-last-station') as Station) || 'strategy') as Station);
       setStation(rawStation);
-      setProgress(existingTask.progress);
+      setProgress(getTaskProgress(existingTask));
       // Dates are now stored as UTC, use directly
-      setDueDate(existingTask.dueDate ? new Date(existingTask.dueDate) : undefined);
-      setLocalDoneAt(existingTask.doneAt ? new Date(existingTask.doneAt) : undefined);
-      setLocalCollectedAt(existingTask.collectedAt ? new Date(existingTask.collectedAt) : undefined);
+      setDueDate(execTask.schedule?.dueDate ? new Date(execTask.schedule.dueDate) : execTask.dueDate ? new Date(execTask.dueDate) : undefined);
+      setLocalDoneAt(execTask.doneAt ? new Date(execTask.doneAt) : undefined);
+      setLocalCollectedAt(execTask.collectedAt ? new Date(execTask.collectedAt) : undefined);
 
-      if (existingTask.scheduledStart) {
-        const start = new Date(existingTask.scheduledStart);
+      const existingStart = getTaskScheduledStart(existingTask);
+      if (existingStart) {
+        const start = new Date(existingStart);
         setScheduledStartDate(start);
         setScheduledStartTime(format(start, 'HH:mm'));
       } else {
         setScheduledStartDate(undefined);
         setScheduledStartTime('');
       }
-      if (existingTask.scheduledEnd) {
-        const end = new Date(existingTask.scheduledEnd);
+      
+      const existingEnd = getTaskScheduledEnd(existingTask);
+      if (existingEnd) {
+        const end = new Date(existingEnd);
         setScheduledEndDate(end);
         setScheduledEndTime(format(end, 'HH:mm'));
       } else {
@@ -208,50 +213,53 @@ export default function MissionTreeModalContent({
         setScheduledEndTime('');
       }
 
-      setCost(existingTask.cost ?? 0);
-      setRevenue(existingTask.revenue ?? 0);
-      setIsNotPaid(existingTask.isNotPaid || false);
-      setIsNotCharged(existingTask.isNotCharged || false);
-      setIsCollected(existingTask.isCollected || false);
+      const fi = existingTask.context?.financialIntent;
+      setCost(fi?.costIntent ? Number(fi.costIntent.minorUnits) : execTask.cost ?? 0);
+      setRevenue(fi?.revenueIntent ? Number(fi.revenueIntent.minorUnits) : execTask.revenue ?? 0);
+      setIsNotPaid(((existingTask as any).status === "PENDING") || false);
+      setIsNotCharged(execTask.isNotCharged || false);
+      setIsCollected(existingTask.status === TaskStatus.COLLECTED || execTask.isCollected || false);
       setFormData({
         site: existingTask.siteId || 'none',
         targetSite: existingTask.targetSiteId || 'none',
       });
-      const taskItemType = (existingTask.outputItemType as ItemType) || '';
-      const taskSubType = existingTask.outputItemSubType || '';
+      const pp = existingTask.context?.productionPlan;
+      const taskItemType = (pp?.outputItemType as ItemType) || (execTask.outputItemType as ItemType) || '';
+      const taskSubType = pp?.outputItemSubType || execTask.outputItemSubType || '';
       setOutputItemType(taskItemType);
       setOutputItemSubType(taskSubType);
       setOutputItemTypeSubType(taskItemType ? `${taskItemType}:${taskSubType}` : 'none:');
-      setOutputQuantity(existingTask.outputQuantity || 1);
-      setOutputQuantityString(String(existingTask.outputQuantity || 1));
-      setOutputUnitCost(existingTask.outputUnitCost || 0);
-      setOutputUnitCostString(String(existingTask.outputUnitCost || 0));
-      setOutputItemName(existingTask.outputItemName || '');
-      setOutputItemPrice(existingTask.outputItemPrice || 0);
-      setOutputItemPriceString(String(existingTask.outputItemPrice || 0));
-      setIsNewItem(existingTask.isNewItem || !Boolean(existingTask.outputItemId));
-      setIsSold(existingTask.isSold || false);
+      setOutputQuantity(pp?.outputQuantity || execTask.outputQuantity || 1);
+      setOutputQuantityString(String(pp?.outputQuantity || execTask.outputQuantity || 1));
+      setOutputUnitCost(pp?.outputUnitCost ? Number(pp.outputUnitCost.minorUnits) : execTask.outputUnitCost || 0);
+      setOutputUnitCostString(String(pp?.outputUnitCost ? Number(pp.outputUnitCost.minorUnits) : execTask.outputUnitCost || 0));
+      setOutputItemName(pp?.outputItemName || execTask.outputItemName || '');
+      setOutputItemPrice(pp?.outputItemPrice ? Number(pp.outputItemPrice.minorUnits) : execTask.outputItemPrice || 0);
+      setOutputItemPriceString(String(pp?.outputItemPrice ? Number(pp.outputItemPrice.minorUnits) : execTask.outputItemPrice || 0));
+      setIsNewItem(pp?.isNewItem ?? execTask.isNewItem ?? !Boolean(existingTask.outputItemId));
+      setIsSold(pp?.isSold ?? execTask.isSold ?? false);
       setOutputItemStatus(
-        existingTask.outputItemStatus ||
+        pp?.outputItemStatus ||
+        execTask.outputItemStatus ||
         (existingTask.status === TaskStatus.IN_PROGRESS || existingTask.status === TaskStatus.FINISHING
           ? ItemStatus.IN_PROGRESS
           : ItemStatus.FOR_SALE)
       );
       setSelectedItemId(existingTask.outputItemId || '');
       const existingTaskCounterpartyId =
-        existingTask.characterId ?? null;
+        existingTask.context?.counterparty?.counterpartyId ?? execTask.characterId ?? null;
       setCustomerCharacterId(existingTaskCounterpartyId);
       setIsNewCustomer(!Boolean(existingTaskCounterpartyId));
-      setNewCustomerName(existingTask.newCustomerName || '');
-      setCustomerCharacterRole(existingTask.customerCharacterRole || CharacterRole.CUSTOMER);
+      setNewCustomerName(execTask.newCustomerName || '');
+      setCustomerCharacterRole(existingTask.context?.counterparty?.role ?? execTask.customerCharacterRole ?? CharacterRole.CUSTOMER);
       setPlayerCharacterId(existingTask.playerCharacterId || FOUNDER_CHARACTER_ID);
-      setOwnerId(existingTask.ownerId || null);
+      setOwnerId(getTaskOwnerIds(existingTask)[0] || null);
       setRewards({
         points: {
-          xp: existingTask.rewards?.points?.xp || 0,
-          rp: existingTask.rewards?.points?.rp || 0,
-          fp: existingTask.rewards?.points?.fp || 0,
-          hp: existingTask.rewards?.points?.hp || 0,
+          xp: existingTask.context?.rewardIntent?.points?.xp || 0,
+          rp: existingTask.context?.rewardIntent?.points?.rp || 0,
+          fp: existingTask.context?.rewardIntent?.points?.fp || 0,
+          hp: existingTask.context?.rewardIntent?.points?.hp || 0,
         },
       });
       setParentId(existingTask.parentId || null);
@@ -331,7 +339,7 @@ export default function MissionTreeModalContent({
     }
     hasInitializedRef.current = true;
     initializedTaskIdRef.current = hydrateKey;
-  }, [open, task, initializeForNewTask, initializeFromTask]);
+  }, [open, task, initializeFromTask, initializeForNewTask]);
 
   useEffect(() => {
     if (customerCharacterId) {
@@ -463,20 +471,19 @@ export default function MissionTreeModalContent({
       newCustomerName: isNewCustomer ? newCustomerName.trim() || undefined : undefined,
       customerCharacterRole,
       playerCharacterId: finalPlayerCharacterId,
-      ownerId: status === TaskStatus.NONE ? null : ownerId,
+      ownerId: status === TaskStatus.NONE ? null : (task ? getTaskOwnerIds(task)[0] || null : ownerId),
       order: determineOrder(),
-      isCollected:
-        finalStatus === TaskStatus.FAILED ? false : finalStatus === TaskStatus.COLLECTED || isCollected,
+      
       isNewItem,
       isSold,
-      outputItemId: isNewItem ? null : (selectedItemId || task?.outputItemId || null),
-      isRecurrentGroup: task?.isRecurrentGroup ?? false,
-      isTemplate: task?.isTemplate ?? false,
-      sourceSaleId: task?.sourceSaleId ?? undefined,
-      links: task?.links || [],
+      outputItemId: isNewItem ? null : (selectedItemId || (task as any)?.outputItemId || null),
+      isRecurrentGroup: task ? getTaskIsRecurrentGroup(task) : false,
+      isTemplate: task ? getTaskIsTemplate(task) : false,
+      sourceSaleId: (task as any)?.sourceSaleId ?? undefined,
+      links: (task as any)?.links || [],
       createdAt: task?.createdAt || getUTCNow(),
       updatedAt: getUTCNow(),
-    } as Task;
+    } as unknown as Task;
   };
 
   const handleSave = async () => {
@@ -490,7 +497,7 @@ export default function MissionTreeModalContent({
     try {
       const newTask = buildTaskFromForm();
       await onSave(newTask);
-      await ensureCounterpartyRole(newTask.characterId, newTask.customerCharacterRole);
+      await ensureCounterpartyRole((newTask as any).characterId, (newTask as any).customerCharacterRole);
       dispatchEntityUpdated(entityTypeToKind(EntityType.TASK));
       onOpenChange(false);
     } catch (error) {

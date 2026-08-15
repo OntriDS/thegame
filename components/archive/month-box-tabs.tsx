@@ -15,11 +15,15 @@ import { ChevronDown, Clipboard, Loader2, Trash2 } from "lucide-react";
 import type { AvailableArchiveMonth, PlayerArchiveRow } from "@/types/archive";
 import type { Task, Sale, FinancialRecord, Item } from "@/types/entities";
 import { formatForDisplay } from '@/lib/utils/date-display-utils';;
-import { formatCurrency } from "@/lib/utils/financial-utils";
+import { formatCurrency, extractMoneyValue } from "@/lib/utils/financial-utils";
 import { ClientAPI } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 
 type ArchiveTabKey = "tasks" | "sales" | "financials" | "items";
+
+function getTaskCollectedAt(task: Task) {
+  return 'collectedAt' in task ? task.collectedAt : undefined;
+}
 
 interface MonthBoxTabsProps {
   month: AvailableArchiveMonth;
@@ -78,21 +82,27 @@ const TaskColumns: ColumnConfig<Task>[] = [
   {
     key: "collectedAt",
     label: "Collected",
-    accessor: (row) => (row.collectedAt ? formatForDisplay(row.collectedAt) : "—"),
-    sortable: true,
-    sortValue: (row) => row.collectedAt ? new Date(row.collectedAt).getTime() : 0,
+     accessor: (row) => {
+       const collectedAt = getTaskCollectedAt(row);
+       return collectedAt ? formatForDisplay(collectedAt) : "—";
+     },
+     sortable: true,
+     sortValue: (row) => {
+       const collectedAt = getTaskCollectedAt(row);
+       return collectedAt ? new Date(collectedAt).getTime() : 0;
+     },
   },
   {
     key: "points",
     label: "Points",
     align: "right",
     accessor: (row) =>
-      row.rewards?.points
-        ? `HP:${row.rewards.points.hp ?? 0} FP:${row.rewards.points.fp ?? 0} RP:${row.rewards.points.rp ?? 0} XP:${row.rewards.points.xp ?? 0}`
+      row.context?.rewardIntent?.points
+        ? `HP:${row.context?.rewardIntent?.points.hp ?? 0} FP:${row.context?.rewardIntent?.points.fp ?? 0} RP:${row.context?.rewardIntent?.points.rp ?? 0} XP:${row.context?.rewardIntent?.points.xp ?? 0}`
         : "—",
     sortable: true,
     sortValue: (row) => {
-      const points = row.rewards?.points;
+      const points = row.context?.rewardIntent?.points;
       if (!points) return 0;
       return (points.hp ?? 0) + (points.fp ?? 0) + (points.rp ?? 0) + (points.xp ?? 0);
     },
@@ -113,9 +123,9 @@ const SalesColumns: ColumnConfig<Sale>[] = [
     key: "totalRevenue",
     label: "Revenue",
     align: "right",
-    accessor: (row) => formatCurrency(row.totals?.totalRevenue ?? 0),
+    accessor: (row) => formatCurrency(extractMoneyValue(row.totals?.totalRevenue)),
     sortable: true,
-    sortValue: (row) => row.totals?.totalRevenue ?? 0,
+    sortValue: (row) => extractMoneyValue(row.totals?.totalRevenue),
   },
   {
     key: "status",
@@ -132,25 +142,31 @@ const FinancialColumns: ColumnConfig<FinancialRecord>[] = [
   {
     key: "collectedAt",
     label: "Collected",
-    accessor: (row) => (row.collectedAt ? formatForDisplay(row.collectedAt) : "—"),
-    sortable: true,
-    sortValue: (row) => row.collectedAt ? new Date(row.collectedAt).getTime() : 0,
+     accessor: (row) => {
+       const collectedAt = row.lifecycle?.collectedAt;
+       return collectedAt ? formatForDisplay(collectedAt) : "—";
+     },
+     sortable: true,
+     sortValue: (row) => {
+       const collectedAt = row.lifecycle?.collectedAt;
+       return collectedAt ? new Date(collectedAt).getTime() : 0;
+     },
   },
   {
     key: "cost",
     label: "Cost",
     align: "right",
-    accessor: (row) => formatCurrency(row.cost ?? 0),
+    accessor: (row) => formatCurrency(extractMoneyValue(row.cost)),
     sortable: true,
-    sortValue: (row) => row.cost ?? 0,
+    sortValue: (row) => extractMoneyValue(row.cost),
   },
   {
     key: "revenue",
     align: "right",
     label: "Revenue",
-    accessor: (row) => formatCurrency(row.revenue ?? 0),
+    accessor: (row) => formatCurrency(extractMoneyValue(row.revenue)),
     sortable: true,
-    sortValue: (row) => row.revenue ?? 0,
+    sortValue: (row) => extractMoneyValue(row.revenue),
   },
 ];
 
@@ -653,7 +669,7 @@ export default function MonthBoxTabs({ month }: MonthBoxTabsProps) {
       const count = taskState.filtered.length;
       const sumPoints = taskState.filtered.reduce(
         (acc, task) => {
-          const points = task.rewards?.points;
+          const points = task.context?.rewardIntent?.points;
           if (!points) return acc;
           return {
             hp: acc.hp + (points.hp ?? 0),
@@ -675,7 +691,7 @@ export default function MonthBoxTabs({ month }: MonthBoxTabsProps) {
     sales: useMemo(() => {
       const count = salesState.filtered.length;
       const totalRevenue = salesState.filtered.reduce(
-        (sum, sale) => sum + (sale.totals?.totalRevenue ?? 0),
+        (sum, sale) => sum + extractMoneyValue(sale.totals?.totalRevenue),
         0
       );
       return [
@@ -685,8 +701,8 @@ export default function MonthBoxTabs({ month }: MonthBoxTabsProps) {
     }, [salesState.filtered]),
     financials: useMemo(() => {
       const count = financialState.filtered.length;
-      const totalCost = financialState.filtered.reduce((sum, record) => sum + (record.cost ?? 0), 0);
-      const totalRevenue = financialState.filtered.reduce((sum, record) => sum + (record.revenue ?? 0), 0);
+      const totalCost = financialState.filtered.reduce((sum, record) => sum + extractMoneyValue(record.cost), 0);
+      const totalRevenue = financialState.filtered.reduce((sum, record) => sum + extractMoneyValue(record.revenue), 0);
       return [
         { label: "Records", value: count },
         { label: "Cost", value: formatCurrency(totalCost) },
@@ -945,4 +961,3 @@ export default function MonthBoxTabs({ month }: MonthBoxTabsProps) {
     </Tabs>
   );
 }
-

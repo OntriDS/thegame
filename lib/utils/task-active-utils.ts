@@ -16,7 +16,7 @@ export function isTaskCompleted(task: Task): boolean {
  * Active child tasks are only removed when the user explicitly opts in to cascade delete.
  */
 export function isTaskHistoryTerminal(task: Task): boolean {
-  if (task.isCollected) return true;
+  if ((task as any).isCollected) return true;
   return (
     task.status === TaskStatus.DONE ||
     task.status === TaskStatus.COLLECTED ||

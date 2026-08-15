@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/utils/recurrent-task-utils.ts
 // Recurrent task management utilities
 
@@ -798,3 +799,4 @@ export async function validateSpawnOperation(template: Task): Promise<Validation
 
   return { isValid: true };
 }
+

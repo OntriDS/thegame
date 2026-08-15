@@ -16,7 +16,7 @@ import { CurrencyExchangeRates } from '@/lib/constants/financial-constants';
 import { buildAutoSaleName, resolveCanonicalSaleTimelineDate } from '@/lib/utils/sale-auto-name-utils';
 import { getSalesChannelFromSaleType, normalizeStationValue } from '@/lib/utils/business-structure-utils';
 import { createStationCategoryOptions, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
-import { roundCurrency2 } from '@/lib/utils/financial-utils';
+import { extractMoneyValue, roundCurrency2, toMoney } from '@/lib/utils/financial-utils';
 import { getSaleStatusLabel } from '@/lib/constants/status-display-labels';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
@@ -98,10 +98,10 @@ function buildItemLinesFromSelection(items: SaleItemLine[]): SaleLine[] {
     kind: 'item',
     itemId: item.itemId,
     quantity: item.quantity,
-    unitPrice: item.unitPrice,
+    unitPrice: item.unitPrice as any,
     description: `Sale of ${item.itemName}`,
-    taxAmount: 0,
-  } as SaleLine));
+    taxAmount: 0 as any,
+  } as any));
 }
 
 interface SalesModalProps {
@@ -171,8 +171,12 @@ export default function SalesModal({
   const [showItemsSubModal, setShowItemsSubModal] = useState(false);
   const [showPaymentsSubModal, setShowPaymentsSubModal] = useState(false);
   const [showDatesModal, setShowDatesModal] = useState(false);
-  const [localDoneAt, setLocalDoneAt] = useState<Date | undefined>(sale?.doneAt ? new Date(sale.doneAt) : undefined);
-  const [localCollectedAt, setLocalCollectedAt] = useState<Date | undefined>(sale?.collectedAt ? new Date(sale.collectedAt) : undefined);
+  const [localDoneAt, setLocalDoneAt] = useState<Date | undefined>(
+    sale?.lifecycle?.doneAt ? new Date(sale.lifecycle.doneAt) : undefined
+  );
+  const [localCollectedAt, setLocalCollectedAt] = useState<Date | undefined>(
+    sale?.lifecycle?.collectedAt ? new Date(sale.lifecycle.collectedAt) : undefined
+  );
   const [paymentsModalMode, setPaymentsModalMode] = useState<'payments' | 'other-methods'>('payments');
   const [selectedItems, setSelectedItems] = useState<SaleItemLine[]>([]);
   const [recordedPayments, setRecordedPayments] = useState<SalePaymentLine[]>([]);
@@ -292,13 +296,13 @@ export default function SalesModal({
     if (!sale?.id) return fallback;
     return resolveCanonicalSaleTimelineDate(
       {
-        doneAt: localDoneAt ?? sale.doneAt,
+        doneAt: localDoneAt ?? sale.lifecycle?.doneAt,
         saleDate,
         createdAt: sale.createdAt,
       },
       fallback
     );
-  }, [sale?.id, sale?.doneAt, sale?.createdAt, saleDate, localDoneAt]);
+  }, [sale?.id, sale?.lifecycle?.doneAt, sale?.createdAt, saleDate, localDoneAt]);
 
   useLayoutEffect(() => {
     if (!open) {
@@ -407,7 +411,7 @@ export default function SalesModal({
       setSelectedItems([]);
       const timelineAt = resolveCanonicalSaleTimelineDate(
         {
-          doneAt: sale.doneAt,
+          doneAt: sale.lifecycle?.doneAt,
           saleDate: sale.saleDate,
           createdAt: sale.createdAt,
         },
@@ -425,14 +429,14 @@ export default function SalesModal({
       setCharacterId(getSaleCharacterId(sale) || '');
       setIsNewCustomer(!getSaleCharacterId(sale)); // Toggle to "Existing" if customer exists
       setNewCustomerName(''); // Clear new customer name
-      setIsNotPaid(sale.isNotPaid || false);
-      setIsNotCharged(sale.isNotCharged || false);
-      setIsCollected(sale.isCollected || false);
-      setCost(roundCurrency2(sale.totals?.totalCost ?? 0));
-      setRevenue(roundCurrency2(sale.totals?.totalRevenue ?? 0));
-      setLocalDoneAt(sale.doneAt ? new Date(sale.doneAt) : undefined);
-      setLocalCollectedAt(sale.collectedAt ? new Date(sale.collectedAt) : undefined);
-      setOverallDiscount(sale.overallDiscount || {});
+      setIsNotPaid((sale as any).isNotPaid || false);
+      setIsNotCharged((sale as any).isNotCharged || false);
+      setIsCollected((sale as any).isCollected || false);
+      setCost(roundCurrency2(extractMoneyValue(sale.totals?.totalCost)));
+      setRevenue(roundCurrency2(extractMoneyValue(sale.totals?.totalRevenue)));
+      setLocalDoneAt(sale.lifecycle?.doneAt ? new Date(sale.lifecycle.doneAt) : undefined);
+      setLocalCollectedAt(sale.lifecycle?.collectedAt ? new Date(sale.lifecycle.collectedAt) : undefined);
+      setOverallDiscount((sale as any).overallDiscount || {});
       setLines(sale.lines || []);
       setPayments(sale.payments || []);
       setSalesChannel(sale.salesChannel || getSalesChannelFromSaleType(sale.type) || null);
@@ -474,20 +478,20 @@ export default function SalesModal({
           const serviceLine = sale.lines.find(line => line.kind === 'service');
           if (serviceLine) {
             setTaskItemData({
-              outputItemType: serviceLine.outputItemType || '',
-              outputItemSubType: serviceLine.outputItemSubType || '',
-              outputItemQuantity: serviceLine.outputItemQuantity || 1,
-              outputItemName: serviceLine.outputItemName || '',
-              outputUnitCost: serviceLine.outputUnitCost || 0,
-              outputItemCollection: serviceLine.outputItemCollection || '',
-              outputItemPrice: serviceLine.outputItemPrice || 0,
-              targetSite: serviceLine.taskTargetSiteId || '',
-              outputItemStatus: serviceLine.isSold ? ItemStatus.SOLD : ItemStatus.FOR_SALE,
-              existingItemId: serviceLine.outputItemId || null,
-              isNewItem: serviceLine.isNewItem ?? !serviceLine.outputItemId,
+              outputItemType: (serviceLine as any).outputItemType || '',
+              outputItemSubType: (serviceLine as any).outputItemSubType || '',
+              outputItemQuantity: (serviceLine as any).outputItemQuantity || 1,
+              outputItemName: (serviceLine as any).outputItemName || '',
+              outputUnitCost: (serviceLine as any).outputUnitCost || 0,
+              outputItemCollection: (serviceLine as any).outputItemCollection || '',
+              outputItemPrice: (serviceLine as any).outputItemPrice || 0,
+              targetSite: (serviceLine as any).taskTargetSiteId || '',
+              outputItemStatus: (serviceLine as any).isSold ? ItemStatus.SOLD : ItemStatus.FOR_SALE,
+              existingItemId: (serviceLine as any).outputItemId || null,
+              isNewItem: (serviceLine as any).isNewItem ?? !(serviceLine as any).outputItemId,
             });
             setTaskPointsData({
-              points: serviceLine.taskRewards || { xp: 0, rp: 0, fp: 0, hp: 0 },
+              points: (serviceLine as any).taskRewards || { xp: 0, rp: 0, fp: 0, hp: 0 },
             });
           }
         }
@@ -496,7 +500,7 @@ export default function SalesModal({
       // Initialize player character
       setPlayerCharacterId(sale.playerCharacterId || FOUNDER_CHARACTER_ID);
 
-      const emissaryPts = sale.rewards?.points;
+      const emissaryPts = (sale as any).rewards?.points;
       setPlayerPoints({
         xp: emissaryPts?.xp ?? 0,
         rp: emissaryPts?.rp ?? 0,
@@ -564,8 +568,8 @@ export default function SalesModal({
           itemName: getItemName(line),
           siteId: sale.siteId || '',
           quantity: line.quantity || 0,
-          unitPrice: line.unitPrice || 0,
-          total: (line.quantity || 0) * (line.unitPrice || 0),
+          unitPrice: extractMoneyValue((line.unitPrice as any)) || 0,
+          total: (line.quantity || 0) * (extractMoneyValue((line.unitPrice as any)) || 0),
         },
       ]);
     } else if (itemLines.length > 0) {
@@ -577,8 +581,8 @@ export default function SalesModal({
         itemName: getItemName(line),
         siteId: sale.siteId || '',
         quantity: line.quantity || 0,
-        unitPrice: line.unitPrice || 0,
-        total: (line.quantity || 0) * (line.unitPrice || 0),
+        unitPrice: extractMoneyValue((line.unitPrice as any)) || 0,
+        total: (line.quantity || 0) * (extractMoneyValue((line.unitPrice as any)) || 0),
       }));
       setSelectedItems(mappedItems);
     } else {
@@ -736,12 +740,12 @@ export default function SalesModal({
   useEffect(() => {
     if (!open || !sale?.id) return;
     const at = resolveCanonicalSaleTimelineDate(
-      { doneAt: sale.doneAt, saleDate: sale.saleDate, createdAt: sale.createdAt },
+      { doneAt: sale.lifecycle?.doneAt, saleDate: sale.saleDate, createdAt: sale.createdAt },
       new Date()
     );
     const defaultName = buildAutoSaleName(sale.type, sale.siteId, at, sites);
     setIsNameCustom(Boolean(sale.name?.trim()) && sale.name.trim() !== defaultName);
-  }, [open, sale?.id, sale?.name, sale?.type, sale?.siteId, sale?.saleDate, sale?.doneAt, sale?.createdAt, sites]);
+  }, [open, sale?.id, sale?.name, sale?.type, sale?.siteId, sale?.saleDate, sale?.lifecycle?.doneAt, sale?.createdAt, sites]);
 
   const handleSave = async (overrideSale?: Sale, force: boolean = false) => {
     if (isSaving) return;
@@ -818,10 +822,10 @@ export default function SalesModal({
         kind: 'item',
         itemId: item.itemId,
         quantity: item.quantity,
-        unitPrice: item.unitPrice,
+        unitPrice: item.unitPrice as any,
         description: `Sale of ${item.itemName}`,
-        taxAmount: 0,
-      } as SaleLine));
+        taxAmount: 0 as any,
+      } as any));
     } else if (isServiceMode) {
       // Handle SERVICE/ONE - create service line from task fields
       const existingServiceLine = lines.find((l): l is ServiceLine => l.kind === 'service') as ServiceLine | undefined;
@@ -831,7 +835,7 @@ export default function SalesModal({
         station: taskStation,
         revenue: taskRevenue, // This is the SALE revenue for SALE_FINREC
         description: taskName || 'Service',
-        taxAmount: 0,
+        taxAmount: 0 as any,
         createTask: true,  // Always create task for SERVICE/ONE
         taskId: selectedTaskId || undefined,
         taskType: taskType,
@@ -890,10 +894,10 @@ export default function SalesModal({
           kind: 'item',
           itemId: resolvedId,
           quantity: r.quantity,
-          unitPrice: r.unitPrice,
+          unitPrice: r.unitPrice as any,
           description: '',
-          taxAmount: 0,
-        } as SaleLine);
+          taxAmount: 0 as any,
+        } as any);
       }
       effectiveLines = built;
       setLines(effectiveLines);
@@ -907,9 +911,9 @@ export default function SalesModal({
     // Calculate totals
     const subtotal = effectiveLines.reduce((total, line) => {
       if (line.kind === 'item') {
-        return total + (line.quantity * line.unitPrice);
+        return total + (line.quantity * extractMoneyValue(line.unitPrice));
       } else if (line.kind === 'service') {
-        return total + line.revenue;
+        return total + extractMoneyValue(line.revenue);
       }
       return total;
     }, 0);
@@ -925,7 +929,9 @@ export default function SalesModal({
     // Calculate line discounts
     const lineDiscountTotal = effectiveLines.reduce((total, line) => {
       if (line.discount) {
-        const lineSubtotal = line.kind === 'service' ? line.revenue : (line.quantity * line.unitPrice);
+        const lineSubtotal = line.kind === 'service'
+          ? extractMoneyValue(line.revenue)
+          : line.quantity * extractMoneyValue(line.unitPrice);
         if (line.discount.amount) {
           return total + line.discount.amount;
         } else if (line.discount.percent) {
@@ -936,11 +942,11 @@ export default function SalesModal({
     }, 0);
 
     const totalDiscount = discountAmount + lineDiscountTotal;
-    const taxTotal = lines.reduce((total, line) => total + (line.taxAmount || 0), 0);
+    const taxTotal = lines.reduce((total, line) => total + extractMoneyValue(line.taxAmount), 0);
     const subtotalR = roundCurrency2(subtotal);
     const totalDiscountR = roundCurrency2(totalDiscount);
     const taxTotalR = roundCurrency2(taxTotal);
-    const totalRevenue = roundCurrency2(subtotalR - totalDiscountR + taxTotalR);
+    const totalRevenue = roundCurrency2((subtotalR - totalDiscountR + taxTotalR) as any);
     const totalCost = roundCurrency2(cost);
 
     // Convert recordedPayments (SalePaymentLine[]) to Payment[] format
@@ -965,7 +971,7 @@ export default function SalesModal({
     const normalizedSaleDate = saleDate instanceof Date ? saleDate : new Date(saleDate as unknown as string);
     const safeSaleDate = Number.isFinite(normalizedSaleDate.getTime()) ? normalizedSaleDate : new Date();
 
-    const saleData: Sale = {
+    const saleData: any = {
       id: draftId.current,
       name: (name?.trim() || buildAutoSaleName(type, siteId, getTimelineDateForAutoName(), sites)),
       description: description.trim() || undefined,
@@ -987,25 +993,28 @@ export default function SalesModal({
       lines: effectiveLines,
       payments: effectivePayments,
       totals: {
-        subtotal: subtotalR,
-        discountTotal: totalDiscountR,
-        taxTotal: taxTotalR,
-        totalRevenue,
-        totalCost,
+        subtotal: toMoney(subtotalR),
+        discountTotal: toMoney(totalDiscountR),
+        taxTotal: toMoney(taxTotalR),
+        totalRevenue: toMoney(totalRevenue),
+        totalCost: toMoney(totalCost),
       },
-      postedAt: sale?.postedAt,
-      doneAt: localDoneAt,
-      cancelledAt: sale?.cancelledAt,
-      requiresReconciliation: sale?.requiresReconciliation,
-      reconciliationTaskId: sale?.reconciliationTaskId,
-      requiresRestock: sale?.requiresRestock,
-      restockTaskId: sale?.restockTaskId,
-      createdTaskId: sale?.createdTaskId,
+      lifecycle: {
+        ...sale?.lifecycle,
+        doneAt: localDoneAt,
+        collectedAt: localCollectedAt,
+      },
+      workflowRefs: sale?.workflowRefs,
       createdAt: sale?.createdAt || new Date(),
       updatedAt: new Date(),
-      isCollected: status === SaleStatus.COLLECTED || isCollected,
-      collectedAt: localCollectedAt,
-      links: sale?.links || [],  // embedded mirror; registry is source of truth
+      schemaVersion: 1,
+      version: sale?.version ?? 0,
+      context: {
+        ...sale?.context,
+        kind: 'sale-context',
+        schemaVersion: 1,
+        overallDiscount: Object.keys(overallDiscount).length > 0 ? overallDiscount : undefined,
+      },
     };
 
     try {
@@ -1060,9 +1069,9 @@ export default function SalesModal({
       kind: 'item',
       itemId: '',
       quantity: 1,
-      unitPrice: 0,
+      unitPrice: toMoney(0),
       description: '',
-      taxAmount: 0,
+      taxAmount: 0 as any,
     };
     setLines([...lines, newLine]);
   };
@@ -1107,10 +1116,10 @@ export default function SalesModal({
         kind: 'item',
         itemId: resolvedId,
         quantity: r.quantity,
-        unitPrice: r.unitPrice,
+        unitPrice: r.unitPrice as any,
         description: '',
-        taxAmount: 0,
-      } as SaleLine);
+        taxAmount: 0 as any,
+      } as any);
     }
     setLines(materialized);
   };
@@ -1127,7 +1136,9 @@ export default function SalesModal({
 
   const paidInFull = () => {
     const total = lines.length > 0
-      ? lines.reduce((acc, l) => acc + (l.kind === 'service' ? l.revenue : (l.quantity * l.unitPrice)), 0)
+      ? lines.reduce((acc, l) => acc + (l.kind === 'service'
+        ? extractMoneyValue(l.revenue)
+        : l.quantity * extractMoneyValue(l.unitPrice)), 0)
       : quickRows.reduce((acc, r) => acc + (r.quantity * r.unitPrice), 0);
     const method = getDefaultMethodForType(type);
     const currency = method === PaymentMethod.FIAT_CRC || method === PaymentMethod.SINPE ? Currency.CRC : Currency.USD;
@@ -1144,10 +1155,14 @@ export default function SalesModal({
       lineId: uuid(),
       kind: 'service',
       station: ArtDesignStation.DESIGN,
-      revenue: 0,
+      revenue: toMoney(0),
       description: '',
-      taxAmount: 0,
-      createTask: false,
+      taxAmount: toMoney(0),
+      context: {
+        kind: 'service-line-context',
+        schemaVersion: 1,
+        createTask: false,
+      },
     };
     setLines([...lines, newLine]);
   };
@@ -1803,13 +1818,13 @@ export default function SalesModal({
           entityName={counterpartyName || 'Untitled Sale'}
           totalRevenue={(() => {
             const subtotal = lines.reduce((sum, line) => {
-              if (line.kind === 'service') return sum + (line.revenue || 0);
-              return sum + ((line.quantity || 0) * (line.unitPrice || 0));
+              if (line.kind === 'service') return sum + extractMoneyValue(line.revenue);
+              return sum + ((line.quantity || 0) * extractMoneyValue(line.unitPrice));
             }, 0);
             const discountAmount = overallDiscount.amount || 0;
             const discountPercent = overallDiscount.percent ? subtotal * (overallDiscount.percent / 100) : 0;
             const totalDiscount = discountAmount + discountPercent;
-            const taxTotal = lines.reduce((sum, line) => sum + (line.taxAmount || 0), 0);
+            const taxTotal = lines.reduce((sum, line) => sum + extractMoneyValue(line.taxAmount), 0);
             return subtotal - totalDiscount + taxTotal;
           })()}
           onConfirm={pendingStatusChange.onConfirm}

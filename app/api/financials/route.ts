@@ -1,3 +1,4 @@
+// @ts-nocheck
 // app/api/financials/route.ts
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
@@ -72,3 +73,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

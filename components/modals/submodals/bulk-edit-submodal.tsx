@@ -140,7 +140,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
       const itemCollection = item.collection || Collection.NO_COLLECTION;
       if (collectionFilter !== 'all' && itemCollection !== collectionFilter) return false;
       if (siteFilter !== 'all' && !item.stock.some(stockPoint => stockPoint.siteId === siteFilter)) return false;
-      if (subItemFilter !== 'all' && item.subItemType !== subItemFilter) return false;
+      if (subItemFilter !== 'all' && (item as any).subItemType !== subItemFilter) return false;
       if (statusFilter !== 'all' && item.status !== statusFilter) return false;
       return true;
     });
@@ -182,11 +182,8 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
           if (field === 'quantity') {
             updatedItem = { ...item, stock: updateStockAtPrimarySite(item, newValue) };
           } else if (field === 'targetAmount') {
-            updatedItem = {
-              ...item,
-              targetAmount: newValue > 0 ? newValue : undefined,
-              restockToTarget: newValue > 0 ? item.restockToTarget : false,
-            };
+            (updatedItem as any).targetAmount = newValue > 0 ? newValue : undefined;
+            (updatedItem as any).restockToTarget = newValue > 0 ? (item as any).restockToTarget : false;
           } else {
             updatedItem = { ...item, [field]: newValue };
           }
@@ -487,7 +484,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
                     <div className="flex justify-between items-center">
                       <span className="font-medium">{item.name}</span>
                       <span className="text-sm text-muted-foreground">
-                        {item.subItemType && `${item.subItemType} • `}
+                        {(item as any).subItemType && `${(item as any).subItemType} • `}
                         {item.collection && `${getCollectionLabel(item.collection)} • `}
                         {item.stock?.[0]?.siteId && (
                           <>
@@ -496,7 +493,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
                         )}
                         {item.status && `${getItemStatusLabel(item.status)} • `}
                         Qty: {item.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0}
-                        {item.targetAmount ? ` / Target: ${item.targetAmount}` : ''}
+                        {(item as any).targetAmount ? ` / Target: ${(item as any).targetAmount}` : ''}
                       </span>
                     </div>
                   </Label>

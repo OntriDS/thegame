@@ -90,13 +90,13 @@ export default function PlayerJ$TransactionsModal({
           ) : (
             <div className="space-y-2">
               {transactions.map((transaction, index) => {
-                const j$Amount = transaction.jungleCoins || 0;
+                const j$Amount = (transaction.context as any)?.rewardIntent?.points || (transaction as any).jungleCoins || 0;
                 const isPositive = j$Amount > 0;
                 
                 // Calculate running balance: sum all transactions from this point forward (newest first)
                 // Since transactions are sorted newest first, we sum from index to end, then reverse
                 const transactionsFromThisPoint = transactions.slice(index);
-                const balanceUpToThis = transactionsFromThisPoint.reduce((sum, t) => sum + (t.jungleCoins || 0), 0);
+                const balanceUpToThis = transactionsFromThisPoint.reduce((sum, t) => sum + ((t.context as any)?.rewardIntent?.points || (t as any).jungleCoins || 0), 0);
                 
                 return (
                   <Card key={transaction.id} className="border">

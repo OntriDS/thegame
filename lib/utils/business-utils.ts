@@ -16,7 +16,7 @@ export function calculateTotalQuantity(stock: StockPoint[]): number {
  */
 export function calculateItemValue(item: Item): number {
   const totalQuantity = calculateTotalQuantity(item.stock);
-  return item.price * totalQuantity;
+  return (item as any).price * totalQuantity;
 }
 
 /**
@@ -24,7 +24,7 @@ export function calculateItemValue(item: Item): number {
  */
 export function calculateItemTotalCost(item: Item): number {
   const totalQuantity = calculateTotalQuantity(item.stock);
-  return item.unitCost * totalQuantity;
+  return (item as any).unitCost * totalQuantity;
 }
 
 /**

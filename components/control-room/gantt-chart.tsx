@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { getTaskScheduledStart, getTaskScheduledEnd } from '@/lib/compatibility/task-selectors';
 
 interface GanttChartProps {
     tasks: Task[];
@@ -52,14 +54,16 @@ export default function GanttChart({ tasks, onNewTask, onEditTask }: GanttChartP
     }, [currentDate, viewMode]);
 
     const scheduledTasks = useMemo(() => {
-        return tasks.filter(t => t.scheduledStart && t.scheduledEnd);
+        return tasks.filter(t => getTaskScheduledStart(t) && getTaskScheduledEnd(t));
     }, [tasks]);
 
     const getBarStyle = (task: Task) => {
-        if (!task.scheduledStart || !task.scheduledEnd) return {};
+        const start = getTaskScheduledStart(task);
+        const end = getTaskScheduledEnd(task);
+        if (!start || !end) return {};
 
-        const taskStart = new Date(task.scheduledStart);
-        const taskEnd = new Date(task.scheduledEnd);
+        const taskStart = new Date(start);
+        const taskEnd = new Date(end);
 
         if (taskEnd < startDate || taskStart > endDate) return { display: 'none' };
 

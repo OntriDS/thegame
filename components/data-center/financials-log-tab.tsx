@@ -171,7 +171,7 @@ export function FinancialsLogTab({ financialsLog, onReload, isReloading }: Finan
                     }
 
                     // Compute amounts for this entry
-                    const isNotPaid = Boolean(entry.isNotPaid);
+                    const isNotPaid = Boolean((entry.status === "PENDING"));
                     const isNotCharged = Boolean(entry.isNotCharged);
                     const rawCost = Number(entry.cost ?? 0);
                     const rawRevenue = Number(entry.revenue ?? 0);

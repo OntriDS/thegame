@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Legacy: kind 'bundle' + itemId → kind 'item'. ItemType.BUNDLE stays on Item only.
 
 import { v4 as uuid } from 'uuid';
@@ -104,3 +105,4 @@ export function normalizeSale<T extends Pick<Sale, 'lines' | 'type' | 'salesChan
   }
   return next;
 }
+

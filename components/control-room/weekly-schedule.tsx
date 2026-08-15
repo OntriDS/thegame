@@ -235,8 +235,8 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
     const getTaskStyle = (occurrence: TaskOccurrence) => {
         // Use dragged state if this is the dragged occurrence
         const isDragging = draggingId === occurrence.occurrenceKey;
-        const currentStart = (isDragging && dragState) ? new Date(dragState.task.scheduledStart!) : new Date(occurrence.start);
-        const currentEnd = (isDragging && dragState) ? new Date(dragState.task.scheduledEnd!) : new Date(occurrence.end);
+        const currentStart = (isDragging && dragState) ? new Date((dragState.task as any).scheduledStart!) : new Date(occurrence.start);
+        const currentEnd = (isDragging && dragState) ? new Date((dragState.task as any).scheduledEnd!) : new Date(occurrence.end);
 
         // Calculate position relative to startHour
         let startHourVal = getHours(currentStart);
@@ -315,8 +315,8 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
 
     // Helper to check if task has any rewards
     const hasRewards = (task: Task) => {
-        if (!task.rewards?.points) return false;
-        const { xp, rp, fp, hp } = task.rewards.points;
+        if (!task.context?.rewardIntent?.points) return false;
+        const { xp, rp, fp, hp } = task.context?.rewardIntent?.points;
         return (xp > 0 || rp > 0 || fp > 0 || hp > 0);
     };
 
@@ -333,8 +333,8 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
 
     // Get individual point types for display with names
     const getPointTypes = (task: Task) => {
-        if (!task.rewards?.points) return [];
-        const pointsObject = task.rewards.points as Record<string, number>;
+        if (!task.context?.rewardIntent?.points) return [];
+        const pointsObject = task.context.rewardIntent.points;
         const points: Array<{
             type: PointType;
             value: number;
@@ -344,7 +344,7 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
         }> = [];
 
         for (const metadata of POINT_TYPE_METADATA) {
-            const value = pointsObject[metadata.type] || 0;
+            const value = pointsObject[metadata.type] ?? 0;
             if (value > 0) {
                 points.push({
                     type: metadata.type,
@@ -523,8 +523,8 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
 
                                                                         {/* Time - Always visible in center */}
                                                                         <span className="text-[0.7rem] text-muted-foreground/80 whitespace-nowrap">
-                                                                            {format(new Date(draggingId === occ.occurrenceKey && dragState ? dragState.task.scheduledStart! : occ.start), 'HH:mm')} -
-                                                                            {format(new Date(draggingId === occ.occurrenceKey && dragState ? dragState.task.scheduledEnd! : occ.end), 'HH:mm')}
+                                                                            {format(new Date(draggingId === occ.occurrenceKey && dragState ? (dragState.task as any).scheduledStart! : occ.start), 'HH:mm')} -
+                                                                            {format(new Date(draggingId === occ.occurrenceKey && dragState ? (dragState.task as any).scheduledEnd! : occ.end), 'HH:mm')}
                                                                         </span>
 
                                                                         {/* Points - Always visible */}

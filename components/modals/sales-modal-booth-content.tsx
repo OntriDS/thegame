@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import NumericInput from "@/components/ui/numeric-input";
+import { extractMoneyValue, toMoney } from "@/lib/utils/financial-utils";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -180,8 +181,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
     // State for Single Contract (Global for this sale)
     const [selectedContractId, setSelectedContractId] = useState<string>(() => {
       return (
-        sale?.metadata?.boothSaleContext?.contractId ||
-        (sale as any)?.archiveMetadata?.boothSaleContext?.contractId ||
+      (sale as any)?.metadata?.boothSaleContext?.contractId ||
+      (sale as any)?.archiveMetadata?.boothSaleContext?.contractId ||
         ""
       );
     });
@@ -190,7 +191,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
     const [selectedFounderBusinessId, setSelectedFounderBusinessId] =
       useState<string>(() => {
         return (
-          sale?.metadata?.boothSaleContext?.principalBusinessId ||
+          (sale as any)?.metadata?.boothSaleContext?.principalBusinessId ||
           (sale as any)?.archiveMetadata?.boothSaleContext
             ?.principalBusinessId ||
           ""
@@ -200,8 +201,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
     // State for Partner (Them)
     const [selectedPartnerId, setSelectedPartnerId] = useState<string>(() => {
       // 1. Try modern metadata first
-      if (sale?.metadata?.boothSaleContext?.counterpartyBusinessId) {
-        return sale.metadata.boothSaleContext.counterpartyBusinessId;
+      if ((sale as any)?.metadata?.boothSaleContext?.counterpartyBusinessId) {
+        return (sale as any).metadata.boothSaleContext.counterpartyBusinessId;
       }
       // 2. Try archiveMetadata context
       if (
@@ -296,18 +297,18 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
 
     // Payment Distribution State
     // Modifiable Financials State (First-Class Fields)
-    const [boothCost, setBoothCost] = useState<number>(sale?.boothFee || 0);
+    const [boothCost, setBoothCost] = useState<number>((sale as any)?.boothFee || 0);
     const [paymentBitcoin, setPaymentBitcoin] = useState<number>(
-      sale?.paymentBreakdown?.bitcoin || 0,
+      (sale as any)?.paymentBreakdown?.bitcoin || 0,
     );
     const [paymentCard, setPaymentCard] = useState<number>(
-      sale?.paymentBreakdown?.card || 0,
+      (sale as any)?.paymentBreakdown?.card || 0,
     );
     const [paymentCashCRC, setPaymentCashCRC] = useState<number>(
-      sale?.paymentBreakdown?.cashCRC || 0,
+      (sale as any)?.paymentBreakdown?.cashCRC || 0,
     );
     const [paymentCashUSD, setPaymentCashUSD] = useState<number>(
-      sale?.paymentBreakdown?.cashUSD || 0,
+      (sale as any)?.paymentBreakdown?.cashUSD || 0,
     );
 
     // Effect to auto-calculate Cash remainder initially (OPTIONAL)
@@ -332,7 +333,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       if (!selectedFounderBusinessId && businesses.length > 0) {
         // First try to find a founder business from metadata
         const metaFounderId =
-          sale?.metadata?.boothSaleContext?.principalBusinessId;
+          (sale as any)?.metadata?.boothSaleContext?.principalBusinessId;
         if (metaFounderId && businesses.some((b) => b.id === metaFounderId)) {
           setSelectedFounderBusinessId(metaFounderId);
         } else {
@@ -461,7 +462,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       // 1. Calculate Baselines (Respecting Currency)
       // Assumption: All Inventory Items (Products & Bundles) are priced in USD for Booth-Sales.
       const myItemsTotalUSD = myItems.reduce(
-        (s, i) => s + (i.unitPrice || 0) * (i.quantity || 0),
+        (s, i) => s + (extractMoneyValue(i.unitPrice) || 0) * (i.quantity || 0),
         0,
       );
 
@@ -573,19 +574,19 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
           let total = 0;
           let category = "Other";
 
-          const metaUSD = itemLine.metadata?.totalUSD ?? 0;
-          const metaCRC = itemLine.metadata?.totalCRC ?? 0;
+          const metaUSD = (itemLine as any).metadata?.totalUSD ?? 0;
+          const metaCRC = (itemLine as any).metadata?.totalCRC ?? 0;
 
           if (metaUSD > 0 || metaCRC > 0) {
-            total = (itemLine.quantity || 0) * (itemLine.unitPrice || 0);
+            total = (itemLine.quantity || 0) * (extractMoneyValue(itemLine.unitPrice) || 0);
           } else {
-            total = (itemLine.quantity || 0) * (itemLine.unitPrice || 0);
+            total = (itemLine.quantity || 0) * (extractMoneyValue(itemLine.unitPrice) || 0);
           }
 
           const item = items.find((i) => i.id === itemLine.itemId);
           if (item) {
-            category = item.subItemType
-              ? `${item.type}: ${item.subItemType}`
+            category = (item as any).subItemType
+              ? `${item.type}: ${(item as any).subItemType}`
               : item.type;
           }
 
@@ -726,10 +727,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         kind: "service",
         station: SalesStation.BOOTH_SALES as Station,
         // Revenue in USD (Source of Truth for Financials)
-        revenue: amountCRC / safeExchangeRate + amountUSD,
+        revenue: toMoney(amountCRC / safeExchangeRate + amountUSD),
         // Descriptive label
         description: `[Partner: ${getPartnerName(selectedPartnerId)}] ${quickCat}`,
-        taxAmount: 0,
+        taxAmount: toMoney(0),
         createTask: false,
         // Metadata stores the raw inputs and relationship info
         metadata: {
@@ -741,7 +742,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
           partnerShare: 0,
           myCommission: 0,
         },
-      };
+      } as unknown as ServiceLine;
 
       // Add directly to lines (Single Source of Truth)
       setLines([...lines, newServiceLine]);
@@ -777,7 +778,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
           return {
             ...line,
             metadata: {
-              ...line.metadata,
+              ...(line as any).metadata,
               partnerShare: !Number.isNaN(
                 totals.breakdown.partnerSharePct_Partner,
               )
@@ -855,10 +856,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         // Financials (Converted to USD)
         lines: updatedLines,
         totals: {
-          subtotal: totals.grossSales / safeExchangeRate,
-          discountTotal: 0,
-          taxTotal: 0,
-          totalRevenue: totals.grossSales / safeExchangeRate,
+          subtotal: toMoney(totals.grossSales / safeExchangeRate),
+          discountTotal: toMoney(0),
+          taxTotal: toMoney(0),
+          totalRevenue: toMoney(totals.grossSales / safeExchangeRate),
         },
 
         // First-Class Fields
@@ -872,20 +873,20 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
 
         // Metadata Extension Payload
         metadata: {
-          ...(sale?.metadata || {}),
+          ...((sale as any)?.metadata || {}),
           boothSaleContext: {
             ...boothMetadata.boothSaleContext,
           },
         },
-        links: sale?.links || [],
+        links: (sale as any)?.links || [],
 
         // Lifecycle defaults
         createdAt: sale?.createdAt || new Date(),
         updatedAt: new Date(),
-        isCollected: sale?.isCollected || false,
+        
         doneAt: doneAt,
         collectedAt: collectedAt,
-      };
+      } as unknown as Sale;
 
       // 5. Pass to Parent
       onSave(fullSale);
@@ -1065,7 +1066,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                           const item = items.find(
                             (i) => i.id === (line as ItemSaleLine).itemId,
                           );
-                          const meta = line.metadata || {};
+                          const meta = (line as any).metadata || {};
                           return (
                             <tr
                               key={line.lineId}
@@ -1076,7 +1077,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                                 {item ? item.name : "Unknown Item"}
                               </td>
                               <td className="p-2 text-slate-400">
-                                ${(line.unitPrice || 0).toFixed(2)}
+                                ${(extractMoneyValue(line.unitPrice) || 0).toFixed(2)}
                               </td>
                               <td className="p-2 text-slate-400 font-mono text-[10px]">
                                 {meta.usdExpression || "-"}
@@ -1090,7 +1091,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                               <td className="p-2 text-right font-bold text-green-400">
                                 $
                                 {(
-                                  (line.unitPrice || 0) * (line.quantity || 0)
+                                  (extractMoneyValue(line.unitPrice) || 0) * (line.quantity || 0)
                                 ).toFixed(2)}
                               </td>
                               <td className="p-2 text-right">
@@ -1768,7 +1769,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                       totalUSD: saleItem.totalUSD,
                       totalCRC: saleItem.totalCRC,
                     },
-                  }) as ItemSaleLine,
+                  }) as unknown as ItemSaleLine,
               );
 
               // Replace ALL item lines with the new selection (since modal manages the full list)
@@ -1792,13 +1793,13 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                   itemId: il.itemId,
                   itemName: soldLabel,
                   quantity: il.quantity,
-                  unitPrice: il.unitPrice || 0,
-                  total: (il.quantity || 0) * (il.unitPrice || 0),
+                  unitPrice: extractMoneyValue(il.unitPrice) || 0,
+                  total: (il.quantity || 0) * (extractMoneyValue(il.unitPrice) || 0),
                   siteId: siteId,
-                  usdExpression: il.metadata?.usdExpression,
-                  crcExpression: il.metadata?.crcExpression,
-                  totalUSD: il.metadata?.totalUSD,
-                  totalCRC: il.metadata?.totalCRC,
+                  usdExpression: (il as any).metadata?.usdExpression,
+                  crcExpression: (il as any).metadata?.crcExpression,
+                  totalUSD: (il as any).metadata?.totalUSD,
+                  totalCRC: (il as any).metadata?.totalCRC,
                 };
               })}
             defaultSiteId={siteId}

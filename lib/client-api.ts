@@ -990,7 +990,7 @@ export const ClientAPI = {
   getItemsByModel: (items: Item[]): Record<string, Item[]> => {
     const grouped: Record<string, Item[]> = {};
     items.forEach(item => {
-      const key = `${item.type}|${item.subItemType || ''}|${item.name}|${item.collection || ''}`;
+      const key = `${item.type}|${(item as any).subItemType || ''}|${item.name}|${item.collection || ''}`;
       if (!grouped[key]) {
         grouped[key] = [];
       }
@@ -1011,7 +1011,7 @@ export const ClientAPI = {
   },
 
   getItemModelKey: (item: Item): string => {
-    return `${item.type}|${item.subItemType || ''}|${item.name}|${item.collection || ''}`;
+    return `${item.type}|${(item as any).subItemType || ''}|${item.name}|${item.collection || ''}`;
   },
 
   // Financial records filtering methods

@@ -121,30 +121,30 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
               if (accountUsable) {
                 setAccountData(account);
                 setName((character.name?.trim() || account.name?.trim() || '').trim());
-                setContactEmail(account.email || character?.contactEmail || '');
-                setContactPhone(account.phone || character?.contactPhone || '');
+                setContactEmail((character as any)?.contactEmail || account.email || '');
+                setContactPhone((character as any)?.contactPhone || account.phone || '');
               } else {
                 // IAM row missing, disabled, or admin "delete" — character should be editable from DS + optional stale account fields
                 setAccountData(null);
                 setName(
                   (character.name?.trim() || account?.name?.trim() || '').trim() || character.name || '',
                 );
-                setContactEmail(character?.contactEmail || account?.email || '');
-                setContactPhone(character?.contactPhone || account?.phone || '');
+                setContactEmail((character as any)?.contactEmail || account?.email || '');
+                setContactPhone((character as any)?.contactPhone || account?.phone || '');
               }
             } catch (error) {
               console.error('Failed to load account data:', error);
               setAccountData(null);
               setName(character?.name || '');
-              setContactPhone(character?.contactPhone || '');
-              setContactEmail(character?.contactEmail || '');
+              setContactPhone((character as any)?.contactPhone || '');
+              setContactEmail((character as any)?.contactEmail || '');
             }
           } else {
             // Clear account data for non-account characters
             setAccountData(null);
             setName(character?.name || '');
-            setContactPhone(character?.contactPhone || '');
-            setContactEmail(character?.contactEmail || '');
+            setContactPhone((character as any)?.contactPhone || '');
+            setContactEmail((character as any)?.contactEmail || '');
           }
 
           setDescription(character.description || '');
@@ -158,7 +158,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           // Reset init guard when editing
           didInitRef.current = false;
 
-          setJungleCoinsBalance(character?.wallet?.jungleCoins || 0);
+          setJungleCoinsBalance((character as any)?.wallet?.jungleCoins || 0);
 
         } else if (!didInitRef.current) {
           // Creating new character - initialize once only (don't reset again while user edits)
@@ -262,7 +262,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         createdAt: character?.createdAt || new Date(),
         updatedAt: new Date(),
         isActive: character?.isActive ?? true,  // Character is active by default
-        links: character?.links || [],
+        links: (character as any)?.links || [],
 
         // Keep accountId only while an active IAM row is driving identity; otherwise clear stale pointers (e.g. after admin disable/delete)
         accountId: identityManagedByAccount ? (character?.accountId ?? null) : null,
@@ -270,8 +270,8 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         // Character core
         roles,
         // For PLAYER role characters, preserve existing contact info (read from Account)
-        contactPhone: shouldPreserveContactInfo ? character?.contactPhone : (contactPhone?.trim() || undefined),
-        contactEmail: shouldPreserveContactInfo ? character?.contactEmail : (contactEmail?.trim() || undefined),
+        contactPhone: shouldPreserveContactInfo ? (character as any)?.contactPhone : (contactPhone?.trim() || undefined),
+        contactEmail: shouldPreserveContactInfo ? (character as any)?.contactEmail : (contactEmail?.trim() || undefined),
 
         // Character Stats
         commColor: character?.commColor,
@@ -282,7 +282,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
 
         // V0.1 required - Character-specific only
         purchasedAmount,
-        inventory: character?.inventory || [], // Empty array for new characters
+        inventory: (character as any)?.inventory || [], // Empty array for new characters
 
         // Player entity link: unchanged on edit; absent on create (this modal does not assign Player rows).
         playerId:
@@ -294,8 +294,8 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         lastActiveAt: character?.lastActiveAt || new Date(),
 
         // Social graph
-        relationships: character?.relationships,
-      };
+        relationships: (character as any)?.relationships,
+      } as unknown as Character;
 
       await onSave(newCharacter);
 

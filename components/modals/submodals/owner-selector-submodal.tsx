@@ -114,7 +114,7 @@ export default function OwnerSelectorModal({
 
     // Search filter
     const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.contactEmail?.toLowerCase().includes(searchTerm.toLowerCase());
+      (c as any).contactEmail?.toLowerCase().includes(searchTerm.toLowerCase());
     
     return matchesSearch;
   }).sort((a, b) => {

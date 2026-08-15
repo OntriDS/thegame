@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Item, Site, Link } from '@/types/entities';
+import { Item, Site } from '@/types/entities';
 import { Package, MapPin, Loader2 } from 'lucide-react';
 import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
 import { ClientAPI } from '@/lib/client-api';
@@ -38,13 +38,13 @@ export default function CharacterInventorySubmodal({
       const links = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: characterId });
 
       // Filter for ownership links (both canonical and reverse)
-      const itemLinks = links.filter((l: Link) =>
+      const itemLinks = links.filter((l: any) =>
         (l.linkType === LinkType.ITEM_CHARACTER || l.linkType === LinkType.CHARACTER_ITEM) &&
         (l.source.type === EntityType.CHARACTER && l.source.id === characterId ||
           l.target.type === EntityType.CHARACTER && l.target.id === characterId)
       );
 
-      const siteLinks = links.filter((l: Link) =>
+      const siteLinks = links.filter((l: any) =>
         (l.linkType === LinkType.SITE_CHARACTER || l.linkType === LinkType.CHARACTER_SITE) &&
         (l.source.type === EntityType.CHARACTER && l.source.id === characterId ||
           l.target.type === EntityType.CHARACTER && l.target.id === characterId)
@@ -52,7 +52,7 @@ export default function CharacterInventorySubmodal({
 
       // Get item IDs from links
       const itemIds = new Set<string>();
-      itemLinks.forEach((link: Link) => {
+      itemLinks.forEach((link: any) => {
         if (link.source.type === EntityType.ITEM) {
           itemIds.add(link.source.id);
         } else if (link.target.type === EntityType.ITEM) {
@@ -62,7 +62,7 @@ export default function CharacterInventorySubmodal({
 
       // Get site IDs from links
       const siteIds = new Set<string>();
-      siteLinks.forEach((link: Link) => {
+      siteLinks.forEach((link: any) => {
         if (link.source.type === EntityType.SITE) {
           siteIds.add(link.source.id);
         } else if (link.target.type === EntityType.SITE) {
@@ -164,9 +164,7 @@ export default function CharacterInventorySubmodal({
                             {item.status && (
                               <span>Status: {item.status}</span>
                             )}
-                            {item.price > 0 && (
-                              <span>Price: ${item.price.toLocaleString()}</span>
-                            )}
+                            {(item as any).price != null ? ` - ${(item as any).price} J$` : ''}
                           </div>
                         </div>
                       </div>

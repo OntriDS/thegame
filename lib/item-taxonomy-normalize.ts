@@ -4,7 +4,15 @@
 import { ItemType } from '@/types/enums';
 import type { SubItemType } from '@/types/type-aliases';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
-import type { Item, Task, FinancialRecord, ServiceLine, Sale, SaleLine } from '@/types/entities';
+import type {
+  FinancialRecord,
+  Item,
+  Sale,
+  SaleLine,
+  ServiceLine,
+  Task,
+  ProductionPlanFacetV1
+} from '@/types/entities';
 
 const ITEM_TYPE_VALUES = new Set<string>(Object.values(ItemType));
 
@@ -33,72 +41,112 @@ export function normalizeSubItemTypeForItemType(
   return s;
 }
 
-export function normalizeItemTaxonomyFields<T extends Pick<Item, 'type' | 'subItemType'>>(entity: T): T {
+export function normalizeItemTaxonomyFields(entity: Item): Item {
   const nextType = normalizeItemTypeString(entity.type as string) ?? entity.type;
   const typed = nextType as ItemType;
-  const rawSub = entity.subItemType != null ? String(entity.subItemType).trim() : '';
+  const rawSub = entity.context?.subItemType != null ? String(entity.context.subItemType).trim() : '';
   const nextSub =
     rawSub !== '' ? normalizeSubItemTypeForItemType(typed, rawSub) : undefined;
   return {
     ...entity,
-    type: nextType as T['type'],
-    subItemType: (nextSub ?? entity.subItemType) as T['subItemType'],
+    type: nextType as ItemType,
+    context: {
+      ...entity.context,
+      subItemType: (nextSub ?? entity.context?.subItemType) as SubItemType,
+    }
   };
 }
 
-export function normalizeTaskOutputTaxonomy<T extends Pick<Task, 'outputItemType' | 'outputItemSubType'>>(task: T): T {
-  const rawType = task.outputItemType;
+export function normalizeTaskOutputTaxonomy(task: Task): Task {
+  const plan = task.context?.productionPlan;
+  if (!plan) return task;
+
+  const rawType = plan.outputItemType;
   if (rawType == null || String(rawType).trim() === '') return task;
 
   const trimmed = String(rawType).trim();
   const resolvedType =
     normalizeItemTypeString(trimmed) ?? (ITEM_TYPE_VALUES.has(trimmed) ? (trimmed as ItemType) : undefined);
-  const outputItemType = (resolvedType ?? trimmed) as T['outputItemType'];
+  const outputItemType = (resolvedType ?? trimmed) as ProductionPlanFacetV1['outputItemType'];
 
-  let outputItemSubType = task.outputItemSubType;
-  if (resolvedType && task.outputItemSubType != null && String(task.outputItemSubType).trim() !== '') {
-    const ns = normalizeSubItemTypeForItemType(resolvedType, String(task.outputItemSubType));
-    outputItemSubType = (ns ?? task.outputItemSubType) as T['outputItemSubType'];
+  let outputItemSubType = plan.outputItemSubType;
+  if (resolvedType && plan.outputItemSubType != null && String(plan.outputItemSubType).trim() !== '') {
+    const ns = normalizeSubItemTypeForItemType(resolvedType, String(plan.outputItemSubType));
+    outputItemSubType = (ns ?? plan.outputItemSubType) as ProductionPlanFacetV1['outputItemSubType'];
   }
 
-  return { ...task, outputItemType, outputItemSubType };
+  return {
+    ...task,
+    context: {
+      ...task.context,
+      productionPlan: {
+        ...plan,
+        outputItemType,
+        outputItemSubType,
+      },
+    },
+  };
 }
 
-export function normalizeFinancialOutputTaxonomy<
-  T extends Pick<FinancialRecord, 'outputItemType' | 'outputItemSubType'>
->(record: T): T {
-  const rawType = record.outputItemType;
+export function normalizeFinancialOutputTaxonomy(record: FinancialRecord): FinancialRecord {
+  const plan = record.context?.productionPlan;
+  if (!plan) return record;
+
+  const rawType = plan.outputItemType;
   if (rawType == null || String(rawType).trim() === '') return record;
 
   const trimmed = String(rawType).trim();
   const resolvedType =
     normalizeItemTypeString(trimmed) ?? (ITEM_TYPE_VALUES.has(trimmed) ? (trimmed as ItemType) : undefined);
-  const outputItemType = (resolvedType ?? trimmed) as T['outputItemType'];
+  const outputItemType = (resolvedType ?? trimmed) as ProductionPlanFacetV1['outputItemType'];
 
-  let outputItemSubType = record.outputItemSubType;
-  if (resolvedType && record.outputItemSubType != null && String(record.outputItemSubType).trim() !== '') {
-    const ns = normalizeSubItemTypeForItemType(resolvedType, String(record.outputItemSubType));
-    outputItemSubType = (ns ?? record.outputItemSubType) as T['outputItemSubType'];
+  let outputItemSubType = plan.outputItemSubType;
+  if (resolvedType && plan.outputItemSubType != null && String(plan.outputItemSubType).trim() !== '') {
+    const ns = normalizeSubItemTypeForItemType(resolvedType, String(plan.outputItemSubType));
+    outputItemSubType = (ns ?? plan.outputItemSubType) as ProductionPlanFacetV1['outputItemSubType'];
   }
 
-  return { ...record, outputItemType, outputItemSubType };
+  return {
+    ...record,
+    context: {
+      ...record.context,
+      productionPlan: {
+        ...plan,
+        outputItemType,
+        outputItemSubType,
+      },
+    },
+  };
 }
 
 export function normalizeServiceLineOutputTaxonomy(line: ServiceLine): ServiceLine {
-  const t = line.outputItemType;
+  const plan = line.context?.productionPlan;
+  if (!plan) return line;
+
+  const t = plan.outputItemType;
   if (t === undefined) return line;
+
   const nextType = normalizeItemTypeString(String(t)) ?? (t as ItemType);
   const itemType = nextType as ItemType;
   const rawOutSub =
-    line.outputItemSubType != null ? String(line.outputItemSubType).trim() : '';
+    plan.outputItemSubType != null ? String(plan.outputItemSubType).trim() : '';
   const nextSub =
     rawOutSub !== ''
       ? normalizeSubItemTypeForItemType(itemType, rawOutSub)
-      : line.outputItemSubType;
+      : plan.outputItemSubType;
+
   return {
     ...line,
-    outputItemType: nextType as ServiceLine['outputItemType'],
-    outputItemSubType: nextSub as ServiceLine['outputItemSubType'],
+    context: {
+      ...line.context,
+      kind: 'service-line-context',
+      schemaVersion: 1,
+      productionPlan: {
+        ...plan,
+        outputItemType: nextType as ProductionPlanFacetV1['outputItemType'],
+        outputItemSubType: nextSub as ProductionPlanFacetV1['outputItemSubType'],
+      },
+    },
   };
 }
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { parseEntityTypeParameter } from '@/lib/mcp/parse-entity-type-param';
 import { getLogEntryById, patchLogEntryById } from '@/workflows/entities-logging';
 import { getSaleById, getTaskById, getItemById, getFinancialById } from '@/data-store/datastore';

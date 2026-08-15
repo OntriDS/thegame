@@ -65,7 +65,7 @@ export default function PlayerCharacterSelectorModal({
   const filteredCharacters = characters.filter((c: Character) => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.contactEmail?.toLowerCase().includes(searchTerm.toLowerCase())
+    (c as any).contactEmail?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleSelect = () => {

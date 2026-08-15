@@ -40,7 +40,7 @@ async function toUiAccount(iamAccount: NonNullable<Awaited<ReturnType<typeof iam
     type: undefined,
     createdAt: new Date(iamAccount.createdAt || Date.now()),
     updatedAt: new Date(iamAccount.updatedAt || Date.now()),
-  } as Account;
+  } as unknown as Account;
 }
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {

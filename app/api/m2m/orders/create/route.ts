@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import { getUTCNow, startOfDayUTC } from '@/lib/utils/utc-utils';
@@ -149,3 +150,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

@@ -324,7 +324,7 @@ async function runPlayerAudit(): Promise<PlayerAuditResult> {
 
       if (finRec.type === 'personal') {
         personalFinrecRecordCount += 1;
-        const value = asFiniteNumber(finRec.jungleCoins);
+        const value = asFiniteNumber((finRec as any).jungleCoins);
         if (value) {
           personalJungleCoinsBalance += value;
         }

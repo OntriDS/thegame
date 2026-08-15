@@ -6,8 +6,10 @@ import { getAllItems, getItemsByType, upsertItem, bulkUpsertItems, getItemsForMo
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { ItemStatus } from '@/types/enums';
+import { EntitySchemaVersion } from '@/types/enums';
 import { isSoldStatus } from '@/lib/utils/status-utils';
 import { parseDateToUTC } from '@/lib/utils/date-parsers';;
+import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 
 // Force dynamic rendering - this route accesses cookies
 export const dynamic = 'force-dynamic';
@@ -115,7 +117,7 @@ export async function GET(req: NextRequest) {
     if (statusFilter === ItemStatus.SOLD) {
       items = items.filter(item => {
         // Fallback to updatedAt or createdAt if soldAt is missing (e.g. imported items)
-        const dateStr = item.soldAt || item.updatedAt || item.createdAt;
+        const dateStr = item.context?.soldAt || item.updatedAt || item.createdAt;
         if (!dateStr) return false;
         const d = parseDateToUTC(dateStr);
         return d.getMonth() + 1 === month && d.getFullYear() === year;
@@ -162,13 +164,15 @@ export async function GET(req: NextRequest) {
         case 'type-asc':
           return (a.type || '').localeCompare(b.type || '');
         case 'subtype-asc':
-          return (a.subItemType || '').localeCompare(b.subItemType || '');
+           return (a.context?.subItemType || '').localeCompare(b.context?.subItemType || '');
         case 'site-asc':
           return ((a.stock?.[0]?.siteId || '')).localeCompare((b.stock?.[0]?.siteId || ''));
         case 'price-asc':
-          return ((a.value ?? (a.price * (a.quantitySold || 0))) || 0) - ((b.value ?? (b.price * (b.quantitySold || 0))) || 0);
+           return (extractMoneyValue(a.pricing?.targetPrice) * (a.quantitySold || 0))
+             - (extractMoneyValue(b.pricing?.targetPrice) * (b.quantitySold || 0));
         case 'price-desc':
-          return ((b.value ?? (b.price * (b.quantitySold || 0))) || 0) - ((a.value ?? (a.price * (a.quantitySold || 0))) || 0);
+           return (extractMoneyValue(b.pricing?.targetPrice) * (b.quantitySold || 0))
+             - (extractMoneyValue(a.pricing?.targetPrice) * (a.quantitySold || 0));
         case 'date-asc':
           return aDate - bDate;
         case 'date-desc':
@@ -213,20 +217,57 @@ export async function POST(req: NextRequest) {
     };
 
     const processItem = (rawItem: any): Item => {
-      const cleanBody = { ...(rawItem as Record<string, unknown>) } as Record<string, unknown>;
-      delete cleanBody.ownerCharacterId;
-      const characterId = normalizeCharacterId(rawItem.characterId);
-      
+      const now = getUTCNow();
+      const existingContext = rawItem.context || {};
+      const existingPricing = rawItem.pricing || {};
+      const existingMedia = rawItem.media || {};
+      const legacyUnitCost = Number(rawItem.unitCost) || 0;
+      const legacyPrice = Number(rawItem.price) || 0;
+
       return {
-        ...(cleanBody as unknown as Item),
         id: rawItem.id || uuid(),
-        links: rawItem.links || [],
-        createdAt: rawItem.createdAt ? new Date(rawItem.createdAt) : getUTCNow(),
-        updatedAt: getUTCNow(),
-        lastRestockDate: rawItem.lastRestockDate ? new Date(rawItem.lastRestockDate) : undefined,
-        soldAt: rawItem.soldAt ? new Date(rawItem.soldAt) : undefined,
-        characterId: characterId,
-      } as Item;
+        schemaVersion: EntitySchemaVersion.V1,
+        version: Number.isFinite(rawItem.version) ? rawItem.version : 0,
+        name: String(rawItem.name || 'Unnamed Item'),
+        description: rawItem.description || undefined,
+        createdAt: rawItem.createdAt ? new Date(rawItem.createdAt) : now,
+        updatedAt: now,
+        type: rawItem.type,
+        collection: rawItem.collection || undefined,
+        status: rawItem.status || ItemStatus.CREATED,
+        station: rawItem.station,
+        stock: Array.isArray(rawItem.stock) ? rawItem.stock : [],
+        quantitySold: Number(rawItem.quantitySold) || 0,
+        pricing: {
+          unitCost: existingPricing.unitCost || toMoney(legacyUnitCost),
+          additionalCost: existingPricing.additionalCost || toMoney(Number(rawItem.additionalCost) || 0),
+          targetPrice: existingPricing.targetPrice || toMoney(legacyPrice),
+          actualSaleValue: existingPricing.actualSaleValue,
+        },
+        media: {
+          main: existingMedia.main,
+          mainUrl: existingMedia.mainUrl || existingMedia.main || '',
+          thumbUrl: existingMedia.thumbUrl || existingMedia.thumb,
+          galleryUrls: existingMedia.galleryUrls || existingMedia.gallery,
+        },
+        sourceTaskId: rawItem.sourceTaskId ?? null,
+        sourceRecordId: rawItem.sourceRecordId ?? null,
+        context: {
+          kind: 'item-context',
+          schemaVersion: 1,
+          ...existingContext,
+          dimensions: existingContext.dimensions || rawItem.dimensions,
+          size: existingContext.size || rawItem.size,
+          year: existingContext.year ?? rawItem.year,
+          subItemType: existingContext.subItemType || rawItem.subItemType,
+          sourceFileUrl: existingContext.sourceFileUrl || rawItem.sourceFileUrl,
+          keepInInventoryAfterSold: existingContext.keepInInventoryAfterSold ?? rawItem.keepInInventoryAfterSold,
+          restockToTarget: existingContext.restockToTarget ?? rawItem.restockToTarget,
+          targetAmount: existingContext.targetAmount ?? rawItem.targetAmount,
+          lastRestockDate: existingContext.lastRestockDate || rawItem.lastRestockDate,
+          soldAt: existingContext.soldAt || rawItem.soldAt,
+        },
+      };
     };
 
     // Support Bulk Upsert

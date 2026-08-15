@@ -19,6 +19,7 @@ import { Edit, BarChart, CheckSquare, Flag, ChevronsRight, Users, Copy, Check, C
 import TaskModal from '@/components/modals/task-modal';
 import { useState, useRef, useEffect } from 'react';
 import { ClientAPI } from '@/lib/client-api';
+import { getTaskProgress, getTaskFrequencyConfig } from '@/lib/compatibility/task-selectors';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
 import { formatForDisplay } from '@/lib/utils/date-display-utils';;
 import { fromRecurrentUTC } from '@/lib/utils/utc-utils';;
@@ -104,7 +105,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
   // Sync currentProgress with task progress
   useEffect(() => {
     if (node) {
-      setCurrentProgress(node.task.progress || 0);
+      setCurrentProgress(getTaskProgress(node.task) || 0);
     }
   }, [node]);
 
@@ -116,7 +117,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
   // Load next spawn preview for recurrent templates
   useEffect(() => {
     const loadNextSpawn = async () => {
-      if (!node || node.task.type !== TaskType.RECURRENT_TEMPLATE || !node.task.frequencyConfig) {
+      if (!node || node.task.type !== TaskType.RECURRENT_TEMPLATE || !getTaskFrequencyConfig(node.task)) {
         setNextSpawnDate(null);
         setNextSpawnStatusMessage(null);
         return;
@@ -201,10 +202,10 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
   };
 
   const saveSubTaskStatus = async (subTask: Task, nextStatus: TaskStatus) => {
-    const updatedTask: Task = {
+    const updatedTask = {
       ...subTask,
       status: nextStatus,
-    };
+    } as unknown as Task;
 
     await ClientAPI.upsertTask(updatedTask);
     setEditingSubTaskStatusId(null);
@@ -235,7 +236,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
 
     try {
       const newId = crypto.randomUUID();
-      const duplicatedTask: Task = {
+      const duplicatedTask = {
         ...node.task,
         id: newId,
         name: node.task.name,
@@ -248,7 +249,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
           allTasks.length > 0
             ? computeNextSiblingOrder(allTasks, node.task.parentId ?? null, newId)
             : (Number(node.task.order) || 0) + ORDER_INCREMENT,
-      };
+      } as unknown as Task;
 
       // Save the task first - logging is handled server-side automatically
       // Skip duplicate check since this is an intentional duplicate operation
@@ -272,7 +273,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
     const parent = node.task;
     if (parent.type !== TaskType.RECURRENT_GROUP) return;
     const prefillId = crypto.randomUUID();
-    const prefill: Task = {
+    const prefill = {
       id: prefillId,
       name: `${parent.name} • Template`,
       description: parent.description || '',
@@ -288,20 +289,14 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
       parentId: parent.id,
       isRecurrentGroup: false,
       isTemplate: true,
-      frequencyConfig: undefined, // Do not set by default
-      dueDate: parent.dueDate ? new Date(parent.dueDate) : undefined,
       siteId: parent.siteId,
       targetSiteId: parent.targetSiteId,
-      cost: 0,
-      revenue: 0,
-      isNotPaid: false,
-      isNotCharged: false,
       rewards: { points: { xp: 0, rp: 0, fp: 0, hp: 0 } },
       createdAt: new Date(),
       updatedAt: new Date(),
-      isCollected: false,
+      
       links: [] // initialize links array
-    };
+    } as unknown as Task;
     setPrefillTemplateTask(prefill);
     setShowTemplateModal(true);
   };
@@ -365,20 +360,14 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
       parentId: parent.id,
       isRecurrentGroup: false,
       isTemplate: false,
-      frequencyConfig: undefined,
-      dueDate: undefined,
       siteId: parent.siteId,
       targetSiteId: parent.targetSiteId,
-      cost: 0,
-      revenue: 0,
-      isNotPaid: false,
-      isNotCharged: false,
       rewards: { points: { xp: 0, rp: 0, fp: 0, hp: 0 } },
       createdAt: new Date(),
       updatedAt: new Date(),
-      isCollected: false,
+      
       links: [] // initialize links array
-    };
+    } as unknown as Task;
     setPrefillMissionTreeTask(prefill);
     setShowMissionTreeModal(true);
   };
@@ -510,18 +499,6 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
                   >
                     {getTaskTypeLabel(task.type)}
                   </span>
-
-                {/* Financial Status Badges */}
-                {task.isNotPaid && (
-                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${TASK_STATUS_COLORS[TaskStatus.FAILED][isDarkMode ? 'dark' : 'light']}`}>
-                    Not Paid
-                  </span>
-                )}
-                {task.isNotCharged && (
-                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${TASK_STATUS_COLORS[TaskStatus.CREATED][isDarkMode ? 'dark' : 'light']}`}>
-                    Not Charged
-                  </span>
-                )}
               </div>
             )}
           </div>
@@ -545,10 +522,10 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
                         : nextSpawnStatusMessage || 'No next date'}
                   </span>
                 </div>
-                {(task.recurrenceStart || task.recurrenceEnd) && (
+                {(task.context?.recurrence?.recurrenceStart || task.context?.recurrence?.recurrenceEnd) && (
                   <div className="flex gap-2 text-[9px] text-muted-foreground uppercase tracking-wider">
-                    {task.recurrenceStart && <span>Start: {formatForDisplay(fromRecurrentUTC(task.recurrenceStart))}</span>}
-                    {task.recurrenceEnd && <span>End: {formatForDisplay(fromRecurrentUTC(task.recurrenceEnd))}</span>}
+                    {task.context?.recurrence?.recurrenceStart && <span>Start: {formatForDisplay(fromRecurrentUTC(task.context.recurrence.recurrenceStart))}</span>}
+                    {task.context?.recurrence?.recurrenceEnd && <span>End: {formatForDisplay(fromRecurrentUTC(task.context.recurrence.recurrenceEnd))}</span>}
                   </div>
                 )}
               </div>
@@ -741,49 +718,53 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
         </div>
 
         {/* Financial Information */}
-        {(task.cost !== 0 || task.revenue !== 0) && (
-          <div className="mb-4">
-            <h3 className="text-sm font-semibold mb-2">Financials</h3>
-            <div className="grid grid-cols-3 gap-3">
-              <Card className="p-3">
-                <div className="text-xs font-medium mb-1">Cost</div>
-                <div className={`text-sm font-bold ${(task.cost || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  ${(task.cost || 0).toLocaleString()}
-                </div>
-              </Card>
-              <Card className="p-3">
-                <div className="text-xs font-medium mb-1">Revenue</div>
-                <div className={`text-sm font-bold ${(task.revenue || 0) > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
-                  ${(task.revenue || 0).toLocaleString()}
-                </div>
-              </Card>
-              <Card className="p-3">
-                <div className="text-xs font-medium mb-1">Profit</div>
-                <div className={`text-sm font-bold ${(() => {
-                  const actualCost = task.isNotPaid ? 0 : (task.cost || 0);
-                  const actualRevenue = task.isNotCharged ? 0 : (task.revenue || 0);
-                  const profit = actualRevenue - actualCost;
-                  return profit > 0 ? 'text-green-600' : profit < 0 ? 'text-red-600' : 'text-muted-foreground';
-                })()
-                  }`}>
-                  ${(() => {
-                    const actualCost = task.isNotPaid ? 0 : (task.cost || 0);
-                    const actualRevenue = task.isNotCharged ? 0 : (task.revenue || 0);
-                    return (actualRevenue - actualCost).toLocaleString();
-                  })()}
-                </div>
-              </Card>
+        {(() => {
+          const costValue = Number(task.context?.financialIntent?.costIntent?.minorUnits || 0) / 100;
+          const revenueValue = Number(task.context?.financialIntent?.revenueIntent?.minorUnits || 0) / 100;
+          
+          if (costValue === 0 && revenueValue === 0) return null;
+
+          return (
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold mb-2">Financials</h3>
+              <div className="grid grid-cols-3 gap-3">
+                <Card className="p-3">
+                  <div className="text-xs font-medium mb-1">Cost</div>
+                  <div className={`text-sm font-bold ${costValue > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    ${costValue.toLocaleString()}
+                  </div>
+                </Card>
+                <Card className="p-3">
+                  <div className="text-xs font-medium mb-1">Revenue</div>
+                  <div className={`text-sm font-bold ${revenueValue > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                    ${revenueValue.toLocaleString()}
+                  </div>
+                </Card>
+                <Card className="p-3">
+                  <div className="text-xs font-medium mb-1">Profit</div>
+                  <div className={`text-sm font-bold ${(() => {
+                    const actualCost = (task.status === TaskStatus.DONE) ? 0 : costValue;
+                    const profit = revenueValue - actualCost;
+                    return profit > 0 ? 'text-green-600' : profit < 0 ? 'text-red-600' : 'text-muted-foreground';
+                  })()}`}>
+                    ${(() => {
+                      const actualCost = (task.status === TaskStatus.DONE) ? 0 : costValue;
+                      return (revenueValue - actualCost).toLocaleString();
+                    })()}
+                  </div>
+                </Card>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Points Rewards */}
-        {task.rewards?.points && hasAnyPoints(task.rewards.points) && (
+        {task.context?.rewardIntent?.points && hasAnyPoints(task.context?.rewardIntent?.points) && (
           <div className="mb-4">
             <h3 className="text-sm font-semibold mb-2">Points Rewards</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {getPointsMetadata().map((pointType) => {
-                const pointValue = task.rewards?.points?.[pointType.key.toLowerCase() as keyof typeof task.rewards.points] || 0;
+                const pointValue = task.context?.rewardIntent?.points?.[pointType.key.toLowerCase() as keyof NonNullable<typeof task.context.rewardIntent>["points"]] || 0;
                 return pointValue > 0 ? (
                   <Card key={pointType.key} className="p-2">
                     <div className="text-xs font-medium mb-1">{pointType.label}</div>

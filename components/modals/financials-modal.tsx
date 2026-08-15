@@ -35,7 +35,7 @@ import {
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, isPersonalStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { getStationDisplayLabel } from '@/lib/constants/business-structure-labels';
 import type { Station, SubItemType } from '@/types/type-aliases';
-import { ItemType, Collection, CharacterRole, FOUNDER_CHARACTER_ID, EntityType } from '@/types/enums';
+import { ItemType, Collection, CharacterRole, FOUNDER_CHARACTER_ID, EntityType, LinkType } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, createItemTypeOptionsWithCategories, createStationCategoryOptions, createCharacterOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
@@ -55,6 +55,7 @@ import ConfirmationModal from './submodals/confirmation-submodal';
 import { MonthYearSelector } from '@/components/ui/month-year-selector';
 import { ensureCounterpartyRole } from '@/lib/utils/character-role-sync';
 import { getFinancialCounterpartyId } from '@/lib/financial-record-counterparty-id';
+import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 
 
 // FinancialsModal: UI-only form for financial record data collection and validation
@@ -152,7 +153,9 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
 
   // Dates Submodal State
   const [showDatesModal, setShowDatesModal] = useState(false);
-  const [localDoneAt, setLocalDoneAt] = useState<Date | undefined>(record?.doneAt ? new Date(record.doneAt) : undefined);
+  const [localDoneAt, setLocalDoneAt] = useState<Date | undefined>(
+    record?.lifecycle?.doneAt ? new Date(record.lifecycle.doneAt) : undefined
+  );
 
   // Guard for one-time initialization of new records
   const didInitRef = useRef(false);
@@ -229,18 +232,21 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     }
 
     if (record && record.id) {
+      const productionPlan = record.context?.productionPlan;
+      const jungleCoins = record.context?.jungleCoins ?? 0;
+      const recordStatus = record.status;
       setFormData({
         name: record.name,
         description: record.description || '',
         station: record.station as Station,
-        cost: record.cost || 0,
-        costString: (record.cost || 0).toString(),
-        revenue: record.revenue || 0,
-        revenueString: (record.revenue || 0).toString(),
-        jungleCoins: record.jungleCoins || 0,
-        jungleCoinsString: (record.jungleCoins || 0).toString(),
-        isNotPaid: record.isNotPaid || false,
-        isNotCharged: record.isNotCharged || false,
+        cost: extractMoneyValue(record.cost),
+        costString: extractMoneyValue(record.cost).toString(),
+        revenue: extractMoneyValue(record.revenue),
+        revenueString: extractMoneyValue(record.revenue).toString(),
+        jungleCoins,
+        jungleCoinsString: jungleCoins.toString(),
+        isNotPaid: recordStatus === FinancialStatus.PENDING,
+        isNotCharged: recordStatus === FinancialStatus.PENDING,
         status:
           String(record.status) === 'Collected'
             ? FinancialStatus.DONE
@@ -248,42 +254,64 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         site: record.siteId || '',
         targetSite: record.targetSiteId || '',
         characterId: getFinancialCounterpartyId(record),
-        customerCharacterRole: toCustomerCounterpartyRole(record.customerCharacterRole),
+        // Counterparty role is relationship context, not FinancialRecord state.
+        customerCharacterRole: toCustomerCounterpartyRole(undefined),
         isNewCustomer: !getFinancialCounterpartyId(record), // Toggle based on whether customer exists
         newCustomerName: '',
-        outputItemType: (record.outputItemType as ItemType) || '',
-        outputQuantity: record.outputQuantity ?? 1,
-        outputQuantityString: (record.outputQuantity ?? 1).toString(),
-        outputUnitCost: record.outputUnitCost || 0,
-        outputUnitCostString: (record.outputUnitCost || 0).toString(),
-        outputItemName: record.outputItemName || '',
-        outputItemCollection: record.outputItemCollection || undefined,
-        outputItemSubType: (record.outputItemSubType ?? undefined) as SubItemType | undefined,
-        outputItemPrice: record.outputItemPrice || 0,
-        outputItemPriceString: (record.outputItemPrice || 0).toString(),
-        isNewItem: record.isNewItem || false,
-        isSold: record.isSold || false,
-        outputItemId: record.outputItemId || null,
+        outputItemType: (productionPlan?.outputItemType as ItemType) || '',
+        outputQuantity: productionPlan?.outputQuantity ?? 1,
+        outputQuantityString: (productionPlan?.outputQuantity ?? 1).toString(),
+        outputUnitCost: extractMoneyValue(productionPlan?.outputUnitCost),
+        outputUnitCostString: extractMoneyValue(productionPlan?.outputUnitCost).toString(),
+        outputItemName: productionPlan?.outputItemName || '',
+        outputItemCollection: productionPlan?.outputItemCollection || undefined,
+        outputItemSubType: productionPlan?.outputItemSubType,
+        outputItemPrice: extractMoneyValue(productionPlan?.outputItemPrice),
+        outputItemPriceString: extractMoneyValue(productionPlan?.outputItemPrice).toString(),
+        isNewItem: productionPlan?.isNewItem || false,
+        isSold: productionPlan?.isSold || false,
+        // The selected Item is a FINREC_ITEM Link, not FinancialRecord state.
+        outputItemId: null,
         year: record.year || year,
         month: record.month || month
       });
 
       // Initialize player character
       setPlayerCharacterId(record.playerCharacterId || FOUNDER_CHARACTER_ID);
-      setSelectedItemId(record.outputItemId || '');
-      setLocalDoneAt(record.doneAt ? new Date(record.doneAt) : undefined);
+      setSelectedItemId('');
+      setLocalDoneAt(record.lifecycle?.doneAt ? new Date(record.lifecycle.doneAt) : undefined);
+
+      // Output-item ownership is a FINREC_ITEM relationship, not a field on
+      // FinancialRecord. Rehydrate the UI selection from the authoritative
+      // Link Registry when editing an existing record.
+      void ClientAPI.getLinksFor({ type: EntityType.FINANCIAL, id: record.id })
+        .then((links) => {
+          const itemLink = links.find((link) =>
+            link.linkType === LinkType.FINREC_ITEM &&
+            link.source?.type === EntityType.FINANCIAL &&
+            link.source?.id === record.id &&
+            link.target?.type === EntityType.ITEM
+          );
+          const linkedItemId = itemLink?.target?.id || '';
+          setSelectedItemId(linkedItemId);
+          setFormData((previous) => ({ ...previous, outputItemId: linkedItemId || null }));
+        })
+        .catch(() => {
+          // A missing or temporarily unavailable projection must not block
+          // editing the FinancialRecord itself.
+        });
 
       // Initialize combined item type/subtype field
-      if (record.outputItemType && record.outputItemSubType) {
-        setOutputItemTypeSubType(`${record.outputItemType}:${record.outputItemSubType}`);
-      } else if (record.outputItemType) {
-        setOutputItemTypeSubType(`${record.outputItemType}:`);
+      if (productionPlan?.outputItemType && productionPlan.outputItemSubType) {
+        setOutputItemTypeSubType(`${productionPlan.outputItemType}:${productionPlan.outputItemSubType}`);
+      } else if (productionPlan?.outputItemType) {
+        setOutputItemTypeSubType(`${productionPlan.outputItemType}:`);
       } else {
         setOutputItemTypeSubType('none:');
       }
 
       // Initialize item status
-      setOutputItemStatus(record.isSold ? ItemStatus.SOLD : ItemStatus.FOR_SALE);
+      setOutputItemStatus(productionPlan?.isSold ? ItemStatus.SOLD : ItemStatus.FOR_SALE);
 
       // Reset init guard when editing
       didInitRef.current = false;
@@ -356,7 +384,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         status: FinancialStatus.PENDING
       }));
     } else if (
-      formData.status === FinancialStatus.PENDING ||
+      (formData as any).status === "PENDING" ||
       String(formData.status) === 'Collected'
     ) {
       setFormData(prev => ({
@@ -375,8 +403,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   };
 
   const handleDatesUpdate = (newDates: { createdAt?: Date; doneAt?: Date; collectedAt?: Date }) => {
-    if (newDates.doneAt !== undefined) {
-      setLocalDoneAt(newDates.doneAt);
+    if ((newDates as any).doneAt !== undefined) {
+      setLocalDoneAt((newDates as any).doneAt);
     }
   };
 
@@ -422,9 +450,9 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
           outputItemId: selectedItem.id,
           outputItemName: selectedItem.name,
           outputItemType: selectedItem.type,
-          outputItemSubType: selectedItem.subItemType ?? undefined,
-          outputUnitCost: selectedItem.unitCost,
-          outputItemPrice: selectedItem.price,
+          outputItemSubType: (selectedItem as any).subItemType ?? undefined,
+          outputUnitCost: (selectedItem as any).unitCost,
+          outputItemPrice: (selectedItem as any).price,
           outputItemCollection: selectedItem.collection || undefined,
         }));
       }
@@ -511,6 +539,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
 
     const recordData: FinancialRecord = {
       id: recordId,
+      schemaVersion: 1,
+      version: record?.version ?? 0,
       name: formData.name || `${formData.station} - ${formatMonthYear(new Date(formData.year, formData.month - 1))}`,
       description: formData.description,
       createdAt: record?.createdAt || new Date(),
@@ -522,36 +552,38 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       siteId: formData.site || null,
       targetSiteId: formData.targetSite || null,
       characterId: formData.isNewCustomer ? null : formData.characterId,  // Ambassador: Existing customer
-      newCustomerName: formData.isNewCustomer ? formData.newCustomerName : undefined,  // EMISSARY: Name for new customer character creation
-      customerCharacterRole: formData.customerCharacterRole,
       playerCharacterId: playerCharacterId,
-      cost: formData.cost,
-      revenue: formData.revenue,
-      jungleCoins: formData.jungleCoins,
-      isNotPaid: formData.isNotPaid,
-      isNotCharged: formData.isNotCharged,
+      cost: toMoney(formData.cost),
+      revenue: toMoney(formData.revenue),
+      netCashflow: toMoney(formData.revenue - formData.cost),
       status:
         String(formData.status) === 'Collected'
           ? FinancialStatus.DONE
           : formData.status,
-      isCollected: false,
-      doneAt: localDoneAt,
-      collectedAt: undefined,
-      rewards: undefined,
-      // Item output fields
-      outputItemType: formData.outputItemType || undefined,
-      outputQuantity: formData.outputQuantity || undefined,
-      outputUnitCost: formData.outputUnitCost || undefined,
-      outputItemName: formData.outputItemName || undefined,
-      outputItemCollection: formData.outputItemCollection || undefined,
-      outputItemSubType: formData.outputItemSubType || undefined,
-      outputItemPrice: formData.outputItemPrice || undefined,
-      outputItemId: formData.isNewItem ? null : (selectedItemId || formData.outputItemId || null),
-      isNewItem: formData.isNewItem,
-      isSold: outputItemStatus === ItemStatus.SOLD,
-      netCashflow: formData.revenue - formData.cost,
-      jungleCoinsValue: formData.jungleCoins * J$_TO_USD_RATE,
-      links: record?.links || [],  // embedded mirror; registry is source of truth
+      lifecycle: {
+        ...record?.lifecycle,
+        doneAt: localDoneAt,
+      },
+      context: {
+        kind: 'financial-record-context',
+        schemaVersion: 1,
+        jungleCoins: formData.jungleCoins,
+        newCustomerName: formData.isNewCustomer ? formData.newCustomerName : undefined,
+        productionPlan: formData.outputItemType || formData.outputItemName
+          ? {
+              outputItemType: formData.outputItemType || undefined,
+              outputQuantity: formData.outputQuantity || undefined,
+              outputUnitCost: toMoney(formData.outputUnitCost),
+              outputItemName: formData.outputItemName || undefined,
+              outputItemCollection: formData.outputItemCollection || undefined,
+              outputItemSubType: formData.outputItemSubType || undefined,
+              outputItemPrice: toMoney(formData.outputItemPrice),
+              isNewItem: formData.isNewItem,
+              isSold: outputItemStatus === ItemStatus.SOLD,
+              outputItemStatus,
+            }
+          : undefined,
+      },
     };
 
     // Save user preferences
@@ -560,7 +592,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     try {
       // Emit pure record entity - Links System handles all relationships automatically
       await onSave(recordData);
-      await ensureCounterpartyRole(recordData.characterId, recordData.customerCharacterRole);
+      await ensureCounterpartyRole(recordData.characterId, formData.customerCharacterRole);
 
       // Dispatch UI update events AFTER successful save
       dispatchEntityUpdated(entityTypeToKind(EntityType.FINANCIAL));

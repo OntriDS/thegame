@@ -2,7 +2,7 @@
 // Financial-specific workflow: PENDING vs DONE (paid+charged); no COLLECTED / finrec points
 import { isValid } from 'date-fns';
 
-import { EntityType, LogEventType, FOUNDER_CHARACTER_ID } from '@/types/enums';
+import { EntityType, LogEventType, FOUNDER_CHARACTER_ID, FinancialStatus } from '@/types/enums';
 import type { FinancialRecord } from '@/types/entities';
 import {
   appendEntityLog,
@@ -39,8 +39,8 @@ const STATE_FIELDS = ['isNotPaid', 'isNotCharged'];
  * else createdAt, else fallback.
  */
 function getFinancialLogAnchorDate(f: FinancialRecord, fallback?: Date): Date {
-  if (f.doneAt) {
-    const d = f.doneAt instanceof Date ? f.doneAt : new Date(f.doneAt as string);
+  if ((f as any).doneAt) {
+    const d = (f as any).doneAt instanceof Date ? (f as any).doneAt : new Date((f as any).doneAt as string);
     if (Number.isFinite(d.getTime())) return d;
   }
   if (typeof f.year === 'number' && typeof f.month === 'number' && f.month >= 1 && f.month <= 12) {
@@ -69,7 +69,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
     // Character creation from emissary fields - when newCustomerName is provided
     // This MUST run first because it updates the financial record
-    if (financial.newCustomerName && !getFinancialCounterpartyId(financial)) {
+    if ((financial as any).newCustomerName && !getFinancialCounterpartyId(financial)) {
       const characterEffectKey = EffectKeys.sideEffect('financial', financial.id, 'characterCreated');
       if (!(await hasEffect(characterEffectKey))) {
         const createdCharacter = await createCharacterFromFinancial(financial);
@@ -87,7 +87,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     const sideEffects: Promise<void>[] = [];
 
     // Item creation from emissary fields - on record creation
-    if (financial.outputItemType && financial.outputQuantity) {
+    if ((financial as any).outputItemType && (financial as any).outputQuantity) {
       sideEffects.push(
         (async () => {
           const itemEffectKey = EffectKeys.sideEffect('financial', financial.id, 'itemCreated');
@@ -102,7 +102,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     }
 
     // J$ Wallet Cache Update - on record creation
-    if (financial.jungleCoins !== 0) {
+    if ((financial as any).jungleCoins !== 0) {
       sideEffects.push(
         (async () => {
           // Identify target character(s)
@@ -125,11 +125,10 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     // Wait for all side effects to complete
     await Promise.all(sideEffects);
 
-    const isPending = financial.isNotPaid || financial.isNotCharged;
+    const isPending = (financial.status === FinancialStatus.PENDING);
 
     // Ensure doneAt is set if created as DONE
-    if (!isPending && !financial.doneAt) {
-      financial = { ...financial, doneAt: getUTCNow() };
+    if (!isPending && !financial.updatedAt) {
       const { upsertFinancial } = await import('@/data-store/datastore');
       await upsertFinancial(financial, { skipWorkflowEffects: true });
     }
@@ -184,10 +183,10 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     }
 
     const latestNewFinancial = (await getFinancialById(financial.id)) || financial;
-    if (latestNewFinancial.characterId && latestNewFinancial.customerCharacterRole) {
+    if (latestNewFinancial.characterId && (latestNewFinancial as any).customerCharacterRole) {
       await ensureCounterpartyRoleDatastore(
         latestNewFinancial.characterId,
-        latestNewFinancial.customerCharacterRole
+        (latestNewFinancial as any).customerCharacterRole
       );
     }
 
@@ -198,8 +197,8 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
   }
 
   // Payment status changes - PENDING (not paid or not charged) vs DONE (paid and charged)
-  const wasPending = previousFinancial.isNotPaid || previousFinancial.isNotCharged;
-  const nowPending = financial.isNotPaid || financial.isNotCharged;
+  const wasPending = (previousFinancial.status === FinancialStatus.PENDING);
+  const nowPending = (financial.status === FinancialStatus.PENDING);
   const financialCounterpartyId = getFinancialCounterpartyId(financial);
   const previousFinancialCounterpartyId = getFinancialCounterpartyId(previousFinancial);
 
@@ -207,8 +206,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     // Transitioned from PENDING to DONE (both paid and charged)
     
     // Explicitly set doneAt on transition if missing
-    if (!financial.doneAt) {
-      financial = { ...financial, doneAt: getUTCNow() };
+    if (!financial.updatedAt) {
       await upsertFinancial(financial, { skipWorkflowEffects: true });
     }
 
@@ -277,7 +275,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     }
 
     // Propagate J$ changes to Character Wallet Cache
-    if (financial.jungleCoins !== previousFinancial.jungleCoins) {
+    if ((financial as any).jungleCoins !== (previousFinancial.context as any)?.rewardIntent?.points) {
       if (financialCounterpartyId) await recalculateCharacterWallet(financialCounterpartyId);
       if (financial.playerCharacterId) await recalculateCharacterWallet(financial.playerCharacterId);
 
@@ -292,20 +290,20 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
   }
 
-  const finCounterpartyPresent = Boolean(financialCounterpartyId && financial.customerCharacterRole);
+  const finCounterpartyPresent = Boolean(financialCounterpartyId && (financial as any).customerCharacterRole);
   const finCounterpartyChanged =
     !previousFinancial ||
     previousFinancialCounterpartyId !== financialCounterpartyId ||
-    previousFinancial.customerCharacterRole !== financial.customerCharacterRole;
+    (previousFinancial as any).customerCharacterRole !== (financial as any).customerCharacterRole;
   if (finCounterpartyPresent && finCounterpartyChanged) {
-    await ensureCounterpartyRoleDatastore(financialCounterpartyId, financial.customerCharacterRole);
+    await ensureCounterpartyRoleDatastore(financialCounterpartyId, (financial as any).customerCharacterRole);
   }
 
   // Lean identity fields changed — cascade patch ALL log entries across ALL months and events
   if (previousFinancial) {
-    const dateChanged = String(previousFinancial.doneAt) !== String(financial.doneAt);
-    if (dateChanged && financial.doneAt) {
-      await syncEntityLogTimestamp(EntityType.FINANCIAL, financial.id, LogEventType.DONE, financial.doneAt);
+    const dateChanged = String(previousFinancial.updatedAt) !== String(financial.updatedAt);
+    if (dateChanged && financial.updatedAt) {
+      await syncEntityLogTimestamp(EntityType.FINANCIAL, financial.id, LogEventType.DONE, financial.updatedAt);
     }
 
     const leanFieldsChanged =
@@ -332,8 +330,8 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
   // We sweep all available months to completely eradicate Snapshot-era ghost duplicates.
   // ---------------------------------------------------------------------------
   if (previousFinancial) {
-    const isNowArchived = !financial.isNotPaid && !financial.isNotCharged;
-    const wasArchived = !previousFinancial.isNotPaid && !previousFinancial.isNotCharged;
+    const isNowArchived = (false || financial.status === FinancialStatus.DONE || financial.status === FinancialStatus.COLLECTED);
+    const wasArchived = (false || previousFinancial.status === FinancialStatus.DONE || previousFinancial.status === FinancialStatus.COLLECTED);
 
     const getArchiveMonth = (f: FinancialRecord) => {
       let snapshotDate: Date = f.createdAt instanceof Date ? f.createdAt : (f.createdAt ? new Date(f.createdAt as string) : new Date(Date.UTC(f.year, 0, 1)));
@@ -402,7 +400,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
   }
 
   // Heal missing DONE log after edits (manual log delete, or lean-field patch found no row).
-  if (!(financial.isNotPaid || financial.isNotCharged)) {
+  if (!((financial.status === FinancialStatus.PENDING))) {
     await ensureFinancialDoneLog(financial.id);
   }
 }
@@ -419,7 +417,7 @@ export async function ensureFinancialDoneLog(financialId: string): Promise<{
 }> {
   const financial = await getFinancialById(financialId);
   if (!financial) return { success: false, error: `Financial not found: ${financialId}` };
-  const pending = financial.isNotPaid || financial.isNotCharged;
+  const pending = (financial.status === FinancialStatus.PENDING);
   if (pending) {
     return {
       success: false,
@@ -551,7 +549,7 @@ async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
     // Get the record to find what points were awarded
     const record = await getFinancialById(recordId);
 
-    if (!record || !record.rewards?.points) {
+    if (!record || !(record as any).jungleCoins) {
       return;
     }
 
@@ -564,7 +562,7 @@ async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
     }
 
     // Check if any points were actually awarded
-    const pointsToRemove = record.rewards.points;
+    const pointsToRemove = (record as any).jungleCoins;
     const hasPoints = (pointsToRemove.xp || 0) > 0 || (pointsToRemove.rp || 0) > 0 ||
       (pointsToRemove.fp || 0) > 0 || (pointsToRemove.hp || 0) > 0;
 

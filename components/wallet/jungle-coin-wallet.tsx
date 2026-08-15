@@ -126,8 +126,8 @@ export function JungleCoinWallet({ characterId, className, onBalanceChange }: Ju
                                                 <span className="font-medium text-foreground">{record.name}</span>
                                                 <span className="text-xs text-muted-foreground">{formatForDisplay(record.createdAt)}</span>
                                             </div>
-                                            <div className={`font-mono font-medium ${record.jungleCoins > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                                {record.jungleCoins > 0 ? '+' : ''}{record.jungleCoins} J$
+                                            <div className={`font-mono font-medium ${(record as any).jungleCoins > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                {(record as any).jungleCoins > 0 ? '+' : ''}{(record as any).jungleCoins} J$
                                             </div>
                                         </div>
                                     ))}

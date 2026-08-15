@@ -21,6 +21,7 @@ type KVClient = {
   sunion: (...keys: string[]) => Promise<string[]>;
   hincrbyfloat: (key: string, field: string, increment: number) => Promise<number>;
   hgetall: <T>(key: string) => Promise<T | null>;
+  eval: (script: string, keys: string[], args: any[]) => Promise<any>;
   pipeline: () => {
     hincrbyfloat: (key: string, field: string, increment: number) => any;
     exec: () => Promise<any[]>;
@@ -46,6 +47,50 @@ export async function kvSet<T>(key: string, value: T): Promise<void> {
 
 export async function kvSetWithTTL<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
   await kv.set(key, value as any, { ex: ttlSeconds });
+}
+
+export async function kvEval<T>(script: string, keys: string[], args: any[]): Promise<T> {
+  return (await kv.eval(script, keys, args)) as T;
+}
+
+/**
+ * Optimistic Locking CAS (Compare-And-Swap)
+ * Updates a key only if its current "version" property matches expectedVersion.
+ * Automatically increments the version property on success.
+ * Assumes the stored data is a JSON object.
+ * Returns true if successful, false if version mismatched or key doesn't exist.
+ */
+export async function kvCAS(key: string, expectedVersion: number, newData: any): Promise<boolean> {
+  const casScript = `
+    local currentStr = redis.call('GET', KEYS[1])
+    if currentStr == false then
+      if tonumber(ARGV[1]) == 0 then
+        -- Creating new entity
+        redis.call('SET', KEYS[1], ARGV[2])
+        return 1
+      else
+        return 0 -- Key does not exist, but expectedVersion > 0
+      end
+    end
+
+    local currentObj = cjson.decode(currentStr)
+    local currentVer = currentObj.version or 0
+    if tonumber(currentVer) == tonumber(ARGV[1]) then
+      redis.call('SET', KEYS[1], ARGV[2])
+      return 1
+    else
+      return 0
+    end
+  `;
+
+  // We ensure the new data has the incremented version
+  const dataToSave = {
+    ...newData,
+    version: expectedVersion + 1,
+  };
+
+  const result = await kvEval<number>(casScript, [key], [expectedVersion, JSON.stringify(dataToSave)]);
+  return result === 1;
 }
 
 export async function kvDel(key: string): Promise<void> {

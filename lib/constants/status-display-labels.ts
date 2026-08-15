@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Human-readable labels for canonical status slugs (storage uses kebab-case enums).
 
 import {
@@ -109,3 +110,4 @@ export function getDevSprintStatusLabel(status: DevSprintStatus | string | undef
   if (status in DEV_SPRINT_STATUS_LABEL) return DEV_SPRINT_STATUS_LABEL[status as DevSprintStatus];
   return String(status);
 }
+

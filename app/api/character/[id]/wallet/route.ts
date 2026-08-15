@@ -1,32 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCharacterById, getFinancialById } from '@/data-store/datastore';
 import { getLinksFor } from '@/links/link-registry';
-import { EntityType, LinkType } from '@/types/enums';
+import { EntityType, CanonicalLinkType } from '@/types/enums';
+import { FinancialRecord } from '@/types/entities';
 
 export async function GET(
     request: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {
-        const characterId = params.id;
+        const { id: characterId } = params;
         if (!characterId) {
             return NextResponse.json({ error: 'Character ID required' }, { status: 400 });
         }
 
-        // 1. Get Character with Wallet Balance
+        // 1. Get Character
         const character = await getCharacterById(characterId);
         if (!character) {
             return NextResponse.json({ error: 'Character not found' }, { status: 404 });
         }
 
         // 2. Get Transaction History (Coins Ledger)
-        // We still fetch this for the history view, but NOT to calculate the balance on the fly anymore.
         const links = await getLinksFor({ type: EntityType.CHARACTER, id: characterId });
 
+        // Use valid CanonicalLinkTypes (legacy PLAYER_FINREC and FINREC_PLAYER don't exist in the canonical enum)
         const relevantLinkTypes = [
-            LinkType.FINREC_CHARACTER,
-            LinkType.PLAYER_FINREC,
-            LinkType.FINREC_PLAYER
+            CanonicalLinkType.FINREC_CHARACTER
         ];
 
         const financialLinks = links.filter(l => relevantLinkTypes.includes(l.linkType));
@@ -43,27 +42,26 @@ export async function GET(
             uniqueFinRecIds.map(id => getFinancialById(id))
         );
 
-        const validRecords = records.filter(r => r !== null && r.jungleCoins !== 0);
+        const validRecords = records.filter((r): r is FinancialRecord => r != null && (r.context.jungleCoins ?? 0) !== 0);
 
         validRecords.sort((a, b) => {
-            const dateA = a!.collectedAt ? new Date(a!.collectedAt).getTime() : new Date(a!.createdAt).getTime();
-            const dateB = b!.collectedAt ? new Date(b!.collectedAt).getTime() : new Date(b!.createdAt).getTime();
+            const dateA = new Date(a.createdAt).getTime();
+            const dateB = new Date(b.createdAt).getTime();
             return dateB - dateA;
         });
 
-        // Audit (Optional: Check if Ledger matches Wallet)
-        // const ledgerBalance = validRecords.reduce((sum, r) => sum + (r!.jungleCoins || 0), 0);
-        // if (ledgerBalance !== (character.jungleCoins || 0)) { console.warn('Wallet Desync Detected', { wallet: character.jungleCoins, ledger: ledgerBalance }); }
+        // Compute cached balance strictly from the V1 ledger
+        const cachedBalance = validRecords.reduce((sum, r) => sum + (r.context.jungleCoins ?? 0), 0);
 
         return NextResponse.json({
             characterId: character.id,
             characterName: character.name,
-            cachedBalance: character.wallet?.jungleCoins || 0, // THE WALLET (Source of Truth)
-            transactions: validRecords // THE LEDGER (History)
+            cachedBalance: cachedBalance,
+            transactions: validRecords
         });
 
     } catch (error) {
-        console.error(`[API] Error fetching wallet for character ${params.id}:`, error);
+        console.error(`[API] Error fetching wallet for character:`, error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

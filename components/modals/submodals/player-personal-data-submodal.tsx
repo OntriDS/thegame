@@ -47,7 +47,7 @@ export default function PersonalDataModal({ player, open, onOpenChange, onSave }
         
         setAccountData(null);
         setName(player.name);
-        setEmail(player.email);
+        setEmail((player as any).email);
         setPhone('');
         setIsLoadingAccount(false);
       }

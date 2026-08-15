@@ -59,6 +59,19 @@ import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { MonthSelector } from '@/components/ui/month-selector';
 import { Switch } from '@/components/ui/switch';
 import { formatMonthKey, getCurrentMonthKey, sortMonthKeys, formatForDisplay } from '@/lib/utils/date-display-utils';;
+import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
+
+const getItemDimensions = (item: Item) => item.context?.dimensions;
+const getItemSize = (item: Item) => item.context?.size;
+const getItemSourceFileUrl = (item: Item) => item.context?.sourceFileUrl;
+const getItemKeepInInventory = (item: Item) => item.context?.keepInInventoryAfterSold;
+const getItemTargetAmount = (item: Item) => item.context?.targetAmount;
+const getItemSubtype = (item: Item) => item.context?.subItemType || '';
+const getItemYear = (item: Item) => item.context?.year;
+const getItemPrice = (item: Item) => extractMoneyValue(item.pricing?.targetPrice);
+const getItemUnitCost = (item: Item) => extractMoneyValue(item.pricing?.unitCost);
+const getItemStockValue = (item: Item) => getItemPrice(item) * (item.stock?.reduce((sum, stock) => sum + stock.quantity, 0) || 0);
+const getItemSoldValue = (item: Item) => getItemPrice(item) * (item.quantitySold || 0);
 
 function inventoryTabForItem(item: Item): InventoryTab {
   if (isSoldStatus(item.status)) {
@@ -356,8 +369,8 @@ export function InventoryDisplay({
           const sortedResults = [...soldItems]
             .filter(item => (item.name || '').toLowerCase().includes(query))
             .sort((a, b) => {
-              const aDate = new Date((showLegacyItems ? (a.updatedAt || a.createdAt) : (a.soldAt || a.updatedAt || a.createdAt)) || 0).getTime();
-              const bDate = new Date((showLegacyItems ? (b.updatedAt || b.createdAt) : (b.soldAt || b.updatedAt || b.createdAt)) || 0).getTime();
+              const aDate = new Date((showLegacyItems ? (a.updatedAt || a.createdAt) : (a.context?.soldAt || a.updatedAt || a.createdAt)) || 0).getTime();
+              const bDate = new Date((showLegacyItems ? (b.updatedAt || b.createdAt) : (b.context?.soldAt || b.updatedAt || b.createdAt)) || 0).getTime();
               switch (soldItemsSortOption) {
                 case 'name-asc':
                   return (a.name || '').localeCompare(b.name || '');
@@ -366,13 +379,13 @@ export function InventoryDisplay({
                 case 'type-asc':
                   return (a.type || '').localeCompare(b.type || '');
                 case 'subtype-asc':
-                  return (a.subItemType || '').localeCompare(b.subItemType || '');
+                  return getItemSubtype(a).localeCompare(getItemSubtype(b));
                 case 'site-asc':
                   return (a.stock?.[0]?.siteId || '').localeCompare(b.stock?.[0]?.siteId || '');
                 case 'price-asc':
-                  return (a.price || 0) - (b.price || 0);
+                  return getItemPrice(a) - getItemPrice(b);
                 case 'price-desc':
-                  return (b.price || 0) - (a.price || 0);
+                  return getItemPrice(b) - getItemPrice(a);
                 case 'date-asc':
                   return aDate - bDate;
                 case 'date-desc':
@@ -661,8 +674,8 @@ export function InventoryDisplay({
           String(i.collection ?? '').toLowerCase().includes(q) ||
           siteLabel.includes(q) ||
           (i.station || '').toLowerCase().includes(q) ||
-          (i.subItemType || '').toLowerCase().includes(q) ||
-          String(i.year ?? '').includes(q)
+          getItemSubtype(i).toLowerCase().includes(q) ||
+          String(getItemYear(i) ?? '').includes(q)
         );
       })
       : list;
@@ -678,8 +691,8 @@ export function InventoryDisplay({
           break;
         case 'year-asc':
         case 'year-desc': {
-          const ya = a.year;
-          const yb = b.year;
+          const ya = getItemYear(a);
+          const yb = getItemYear(b);
           const emptyA = ya == null;
           const emptyB = yb == null;
           if (emptyA && emptyB) cmp = 0;
@@ -715,8 +728,8 @@ export function InventoryDisplay({
         }
         case 'subtype-asc':
         case 'subtype-desc': {
-          const sa = (a.subItemType || '').toLowerCase();
-          const sb = (b.subItemType || '').toLowerCase();
+          const sa = getItemSubtype(a).toLowerCase();
+          const sb = getItemSubtype(b).toLowerCase();
           const emptyA = !sa;
           const emptyB = !sb;
           if (emptyA && emptyB) cmp = 0;
@@ -727,10 +740,10 @@ export function InventoryDisplay({
           break;
         }
         case 'price-asc':
-          cmp = (a.price || 0) - (b.price || 0);
+          cmp = getItemPrice(a) - getItemPrice(b);
           break;
         case 'price-desc':
-          cmp = (b.price || 0) - (a.price || 0);
+          cmp = getItemPrice(b) - getItemPrice(a);
           break;
         default:
           cmp = 0;
@@ -781,7 +794,7 @@ export function InventoryDisplay({
           </SelectTrigger>
           <SelectContent>
             {opts.sortOptions.map(o => (
-              <SelectItem key={o.value} value={o.value}>
+              <SelectItem key={(o as any).value} value={(o as any).value}>
                 {o.label}
               </SelectItem>
             ))}
@@ -796,7 +809,7 @@ export function InventoryDisplay({
             </SelectTrigger>
             <SelectContent>
               {opts.viewOptions.map(option => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem key={(option as any).value} value={(option as any).value}>
                   {option.label}
                 </SelectItem>
               ))}
@@ -1041,7 +1054,7 @@ export function InventoryDisplay({
         setLegacyCurrentPage(targetPage);
       }
     } else {
-      const anchorDate = item.soldAt || item.updatedAt || item.createdAt;
+      const anchorDate = item.context?.soldAt || item.updatedAt || item.createdAt;
       if (anchorDate) {
         onMonthChange(formatMonthKey(anchorDate));
       }
@@ -1148,6 +1161,33 @@ export function InventoryDisplay({
         ...item,
         stock: targetStock
       };
+    } else if (field === 'price') {
+      const nextPrice = Number(value);
+      updatedItem = {
+        ...item,
+        pricing: {
+          ...item.pricing,
+          targetPrice: toMoney(Number.isFinite(nextPrice) ? nextPrice : 0),
+        },
+      };
+    } else if (field === 'unitCost') {
+      const nextUnitCost = Number(value);
+      updatedItem = {
+        ...item,
+        pricing: {
+          ...item.pricing,
+          unitCost: toMoney(Number.isFinite(nextUnitCost) ? nextUnitCost : 0),
+        },
+      };
+    } else if (field === 'targetAmount') {
+      const nextTargetAmount = Number(value);
+      updatedItem = {
+        ...item,
+        context: {
+          ...item.context,
+          targetAmount: Number.isFinite(nextTargetAmount) ? nextTargetAmount : undefined,
+        },
+      };
     } else if (field) {
       updatedItem = { ...item, [field]: value };
     }
@@ -1229,7 +1269,7 @@ export function InventoryDisplay({
         });
       } else if (stickersViewBy === 'subtype') {
         stickerItems.forEach(item => {
-          allKeys.add(item.subItemType || 'No Subtype');
+          allKeys.add(getItemSubtype(item) || 'No Subtype');
         });
       } else { // collection
         stickerItems.forEach(item => {
@@ -1401,7 +1441,7 @@ export function InventoryDisplay({
         title={`Click to edit ${field}`}
       >
         {type === 'select' && options.length > 0 ?
-          options.find(opt => opt.value === value)?.label || value || '' :
+          options.find(opt => (opt as any).value === value)?.label || value || '' :
           value
         }
       </div>
@@ -1454,7 +1494,7 @@ export function InventoryDisplay({
             </SelectTrigger>
             <SelectContent>
               {viewOptions.map(option => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem key={(option as any).value} value={(option as any).value}>
                   {option.label}
                 </SelectItem>
               ))}
@@ -1541,8 +1581,8 @@ export function InventoryDisplay({
             String(i.collection ?? '').toLowerCase().includes(qSearch) ||
             siteLabel.includes(qSearch) ||
             (i.station || '').toLowerCase().includes(qSearch) ||
-            (i.subItemType || '').toLowerCase().includes(qSearch) ||
-            String(i.year ?? '').includes(qSearch)
+            getItemSubtype(i).toLowerCase().includes(qSearch) ||
+            String(getItemYear(i) ?? '').includes(qSearch)
           );
         })
       : stickerItems;
@@ -1555,7 +1595,7 @@ export function InventoryDisplay({
           key = sticker.stock[0]?.siteId || 'Unknown Location';
           break;
         case 'subtype':
-          key = sticker.subItemType || 'No Subtype';
+          key = getItemSubtype(sticker) || 'No Subtype';
           break;
         case 'model':
           // Use DataStore method for consistent model key generation
@@ -1663,19 +1703,19 @@ export function InventoryDisplay({
             <div className="flex flex-wrap items-center justify-end gap-4 text-sm text-muted-foreground">
               <div className="text-center">
                 <div className="font-bold text-base tabular-nums text-foreground">
-                  ${stickerTotalsSource.reduce((sum, item) => sum + (item.unitCost * (item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0)), 0).toFixed(2)}
+                  ${stickerTotalsSource.reduce((sum, item) => sum + getItemUnitCost(item) * (item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0), 0).toFixed(2)}
                 </div>
                 <div className="text-[10px] uppercase tracking-wide">Cost</div>
               </div>
               <div className="text-center">
                 <div className="font-bold text-base tabular-nums text-foreground">
-                  ${stickerTotalsSource.reduce((sum, item) => sum + (item.price * (item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0)), 0).toFixed(2)}
+                  ${stickerTotalsSource.reduce((sum, item) => sum + getItemStockValue(item), 0).toFixed(2)}
                 </div>
                 <div className="text-[10px] uppercase tracking-wide">Value</div>
               </div>
               <div className="text-center">
                 <div className="font-bold text-base tabular-nums text-foreground">
-                  ${stickerTotalsSource.reduce((sum, item) => sum + ((item.price - item.unitCost) * (item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0)), 0).toFixed(2)}
+                  ${stickerTotalsSource.reduce((sum, item) => sum + (getItemPrice(item) - getItemUnitCost(item)) * (item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0), 0).toFixed(2)}
                 </div>
                 <div className="text-[10px] uppercase tracking-wide">Est. profit</div>
               </div>
@@ -1822,8 +1862,8 @@ export function InventoryDisplay({
                           <div className="w-28 shrink-0 truncate text-[0.8125rem] font-semibold " title={getCollectionLabel(sticker.collection || Collection.NO_COLLECTION)}>
                             {getCollectionLabel(sticker.collection || Collection.NO_COLLECTION)}
                           </div>
-                          <div className="w-24 shrink-0 truncate text-[0.85rem] " title={getStickerSubtypeLabel(sticker.subItemType)}>
-                            {getStickerSubtypeLabel(sticker.subItemType)}
+                          <div className="w-24 shrink-0 truncate text-[0.85rem] " title={getStickerSubtypeLabel(getItemSubtype(sticker))}>
+                            {getStickerSubtypeLabel(getItemSubtype(sticker))}
                           </div>
                           <div className="w-28 shrink-0 truncate text-center text-[0.75rem] text-muted-foreground" title={sticker.station || ''}>
                             {sticker.station || '—'}
@@ -1862,7 +1902,7 @@ export function InventoryDisplay({
                             )}
                           </div>
                           <div className="w-24 shrink-0 text-center text-[0.9375rem] font-semibold tabular-nums" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                            {renderEditableField(sticker, 'price', sticker.price, 'number')}
+                            {renderEditableField(sticker, 'price', getItemPrice(sticker), 'number')}
                           </div>
                           <div className="w-[7.25rem] shrink-0 text-center text-[0.8125rem]" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
                             {renderEditableField(
@@ -1870,7 +1910,7 @@ export function InventoryDisplay({
                               'status',
                               sticker.status,
                               'select',
-                              Object.values(ItemStatus).map(status => ({
+                               Object.values(ItemStatus).map((status: ItemStatus) => ({
                                 value: status,
                                 label: getItemStatusLabel(status),
                               }))
@@ -1976,7 +2016,7 @@ export function InventoryDisplay({
                             <div className="flex items-center gap-1">
                               <span className="text-muted-foreground">Target:</span>
                               <span className="px-1">
-                                {bundle.targetAmount || 0}
+                                {getItemTargetAmount(bundle) || 0}
                               </span>
                             </div>
                             <span>•</span>
@@ -2037,7 +2077,7 @@ export function InventoryDisplay({
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {Object.values(ItemStatus).map(s => (
+                                    {Object.values(ItemStatus).map((s: ItemStatus) => (
                                       <SelectItem key={s} value={s}>{getItemStatusLabel(s)}</SelectItem>
                                     ))}
                                   </SelectContent>
@@ -2060,9 +2100,12 @@ export function InventoryDisplay({
                           <div className="text-sm">
                             {editingField?.itemId === bundle.id && editingField?.field === 'price' ? (
                               <NumericInput
-                                value={bundle.price || 0}
+                                value={getItemPrice(bundle)}
                                 onChange={(price) => {
-                                  const updated = { ...bundle, price, value: price * (bundle.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0) };
+                                  const updated = {
+                                    ...bundle,
+                                    pricing: { ...bundle.pricing, targetPrice: toMoney(price) },
+                                  };
                                   handleSaveItem(updated);
                                 }}
                                 onBlur={() => setEditingField(null)}
@@ -2074,13 +2117,13 @@ export function InventoryDisplay({
                                 onClick={() => setEditingField({ itemId: bundle.id, field: 'price' })}
                                 title="Click to edit price"
                               >
-                                {formatCurrency(bundle.price)}
+                                {formatCurrency(getItemPrice(bundle))}
                               </span>
                             )}
                           </div>
 
                           <div className="text-sm font-bold">
-                            <span className="px-1">{bundle.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}/{bundle.targetAmount || 0}</span>
+                            <span className="px-1">{bundle.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}/{getItemTargetAmount(bundle) || 0}</span>
                           </div>
 
                           <div className="flex gap-1">
@@ -2150,12 +2193,12 @@ export function InventoryDisplay({
                   <Settings className="w-6 h-6" />
                 </div>
                 <div className="text-xs font-medium truncate">{item.name}</div>
-                <div className="text-xs text-muted-foreground">{item.year}</div>
+                <div className="text-xs text-muted-foreground">{getItemYear(item)}</div>
                 <div className="text-xs text-muted-foreground">
                   {getAreaForStation(item.station) || 'N/A'} - {item.station}
                 </div>
                 <div className="text-sm font-bold">{item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}</div>
-                <div className="text-xs text-muted-foreground">{formatCurrency(item.unitCost)}</div>
+                <div className="text-xs text-muted-foreground">{formatCurrency(getItemUnitCost(item))}</div>
                 <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={(e) => { e.stopPropagation(); handleEditItem(item); }}>Edit</Button>
               </div>
             </div>
@@ -2172,7 +2215,7 @@ export function InventoryDisplay({
       const getSoldItemsDate = (item: Item) => {
         return showLegacyItems
           ? (item.updatedAt || item.createdAt || 0)
-          : (item.soldAt || item.updatedAt || item.createdAt || 0);
+          : (item.context?.soldAt || item.updatedAt || item.createdAt || 0);
       };
       switch (soldItemsSortOption) {
         case 'date-desc':
@@ -2180,12 +2223,12 @@ export function InventoryDisplay({
         case 'date-asc':
           return new Date(getSoldItemsDate(a)).getTime() - new Date(getSoldItemsDate(b)).getTime();
         case 'price-desc':
-          const valB = b.value || (b.price * (b.quantitySold || 0));
-          const valA = a.value || (a.price * (a.quantitySold || 0));
+          const valB = getItemSoldValue(b);
+          const valA = getItemSoldValue(a);
           return valB - valA;
         case 'price-asc':
-          const valB2 = b.value || (b.price * (b.quantitySold || 0));
-          const valA2 = a.value || (a.price * (a.quantitySold || 0));
+          const valB2 = getItemSoldValue(b);
+          const valA2 = getItemSoldValue(a);
           return valA2 - valB2;
         case 'name-asc':
           return a.name.localeCompare(b.name);
@@ -2194,7 +2237,7 @@ export function InventoryDisplay({
         case 'type-asc':
           return (a.type || '').localeCompare(b.type || '');
         case 'subtype-asc':
-          return (a.subItemType || '').localeCompare(b.subItemType || '');
+          return getItemSubtype(a).localeCompare(getItemSubtype(b));
         case 'site-asc':
           const siteA = a.stock?.[0]?.siteId || '';
           const siteB = b.stock?.[0]?.siteId || '';
@@ -2282,7 +2325,7 @@ export function InventoryDisplay({
                       {soldItemsSearchResults.map(item => {
                         const monthSource = showLegacyItems
                           ? item.updatedAt || item.createdAt
-                          : item.soldAt || item.updatedAt || item.createdAt;
+                          : item.context?.soldAt || item.updatedAt || item.createdAt;
                         const monthLabel = monthSource ? formatMonthKey(monthSource) : 'Unknown month';
 
                         return (
@@ -2358,36 +2401,37 @@ export function InventoryDisplay({
           {isHydrated && visibleSoldItems.map(item => {
             const siteName = item.stock?.[0]?.siteId || '';
             const qty = item.quantitySold || 0;
-            const unitPrice = item.price || 0;
-            const total = item.value || (unitPrice * qty);
+            const unitPrice = getItemPrice(item);
+            const total = getItemSoldValue(item);
             const showPrice = total > 0;
             
             // Subtype & Icon Resolution
             const itemTypeBase = item.type?.toLowerCase();
             let Icon = ITEM_TYPE_ICONS[itemTypeBase] || ITEM_TYPE_ICONS['default'] || Package;
-            let subtypeLabel: string = item.subItemType || item.type || '';
+            let subtypeLabel: string = getItemSubtype(item) || item.type || '';
 
             if (item.type === ItemType.DIGITAL) {
-              Icon = getDigitalSubtypeIcon(item.subItemType);
-              subtypeLabel = getDigitalSubtypeLabel(item.subItemType);
+              Icon = getDigitalSubtypeIcon(getItemSubtype(item));
+              subtypeLabel = getDigitalSubtypeLabel(getItemSubtype(item));
             } else if (item.type === ItemType.ARTWORK) {
-              Icon = getArtworkSubtypeIcon(item.subItemType);
-              subtypeLabel = getArtworkSubtypeLabel(item.subItemType);
+              Icon = getArtworkSubtypeIcon(getItemSubtype(item));
+              subtypeLabel = getArtworkSubtypeLabel(getItemSubtype(item));
             } else if (item.type === ItemType.PRINT) {
-              Icon = getPrintSubtypeIcon(item.subItemType);
-              subtypeLabel = getPrintSubtypeLabel(item.subItemType);
+              Icon = getPrintSubtypeIcon(getItemSubtype(item));
+              subtypeLabel = getPrintSubtypeLabel(getItemSubtype(item));
             }
 
             const collectionLabel = item.collection ? getCollectionLabel(item.collection) : null;
-            const dimsLabel = (item.dimensions && (item.dimensions.width > 0 || item.dimensions.height > 0)) 
-              ? `${item.dimensions.width}×${item.dimensions.height} cm` 
+            const dimensions = getItemDimensions(item);
+            const dimsLabel = (dimensions && (dimensions.width > 0 || dimensions.height > 0))
+              ? `${dimensions.width}×${dimensions.height} cm`
               : null;
-            const sizeLabel = item.size ? `Model: ${item.size}` : null;
+            const sizeLabel = getItemSize(item) ? `Model: ${getItemSize(item)}` : null;
 
-            const hasMainMedia = !!item.media?.main;
-            const hasGallery = !!item.media?.gallery?.length;
-            const hasThumb = !!item.media?.thumb;
-            const hasSource = !!item.sourceFileUrl;
+            const hasMainMedia = !!item.media?.mainUrl;
+            const hasGallery = !!item.media?.galleryUrls?.length;
+            const hasThumb = !!item.media?.thumbUrl;
+            const hasSource = !!getItemSourceFileUrl(item);
 
             return (
               <div
@@ -2448,15 +2492,15 @@ export function InventoryDisplay({
                           <span className="italic">{collectionLabel}</span>
                         </>
                       )}
-                      {item.year != null && (
+                      {getItemYear(item) != null && (
                         <>
                           {(item.station || dimsLabel || collectionLabel) && <span className="text-muted-foreground/35">·</span>}
-                          <span>{item.year}</span>
+                          <span>{getItemYear(item)}</span>
                         </>
                       )}
                       {sizeLabel && (
                         <>
-                          {(item.station || dimsLabel || collectionLabel || item.year != null) && <span className="text-muted-foreground/35">·</span>}
+                          {(item.station || dimsLabel || collectionLabel || getItemYear(item) != null) && <span className="text-muted-foreground/35">·</span>}
                           <span>{sizeLabel}</span>
                         </>
                       )}
@@ -2598,8 +2642,8 @@ export function InventoryDisplay({
         ) : (
           <div className="grid grid-cols-2 gap-3">
             {digitalArtItems.map(item => {
-              const Icon = getDigitalSubtypeIcon(item.subItemType);
-              const isNFT = item.subItemType === DigitalSubType.NFT;
+              const Icon = getDigitalSubtypeIcon(getItemSubtype(item));
+              const isNFT = getItemSubtype(item) === DigitalSubType.NFT;
               const totalQty = item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0;
 
               return (
@@ -2624,27 +2668,27 @@ export function InventoryDisplay({
                   </span>
 
                   <span className="hidden md:inline-flex shrink-0 items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-primary/10 dark:text-zinc-300 dark:bg-zinc-800 border border-primary/20 dark:border-zinc-700/80">
-                    {getDigitalSubtypeLabel(item.subItemType)}
+                    {getDigitalSubtypeLabel(getItemSubtype(item))}
                   </span>
 
                   <span
-                    className={`hidden md:inline shrink-0 min-w-[2.25rem] text-right text-xs tabular-nums ${item.year != null ? 'text-muted-foreground' : 'text-rose-500/80'
+                    className={`hidden md:inline shrink-0 min-w-[2.25rem] text-right text-xs tabular-nums ${getItemYear(item) != null ? 'text-muted-foreground' : 'text-rose-500/80'
                       }`}
                   >
-                    {item.year ?? 'missing'}
+                    {getItemYear(item) ?? 'missing'}
                   </span>
 
                   <div className="hidden sm:flex items-center gap-1 shrink-0">
-                    <MediaFlag label="Main" ok={!!item.media?.main} />
-                    <MediaFlag label="Gallery" ok={!!item.media?.gallery?.length} />
-                    <MediaFlag label="Thumb" ok={!!item.media?.thumb} />
-                    <MediaFlag label="Source" ok={!!item.sourceFileUrl} />
+                    <MediaFlag label="Main" ok={!!item.media?.mainUrl} />
+                    <MediaFlag label="Gallery" ok={!!item.media?.galleryUrls?.length} />
+                    <MediaFlag label="Thumb" ok={!!item.media?.thumbUrl} />
+                    <MediaFlag label="Source" ok={!!getItemSourceFileUrl(item)} />
                   </div>
 
                   {isNFT && (
                     <div className="flex shrink-0 items-center gap-2 text-sm tabular-nums">
                       <span className="font-bold">{totalQty}</span>
-                      <span className="text-xs text-muted-foreground">{formatCurrency(item.price)}</span>
+                      <span className="text-xs text-muted-foreground">{formatCurrency(getItemPrice(item))}</span>
                     </div>
                   )}
                 </div>
@@ -2691,11 +2735,12 @@ export function InventoryDisplay({
         ) : (
           <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {artworkItems.map(artwork => {
-              const accent = getArtworkSubtypeAccent(artwork.subItemType);
-              const Icon = getArtworkSubtypeIcon(artwork.subItemType);
+              const accent = getArtworkSubtypeAccent(getItemSubtype(artwork));
+              const Icon = getArtworkSubtypeIcon(getItemSubtype(artwork));
+              const dimensions = getItemDimensions(artwork);
               const dims =
-                (artwork.dimensions && (artwork.dimensions.width > 0 || artwork.dimensions.height > 0))
-                  ? `${artwork.dimensions.width}×${artwork.dimensions.height} cm`
+                (dimensions && (dimensions.width > 0 || dimensions.height > 0))
+                  ? `${dimensions.width}×${dimensions.height} cm`
                   : null;
               const siteName = getPrimarySiteName(artwork);
 
@@ -2721,7 +2766,7 @@ export function InventoryDisplay({
                       <span
                         className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-medium ${accent.pill}`}
                       >
-                        {getArtworkSubtypeLabel(artwork.subItemType)}
+                        {getArtworkSubtypeLabel(getItemSubtype(artwork))}
                       </span>
                       {dims && (
                         <>
@@ -2730,7 +2775,7 @@ export function InventoryDisplay({
                         </>
                       )}
                       <span className="text-muted-foreground/35">·</span>
-                      <span className={artwork.year != null ? '' : 'text-rose-500/80'}>{artwork.year ?? 'missing'}</span>
+                      <span className={getItemYear(artwork) != null ? '' : 'text-rose-500/80'}>{getItemYear(artwork) ?? 'missing'}</span>
                     </div>
 
                     {/* Row 3: Site (badge) / Station / Collection */}
@@ -2750,17 +2795,17 @@ export function InventoryDisplay({
 
                     {/* Row 4: Media Flags (Rest of the card as is) */}
                     <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                      <MediaFlag label="Main" ok={!!artwork.media?.main} />
-                      <MediaFlag label="Gallery" ok={!!artwork.media?.gallery?.length} />
-                      <MediaFlag label="Thumb" ok={!!artwork.media?.thumb} />
-                      <MediaFlag label="Source" ok={!!artwork.sourceFileUrl} />
+                      <MediaFlag label="Main" ok={!!artwork.media?.mainUrl} />
+                      <MediaFlag label="Gallery" ok={!!artwork.media?.galleryUrls?.length} />
+                      <MediaFlag label="Thumb" ok={!!artwork.media?.thumbUrl} />
+                      <MediaFlag label="Source" ok={!!getItemSourceFileUrl(artwork)} />
                     </div>
                   </div>
 
                   {/* Price: no decimals */}
                   <div className="flex shrink-0 flex-row items-center justify-end gap-3 border-t border-border/60 pt-3 tabular-nums sm:flex-col sm:items-end sm:justify-center sm:border-t-0 sm:border-l sm:pl-4 sm:pt-0">
                     <span className="text-2xl font-bold tracking-tighter text-foreground">
-                      ${Math.round(artwork.price)}
+                      ${Math.round(getItemPrice(artwork))}
                     </span>
                   </div>
                 </div>
@@ -2784,7 +2829,7 @@ export function InventoryDisplay({
           key = item.stock[0]?.siteId || 'Unknown Location';
           break;
         case 'subtype':
-          key = item.subItemType || 'Other';
+                      key = getItemSubtype(item) || 'Other';
           break;
         default: // collection
           key = item.collection || 'Uncategorized';
@@ -2831,7 +2876,7 @@ export function InventoryDisplay({
                       <div className="text-xs text-muted-foreground">units</div>
                     </div>
                     <div className="text-center">
-                      <div className="font-bold">{formatCurrency(item.price)}</div>
+                      <div className="font-bold">{formatCurrency(getItemPrice(item))}</div>
                       <div className="text-xs text-muted-foreground">price</div>
                     </div>
                     <Button size="sm" variant="ghost" onClick={() => handleEditItem(item, merchViewBy === 'location' ? groupKey : undefined)}>Edit</Button>
@@ -2857,7 +2902,7 @@ export function InventoryDisplay({
           key = item.stock[0]?.siteId || 'Unknown Location';
           break;
         case 'subtype':
-          key = item.subItemType || 'Other';
+                      key = getItemSubtype(item) || 'Other';
           break;
         default: // collection
           key = item.collection || 'Uncategorized';
@@ -2892,10 +2937,10 @@ export function InventoryDisplay({
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">{item.subItemType || 'No subtype'}</p>
+                      <p className="text-xs text-muted-foreground">{getItemSubtype(item) || 'No subtype'}</p>
                     </div>
                     <div className="text-right ml-2">
-                      <p className="text-sm font-medium">${item.price || 0}</p>
+                      <p className="text-sm font-medium">${getItemPrice(item)}</p>
                       <p className="text-xs text-muted-foreground">Qty: {item.stock.reduce((sum, sp) => sum + sp.quantity, 0)}</p>
                     </div>
                   </div>
@@ -2943,12 +2988,13 @@ export function InventoryDisplay({
         ) : (
           <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {printItems.map(print => {
-              const Icon = getPrintSubtypeIcon(print.subItemType);
+              const Icon = getPrintSubtypeIcon(getItemSubtype(print));
               const totalQty = print.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0;
-              const target = print.targetAmount;
+              const target = getItemTargetAmount(print);
+              const dimensions = getItemDimensions(print);
               const dims =
-                (print.dimensions && (print.dimensions.width > 0 || print.dimensions.height > 0))
-                  ? `${print.dimensions.width}×${print.dimensions.height} cm`
+                (dimensions && (dimensions.width > 0 || dimensions.height > 0))
+                  ? `${dimensions.width}×${dimensions.height} cm`
                   : null;
               const siteName = getPrimarySiteName(print);
 
@@ -2971,14 +3017,14 @@ export function InventoryDisplay({
                       <span className="min-w-0 flex-1 truncate text-lg font-semibold leading-snug tracking-tight text-foreground">
                         {print.name}
                       </span>
-                      <span className={`${PRINT_SUBTYPE_BADGE} shrink-0`}>{getPrintSubtypeLabel(print.subItemType)}</span>
+                      <span className={`${PRINT_SUBTYPE_BADGE} shrink-0`}>{getPrintSubtypeLabel(getItemSubtype(print))}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         {dims && (
                           <span className="text-sm text-muted-foreground">{dims}</span>
                         )}
-                        {print.keepInInventoryAfterSold && (
+                        {getItemKeepInInventory(print) && (
                           <>
                             <span className="text-muted-foreground/35">·</span>
                             <button
@@ -2986,7 +3032,10 @@ export function InventoryDisplay({
                               className="text-[10px] uppercase font-bold text-green-600/70 dark:text-green-500/60 hover:text-green-700 dark:hover:text-green-400 transition-colors"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleSaveItem({ ...print, keepInInventoryAfterSold: false });
+                                handleSaveItem({
+                                  ...print,
+                                  context: { ...print.context, keepInInventoryAfterSold: false },
+                                });
                               }}
                               title="Keep in Inventory after Sold (Click to disable)"
                             >
@@ -3006,7 +3055,7 @@ export function InventoryDisplay({
                           {print.collection ? getCollectionLabel(print.collection) : 'No collection'}
                         </span>
                         <span className="text-muted-foreground/35">·</span>
-                        <span className={print.year != null ? '' : 'text-rose-500/80'}>{print.year ?? 'missing'}</span>
+                        <span className={getItemYear(print) != null ? '' : 'text-rose-500/80'}>{getItemYear(print) ?? 'missing'}</span>
                         <span className="text-muted-foreground/35">·</span>
                         <span className="max-w-full truncate" title={siteName || undefined}>
                           {siteName || 'No site'}
@@ -3019,10 +3068,10 @@ export function InventoryDisplay({
                     </div>
 
                     <div className="flex max-w-full flex-wrap justify-end gap-1.5 pt-0.5">
-                      <PrintsMediaFlag label="Main" ok={!!print.media?.main} />
-                      <PrintsMediaFlag label="Gallery" ok={!!print.media?.gallery?.length} />
-                      <PrintsMediaFlag label="Thumb" ok={!!print.media?.thumb} />
-                      <PrintsMediaFlag label="Source" ok={!!print.sourceFileUrl} />
+                      <PrintsMediaFlag label="Main" ok={!!print.media?.mainUrl} />
+                      <PrintsMediaFlag label="Gallery" ok={!!print.media?.galleryUrls?.length} />
+                      <PrintsMediaFlag label="Thumb" ok={!!print.media?.thumbUrl} />
+                      <PrintsMediaFlag label="Source" ok={!!getItemSourceFileUrl(print)} />
                     </div>
                   </div>
 
@@ -3033,7 +3082,7 @@ export function InventoryDisplay({
                     </div>
                     <div className="flex items-center justify-end pb-0.5">
                       <span className="inline-flex items-center rounded-full border border-border bg-secondary/70 px-3 py-1 text-md font-bold text-foreground tabular-nums shadow-sm">
-                        {formatCurrency(print.price)}
+                        {formatCurrency(getItemPrice(print))}
                       </span>
                     </div>
                   </div>
@@ -3098,14 +3147,14 @@ export function InventoryDisplay({
                         <div className="text-xs text-muted-foreground">
                           {getAreaForStation(item.station) || 'N/A'} - {item.station}
                         </div>
-                        <div className="text-xs text-muted-foreground">{item.year}</div>
+                        <div className="text-xs text-muted-foreground">{getItemYear(item)}</div>
                         <div className="text-sm font-bold">
                           {location === 'No Location'
                             ? (item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0)
                             : (item.stock?.find(s => s.siteId === location)?.quantity || 0)
                           }
                         </div>
-                        <div className="text-xs text-muted-foreground">{formatCurrency(item.unitCost)}</div>
+                        <div className="text-xs text-muted-foreground">{formatCurrency(getItemUnitCost(item))}</div>
                         <Button
                           size="sm"
                           variant="ghost"

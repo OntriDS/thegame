@@ -10,6 +10,11 @@ import { useEntityUpdates } from "@/lib/hooks/use-entity-updates";
 import { ClientAPI } from "@/lib/client-api";
 import { Sale, Character } from "@/types/entities";
 import { getSaleCharacterId } from '@/lib/sale-character-id';
+import { 
+  getSaleMetadata,
+  getSaleBoothFee,
+  getSaleLinks
+} from '@/lib/compatibility/sale-selectors';
 import { SaleType, SaleStatus } from "@/types/enums";
 import { getSaleStatusLabel } from "@/lib/constants/status-display-labels";
 import { formatDateDDMMYYYY, getMonthName } from "@/lib/constants/date-constants";
@@ -19,7 +24,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import SalesModal from "@/components/modals/sales-modal";
 import { MonthSelector } from "@/components/ui/month-selector";
 import { CurrencyExchangeRates, DEFAULT_CURRENCY_EXCHANGE_RATES } from "@/lib/constants/financial-constants";
-import { formatCurrency, roundCurrency2 } from "@/lib/utils/financial-utils";
+import { formatCurrency, roundCurrency2, extractMoneyValue } from "@/lib/utils/financial-utils";
 import { formatMonthKey } from '@/lib/utils/date-display-utils';;
 import { SalesDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 import { useMonthlySummary } from '@/lib/hooks/use-monthly-summary';
@@ -73,10 +78,11 @@ function SalesPageContent() {
 
   const getSaleCounterpartyName = useCallback((sale: Sale): string => {
     const primaryCharacterId = getSaleCharacterId(sale);
+    const links = getSaleLinks(sale);
     const linkedCharacterId =
       primaryCharacterId ??
-      sale.links?.find((link: any) => link?.source?.type === 'sale' && link?.target?.type === 'character' && link?.target?.id)?.target?.id ??
-      sale.links?.find((link: any) => link?.source?.type === 'character' && link?.target?.type === 'sale' && link?.source?.id)?.source?.id ??
+      links?.find((link: any) => link?.source?.type === 'sale' && link?.target?.type === 'character' && link?.target?.id)?.target?.id ??
+      links?.find((link: any) => link?.source?.type === 'character' && link?.target?.type === 'sale' && link?.source?.id)?.source?.id ??
       '';
 
     const characterName = linkedCharacterId && characterById.get(String(linkedCharacterId));
@@ -187,40 +193,42 @@ function SalesPageContent() {
   };
 
   const getSaleFinancials = useCallback((sale: Sale) => {
-    const grossRevenue = sale.totals.totalRevenue;
+    const grossRevenue = extractMoneyValue(sale.totals.totalRevenue);
     let cost = 0;
     let netProfit = 0;
 
     if (sale.type === SaleType.BOOTH) {
       const exchangeRate = exchangeRates?.colonesToUsd || DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd;
 
-      // Check for advanced contract calculation first
-      // myNet is stored in Colones (CRC)
-      const myNetCRC = sale.metadata?.boothSaleContext?.calculatedTotals?.myNet ??
+      const metadata = getSaleMetadata(sale);
+      const myNetCRCRaw = metadata?.boothSaleContext?.calculatedTotals?.myNet ??
         (sale as any).archiveMetadata?.boothSaleContext?.calculatedTotals?.myNet;
 
-      if (myNetCRC !== undefined) {
+      const myNetCRC = extractMoneyValue(myNetCRCRaw);
+
+      if (myNetCRC !== 0 || myNetCRCRaw !== undefined) {
         netProfit = myNetCRC / exchangeRate;
         // Reverse-engineer apparent cost for consistent UI structure in dashboards
         cost = grossRevenue - netProfit;
       } else {
         // Legacy calculation fallback
-        const boothFeeUSD = (sale.boothFee || 0) / exchangeRate;
+        const boothFeeValue = extractMoneyValue(getSaleBoothFee(sale));
+        const boothFeeUSD = boothFeeValue / exchangeRate;
         const partnerPayouts = sale.lines
           .filter(l => l.kind === 'service' && (l as any).station === 'booth-sales')
-          .reduce((sum, l) => sum + ((l as any).revenue || 0), 0);
+          .reduce((sum, l) => sum + extractMoneyValue((l as any).revenue), 0);
 
         cost = boothFeeUSD + partnerPayouts;
         netProfit = grossRevenue - cost;
       }
     } else {
-      const hasExplicitCost = typeof sale.totals?.totalCost === 'number';
-      const explicitCost = Number(sale.totals?.totalCost ?? 0) || 0;
+      const explicitCost = extractMoneyValue(sale.totals?.totalCost);
+      const hasExplicitCost = explicitCost !== 0 || sale.totals?.totalCost !== undefined;
 
       // General service costs
       const serviceLineCosts = sale.lines
         .filter(l => l.kind === 'service' && (l as any).taskCost)
-        .reduce((sum, l) => sum + ((l as any).taskCost || 0), 0);
+        .reduce((sum, l) => sum + extractMoneyValue((l as any).taskCost), 0);
       cost = hasExplicitCost ? explicitCost : serviceLineCosts;
       netProfit = grossRevenue - cost;
     }

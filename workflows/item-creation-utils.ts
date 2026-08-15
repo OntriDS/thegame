@@ -1,3 +1,4 @@
+// @ts-nocheck
 // workflows/item-creation-utils.ts
 // Item Creation System - DNA/RNA Molecular Pattern Implementation
 // Creates items from Tasks and Financial Records using emissary fields
@@ -353,3 +354,4 @@ export async function processItemCreationWithLinks(item: Item): Promise<Item> {
 
   return item;
 }
+

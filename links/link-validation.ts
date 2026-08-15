@@ -118,7 +118,7 @@ export function validateLinkTypeCompatibility(
     // TASK relationships (7)
     'TASK_ITEM': { source: [EntityType.TASK], target: [EntityType.ITEM] },
     'TASK_FINREC': { source: [EntityType.TASK], target: [EntityType.FINANCIAL] },
-    'TASK_SALE': { source: [EntityType.TASK], target: [EntityType.SALE] },
+
     'TASK_PLAYER': { source: [EntityType.TASK], target: [EntityType.PLAYER] },
     'TASK_CHARACTER': { source: [EntityType.TASK], target: [EntityType.CHARACTER] },
     'TASK_AGENT': { source: [EntityType.TASK], target: [EntityType.AGENT] },
@@ -253,16 +253,15 @@ async function checkReverseDuplicate(
     [LinkType.ITEM_CHARACTER]: null, // Canonical - no reverse check needed
     [LinkType.CHARACTER_ITEM]: LinkType.ITEM_CHARACTER, // Reverse - check if canonical exists
 
-    // Ownership: canonical is SITE_CHARACTER, reverse is CHARACTER_SITE
-    [LinkType.SITE_CHARACTER]: null, // Canonical - no reverse check needed
-    [LinkType.CHARACTER_SITE]: LinkType.SITE_CHARACTER, // Reverse - check if canonical exists
+    // Ownership: canonical is CHARACTER_SITE (Character owns/occupies Site), reverse is SITE_CHARACTER
+    [LinkType.SITE_CHARACTER]: LinkType.CHARACTER_SITE, // Reverse - check if canonical exists
+    [LinkType.CHARACTER_SITE]: null, // Canonical - no reverse check needed
 
     // Add other reverse pairs as needed
     [LinkType.TASK_ITEM]: null,
     [LinkType.ITEM_TASK]: null,
     [LinkType.TASK_FINREC]: null,
     [LinkType.FINREC_TASK]: null,
-    [LinkType.TASK_SALE]: null,
     [LinkType.SALE_TASK]: null,
     [LinkType.TASK_PLAYER]: null,
     [LinkType.PLAYER_TASK]: null,

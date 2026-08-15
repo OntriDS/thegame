@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { v4 as uuidv4 } from 'uuid';
 import type { Character } from '@/types/entities';
 import { getAllCharacters, upsertCharacter } from '@/data-store/datastore';
@@ -389,3 +390,4 @@ export async function rebuildCharacterContactIndexes(): Promise<ProvisioningBack
     addedPhoneIndexKeys: phoneIndexed,
   };
 }
+

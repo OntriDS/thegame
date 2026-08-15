@@ -10,6 +10,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ClientAPI } from '@/lib/client-api';
 import ConfirmationModal from '@/components/modals/submodals/confirmation-submodal';
 import { Character, Task } from '@/types/entities';
+import { getTaskOwnerIds } from '@/lib/compatibility/task-selectors';
 import { STATION_CATEGORIES, TaskStatus } from '@/types/enums';
 
 import {
@@ -293,8 +294,8 @@ export function DelegationMatrixTab() {
     const realTask = allTasks.find(t => t.id === selectedTaskId);
     if (realTask) {
       let currentOwnerString = '';
-      if (realTask.ownerId) {
-         const ownerIds = Array.isArray(realTask.ownerId) ? realTask.ownerId : [realTask.ownerId];
+      const ownerIds = getTaskOwnerIds(realTask);
+      if (ownerIds.length > 0) {
          currentOwnerString = ownerIds.join(',');
       }
 
@@ -351,7 +352,7 @@ export function DelegationMatrixTab() {
           if (realTask) {
             try {
               const newOwnerId = characterIds.length === 1 ? characterIds[0] : characterIds;
-              const updatedTask = await ClientAPI.upsertTask({ ...realTask, ownerId: newOwnerId });
+              const updatedTask = await ClientAPI.upsertTask({ ...realTask, ownerId: newOwnerId } as unknown as Task);
               setAllTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
             } catch (e) {
               console.error("Failed to update task owner in DB", e);

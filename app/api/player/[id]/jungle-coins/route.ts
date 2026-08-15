@@ -53,11 +53,14 @@ export async function GET(
     // Filter out null records and only include PERSONAL records (company records are for buyback tracking)
     const validRecords = financialRecords.filter((record): record is NonNullable<typeof record> => record !== null);
     const personalRecords = validRecords.filter(record => record.type === 'personal');
-    const totalJ$ = personalRecords.reduce((sum, record) => sum + (record.jungleCoins || 0), 0);
+  const totalJ$ = personalRecords.reduce(
+    (sum, record) => sum + (record.context?.jungleCoins ?? 0),
+    0
+  );
     
     // Get exchange records (POINTS_TO_J$) for reference (only from personal records)
     const exchangeRecords = personalRecords.filter(record =>
-      record.exchangeType === 'POINTS_TO_J$' ||
+      (record.context?.exchangeType || (record as any).exchangeType) === 'POINTS_TO_J$' ||
       record.description?.includes('Points exchanged for J$')
     );
     
@@ -68,7 +71,7 @@ export async function GET(
       records: personalRecords.map(record => ({
         id: record.id,
         name: record.name,
-        jungleCoins: record.jungleCoins,
+      jungleCoins: record.context?.jungleCoins ?? 0,
         createdAt: record.createdAt,
         description: record.description
       }))

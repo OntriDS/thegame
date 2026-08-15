@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Link as LinkIcon, ArrowRight, Network, Trash2 } from 'lucide-react';
-import { Link } from '@/types/entities';
+
 import { EntityType, LinkType } from '@/types/enums';
 import { ClientAPI } from '@/lib/client-api';
 import { buildAdminEntityDeepLink } from '@/lib/utils/entity-admin-deep-links';
@@ -25,7 +25,7 @@ export default function LinksRelationshipsModal({
   open,
   onClose
 }: LinksRelationshipsModalProps) {
-  const [links, setLinks] = useState<Link[]>([]);
+  const [links, setLinks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [entityNames, setEntityNames] = useState<Record<string, string>>({});
@@ -64,7 +64,7 @@ export default function LinksRelationshipsModal({
   }, [open, entity, loadLinks]);
 
   const groupLinksByType = () => {
-    const groups: { [key: string]: Link[] } = {
+    const groups: { [key: string]: any[] } = {
       tasks: [],
       items: [],
       financials: [],
@@ -203,7 +203,7 @@ export default function LinksRelationshipsModal({
                         No {type} relationships
                       </div>
                     ) : (
-                      typeLinks.map(link => (
+                      typeLinks.map((link: any) => (
                         <LinkCard
                           key={link.id}
                           link={link}
@@ -236,7 +236,7 @@ function LinkCard({
   entityNames,
   onDelete
 }: {
-  link: Link;
+  link: any;
   currentEntity: { type: EntityType; id: string };
   entityNames: Record<string, string>;
   onDelete: (linkId: string) => void;

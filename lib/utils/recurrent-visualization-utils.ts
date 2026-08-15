@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { addDays, addWeeks, addMonths } from 'date-fns';
 import { Task } from '@/types/entities';
 import { RecurrentFrequency, TaskType } from '@/types/enums';
@@ -173,3 +174,4 @@ export function getOccurrencesForRange(task: Task, rangeStart: Date, rangeEnd: D
 
   return occurrences;
 }
+

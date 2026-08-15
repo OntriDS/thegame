@@ -91,8 +91,8 @@ export function BusinessSubmodal({
             isActive: true,
             createdAt: initialData?.createdAt || new Date(),
             updatedAt: new Date(),
-            links: initialData?.links || [], // Keep existing links if update
-        };
+            links: (initialData as any)?.links || [], // Keep existing links if update
+        } as unknown as Business;
 
         onSave(entity);
         onClose();

@@ -234,7 +234,7 @@ function convertItemsToCSV(items: any[]): string {
     const row = [
       escapeCSVField(item.station || 'items'),
       escapeCSVField(item.type),
-      escapeCSVField(item.subItemType || ''),
+      escapeCSVField((item as any).subItemType || ''),
       escapeCSVField(item.name),
       escapeCSVField(totalQuantity),
       escapeCSVField(site),

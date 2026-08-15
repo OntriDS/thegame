@@ -74,10 +74,8 @@ export async function GET(req: NextRequest) {
         }
         const ownerIds = new Set<string>();
         for (const link of links) {
-          if (link.linkType !== LinkType.SITE_CHARACTER) continue;
-          if (link.source.type === EntityType.SITE && link.source.id === site.id) {
-            ownerIds.add(link.target.id);
-          } else if (link.target.type === EntityType.SITE && link.target.id === site.id) {
+          if (link.linkType !== LinkType.CHARACTER_SITE) continue;
+          if (link.target.type === EntityType.SITE && link.target.id === site.id) {
             ownerIds.add(link.source.id);
           }
         }
@@ -162,4 +160,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to build map model' }, { status: 500 });
   }
 }
-
