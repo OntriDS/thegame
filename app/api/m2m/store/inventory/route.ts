@@ -2,7 +2,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { iamService } from '@/lib/iam-service';
 import { ItemStatus, ItemType, Collection } from '@/types/enums';
-import { AdminStation } from '@/lib/storage/taxonomy';
 import type { SubItemType } from '@/types/type-aliases';
 import {
   getActiveItems,
@@ -311,7 +310,6 @@ function buildDraftItem(input: {
     name: input.name,
     type: input.type,
     status: NEW_ITEM_STATUS,
-    station: AdminStation.STRATEGY,
     stock: [],
     unitCost: 0,
     additionalCost: 0,

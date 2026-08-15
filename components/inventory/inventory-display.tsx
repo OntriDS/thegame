@@ -673,7 +673,7 @@ export function InventoryDisplay({
           collLabel.includes(q) ||
           String(i.collection ?? '').toLowerCase().includes(q) ||
           siteLabel.includes(q) ||
-          (i.station || '').toLowerCase().includes(q) ||
+          getItemClassification(i).toLowerCase().includes(q) ||
           getItemSubtype(i).toLowerCase().includes(q) ||
           String(getItemYear(i) ?? '').includes(q)
         );
@@ -1580,7 +1580,7 @@ export function InventoryDisplay({
             collLabel.includes(qSearch) ||
             String(i.collection ?? '').toLowerCase().includes(qSearch) ||
             siteLabel.includes(qSearch) ||
-            (i.station || '').toLowerCase().includes(qSearch) ||
+            getItemClassification(i).toLowerCase().includes(qSearch) ||
             getItemSubtype(i).toLowerCase().includes(qSearch) ||
             String(getItemYear(i) ?? '').includes(qSearch)
           );
@@ -1865,9 +1865,6 @@ export function InventoryDisplay({
                           <div className="w-24 shrink-0 truncate text-[0.85rem] " title={getStickerSubtypeLabel(getItemSubtype(sticker))}>
                             {getStickerSubtypeLabel(getItemSubtype(sticker))}
                           </div>
-                          <div className="w-28 shrink-0 truncate text-center text-[0.75rem] text-muted-foreground" title={sticker.station || ''}>
-                            {sticker.station || '—'}
-                          </div>
                           <div className="flex w-32 shrink-0 items-center justify-center gap-1 text-xs">
                             <div className="min-w-0 flex-1">
                               {stickersViewBy === 'model' ? (
@@ -2009,7 +2006,7 @@ export function InventoryDisplay({
                           </div>
 
                           <div className="text-xs text-muted-foreground">
-                            {getAreaForStation(bundle.station) || 'N/A'} - {bundle.station}
+                            {getItemClassification(bundle)}
                           </div>
 
                           <div className="text-xs text-muted-foreground flex items-center gap-2">
@@ -2784,8 +2781,8 @@ export function InventoryDisplay({
                         {siteName || 'No site'}
                       </span>
                       <span className="text-muted-foreground/35">·</span>
-                      <span className="max-w-full truncate" title={artwork.station}>
-                        {artwork.station || '—'}
+                      <span className="max-w-full truncate" title={getItemClassification(artwork)}>
+                        {getItemClassification(artwork)}
                       </span>
                       <span className="text-muted-foreground/35">·</span>
                       <span className="truncate">
@@ -3045,9 +3042,7 @@ export function InventoryDisplay({
                         )}
                       </div>
                       
-                      {print.station && (
-                        <span className={`${PRINT_SUBTYPE_BADGE} shrink-0`}>{print.station}</span>
-                      )}
+                      <span className={`${PRINT_SUBTYPE_BADGE} shrink-0`}>{getItemClassification(print)}</span>
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 text-sm leading-snug text-muted-foreground">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
