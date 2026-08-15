@@ -188,7 +188,7 @@ export default function ItemsImportExport() {
           <div className="font-medium mb-2">CSV Format:</div>
           <div className="space-y-1">
             <div className="break-all">
-              <code className="text-xs">Station,ItemType,SubItemType,Name,TotalQuantity,Site,Status,Collection,UnitCost,AdditionalCost,Price,Value,QuantitySold,TargetAmount,SoldThisMonth,LastRestockDate,SourceTaskId,Year,Width,Height,Size,MediaMain,MediaThumb,MediaGallery,SourceFileUrl</code>
+              <code className="text-xs">ItemType,SubItemType,Name,TotalQuantity,Site,Status,Collection,UnitCost,AdditionalCost,Price,Value,QuantitySold,TargetAmount,SoldThisMonth,LastRestockDate,SourceTaskId,Year,Width,Height,Size,MediaMain,MediaThumb,MediaGallery,SourceFileUrl</code>
             </div>
             <div className="mt-2">
               <strong>Note:</strong> Items without a Site field will be imported as ideation items (no stock location).
@@ -203,7 +203,7 @@ export default function ItemsImportExport() {
 // Helper functions for CSV export (same as in inventories page)
 function convertItemsToCSV(items: any[]): string {
   const headers = [
-    'Station', 'ItemType', 'SubItemType', 'Name', 'TotalQuantity', 'Site', 'Status',
+    'ItemType', 'SubItemType', 'Name', 'TotalQuantity', 'Site', 'Status',
     'Collection', 'UnitCost', 'AdditionalCost', 'Price', 'Value', 'QuantitySold', 'TargetAmount',
     'SoldThisMonth', 'LastRestockDate', 'SourceTaskId', 'Year', 'Width', 'Height', 'Size',
     'MediaMain', 'MediaThumb', 'MediaGallery', 'SourceFileUrl'
@@ -232,7 +232,6 @@ function convertItemsToCSV(items: any[]): string {
 
     // Create one row per item (like import expects)
     const row = [
-      escapeCSVField(item.station || 'items'),
       escapeCSVField(item.type),
       escapeCSVField((item as any).subItemType || ''),
       escapeCSVField(item.name),

@@ -235,7 +235,6 @@ export async function POST(req: NextRequest) {
         type: rawItem.type,
         collection: rawItem.collection || undefined,
         status: rawItem.status || ItemStatus.CREATED,
-        station: rawItem.station,
         stock: Array.isArray(rawItem.stock) ? rawItem.stock : [],
         quantitySold: Number(rawItem.quantitySold) || 0,
         pricing: {

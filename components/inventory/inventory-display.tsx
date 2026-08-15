@@ -55,7 +55,6 @@ import { DEFAULT_YELLOW_THRESHOLD } from '@/lib/constants/app-constants';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
-import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { MonthSelector } from '@/components/ui/month-selector';
 import { Switch } from '@/components/ui/switch';
 import { formatMonthKey, getCurrentMonthKey, sortMonthKeys, formatForDisplay } from '@/lib/utils/date-display-utils';;
@@ -67,6 +66,7 @@ const getItemSourceFileUrl = (item: Item) => item.context?.sourceFileUrl;
 const getItemKeepInInventory = (item: Item) => item.context?.keepInInventoryAfterSold;
 const getItemTargetAmount = (item: Item) => item.context?.targetAmount;
 const getItemSubtype = (item: Item) => item.context?.subItemType || '';
+const getItemClassification = (item: Item) => `${item.type}${getItemSubtype(item) ? ` / ${getItemSubtype(item)}` : ''}`;
 const getItemYear = (item: Item) => item.context?.year;
 const getItemPrice = (item: Item) => extractMoneyValue(item.pricing?.targetPrice);
 const getItemUnitCost = (item: Item) => extractMoneyValue(item.pricing?.unitCost);
@@ -2195,7 +2195,7 @@ export function InventoryDisplay({
                 <div className="text-xs font-medium truncate">{item.name}</div>
                 <div className="text-xs text-muted-foreground">{getItemYear(item)}</div>
                 <div className="text-xs text-muted-foreground">
-                  {getAreaForStation(item.station) || 'N/A'} - {item.station}
+                  {getItemClassification(item)}
                 </div>
                 <div className="text-sm font-bold">{item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}</div>
                 <div className="text-xs text-muted-foreground">{formatCurrency(getItemUnitCost(item))}</div>
@@ -2473,14 +2473,14 @@ export function InventoryDisplay({
 
                     {/* Row 3: Combined Metadata (Station, Dims, Collection, Year) */}
                     <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 mb-auto text-[10px] text-muted-foreground font-medium">
-                      {item.station && (
+                      {getItemClassification(item) && (
                         <span className="text-[9px] font-bold text-muted-foreground bg-secondary/40 px-1 py-0.5 rounded uppercase tracking-wider">
-                          {item.station}
+                          {getItemClassification(item)}
                         </span>
                       )}
                       {dimsLabel && (
                         <>
-                          {(item.station) && <span className="text-muted-foreground/35">·</span>}
+                          {getItemClassification(item) && <span className="text-muted-foreground/35">·</span>}
                           <span className="flex items-center gap-1 font-bold text-foreground/70">
                             {dimsLabel}
                           </span>
@@ -2488,19 +2488,19 @@ export function InventoryDisplay({
                       )}
                       {collectionLabel && (
                         <>
-                          {(item.station || dimsLabel) && <span className="text-muted-foreground/35">·</span>}
+                          {(getItemClassification(item) || dimsLabel) && <span className="text-muted-foreground/35">·</span>}
                           <span className="italic">{collectionLabel}</span>
                         </>
                       )}
                       {getItemYear(item) != null && (
                         <>
-                          {(item.station || dimsLabel || collectionLabel) && <span className="text-muted-foreground/35">·</span>}
+                          {(getItemClassification(item) || dimsLabel || collectionLabel) && <span className="text-muted-foreground/35">·</span>}
                           <span>{getItemYear(item)}</span>
                         </>
                       )}
                       {sizeLabel && (
                         <>
-                          {(item.station || dimsLabel || collectionLabel || getItemYear(item) != null) && <span className="text-muted-foreground/35">·</span>}
+                          {(getItemClassification(item) || dimsLabel || collectionLabel || getItemYear(item) != null) && <span className="text-muted-foreground/35">·</span>}
                           <span>{sizeLabel}</span>
                         </>
                       )}
@@ -2663,8 +2663,8 @@ export function InventoryDisplay({
                     </span>
                   </div>
 
-                  <span className="hidden md:block shrink-0 max-w-[5rem] truncate text-xs text-foreground" title={item.station}>
-                    {item.station || '—'}
+                  <span className="hidden md:block shrink-0 max-w-[8rem] truncate text-xs text-foreground" title={getItemClassification(item)}>
+                    {getItemClassification(item)}
                   </span>
 
                   <span className="hidden md:inline-flex shrink-0 items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-primary/10 dark:text-zinc-300 dark:bg-zinc-800 border border-primary/20 dark:border-zinc-700/80">
@@ -2867,7 +2867,7 @@ export function InventoryDisplay({
                     <div className="font-medium text-sm">{item.name}</div>
                     <div className="text-xs text-muted-foreground">{item.collection}</div>
                     <div className="text-xs text-muted-foreground">
-                      {getAreaForStation(item.station) || 'N/A'} - {item.station}
+                  {getItemClassification(item)}
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-sm">
@@ -3145,7 +3145,7 @@ export function InventoryDisplay({
                         </div>
                         <div className="text-xs font-medium truncate" title={item.name}>{item.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          {getAreaForStation(item.station) || 'N/A'} - {item.station}
+                  {getItemClassification(item)}
                         </div>
                         <div className="text-xs text-muted-foreground">{getItemYear(item)}</div>
                         <div className="text-sm font-bold">

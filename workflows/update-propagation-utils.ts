@@ -265,8 +265,7 @@ export async function updateItemsCreatedByTask(
           task.outputQuantity !== previousTask.outputQuantity ||
           task.outputItemName !== previousTask.outputItemName ||
           task.outputUnitCost !== previousTask.outputUnitCost ||
-          task.outputItemPrice !== previousTask.outputItemPrice ||
-          task.station !== previousTask.station;
+          task.outputItemPrice !== previousTask.outputItemPrice;
 
         const statePropsChanged = hasStatePropsChanged(task, previousTask);
 
@@ -282,7 +281,6 @@ export async function updateItemsCreatedByTask(
             name: outputPropsChanged ? (task.outputItemName || item.name) : item.name,
             unitCost: outputPropsChanged ? (task.outputUnitCost || item.unitCost) : item.unitCost,
             price: outputPropsChanged ? (task.outputItemPrice || item.price) : item.price,
-            station: outputPropsChanged ? (task.station || item.station) : item.station,
             year,
             updatedAt: getUTCNow()
           };
@@ -447,8 +445,7 @@ export async function updateItemsCreatedByRecord(
         record.outputQuantity !== previousRecord.outputQuantity ||
         record.outputItemName !== previousRecord.outputItemName ||
         record.outputUnitCost !== previousRecord.outputUnitCost ||
-        record.outputItemPrice !== previousRecord.outputItemPrice ||
-        record.station !== previousRecord.station;
+        record.outputItemPrice !== previousRecord.outputItemPrice;
 
       const statePropsChanged = hasStatePropsChanged(record, previousRecord);
 
@@ -458,7 +455,6 @@ export async function updateItemsCreatedByRecord(
           name: outputPropsChanged ? (record.outputItemName || item.name) : item.name,
           unitCost: outputPropsChanged ? (record.outputUnitCost || item.unitCost) : item.unitCost,
           price: outputPropsChanged ? (record.outputItemPrice || item.price) : item.price,
-          station: outputPropsChanged ? (record.station || item.station) : item.station,
           year: record.year, // inherit year
           updatedAt: getUTCNow()
         };
@@ -837,7 +833,6 @@ export async function updateTasksFromItem(
   // Detect if any shared metadata changed
   const dataChanged = 
     item.name !== previousItem.name ||
-    item.station !== previousItem.station ||
     item.price !== previousItem.price ||
     item.unitCost !== previousItem.unitCost;
 
@@ -854,7 +849,6 @@ export async function updateTasksFromItem(
     for (const task of relatedTasks) {
       const needsUpdate = 
         task.outputItemName !== item.name ||
-        task.station !== item.station ||
         task.outputItemPrice !== item.price ||
         task.outputUnitCost !== item.unitCost;
 
@@ -862,7 +856,6 @@ export async function updateTasksFromItem(
         const updatedTask = {
           ...task,
           outputItemName: item.name,
-          station: item.station || task.station,
           outputItemPrice: item.price || task.outputItemPrice,
           outputUnitCost: item.unitCost || task.outputUnitCost,
           updatedAt: getUTCNow()
@@ -889,7 +882,6 @@ export async function updateFinancialRecordsFromItem(
 
   const dataChanged = 
     item.name !== previousItem.name ||
-    item.station !== previousItem.station ||
     item.price !== previousItem.price ||
     item.unitCost !== previousItem.unitCost;
 
@@ -905,7 +897,6 @@ export async function updateFinancialRecordsFromItem(
     for (const record of relatedRecords) {
       const needsUpdate = 
         record.outputItemName !== item.name ||
-        record.station !== item.station ||
         record.outputItemPrice !== item.price ||
         record.outputUnitCost !== item.unitCost;
 
@@ -913,7 +904,6 @@ export async function updateFinancialRecordsFromItem(
         const updatedRecord = {
           ...record,
           outputItemName: item.name,
-          station: item.station || record.station,
           outputItemPrice: item.price || record.outputItemPrice,
           outputUnitCost: item.unitCost || record.outputUnitCost,
           updatedAt: getUTCNow()

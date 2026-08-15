@@ -289,12 +289,11 @@ export function getStationPerformance(
 }
 
 // ============================================================================
-// COSTS BY PRODUCT STATION (Item.station via FINREC_ITEM)
+// COSTS BY PRODUCT TYPE/SUBTYPE (via FINREC_ITEM)
 // ============================================================================
 
 /**
- * Calculate costs grouped by Item.station (product station)
- * Traverses FINREC_ITEM links to get Item.station
+ * Calculate costs grouped by Item type and subtype.
  */
 export async function getCostsByProductStation(
   records: FinancialRecord[]
@@ -312,13 +311,13 @@ export async function getCostsByProductStation(
       const item = await getItemById(link.target.id);
       if (!item) continue;
 
-      const productStation = item.station;
-      if (!stationMap[productStation]) {
-        stationMap[productStation] = { cost: 0, recordCount: 0 };
+      const productType = `${item.type}:${item.context?.subItemType || 'none'}`;
+      if (!stationMap[productType]) {
+        stationMap[productType] = { cost: 0, recordCount: 0 };
       }
 
-      stationMap[productStation].cost += record.cost;
-      stationMap[productStation].recordCount += 1;
+      stationMap[productType].cost += record.cost;
+      stationMap[productType].recordCount += 1;
     }
   }
 
@@ -326,12 +325,11 @@ export async function getCostsByProductStation(
 }
 
 // ============================================================================
-// REVENUES BY PRODUCT STATION (Item.station via SALE_FINREC → SALE_ITEM)
+// REVENUES BY PRODUCT TYPE/SUBTYPE (SALE_FINREC → SALE_ITEM)
 // ============================================================================
 
 /**
- * Calculate revenues grouped by Item.station (product station)
- * Traverses SALE_FINREC → SALE_ITEM → ITEM to get Item.station
+ * Calculate revenues grouped by Item type and subtype.
  */
 export async function getRevenuesByProductStation(
   records: FinancialRecord[]
@@ -353,15 +351,15 @@ export async function getRevenuesByProductStation(
       const item = await getItemById(link.target.id);
       if (!item) continue;
 
-      const productStation = item.station;
-      if (!stationMap[productStation]) {
-        stationMap[productStation] = { revenue: 0, transactionCount: 0 };
+      const productType = `${item.type}:${item.context?.subItemType || 'none'}`;
+      if (!stationMap[productType]) {
+        stationMap[productType] = { revenue: 0, transactionCount: 0 };
       }
 
       const { quantity, unitPrice, revenue } = await metricsForSaleItemLink(sale.id, link.target.id);
 
-      stationMap[productStation].revenue += revenue;
-      stationMap[productStation].transactionCount += 1;
+      stationMap[productType].revenue += revenue;
+      stationMap[productType].transactionCount += 1;
     }
   }
 

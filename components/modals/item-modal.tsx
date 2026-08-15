@@ -17,9 +17,8 @@ import type { Money } from '@/types/entities';
 import { ItemType, ItemStatus, Collection, EntityType, EntitySchemaVersion, STATION_CATEGORIES, SaleType, SaleStatus, PaymentMethod, Currency } from '@/types/enums';
 import { getItemStatusLabel } from '@/lib/constants/status-display-labels';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
-import { getCategoryForItemType, createStationCategoryOptions, getStationFromCombined, getCategoryFromCombined, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined } from '@/lib/utils/searchable-select-utils';
-import { getAreaForStation } from '@/lib/utils/business-structure-utils';
-import type { Station, SubItemType } from '@/types/type-aliases';
+import { createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined } from '@/lib/utils/searchable-select-utils';
+import type { SubItemType } from '@/types/type-aliases';
 import { CM_TO_M2_CONVERSION, PRICE_STEP, YEAR_MIN, YEAR_MAX } from '@/lib/constants/app-constants';
 import { v4 as uuid } from 'uuid';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
@@ -46,7 +45,6 @@ interface ItemModalProps {
   initialSiteId?: string;
 }
 
-const DEFAULT_NEW_ITEM_STATION: Station = 'items';
 const DEFAULT_NONE_SITE = 'None';
 
 // Links are loaded from the registry/API as relationship records. They are
@@ -67,24 +65,9 @@ const toMoney = (amount: number, currency: Currency = Currency.USD): Money => ({
 export default function ItemModal({ item, defaultItemType, open, onOpenChange, onSave, initialSiteId }: ItemModalProps) {
   const { getPreference, setPreference } = useUserPreferences();
 
-  // Memoized to prevent dependency changes on every render
-  const getLastUsedStation = useCallback((): Station => {
-    const saved = getPreference('item-modal-last-station');
-    return (saved as Station) || DEFAULT_NEW_ITEM_STATION;
-  }, [getPreference]);
-
-  // Helper function to get the correct value format for SearchableSelect
-  const getStationValue = (station: Station): string => {
-    const area = getAreaForStation(station);
-    return `${area}:${station}`;
-  };
-
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<ItemType>(defaultItemType || ItemType.STICKER);
-  const [station, setStation] = useState<Station>(getLastUsedStation());
-
-  // stationCategory state removed - derived from station via getStationValue
   const [subItemType, setSubItemType] = useState<SubItemType | ''>('');
   const [itemTypeSubType, setItemTypeSubType] = useState<string>(`${defaultItemType || ItemType.STICKER}:`);
   const [collection, setCollection] = useState<Collection | 'none'>(Collection.NO_COLLECTION);
@@ -170,11 +153,10 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
   const r2Prefix = useMemo(() => {
     const parts: string[] = [];
-    if (station) parts.push(String(station));
     if (type) parts.push(String(type));
     if (subItemType) parts.push(String(subItemType));
     return parts.join('/');
-  }, [station, type, subItemType]);
+  }, [type, subItemType]);
 
   const r2NameSlug = useMemo(() => toKebabCase(name) || 'item', [name]);
   const r2FileBySlug = useCallback(
@@ -314,7 +296,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         name,
         description,
         type,
-        station,
         subItemType,
         collection,
         status,
@@ -336,16 +317,14 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       };
       setPreference('item-modal-form-data', JSON.stringify(formData));
     }
-  }, [item, name, description, type, station, subItemType, collection, status, quantity, unitCost, price, keepInInventoryAfterSold, restockToTarget, year, mediaMain, mediaThumb, mediaGallery, sourceFileUrl, width, height, size, targetAmount, site, setPreference]);
+  }, [item, name, description, type, subItemType, collection, status, quantity, unitCost, price, keepInInventoryAfterSold, restockToTarget, year, mediaMain, mediaThumb, mediaGallery, sourceFileUrl, width, height, size, targetAmount, site, setPreference]);
 
   const initializeBlankNewItemForm = useCallback(() => {
     draftId.current = uuid();
     const baseType = defaultItemType || ItemType.STICKER;
-    const lastStation = getLastUsedStation();
     setName('');
     setDescription('');
     setType(baseType);
-    setStation(lastStation);
     setSubItemType('');
     setItemTypeSubType(`${baseType}:`);
     setCollection(Collection.NO_COLLECTION);
@@ -370,7 +349,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     setSelectedItemId('');
     setOwnerId(null);
     setOwnerCharacterName('');
-  }, [defaultItemType, getLastUsedStation, initialSiteId]);
+  }, [defaultItemType, initialSiteId]);
 
   const prevModalSessionRef = useRef<{ open: boolean; hadItem: boolean }>({
     open: false,
@@ -396,7 +375,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           const loadedType = formData.type || defaultItemType || ItemType.STICKER;
           const loadedSub = (formData as any).subItemType || '';
           setType(loadedType);
-          setStation(formData.station || DEFAULT_NEW_ITEM_STATION);
           setSubItemType(loadedSub);
           setItemTypeSubType(`${loadedType}:${loadedSub}`);
           setCollection(formData.collection || Collection.NO_COLLECTION);
@@ -716,13 +694,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     }
   }, [open, item, initializeBlankNewItemForm]);
 
-  const handleStationCategoryChange = (newStationCategory: string) => {
-    const newStation = getStationFromCombined(newStationCategory) as Station;
-
-    setStation(newStation);
-    setPreference('item-modal-last-station', newStation);
-  };
-
   const handleItemTypeSubTypeChange = (newItemTypeSubType: string) => {
     const newItemType = getItemTypeFromCombined(newItemTypeSubType) as ItemType;
     const newSubType = getSubTypeFromCombined(newItemTypeSubType) as SubItemType;
@@ -773,8 +744,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setSubItemType(itemSubType);
       setItemTypeSubType(`${itemType}:${itemSubType}`);
 
-      const itemStation = item.station || '';
-      setStation(itemStation);
       setCollection(item.collection || Collection.NO_COLLECTION);
       setStatus(item.status || ItemStatus.FOR_SALE);
       const itemSiteId = initialSiteId || item.stock?.[0]?.siteId || '';
@@ -879,7 +848,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setName(selectedItem.name);
         setDescription(selectedItem.description || '');
         setType(selectedItem.type);
-        setStation(selectedItem.station || 'strategy');
         setSubItemType((selectedItem as any).subItemType || '');
         setCollection(selectedItem.collection || Collection.NO_COLLECTION);
         setStatus(selectedItem.status || ItemStatus.FOR_SALE);
@@ -1026,7 +994,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         name,
         description,
         type,
-        station,
         collection: collection as Collection,
         status,
         quantitySold,
@@ -1122,21 +1089,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                   onLoadLastSavedForm={() => loadFormDataFromStorage()}
                   label="Item Name"
                   sites={sites}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="station-category" className="text-xs">Station & Category</label>
-                <SearchableSelect
-                  value={getStationValue(station)}
-                  onValueChange={handleStationCategoryChange}
-                  options={createStationCategoryOptions()}
-                  autoGroupByCategory={true}
-                  getCategoryForValue={(value) => getCategoryFromCombined(value)}
-                  placeholder="Select station..."
-                  className="h-8 text-sm mt-1"
-                  persistentCollapsible={true}
-                  instanceId="item-modal-station-category"
                 />
               </div>
 

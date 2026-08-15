@@ -74,7 +74,6 @@ export function createItemOptions(
         primaryId: string; 
         name: string; 
         type: ItemType; 
-        station: string;
         totalQty: number;
     }> = {};
 
@@ -87,7 +86,6 @@ export function createItemOptions(
                 primaryId: item.id,
                 name: item.name,
                 type: item.type,
-                station: item.station || 'Other',
                 totalQty: qty
             };
         } else {
@@ -102,7 +100,7 @@ export function createItemOptions(
             return {
                 value: model.primaryId,
                 label: `${model.name} (${model.totalQty})`,
-                group: groupByStation ? model.station : getItemTypeLabel(model.type),
+                group: getItemTypeLabel(model.type),
                 category: category
             };
         });

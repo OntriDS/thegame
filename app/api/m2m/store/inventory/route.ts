@@ -629,7 +629,6 @@ function toStoreItemPayload(item: Item) {
     dimensions: item.dimensions,
     size: item.size,
     status: item.status,
-    station: item.station,
     price: item.price,
     year: item.year,
     createdAt: item.createdAt,

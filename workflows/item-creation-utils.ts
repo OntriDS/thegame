@@ -118,7 +118,6 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
           : undefined,
         task.status
       ),
-      station: task.station,
       unitCost: task.outputUnitCost || 0,
       additionalCost: 0,
       price: task.outputItemPrice || 0, // Use task's outputItemPrice instead of unitCost
@@ -238,7 +237,6 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       subItemType: record.outputItemSubType || undefined,
       collection: record.outputItemCollection || undefined,
       status: getDefaultItemStatus(record.outputItemType || '', record.isSold || false, record.outputItemStatus),
-      station: record.station,
       unitCost: record.outputUnitCost || 0,
       additionalCost: 0,
       price: record.outputItemPrice || 0, // Use record's outputItemPrice instead of unitCost

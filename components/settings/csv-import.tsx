@@ -10,13 +10,11 @@ import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { ClientAPI } from '@/lib/client-api';
 import { Item, Site } from '@/types/entities';
 import { ItemType, ItemStatus, Collection, SiteType, PhysicalBusinessType, SiteStatus } from '@/types/enums';
-import { AdminStation } from '@/lib/storage/taxonomy';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
-import type { Station, Area, SubItemType } from '@/types/type-aliases';
+import type { SubItemType } from '@/types/type-aliases';
 import { CM_TO_M2_CONVERSION } from '@/lib/constants/app-constants';
 import { FileReference } from '@/types/entities';
 import { calculateTotalQuantity } from '@/lib/utils/business-utils';
-import { getAllStations, normalizeStationValue } from '@/lib/utils/business-structure-utils';
 import { getSiteByName } from '@/lib/utils/site-options-utils';
 import { normalizeItemTypeString, normalizeSubItemTypeForItemType } from '@/lib/item-taxonomy-normalize';
 import { normalizeCollectionValue } from '@/lib/constants/collection-labels';
@@ -111,12 +109,6 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
     const isValid = validSubtypes.includes(subType as SubItemType);
 
     return isValid;
-  };
-
-  // Validate that a station is valid
-  const isValidStation = (station: string): boolean => {
-    const validStations = getAllStations();
-    return validStations.includes(station as Station);
   };
 
   const convertToItems = async (csvData: any[], sitesToUse: Site[] = sites): Promise<{ items: (Item | null)[], warnings: string[] }> => {
@@ -226,8 +218,6 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         type: finalItemType,
         collection: finalCollection,
         status: finalStatus,
-        station: (normalizeStationValue(row.Station || row.station) || AdminStation.STRATEGY) as Station,
-        area: 'admin' as Area, // Default area for imported items
         stock,
         dimensions: width > 0 || height > 0 ? { width, height, area } : undefined,
         size,

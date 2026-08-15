@@ -504,7 +504,6 @@ export interface Item extends EntityEnvelope {
   type: ItemType;
   collection?: Collection;
   status: ItemStatus;
-  station: Station;
   
   // UNIFIED STOCK SYSTEM: Absolute source of truth for quantity
   stock: StockPointV1[];

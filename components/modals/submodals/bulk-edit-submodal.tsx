@@ -12,9 +12,6 @@ import { Switch } from '@/components/ui/switch';
 import { ItemType, ItemStatus, Collection, EntityType } from '@/types/enums';
 import { getItemStatusLabel } from '@/lib/constants/status-display-labels';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
-import { getCategoryForItemType, createStationCategoryOptions, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
-import type { Station } from '@/types/type-aliases';
-import { SearchableSelect } from '@/components/ui/searchable-select';
 // Side effects handled by parent component via API calls
 import { Item } from '@/types/entities';
 import { PRICE_STEP, DEFAULT_MIN_VALUE } from '@/lib/constants/app-constants';
@@ -56,7 +53,6 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
     { value: 'collection', label: 'Collection' },
     { value: 'subItemType', label: 'Sub Type' },
     { value: 'size', label: 'Size' },
-    { value: 'station', label: 'Station' },
     { value: EntityType.SITE, label: 'Site' },
     { value: 'keepInInventoryAfterSold', label: 'Keep Item in Inventory after Sold?' },
     { value: 'restockToTarget', label: 'Restock when Sold?' },
@@ -196,10 +192,6 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
       } else if (field === 'collection') {
           newValue = value === Collection.NO_COLLECTION ? Collection.NO_COLLECTION : value as Collection;
           updatedItem = { ...item, collection: newValue };
-        } else if (field === 'station') {
-          // IMPORTANT: Extract just the station name from the combined 'area:station' value
-          newValue = getStationFromCombined(value) as Station;
-          updatedItem = { ...item, station: newValue };
         } else if (field === EntityType.SITE) {
           updatedItem = { ...item, stock: moveStockToSite(item, value) };
         } else {
@@ -277,17 +269,6 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="Enter sub type"
-          />
-        );
-
-      case 'station':
-        return (
-          <SearchableSelect
-            value={value}
-            onValueChange={setValue}
-            placeholder="Select station"
-            options={createStationCategoryOptions()}
-            getCategoryForValue={(station) => getCategoryForItemType(itemType)}
           />
         );
 
