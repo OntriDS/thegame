@@ -10,7 +10,7 @@ import { getAllCharacters, getCharacterById, upsertCharacter, getAllFinancials, 
 import type { Character } from '@/types/entities';
 import { getLinksFor } from '@/links/link-registry';
 import { getUTCNow } from '@/lib/utils/utc-utils';
-import { getFinancialCounterpartyId } from '@/lib/financial-record-counterparty-id';
+import { getFinancialCounterpartyId, getFinancialCounterpartyRole } from '@/lib/financial-record-counterparty-id';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,7 +79,7 @@ const buildDirectoryAmountTotals = async (characterIds: string[]): Promise<Map<s
   for (const record of financials) {
     const customerCharacterId = getFinancialCounterpartyId(record);
     if (!customerCharacterId || !idSet.has(customerCharacterId)) continue;
-    if (!isCustomerRole(record.customerCharacterRole)) continue;
+    if (!isCustomerRole(getFinancialCounterpartyRole(record))) continue;
 
     const amount = Number(record.revenue || 0);
     if (!Number.isFinite(amount) || amount <= 0) continue;
@@ -126,7 +126,7 @@ const buildDirectoryAmountTotals = async (characterIds: string[]): Promise<Map<s
 
       // Ensure that this cost is only attributed as a payout if they are NOT the customer in this transaction.
       // E.g., gateway commissions on a sale should not be treated as a payout to the customer.
-      if (isCustomerRole(financial.customerCharacterRole)) continue;
+      if (isCustomerRole(getFinancialCounterpartyRole(financial))) continue;
 
       const amount = Number(financial.cost || 0);
       if (!Number.isFinite(amount) || amount === 0) continue;

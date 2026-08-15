@@ -89,10 +89,17 @@ export async function createCharacterFromSale(sale: Sale): Promise<Character | n
 }
 
 export async function createCharacterFromFinancial(record: FinancialRecord): Promise<Character | null> {
-  if (!record.newCustomerName) {
+  const newCustomerName = record.context?.newCustomerName;
+  if (!newCustomerName) {
     return null;
   }
-  return createCharacterFromEntity('financial', record.id, record.name, record.newCustomerName, (record as any).customerCharacterRole || CharacterRole.CUSTOMER);
+  return createCharacterFromEntity(
+    'financial',
+    record.id,
+    record.name,
+    newCustomerName,
+    record.context?.counterparty?.role || CharacterRole.CUSTOMER
+  );
 }
 
 export async function createCharacterFromItem(item: Item): Promise<Character | null> {

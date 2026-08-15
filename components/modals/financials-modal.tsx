@@ -254,8 +254,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         site: record.siteId || '',
         targetSite: record.targetSiteId || '',
         characterId: getFinancialCounterpartyId(record),
-        // Counterparty role is relationship context, not FinancialRecord state.
-        customerCharacterRole: toCustomerCounterpartyRole(undefined),
+        customerCharacterRole: toCustomerCounterpartyRole(record.context?.counterparty?.role),
         isNewCustomer: !getFinancialCounterpartyId(record), // Toggle based on whether customer exists
         newCustomerName: '',
         outputItemType: (productionPlan?.outputItemType as ItemType) || '',
@@ -567,6 +566,10 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       context: {
         kind: 'financial-record-context',
         schemaVersion: 1,
+        counterparty: {
+          counterpartyId: formData.isNewCustomer ? null : formData.characterId,
+          role: formData.customerCharacterRole,
+        },
         jungleCoins: formData.jungleCoins,
         newCustomerName: formData.isNewCustomer ? formData.newCustomerName : undefined,
         productionPlan: formData.outputItemType || formData.outputItemName

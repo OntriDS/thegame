@@ -460,6 +460,15 @@ export default function RecurrentTreeModalContent({
       characterId: isNewCustomer ? null : customerCharacterId,
       newCustomerName: isNewCustomer ? newCustomerName.trim() || undefined : undefined,
       customerCharacterRole,
+      context: {
+        ...(task as any)?.context,
+        kind: 'task-context',
+        schemaVersion: 1,
+        counterparty: {
+          counterpartyId: isNewCustomer ? null : customerCharacterId,
+          role: customerCharacterRole,
+        },
+      },
       playerCharacterId: finalPlayerCharacterId,
       ownerId: status === TaskStatus.NONE ? null : (task ? getTaskOwnerIds(task)[0] || null : ownerId),
       order: determineOrder(),

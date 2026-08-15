@@ -693,6 +693,7 @@ export interface FinancialJournalTransactionV1 extends EntityEnvelope {
 export interface FinancialRecordContextV1 {
   kind: 'financial-record-context';
   schemaVersion: 1;
+  counterparty?: TaskCounterpartyFacetV1;
   jungleCoins?: number; // J$ internal currency value
   productionPlan?: ProductionPlanFacetV1; // Replaces outputItem* fields
   exchangeType?: 'POINTS_TO_J$' | 'J$_TO_USD' | 'J$_TO_ZAPS';

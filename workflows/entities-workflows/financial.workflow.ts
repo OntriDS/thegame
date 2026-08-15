@@ -31,7 +31,7 @@ import { getUTCNow, endOfMonthUTC, formatArchiveMonthKeyUTC } from '@/lib/utils/
 import { buildMonthIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { recalculateCharacterWallet } from '../financial-record-utils';
 import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync-server';
-import { getFinancialCounterpartyId } from '@/lib/financial-record-counterparty-id';
+import { getFinancialCounterpartyId, getFinancialCounterpartyRole } from '@/lib/financial-record-counterparty-id';
 const STATE_FIELDS = ['isNotPaid', 'isNotCharged'];
 
 /**
@@ -69,7 +69,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
     // Character creation from emissary fields - when newCustomerName is provided
     // This MUST run first because it updates the financial record
-    if ((financial as any).newCustomerName && !getFinancialCounterpartyId(financial)) {
+    if (financial.context?.newCustomerName && !getFinancialCounterpartyId(financial)) {
       const characterEffectKey = EffectKeys.sideEffect('financial', financial.id, 'characterCreated');
       if (!(await hasEffect(characterEffectKey))) {
         const createdCharacter = await createCharacterFromFinancial(financial);
@@ -183,10 +183,10 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     }
 
     const latestNewFinancial = (await getFinancialById(financial.id)) || financial;
-    if (latestNewFinancial.characterId && (latestNewFinancial as any).customerCharacterRole) {
+    if (latestNewFinancial.characterId && getFinancialCounterpartyRole(latestNewFinancial)) {
       await ensureCounterpartyRoleDatastore(
         latestNewFinancial.characterId,
-        (latestNewFinancial as any).customerCharacterRole
+        getFinancialCounterpartyRole(latestNewFinancial)
       );
     }
 
@@ -290,13 +290,15 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
   }
 
-  const finCounterpartyPresent = Boolean(financialCounterpartyId && (financial as any).customerCharacterRole);
+  const financialRole = getFinancialCounterpartyRole(financial);
+  const previousFinancialRole = getFinancialCounterpartyRole(previousFinancial);
+  const finCounterpartyPresent = Boolean(financialCounterpartyId && financialRole);
   const finCounterpartyChanged =
     !previousFinancial ||
     previousFinancialCounterpartyId !== financialCounterpartyId ||
-    (previousFinancial as any).customerCharacterRole !== (financial as any).customerCharacterRole;
+    previousFinancialRole !== financialRole;
   if (finCounterpartyPresent && finCounterpartyChanged) {
-    await ensureCounterpartyRoleDatastore(financialCounterpartyId, (financial as any).customerCharacterRole);
+    await ensureCounterpartyRoleDatastore(financialCounterpartyId, financialRole);
   }
 
   // Lean identity fields changed — cascade patch ALL log entries across ALL months and events
@@ -582,4 +584,3 @@ async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
     console.error(`[removePlayerPointsFromRecord] ❌ Failed to remove player points for record ${recordId}:`, error);
   }
 }
-

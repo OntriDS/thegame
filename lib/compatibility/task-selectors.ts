@@ -60,10 +60,13 @@ export function getTaskScheduledEnd(task: Task): Date | string | null | undefine
 }
 
 export function getTaskProgress(task: Task): number {
-  if (isExecutableTaskV1(task)) {
-    return task.progress?.percentage || 0;
+  const rawProgress = (task as any).progress;
+  if (rawProgress && typeof rawProgress === 'object') {
+    const percentage = Number(rawProgress.percentage);
+    return Number.isFinite(percentage) ? percentage : 0;
   }
-  return (task as any).progress || 0;
+  const numericProgress = Number(rawProgress);
+  return Number.isFinite(numericProgress) ? numericProgress : 0;
 }
 
 // -----------------------------------------------------------------------------
