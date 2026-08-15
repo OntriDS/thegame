@@ -3,7 +3,7 @@
 // Financial record creation and management utilities
 
 import type { Task, FinancialRecord, Sale, ItemSaleLine, Character, Contract, ServiceLine } from '@/types/entities';
-import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, SaleType, SaleStatus, ContractClauseType, ContractStatus, FinancialStatus, CharacterRole } from '@/types/enums';
+import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, SaleType, SaleStatus, ContractClauseType, ContractStatus, FinancialStatus, CharacterRole, EntitySchemaVersion } from '@/types/enums';
 import {
   upsertFinancial,
   getAllFinancials,
@@ -30,7 +30,7 @@ import { getUTCNow } from '@/lib/utils/utc-utils';
 import { parseDateToUTC } from '@/lib/utils/date-parsers';
 import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution';
 import { getSaleCharacterId } from '@/lib/sale-character-id';
-import { extractMoneyValue } from '@/lib/utils/financial-utils';
+import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 
 /**
  * Get the current J$ Balance for an entity (Character or Player)
@@ -87,7 +87,7 @@ export async function getJungleCoinBalance(entityId: string): Promise<number> {
     const records = await Promise.all(uniqueFinRecIds.map(id => import('@/data-store/datastore').then(ds => ds.getFinancialById(id))));
 
     for (const record of records) {
-      if (record && (record as any).jungleCoins) {
+      if (record && (record.context?.jungleCoins ?? 0) !== 0) {
         // Only count if it's the correct record type? 
         // Actually, any J$ attached to a record linked to me is mine.
         // Except maybe if I'm just a contract counterparty on a large sale?
@@ -97,7 +97,7 @@ export async function getJungleCoinBalance(entityId: string): Promise<number> {
         // Usually J$ is 0 on Sales.
 
         // IMPORTANT: We trust the 'jungleCoins' field on the record.
-        totalBalance += (record as any).jungleCoins || 0;
+        totalBalance += record.context?.jungleCoins ?? 0;
       }
     }
 
@@ -123,8 +123,8 @@ export async function recalculateCharacterWallet(characterId: string): Promise<v
       const currentWallet = character.wallet || { jungleCoins: -1 }; // Force update if missing
 
       // Only update if changed to avoid write loops
-      if (currentWallet.context?.rewardIntent?.points !== balance) {
-        console.log(`[recalculateCharacterWallet] Updating wallet cache for ${character.name}: ${currentWallet.context?.rewardIntent?.points} -> ${balance}`);
+      if (currentWallet.jungleCoins !== balance) {
+        console.log(`[recalculateCharacterWallet] Updating wallet cache for ${character.name}: ${currentWallet.jungleCoins} -> ${balance}`);
 
         await upsertCharacter({
           ...character,
@@ -148,7 +148,11 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
     console.log(`[createFinancialRecordFromTask] Starting financial record creation for task: ${task.name} (${task.id})`);
 
     // Check if task has cost or revenue
-    if (!task.cost && !task.revenue) {
+    const taskCost = Number(task.context?.financialIntent?.costIntent?.minorUnits ?? task.cost ?? 0) /
+      (task.context?.financialIntent?.costIntent ? 100 : 1);
+    const taskRevenue = Number(task.context?.financialIntent?.revenueIntent?.minorUnits ?? task.revenue ?? 0) /
+      (task.context?.financialIntent?.revenueIntent ? 100 : 1);
+    if (!taskCost && !taskRevenue) {
       console.log(`[createFinancialRecordFromTask] Task ${task.name} has no cost or revenue, skipping financial record creation`);
       return null;
     }
@@ -161,8 +165,12 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
     const rawDate = task.collectedAt || task.doneAt || currentDate;
     const dateToUse =
       rawDate instanceof Date ? rawDate : parseDateToUTC(rawDate as string | number);
+    const cost = taskCost;
+    const revenue = taskRevenue;
     const newFinrec: FinancialRecord = {
       id: `finrec-${task.id}`,
+      schemaVersion: EntitySchemaVersion.V1,
+      version: 0,
       name: task.name,
       description: `Financial record from task: ${task.name}`,
       year: dateToUse.getFullYear(),
@@ -173,23 +181,23 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
       targetSiteId: task.targetSiteId,
       sourceTaskId: task.id, // AMBASSADOR field - points back to Task
       characterId: getTaskCounterpartyId(task),
-      customerCharacterRole: task.customerCharacterRole || CharacterRole.CUSTOMER,
-      cost: task.cost || 0,
-      revenue: task.revenue || 0,
-      jungleCoins: 0, // J$ no longer awarded as task rewards
-      isNotPaid: (task.status === "PENDING"),       // Copy payment status from Task
-      isNotCharged: task.isNotCharged, // Copy payment status from Task
-      outputItemId: task.isNewItem ? null : (task.outputItemId || null),
-      isNewItem: task.isNewItem,
-      rewards: undefined,
-      netCashflow: (task.revenue || 0) - (task.cost || 0),
-      jungleCoinsValue: 0, // J$ no longer awarded as task rewards
-      
-      collectedAt: undefined,
-      doneAt: dateToUse,
+      cost: toMoney(cost),
+      revenue: toMoney(revenue),
+      netCashflow: toMoney(revenue - cost),
+      status: task.status === 'PENDING' ? FinancialStatus.PENDING : FinancialStatus.DONE,
+      lifecycle: { doneAt: dateToUse },
+      context: {
+        kind: 'financial-record-context',
+        schemaVersion: 1,
+        counterparty: {
+          counterpartyId: getTaskCounterpartyId(task),
+          role: task.context?.counterparty?.role || task.customerCharacterRole || CharacterRole.CUSTOMER,
+        },
+        jungleCoins: 0,
+        productionPlan: task.context?.productionPlan,
+      },
       createdAt: currentDate,
       updatedAt: currentDate,
-      links: []
     };
 
     // Store the financial record
@@ -545,7 +553,6 @@ async function upsertPrimarySaleFinrecFromSale(
     isNotCharged: !!sale.isNotCharged,
     rewards: undefined,
     netCashflow,
-    jungleCoinsValue: existing.context?.rewardIntent?.pointsValue ?? 0,
     
     collectedAt: existing.collectedAt,
     doneAt: derived.dateToUse,
@@ -708,7 +715,6 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       isNotCharged: !!sale.isNotCharged,
       rewards: undefined,
       netCashflow,
-      jungleCoinsValue: 0,
       
       collectedAt: undefined,
       doneAt: derived.dateToUse,
@@ -960,7 +966,6 @@ export async function createFinancialRecordFromPointsExchange(
       isNotPaid: false,
       isNotCharged: false,
       rewards: undefined,
-      jungleCoinsValue: j$Received * 10, // J$ value in USD (1 J$ = $10)
       netCashflow: 0, // No cashflow, just currency exchange
       status: FinancialStatus.DONE,
       createdAt: getUTCNow(),
@@ -1061,7 +1066,6 @@ export async function createFinancialRecordFromJ$CashOut(
       isNotPaid: false,
       isNotCharged: false,
       netCashflow: 0,
-      jungleCoinsValue: j$Sold * 10, // J$ value in USD
       
       exchangeType,
       exchangeCounterAmount: cashOutType === 'ZAPS' ? amountPaid : undefined,
@@ -1086,7 +1090,6 @@ export async function createFinancialRecordFromJ$CashOut(
       isNotPaid: false,
       isNotCharged: false,
       netCashflow: cashOutType === 'USD' ? -amountPaid : 0,
-      jungleCoinsValue: j$Sold * 10,
       
       exchangeType,
       exchangeCounterAmount: cashOutType === 'ZAPS' ? amountPaid : undefined,

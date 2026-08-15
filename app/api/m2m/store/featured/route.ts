@@ -52,7 +52,7 @@ function toStoreItemPayload(item: Item) {
       thumb: cdnUrlForObjectKey(item.media?.thumb),
       gallery: item.media?.gallery?.map((url) => cdnUrlForObjectKey(url)) || [],
     },
-    sourceFileUrl: item.sourceFileUrl || undefined,
+    sourceFileUrl: item.context?.sourceFileUrl || undefined,
   };
 }
 

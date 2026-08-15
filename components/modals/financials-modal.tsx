@@ -245,8 +245,12 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         revenueString: extractMoneyValue(record.revenue).toString(),
         jungleCoins,
         jungleCoinsString: jungleCoins.toString(),
-        isNotPaid: recordStatus === FinancialStatus.PENDING,
-        isNotCharged: recordStatus === FinancialStatus.PENDING,
+        isNotPaid: record.context?.paymentObservation
+          ? !record.context.paymentObservation.paid
+          : recordStatus === FinancialStatus.PENDING,
+        isNotCharged: record.context?.paymentObservation
+          ? !record.context.paymentObservation.charged
+          : recordStatus === FinancialStatus.PENDING,
         status:
           String(record.status) === 'Collected'
             ? FinancialStatus.DONE
@@ -552,6 +556,9 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       targetSiteId: formData.targetSite || null,
       characterId: formData.isNewCustomer ? null : formData.characterId,  // Ambassador: Existing customer
       playerCharacterId: playerCharacterId,
+      sourceTaskId: record?.sourceTaskId ?? null,
+      sourceSaleId: record?.sourceSaleId ?? null,
+      salesChannel: record?.salesChannel ?? null,
       cost: toMoney(formData.cost),
       revenue: toMoney(formData.revenue),
       netCashflow: toMoney(formData.revenue - formData.cost),
@@ -571,6 +578,10 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
           role: formData.customerCharacterRole,
         },
         jungleCoins: formData.jungleCoins,
+        paymentObservation: {
+          paid: !formData.isNotPaid,
+          charged: !formData.isNotCharged,
+        },
         newCustomerName: formData.isNewCustomer ? formData.newCustomerName : undefined,
         productionPlan: formData.outputItemType || formData.outputItemName
           ? {

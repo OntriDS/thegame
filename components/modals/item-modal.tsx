@@ -773,7 +773,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setMediaMain(item.media?.mainUrl || '');
       setMediaThumb(item.media?.thumbUrl || '');
       setMediaGallery(item.media?.galleryUrls?.join(';') || '');
-      setSourceFileUrl((item as any).sourceFileUrl || '');
+          setSourceFileUrl(item.context?.sourceFileUrl || (item as any).sourceFileUrl || '');
       setWidth((item as any).dimensions?.width?.toString() || '');
       setHeight((item as any).dimensions?.height?.toString() || '');
       setSize((item as any).size || '');
@@ -878,7 +878,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setMediaMain(selectedItem.media?.mainUrl || '');
         setMediaThumb(selectedItem.media?.thumbUrl || '');
         setMediaGallery(selectedItem.media?.galleryUrls?.join(';') || '');
-        setSourceFileUrl((selectedItem as any).sourceFileUrl || '');
+        setSourceFileUrl(selectedItem.context?.sourceFileUrl || (selectedItem as any).sourceFileUrl || '');
         // Extract dimensions
         setWidth((selectedItem as any).dimensions?.width?.toString() || '');
         setHeight((selectedItem as any).dimensions?.height?.toString() || '');

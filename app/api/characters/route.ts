@@ -11,6 +11,7 @@ import type { Character } from '@/types/entities';
 import { getLinksFor } from '@/links/link-registry';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { getFinancialCounterpartyId, getFinancialCounterpartyRole } from '@/lib/financial-record-counterparty-id';
+import { extractMoneyValue } from '@/lib/utils/financial-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,7 +82,7 @@ const buildDirectoryAmountTotals = async (characterIds: string[]): Promise<Map<s
     if (!customerCharacterId || !idSet.has(customerCharacterId)) continue;
     if (!isCustomerRole(getFinancialCounterpartyRole(record))) continue;
 
-    const amount = Number(record.revenue || 0);
+    const amount = extractMoneyValue(record.revenue);
     if (!Number.isFinite(amount) || amount <= 0) continue;
     const current = totals.get(customerCharacterId);
     if (!current) continue;

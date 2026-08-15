@@ -636,7 +636,7 @@ function toStoreItemPayload(item: Item) {
       thumb: cdn(item.media?.thumb),
       gallery: item.media?.gallery?.map((url) => cdn(url)) || [],
     },
-    sourceFileUrl: item.sourceFileUrl || undefined,
+    sourceFileUrl: item.context?.sourceFileUrl || undefined,
   };
 }
 

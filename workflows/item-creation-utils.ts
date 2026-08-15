@@ -4,7 +4,7 @@
 // Creates items from Tasks and Financial Records using emissary fields
 
 import type { Task, Item, FinancialRecord } from '@/types/entities';
-import { ItemStatus, ItemType, LinkType, EntityType, TaskStatus } from '@/types/enums';
+import { ItemStatus, ItemType, LinkType, EntityType, TaskStatus, EntitySchemaVersion } from '@/types/enums';
 import { upsertItem, removeItem, getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById } from '@/data-store/datastore';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 // links are created by processLinkEntity()
@@ -13,6 +13,9 @@ import { getUTCNow } from '@/lib/utils/utc-utils';
 import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution';
 import { getItemCharacterId } from '@/lib/item-character-id';
 import { getFinancialCounterpartyId } from '@/lib/financial-record-counterparty-id';
+import { toMoney } from '@/lib/utils/financial-utils';
+import { makeLink } from '@/links/links-workflows';
+import { createLink } from '@/links/link-registry';
 
 /**
  * Determines the default item status based on item type and sale status
@@ -51,11 +54,23 @@ export function getDefaultItemStatus(
  */
 export async function createItemFromTask(task: Task): Promise<Item | null> {
   try {
-    console.log(`[createItemFromTask] Starting item creation for task: ${task.name} (${task.id})`);
-    console.log(`[createItemFromTask] outputItemType: ${task.outputItemType}`);
-    console.log(`[createItemFromTask] outputQuantity: ${task.outputQuantity}`);
+    const plan = task.context?.productionPlan;
+    const outputItemType = plan?.outputItemType ?? task.outputItemType;
+    const outputItemSubType = plan?.outputItemSubType ?? task.outputItemSubType;
+    const outputQuantity = Number(plan?.outputQuantity ?? task.outputQuantity ?? 1);
+    const outputItemName = plan?.outputItemName ?? task.outputItemName;
+    const outputItemPrice = Number(plan?.outputItemPrice?.minorUnits ?? task.outputItemPrice ?? 0) /
+      (plan?.outputItemPrice ? 100 : 1);
+    const outputUnitCost = Number(plan?.outputUnitCost?.minorUnits ?? task.outputUnitCost ?? 0) /
+      (plan?.outputUnitCost ? 100 : 1);
+    const isNewItem = plan?.isNewItem ?? task.isNewItem;
+    const isSold = plan?.isSold ?? task.isSold;
 
-    if (task.outputItemId && !task.isNewItem) {
+    console.log(`[createItemFromTask] Starting item creation for task: ${task.name} (${task.id})`);
+    console.log(`[createItemFromTask] outputItemType: ${outputItemType}`);
+    console.log(`[createItemFromTask] outputQuantity: ${outputQuantity}`);
+
+    if (task.outputItemId && !isNewItem) {
       console.log(`[createItemFromTask] Existing item detected (outputItemId=${task.outputItemId}) - updating stock`);
       const existingItem = await getItemById(task.outputItemId);
       if (existingItem) {
@@ -65,7 +80,7 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
             existingItem.stock?.[0]?.siteId ||
             '';
 
-        const quantityToAdd = task.outputQuantity || 1;
+        const quantityToAdd = outputQuantity;
         const updatedStock = Array.isArray(existingItem.stock)
           ? existingItem.stock.map(stockPoint => ({ ...stockPoint }))
           : [];
@@ -94,7 +109,7 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       }
     }
 
-    if (!task.outputItemType) {
+    if (!outputItemType) {
       console.error('Cannot create item: outputItemType is required');
       return null;
     }
@@ -103,44 +118,49 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
     // The workflow only calls this when hasEffect('task:{id}:itemCreated') === false
     console.log(`[createItemFromTask] Creating new item (Effect Registry confirmed no existing item)`);
 
+    const now = getUTCNow();
+    const ownerId = getTaskCounterpartyId(task);
     const newItem: Item = {
       id: `item-${task.id}-${Date.now()}`, // More predictable ID based on task ID
-      name: task.outputItemName || `${task.outputItemType} from ${task.name}`,
+      schemaVersion: EntitySchemaVersion.V1,
+      version: 0,
+      name: outputItemName || `${outputItemType} from ${task.name}`,
       description: `Created from task: ${task.name}`,
-      type: task.outputItemType as ItemType,
-      subItemType: task.outputItemSubType || undefined,
-      collection: task.outputItemCollection || undefined,
+      type: outputItemType as ItemType,
+      collection: plan?.outputItemCollection ?? task.outputItemCollection ?? undefined,
       status: getDefaultItemStatus(
-        task.outputItemType || '',
-        task.isSold || false,
+        outputItemType || '',
+        isSold || false,
         task.status === TaskStatus.IN_PROGRESS || task.status === TaskStatus.FINISHING
-          ? task.outputItemStatus
+          ? (plan?.outputItemStatus ?? task.outputItemStatus)
           : undefined,
         task.status
       ),
-      unitCost: task.outputUnitCost || 0,
-      additionalCost: 0,
-      price: task.outputItemPrice || 0, // Use task's outputItemPrice instead of unitCost
-      value: 0,
+      pricing: {
+        unitCost: toMoney(outputUnitCost),
+        additionalCost: toMoney(0),
+        targetPrice: toMoney(outputItemPrice),
+      },
       quantitySold: 0,
       sourceTaskId: task.id, // Link item back to the task that created it
-      characterId: getTaskCounterpartyId(task), // Emissary: Pass customer as item owner
-      year: (task.collectedAt || task.doneAt || getUTCNow()).getUTCFullYear(), // Use task's date (UTC)
-      createdAt: getUTCNow(),
-      updatedAt: getUTCNow(),
+      createdAt: now,
+      updatedAt: now,
       media: {
-        main: "",
-        thumb: "",
-        gallery: [],
+        mainUrl: "",
       },
-      sourceFileUrl: "",
-      links: [],  // initialize links array (registry creates real links)
+      context: {
+        kind: 'item-context',
+        schemaVersion: 1,
+        subItemType: outputItemSubType || undefined,
+        year: new Date(task.collectedAt || task.doneAt || now).getUTCFullYear(),
+        sourceFileUrl: undefined,
+      },
       stock: [
         {
           siteId: (task.targetSiteId && task.targetSiteId !== 'none' && task.targetSiteId !== 'None' ? task.targetSiteId : null) ||
             (task.siteId && task.siteId !== 'none' && task.siteId !== 'None' ? task.siteId : null) ||
             '', // Default to no-site (temporary fallback)
-          quantity: task.outputQuantity || 1
+          quantity: outputQuantity
         }
       ]
     };
@@ -148,6 +168,13 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
     // Store the item in DataStore
     console.log(`[createItemFromTask] Creating new item:`, newItem);
     const createdItem = await upsertItem(newItem);
+    if (ownerId) {
+      await createLink(makeLink(
+        LinkType.ITEM_CHARACTER,
+        { type: EntityType.ITEM, id: createdItem.id },
+        { type: EntityType.CHARACTER, id: ownerId }
+      ));
+    }
     console.log(`[createItemFromTask] ✅ Item created successfully`);
 
     return createdItem;
@@ -164,9 +191,18 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
  */
 export async function createItemFromRecord(record: FinancialRecord): Promise<Item | null> {
   try {
+    const plan = record.context?.productionPlan;
+    const outputItemType = plan?.outputItemType ?? (record as any).outputItemType;
+    const outputItemSubType = plan?.outputItemSubType ?? (record as any).outputItemSubType;
+    const outputQuantity = Number(plan?.outputQuantity ?? (record as any).outputQuantity ?? 1);
+    const outputItemName = plan?.outputItemName ?? (record as any).outputItemName;
+    const outputItemPrice = Number(plan?.outputItemPrice?.minorUnits ?? (record as any).outputItemPrice ?? 0) /
+      (plan?.outputItemPrice ? 100 : 1);
+    const outputUnitCost = Number(plan?.outputUnitCost?.minorUnits ?? (record as any).outputUnitCost ?? 0) /
+      (plan?.outputUnitCost ? 100 : 1);
     console.log(`[createItemFromRecord] Starting item creation for record: ${record.name} (${record.id})`);
-    console.log(`[createItemFromRecord] outputItemType: ${record.outputItemType}`);
-    console.log(`[createItemFromRecord] outputQuantity: ${record.outputQuantity}`);
+    console.log(`[createItemFromRecord] outputItemType: ${outputItemType}`);
+    console.log(`[createItemFromRecord] outputQuantity: ${outputQuantity}`);
 
     const isValidSite = (siteId: string | null | undefined) => {
       const normalized = String(siteId || '').trim();
@@ -185,7 +221,7 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
           existingItem.stock?.[0]?.siteId ||
           '';
 
-        const quantityToAdd = record.outputQuantity || 1;
+        const quantityToAdd = outputQuantity;
         const updatedStock = Array.isArray(existingItem.stock)
           ? existingItem.stock.map(stockPoint => ({ ...stockPoint }))
           : [];
@@ -204,7 +240,6 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
           ...existingItem,
           stock: updatedStock,
           updatedAt: getUTCNow(),
-          characterId: getItemCharacterId(existingItem) || resolvedOwnerCharacterId || null,
         };
 
         const savedItem = await upsertItem(updatedItem);
@@ -215,7 +250,7 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       }
     }
 
-    if (!record.outputItemType) {
+    if (!outputItemType) {
       console.error('Cannot create item: outputItemType is required');
       return null;
     }
@@ -229,35 +264,38 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
         (isValidSite(record.siteId) ? record.siteId as string : null)) ||
       '';
 
+    const now = getUTCNow();
     const newItem: Item = {
       id: `item-${record.id}-${Date.now()}`, // More predictable ID based on record ID
-      name: record.outputItemName || `${record.outputItemType} from ${record.name}`,
+      schemaVersion: EntitySchemaVersion.V1,
+      version: 0,
+      name: outputItemName || `${outputItemType} from ${record.name}`,
       description: `Created from record: ${record.name}`,
-      type: record.outputItemType as ItemType,
-      subItemType: record.outputItemSubType || undefined,
-      collection: record.outputItemCollection || undefined,
-      status: getDefaultItemStatus(record.outputItemType || '', record.isSold || false, record.outputItemStatus),
-      unitCost: record.outputUnitCost || 0,
-      additionalCost: 0,
-      price: record.outputItemPrice || 0, // Use record's outputItemPrice instead of unitCost
-      value: 0,
+      type: outputItemType as ItemType,
+      collection: plan?.outputItemCollection ?? (record as any).outputItemCollection ?? undefined,
+      status: getDefaultItemStatus(outputItemType || '', plan?.isSold || (record as any).isSold || false, plan?.outputItemStatus ?? (record as any).outputItemStatus),
+      pricing: {
+        unitCost: toMoney(outputUnitCost),
+        additionalCost: toMoney(0),
+        targetPrice: toMoney(outputItemPrice),
+      },
       quantitySold: 0,
       sourceRecordId: record.id, // Link item back to the record that created it
-      characterId: resolvedOwnerCharacterId,
-      year: record.year, // Use record's year
-      createdAt: getUTCNow(),
-      updatedAt: getUTCNow(),
+      createdAt: now,
+      updatedAt: now,
       media: {
-        main: "",
-        thumb: "",
-        gallery: [],
+        mainUrl: "",
       },
-      sourceFileUrl: "",
-      links: [],  // initialize links array (registry creates real links)
+      context: {
+        kind: 'item-context',
+        schemaVersion: 1,
+        subItemType: outputItemSubType || undefined,
+        year: record.year,
+      },
       stock: [
         {
           siteId: resolvedSiteId, // Default to None (no site) when not provided
-          quantity: record.outputQuantity || 1
+          quantity: outputQuantity
         }
       ]
     };
@@ -265,6 +303,13 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
     // Store the item in DataStore
     console.log(`[createItemFromRecord] Creating new item:`, newItem);
     const createdItem = await upsertItem(newItem);
+    if (resolvedOwnerCharacterId) {
+      await createLink(makeLink(
+        LinkType.ITEM_CHARACTER,
+        { type: EntityType.ITEM, id: createdItem.id },
+        { type: EntityType.CHARACTER, id: resolvedOwnerCharacterId }
+      ));
+    }
     console.log(`[createItemFromRecord] ✅ Item created successfully`);
 
     return createdItem;

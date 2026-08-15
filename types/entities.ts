@@ -694,6 +694,11 @@ export interface FinancialRecordContextV1 {
   schemaVersion: 1;
   counterparty?: TaskCounterpartyFacetV1;
   jungleCoins?: number; // J$ internal currency value
+  /** Operational payment state replacing legacy root payment booleans. */
+  paymentObservation?: {
+    paid: boolean;
+    charged: boolean;
+  };
   productionPlan?: ProductionPlanFacetV1; // Replaces outputItem* fields
   exchangeType?: 'POINTS_TO_J$' | 'J$_TO_USD' | 'J$_TO_ZAPS';
   exchangeCounterAmount?: number;
@@ -1156,6 +1161,15 @@ export interface Player extends EntityEnvelope {
 export interface Character extends EntityEnvelope {
   // 1. IDENTITY & AUTHENTICATION
   accountId?: EntityId | null;     // 🏛️ AMBASSADOR FIELD (links to Account entity)
+
+  // 1.1 OPTIONAL CHARACTER CONTACT
+  // Characters may be real people without an authenticated Account. These
+  // fields describe the contact channel known for the Character and are not
+  // required to create or use a Character. When an Account exists, Account is
+  // the authentication identity; Character contact remains valid business data.
+  contactEmail?: string;
+  contactPhone?: string;
+  contactPhoneCountryCode?: string;
 
   // 2. ROLES - Core: defines WHO they are to the system AND Player
   roles: CharacterRole[];    // [PLAYER, FOUNDER, CUSTOMER, FAMILY, TEAM, etc.]

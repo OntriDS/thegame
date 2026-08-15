@@ -131,6 +131,7 @@ import {
   normalizeItemTaxonomyFields,
   normalizeTaskOutputTaxonomy,
   normalizeFinancialOutputTaxonomy,
+  normalizeFinancialRecordFields,
   normalizeSaleOutputTaxonomy,
 } from '@/lib/item-taxonomy-normalize';
 
@@ -864,6 +865,28 @@ export async function getLegacyItems(): Promise<Item[]> {
 }
 
 export async function getItemsByCharacterId(ownerId: string): Promise<Item[]> {
+  // Canonical ownership is represented by ITEM_CHARACTER links. The old
+  // characterId index is retained only for historical compatibility.
+  const { getLinksFor } = await import('@/links/link-registry');
+  const links = await getLinksFor({ type: EntityType.CHARACTER, id: ownerId });
+  const linkedItemIds = Array.from(new Set(
+    links
+      .filter((link: any) =>
+        link.linkType === 'ITEM_CHARACTER' || link.linkType === 'CHARACTER_ITEM'
+      )
+      .map((link: any) =>
+        link.source?.type === EntityType.ITEM ? link.source.id :
+          link.target?.type === EntityType.ITEM ? link.target.id : null
+      )
+      .filter(Boolean)
+  ));
+
+  if (linkedItemIds.length > 0) {
+    const linkedItems = await Promise.all(linkedItemIds.map(id => repoGetItemById(id as string)));
+    return linkedItems.filter((item): item is Item => Boolean(item));
+  }
+
+  // Compatibility fallback for pre-link records only.
   return await repoGetItemsByCharacterId(ownerId);
 }
 
@@ -982,7 +1005,7 @@ export async function removeItem(id: string): Promise<void> {
 
 // FINANCIALS
 export async function upsertFinancial(financial: FinancialRecord, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean }): Promise<FinancialRecord> {
-  const financialNorm = normalizeFinancialOutputTaxonomy(financial);
+  const financialNorm = normalizeFinancialRecordFields(normalizeFinancialOutputTaxonomy(financial));
   const previous = await repoGetFinancialById(financialNorm.id);
 
   // Identity Shield: Time-Window Deduplication (2 minutes)
@@ -1040,12 +1063,10 @@ export async function getAllFinancials(): Promise<FinancialRecord[]> {
 }
 
 /** Financial rows that still need settlement (unpaid or uncharged). No COLLECTED lifecycle on finrecs. */
-export async function getActiveFinancials(): Promise<FinancialRecord[]> {
-  const financials = await repoGetAllFinancials();
-  return financials.filter(
-    (f) => (f.status === FinancialStatus.PENDING) || f.status === FinancialStatus.PENDING
-  );
-}
+  export async function getActiveFinancials(): Promise<FinancialRecord[]> {
+    const financials = await repoGetAllFinancials();
+    return financials.filter((f) => f.status === FinancialStatus.PENDING);
+  }
 
 // Helper to chunk arrays for Redis MGET (prevents payload size errors)
 const chunkArray = <T>(arr: T[], size: number): T[][] =>
@@ -1733,24 +1754,6 @@ export async function getPlayerArchiveEventsByMonth(mmyy: string): Promise<Playe
           fp: task.context?.rewardIntent?.points?.fp ?? 0,
           rp: task.context?.rewardIntent?.points?.rp ?? 0,
           xp: task.context?.rewardIntent?.points?.xp ?? 0,
-        },
-      });
-    }
-  });
-
-  financials.forEach((financial) => {
-    if (hasPoints((financial as any).jungleCoins)) {
-      rows.push({
-        id: `financial:${financial.id}`,
-        sourceType: 'financial',
-        sourceId: financial.id,
-        description: financial.name,
-        date: toUTCISOString(new Date(Date.UTC(financial.year, Math.max(0, financial.month - 1), 1))),
-        points: {
-          hp: (financial as any).jungleCoins?.hp ?? 0,
-          fp: (financial as any).jungleCoins?.fp ?? 0,
-          rp: (financial as any).jungleCoins?.rp ?? 0,
-          xp: (financial as any).jungleCoins?.xp ?? 0,
         },
       });
     }

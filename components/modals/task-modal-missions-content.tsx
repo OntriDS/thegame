@@ -43,6 +43,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { format } from 'date-fns'; // Keeping for time formatting (HH:mm)
 import { formatForDisplay, formatDayMonth } from '@/lib/utils/date-display-utils';
 import { getUTCNow } from '@/lib/utils/utc-utils';
+import { toMoney } from '@/lib/utils/financial-utils';
 import { TaskModalFooter } from './task-modal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { ensureCounterpartyRole } from '@/lib/utils/character-role-sync';
@@ -478,6 +479,23 @@ export default function MissionTreeModalContent({
           counterpartyId: isNewCustomer ? null : customerCharacterId,
           role: customerCharacterRole,
         },
+        financialIntent: cost || revenue
+          ? { costIntent: toMoney(cost), revenueIntent: toMoney(revenue) }
+          : undefined,
+        productionPlan: outputItemType || outputItemName.trim() || !isNewItem
+          ? {
+              ...(task as any)?.context?.productionPlan,
+              outputItemType: outputItemType || undefined,
+              outputItemSubType: outputItemSubType || undefined,
+              outputQuantity,
+              outputUnitCost: toMoney(outputUnitCost),
+              outputItemName: outputItemName.trim() || undefined,
+              outputItemPrice: toMoney(outputItemPrice),
+              isNewItem,
+              isSold,
+              outputItemStatus,
+            }
+          : undefined,
       },
       playerCharacterId: finalPlayerCharacterId,
       ownerId: status === TaskStatus.NONE ? null : (task ? getTaskOwnerIds(task)[0] || null : ownerId),

@@ -39,8 +39,9 @@ const STATE_FIELDS = ['isNotPaid', 'isNotCharged'];
  * else createdAt, else fallback.
  */
 function getFinancialLogAnchorDate(f: FinancialRecord, fallback?: Date): Date {
-  if ((f as any).doneAt) {
-    const d = (f as any).doneAt instanceof Date ? (f as any).doneAt : new Date((f as any).doneAt as string);
+  const doneAt = f.lifecycle?.doneAt;
+  if (doneAt) {
+    const d = new Date(doneAt as string);
     if (Number.isFinite(d.getTime())) return d;
   }
   if (typeof f.year === 'number' && typeof f.month === 'number' && f.month >= 1 && f.month <= 12) {
@@ -87,7 +88,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     const sideEffects: Promise<void>[] = [];
 
     // Item creation from emissary fields - on record creation
-    if ((financial as any).outputItemType && (financial as any).outputQuantity) {
+    if (financial.context?.productionPlan?.outputItemType && financial.context.productionPlan?.outputQuantity) {
       sideEffects.push(
         (async () => {
           const itemEffectKey = EffectKeys.sideEffect('financial', financial.id, 'itemCreated');
@@ -102,7 +103,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     }
 
     // J$ Wallet Cache Update - on record creation
-    if ((financial as any).jungleCoins !== 0) {
+    if ((financial.context?.jungleCoins ?? 0) !== 0) {
       sideEffects.push(
         (async () => {
           // Identify target character(s)
@@ -275,7 +276,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     }
 
     // Propagate J$ changes to Character Wallet Cache
-    if ((financial as any).jungleCoins !== (previousFinancial.context as any)?.rewardIntent?.points) {
+    if ((financial.context?.jungleCoins ?? 0) !== (previousFinancial.context?.jungleCoins ?? 0)) {
       if (financialCounterpartyId) await recalculateCharacterWallet(financialCounterpartyId);
       if (financial.playerCharacterId) await recalculateCharacterWallet(financial.playerCharacterId);
 

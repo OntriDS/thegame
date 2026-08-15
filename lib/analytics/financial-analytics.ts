@@ -8,6 +8,7 @@ import { getLinksFor } from '@/links/link-registry';
 import { getItemById, getAllItems } from '@/data-store/datastore';
 import { getSaleById, getAllSales } from '@/data-store/datastore';
 import type { Station } from '@/types/type-aliases';
+import { extractMoneyValue } from '@/lib/utils/financial-utils';
 
 async function metricsForFinrecItemLink(
   record: FinancialRecord,
@@ -26,14 +27,16 @@ async function metricsForFinrecItemLink(
       }
     }
   }
-  if (record.outputItemId === itemId && record.outputQuantity) {
-    const q = record.outputQuantity;
-    const up =
-      record.outputItemPrice ?? (record.revenue > 0 && q ? record.revenue / q : 0);
+  const plan = record.context?.productionPlan;
+  if (plan?.outputQuantity) {
+    const q = plan.outputQuantity;
+    const revenue = extractMoneyValue(record.revenue);
+    const up = extractMoneyValue(plan.outputItemPrice) || (revenue > 0 && q ? revenue / q : 0);
     return { quantity: q, unitPrice: up, revenue: q * up };
   }
-  if (record.revenue > 0) {
-    return { quantity: 1, unitPrice: record.revenue, revenue: record.revenue };
+  const revenue = extractMoneyValue(record.revenue);
+  if (revenue > 0) {
+    return { quantity: 1, unitPrice: revenue, revenue };
   }
   return { quantity: 0, unitPrice: 0, revenue: 0 };
 }
@@ -135,13 +138,13 @@ export async function getProductPerformance(
       const revenue = lineRevenue || (quantity * unitPrice);
 
       // Cost comes from the financial record (if it's a cost record)
-      if (record.cost > 0) {
-        perf.totalCost += record.cost;
+      if (extractMoneyValue(record.cost) > 0) {
+        perf.totalCost += extractMoneyValue(record.cost);
       }
       
       // Revenue comes from the link metadata or record
-      if (record.revenue > 0 || revenue > 0) {
-        perf.totalRevenue += revenue || record.revenue;
+      if (extractMoneyValue(record.revenue) > 0 || revenue > 0) {
+        perf.totalRevenue += revenue || extractMoneyValue(record.revenue);
       }
 
       perf.quantitySold += quantity;
@@ -174,7 +177,7 @@ export async function getChannelPerformance(
   const channelMap = new Map<string, ChannelPerformance>();
 
   for (const record of records) {
-    if (!record.salesChannel || record.revenue <= 0) continue;
+    if (!record.salesChannel || extractMoneyValue(record.revenue) <= 0) continue;
 
     const channel = record.salesChannel;
 
@@ -188,7 +191,7 @@ export async function getChannelPerformance(
     }
 
     const perf = channelMap.get(channel)!;
-    perf.totalRevenue += record.revenue;
+    perf.totalRevenue += extractMoneyValue(record.revenue);
     perf.transactionCount += 1;
   }
 
@@ -276,8 +279,8 @@ export function getStationPerformance(
     }
 
     const perf = stationMap.get(station)!;
-    perf.totalCost += record.cost;
-    perf.totalRevenue += record.revenue;
+    perf.totalCost += extractMoneyValue(record.cost);
+    perf.totalRevenue += extractMoneyValue(record.revenue);
     perf.recordCount += 1;
   }
 
@@ -301,7 +304,7 @@ export async function getCostsByProductStation(
   const stationMap: Record<string, { cost: number; recordCount: number }> = {};
 
   for (const record of records) {
-    if (record.cost <= 0) continue;
+    if (extractMoneyValue(record.cost) <= 0) continue;
 
     // Get items linked to this financial record
     const links = await getLinksFor({ type: EntityType.FINANCIAL, id: record.id });
@@ -316,7 +319,7 @@ export async function getCostsByProductStation(
         stationMap[productType] = { cost: 0, recordCount: 0 };
       }
 
-      stationMap[productType].cost += record.cost;
+      stationMap[productType].cost += extractMoneyValue(record.cost);
       stationMap[productType].recordCount += 1;
     }
   }
@@ -337,7 +340,7 @@ export async function getRevenuesByProductStation(
   const stationMap: Record<string, { revenue: number; transactionCount: number }> = {};
 
   for (const record of records) {
-    if (record.revenue <= 0 || !record.sourceSaleId) continue;
+    if (extractMoneyValue(record.revenue) <= 0 || !record.sourceSaleId) continue;
 
     // Get the sale
     const sale = await getSaleById(record.sourceSaleId);

@@ -255,7 +255,7 @@ function convertItemsToCSV(items: any[]): string {
       escapeCSVField(item.media?.main || ''),
       escapeCSVField(item.media?.thumb || ''),
       escapeCSVField(item.media?.gallery?.join(';') || ''),
-      escapeCSVField(item.sourceFileUrl || '')
+      escapeCSVField(item.context?.sourceFileUrl || '')
     ];
     csvRows.push(row.join(','));
   });

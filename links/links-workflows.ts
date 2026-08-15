@@ -121,11 +121,14 @@ export async function processTaskEffects(task: Task): Promise<void> {
   // NOTE: playerCharacterId is internal assignment, not logged as a character action
   await syncTaskCharacterCounterpartyLinks(task);
 
-  // Create TASK_ITEM link for items created from task emissary fields
-  if (task.outputItemType && task.outputQuantity && task.status === TaskStatus.DONE) {
+  // Create TASK_ITEM link for items created from the canonical production plan.
+  // Existing flat fields remain read-only compatibility for pre-migration tasks.
+  const productionPlan = task.context?.productionPlan;
+  const outputItemType = productionPlan?.outputItemType ?? task.outputItemType;
+  if (outputItemType && (productionPlan?.outputQuantity ?? task.outputQuantity)) {
     // Find the item created by this task (optimized query)
     const taskItems = await getItemsBySourceTaskId(task.id);
-    const createdItem = taskItems.find(item => item.type === task.outputItemType);
+    const createdItem = taskItems.find(item => item.type === outputItemType);
 
     if (createdItem) {
       const l = makeLink(
@@ -207,11 +210,9 @@ export async function processItemEffects(item: Item): Promise<void> {
       });
     }
   } else {
-    // If no owner, remove all ITEM_CHARACTER links
-    const oldCharacterLinks = existingLinks.filter(l => l.linkType === LinkType.ITEM_CHARACTER);
-    for (const oldLink of oldCharacterLinks) {
-      await removeLink(oldLink.id);
-    }
+    // Canonical ownership is link-owned. Do not remove an existing ownership
+    // link merely because the compatibility root characterId is absent.
+    // New canonical Items intentionally do not persist characterId.
   }
 
   // Note: ITEM_SALE links handled in processSaleEffects (from sale.lines)
@@ -384,8 +385,10 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
     }
   }
 
-  // Create FINREC_ITEM link for items created from financial record emissary fields
-  if ((fin.outputItemType || fin.outputItemId) && fin.outputQuantity) {
+  // Create FINREC_ITEM link for items created from the canonical financial
+  // production plan. Legacy root output fields are no longer authoritative.
+  const productionPlan = fin.context?.productionPlan;
+  if (productionPlan?.outputItemType && productionPlan.outputQuantity) {
     // Remove previous FINREC_ITEM links to avoid duplicates when switching items
     const existingItemLinks = existingLinks.filter(link => link.linkType === LinkType.FINREC_ITEM);
     for (const link of existingItemLinks) {
@@ -394,13 +397,9 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
 
     let createdItem: Item | undefined;
 
-    if (fin.outputItemId) {
-      createdItem = await getItemById(fin.outputItemId) || undefined;
-    }
-
     if (!createdItem) {
       const recordItems = await getItemsBySourceRecordId(fin.id);
-      createdItem = recordItems.find(item => item.type === fin.outputItemType);
+      createdItem = recordItems.find(item => item.type === productionPlan.outputItemType);
     }
 
     if (createdItem) {

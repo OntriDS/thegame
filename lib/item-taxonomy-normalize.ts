@@ -119,6 +119,117 @@ export function normalizeFinancialOutputTaxonomy(record: FinancialRecord): Finan
   };
 }
 
+/**
+ * Canonical write boundary for FinancialRecords.
+ *
+ * Older workflow code still constructs plain numeric financial fields and
+ * root-level emissary fields. New records must persist Money/context/lifecycle
+ * only, so the adapter translates those inputs once before repository write.
+ */
+export function normalizeFinancialRecordFields(record: FinancialRecord): FinancialRecord {
+  const raw = record as any;
+  const toMoneyValue = (value: unknown): { minorUnits: string; currency: string } => {
+    if (value && typeof value === 'object' && typeof (value as any).minorUnits === 'string') return value as any;
+    return { minorUnits: String(Math.round(Number(value || 0) * 100)), currency: 'USD' };
+  };
+
+  const cost = toMoneyValue(raw.cost);
+  const revenue = toMoneyValue(raw.revenue);
+  const numericCost = Number(cost.minorUnits) / 100;
+  const numericRevenue = Number(revenue.minorUnits) / 100;
+
+  const legacyPlanValues = [
+    raw.outputItemType,
+    raw.outputItemSubType,
+    raw.outputQuantity,
+    raw.outputItemName,
+    raw.outputItemPrice,
+    raw.outputUnitCost,
+    raw.isNewItem,
+    raw.isSold,
+  ];
+  const existingPlan = raw.context?.productionPlan;
+  const hasLegacyPlan = legacyPlanValues.some((value) => value !== undefined && value !== null);
+  const productionPlan = existingPlan || hasLegacyPlan
+    ? {
+        ...existingPlan,
+        outputItemType: existingPlan?.outputItemType ?? raw.outputItemType,
+        outputItemSubType: existingPlan?.outputItemSubType ?? raw.outputItemSubType,
+        outputQuantity: existingPlan?.outputQuantity ?? raw.outputQuantity,
+        outputItemName: existingPlan?.outputItemName ?? raw.outputItemName,
+        outputItemPrice: existingPlan?.outputItemPrice ?? (raw.outputItemPrice != null ? toMoneyValue(raw.outputItemPrice) : undefined),
+        outputUnitCost: existingPlan?.outputUnitCost ?? (raw.outputUnitCost != null ? toMoneyValue(raw.outputUnitCost) : undefined),
+        isNewItem: existingPlan?.isNewItem ?? raw.isNewItem,
+        isSold: existingPlan?.isSold ?? raw.isSold,
+      }
+    : undefined;
+
+  const {
+    customerCharacterRole,
+    newCustomerName,
+    jungleCoins,
+    outputItemType,
+    outputItemSubType,
+    outputQuantity,
+    outputUnitCost,
+    outputItemName,
+    outputItemPrice,
+    outputItemCollection,
+    outputItemStatus,
+    isNewItem,
+    isSold,
+    isNotPaid,
+    isNotCharged,
+    rewards,
+    doneAt,
+    collectedAt,
+    netCashflow,
+    jungleCoinsValue,
+    outputItemId,
+    ...canonicalBase
+  } = raw;
+
+  const paymentObservation = raw.context?.paymentObservation ?? {
+    paid: !Boolean(isNotPaid ?? raw.status === 'pending'),
+    charged: !Boolean(isNotCharged),
+  };
+
+  return {
+    ...canonicalBase,
+    schemaVersion: raw.schemaVersion ?? 1,
+    version: raw.version ?? 0,
+    cost,
+    revenue,
+    netCashflow: toMoneyValue(raw.netCashflow ?? numericRevenue - numericCost),
+    status: raw.status ?? (isNotPaid ? 'pending' : 'done'),
+    // Temporary read-compatibility mirrors. Canonical readers must use
+    // status/context; these remain until every older projection is migrated.
+    isNotPaid: Boolean(isNotPaid ?? raw.status === 'pending'),
+    isNotCharged: Boolean(isNotCharged),
+    customerCharacterRole,
+    jungleCoins: raw.context?.jungleCoins ?? jungleCoins ?? 0,
+    lifecycle: {
+      ...(raw.lifecycle || {}),
+      doneAt: raw.lifecycle?.doneAt ?? doneAt,
+      collectedAt: raw.lifecycle?.collectedAt ?? collectedAt,
+    },
+    context: {
+      ...(raw.context || {}),
+      kind: 'financial-record-context',
+      schemaVersion: 1,
+      counterparty: {
+        ...(raw.context?.counterparty || {}),
+        counterpartyId: raw.context?.counterparty?.counterpartyId ?? raw.characterId ?? null,
+        role: raw.context?.counterparty?.role ?? customerCharacterRole,
+      },
+      jungleCoins: raw.context?.jungleCoins ?? jungleCoins ?? 0,
+      paymentObservation,
+      newCustomerName: raw.context?.newCustomerName ?? newCustomerName,
+      productionPlan,
+    },
+  } as FinancialRecord;
+}
+
 export function normalizeServiceLineOutputTaxonomy(line: ServiceLine): ServiceLine {
   const plan = line.context?.productionPlan;
   if (!plan) return line;

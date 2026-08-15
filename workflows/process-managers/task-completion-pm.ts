@@ -148,7 +148,9 @@ export class TaskCompletionProcessManager {
     
     // Check if task has financial intent
     const fi = task.context?.financialIntent;
-    const hasFinancialIntent = fi && ((fi.costIntent && Number(fi.costIntent.minorUnits) > 0) || (fi.revenueIntent && Number(fi.revenueIntent.minorUnits) > 0));
+    const hasFinancialIntent = fi
+      ? ((fi.costIntent && Number(fi.costIntent.minorUnits) > 0) || (fi.revenueIntent && Number(fi.revenueIntent.minorUnits) > 0))
+      : (Number((task as any).cost || 0) > 0 || Number((task as any).revenue || 0) > 0);
     if (!hasFinancialIntent) {
       execution.stepOutcomes[stepName] = {
         step: stepName,
@@ -222,7 +224,8 @@ export class TaskCompletionProcessManager {
     const stepName = 'createItem';
     
     // Check if task has production plan
-    if (!task.context?.productionPlan?.isNewItem) {
+    const isNewItem = task.context?.productionPlan?.isNewItem ?? (task as any).isNewItem;
+    if (!isNewItem) {
       execution.stepOutcomes[stepName] = {
         step: stepName,
         state: 'skipped',

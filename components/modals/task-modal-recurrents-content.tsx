@@ -43,6 +43,7 @@ import { computeNextSiblingOrder } from '@/lib/utils/task-order-utils';
 import { Calendar as CalendarIcon, Repeat, Network, User } from 'lucide-react';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { format } from 'date-fns';
+import { toMoney } from '@/lib/utils/financial-utils';
 import { FrequencyConfig } from '@/components/ui/frequency-calendar';
 // UTC STANDARDIZATION: Using new UTC utilities
 import { validateFrequencyConfig } from '@/lib/utils/recurrent-validation';;
@@ -468,6 +469,23 @@ export default function RecurrentTreeModalContent({
           counterpartyId: isNewCustomer ? null : customerCharacterId,
           role: customerCharacterRole,
         },
+        financialIntent: cost || revenue
+          ? { costIntent: toMoney(cost), revenueIntent: toMoney(revenue) }
+          : undefined,
+        productionPlan: outputItemType || outputItemName.trim() || !isNewItem
+          ? {
+              ...(task as any)?.context?.productionPlan,
+              outputItemType: outputItemType || undefined,
+              outputItemSubType: outputItemSubType || undefined,
+              outputQuantity,
+              outputUnitCost: toMoney(outputUnitCost),
+              outputItemName: outputItemName.trim() || undefined,
+              outputItemPrice: toMoney(outputItemPrice),
+              isNewItem,
+              isSold,
+              outputItemStatus,
+            }
+          : undefined,
       },
       playerCharacterId: finalPlayerCharacterId,
       ownerId: status === TaskStatus.NONE ? null : (task ? getTaskOwnerIds(task)[0] || null : ownerId),

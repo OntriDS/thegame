@@ -128,8 +128,9 @@ export interface OtherAssets {
  */
 export function cashflowCountableRevenue(record: FinancialRecord): number {
   if (record.status === FinancialStatus.PENDING) return 0;
-  if (record.isNotCharged) return 0;
-  return Number(record.revenue) || 0;
+  if (record.context?.paymentObservation && !record.context.paymentObservation.charged) return 0;
+  if ((record as any).isNotCharged) return 0;
+  return extractMoneyValue(record.revenue);
 }
 
 /**
@@ -137,8 +138,8 @@ export function cashflowCountableRevenue(record: FinancialRecord): number {
  */
 export function cashflowCountableCost(record: FinancialRecord): number {
   if (record.status === FinancialStatus.PENDING) return 0;
-  if ((record.status === FinancialStatus.PENDING)) return 0;
-  return Number(record.cost) || 0;
+  if (record.context?.paymentObservation && !record.context.paymentObservation.paid) return 0;
+  return extractMoneyValue(record.cost);
 }
 
 /**
@@ -146,8 +147,7 @@ export function cashflowCountableCost(record: FinancialRecord): number {
  */
 export function cashflowCountableJungleCoins(record: FinancialRecord): number {
   if (record.status === FinancialStatus.PENDING) return 0;
-  if ((record.status === FinancialStatus.PENDING)) return 0;
-  return Number((record as any).jungleCoins) || 0;
+  return Number(record.context?.jungleCoins ?? (record as any).jungleCoins) || 0;
 }
 
 /**
@@ -196,7 +196,7 @@ export function calculateTotals(breakdown: AreaBreakdown) {
       totalRevenue: totals.totalRevenue + station.revenue,
       totalCost: totals.totalCost + station.cost,
       net: totals.net + station.net,
-      totalJungleCoins: totals.totalJungleCoins + station.context?.rewardIntent?.points
+      totalJungleCoins: totals.totalJungleCoins + station.jungleCoins
     }),
     { totalRevenue: 0, totalCost: 0, net: 0, totalJungleCoins: 0 }
   );

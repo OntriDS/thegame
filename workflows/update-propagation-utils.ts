@@ -120,14 +120,27 @@ export async function updateFinancialRecordsFromTask(
           month = safeDate.getMonth() + 1;
         }
 
+        const nextCost = Number(task.cost || 0);
+        const nextRevenue = Number(task.revenue || 0);
         const updatedRecord = {
           ...record,
-          cost: task.cost,
-          revenue: task.revenue,
-          isNotPaid: (task.status === "PENDING"),
-          isNotCharged: task.isNotCharged,
+          cost: toMoney(nextCost),
+          revenue: toMoney(nextRevenue),
+          netCashflow: toMoney(nextRevenue - nextCost),
+          status: task.status === "PENDING" ? FinancialStatus.PENDING : record.status,
+          lifecycle: {
+            ...record.lifecycle,
+            doneAt: record.lifecycle?.doneAt || record.createdAt,
+          },
           characterId: getTaskCounterpartyId(task),
-          customerCharacterRole: task.customerCharacterRole || CharacterRole.CUSTOMER,
+          context: {
+            ...record.context,
+            counterparty: {
+              ...record.context?.counterparty,
+              counterpartyId: getTaskCounterpartyId(task),
+              role: task.context?.counterparty?.role || task.customerCharacterRole || CharacterRole.CUSTOMER,
+            },
+          },
           name: task.name,
           station: task.station,
           year,
@@ -186,10 +199,10 @@ export async function updateTasksFromFinancialRecord(
 
       // Check if financial properties changed
       const financialPropsChanged =
-        record.cost !== previousRecord.cost ||
-        record.revenue !== previousRecord.revenue ||
+        extractMoneyValue(record.cost) !== extractMoneyValue(previousRecord.cost) ||
+        extractMoneyValue(record.revenue) !== extractMoneyValue(previousRecord.revenue) ||
         (record.status === FinancialStatus.PENDING) !== (previousRecord.status === "PENDING") ||
-        record.isNotCharged !== previousRecord.isNotCharged ||
+        record.context?.paymentObservation?.charged !== previousRecord.context?.paymentObservation?.charged ||
         getTaskCounterpartyId(record as unknown as Task) !== getTaskCounterpartyId(previousRecord as unknown as Task) ||
         (record as any).customerCharacterRole !== previousRecord.customerCharacterRole ||
         record.name !== previousRecord.name ||
@@ -442,26 +455,28 @@ export async function updateItemsCreatedByRecord(
 
       // Check if output properties changed
       const outputPropsChanged =
-        record.outputQuantity !== previousRecord.outputQuantity ||
-        record.outputItemName !== previousRecord.outputItemName ||
-        record.outputUnitCost !== previousRecord.outputUnitCost ||
-        record.outputItemPrice !== previousRecord.outputItemPrice;
+        JSON.stringify(record.context?.productionPlan ?? null) !== JSON.stringify(previousRecord.context?.productionPlan ?? null);
 
       const statePropsChanged = hasStatePropsChanged(record, previousRecord);
 
       if (outputPropsChanged || statePropsChanged) {
         const updatedItem = {
           ...item,
-          name: outputPropsChanged ? (record.outputItemName || item.name) : item.name,
-          unitCost: outputPropsChanged ? (record.outputUnitCost || item.unitCost) : item.unitCost,
-          price: outputPropsChanged ? (record.outputItemPrice || item.price) : item.price,
+          name: outputPropsChanged ? (record.context?.productionPlan?.outputItemName || item.name) : item.name,
+          pricing: outputPropsChanged
+            ? {
+                ...item.pricing,
+                unitCost: record.context?.productionPlan?.outputUnitCost || item.pricing?.unitCost,
+                targetPrice: record.context?.productionPlan?.outputItemPrice || item.pricing?.targetPrice,
+              }
+            : item.pricing,
           year: record.year, // inherit year
           updatedAt: getUTCNow()
         };
 
         // Update stock quantity if it changed
-        if (record.outputQuantity !== previousRecord.outputQuantity) {
-          const quantityDiff = (record.outputQuantity || 0) - (previousRecord.outputQuantity || 0);
+        if (record.context?.productionPlan?.outputQuantity !== previousRecord.context?.productionPlan?.outputQuantity) {
+          const quantityDiff = (record.context?.productionPlan?.outputQuantity || 0) - (previousRecord.context?.productionPlan?.outputQuantity || 0);
           if (quantityDiff !== 0) {
             // Update the first stock point (or create one if none exists)
             if (updatedItem.stock && updatedItem.stock.length > 0) {
@@ -780,10 +795,10 @@ export function hasStatePropsChanged(newEntity: any, oldEntity: any): boolean {
 
 export function hasFinancialPropsChanged(newEntity: any, oldEntity: any): boolean {
   return (
-    newEntity.cost !== oldEntity.cost ||
-    newEntity.revenue !== oldEntity.revenue ||
+    extractMoneyValue(newEntity.cost) !== extractMoneyValue(oldEntity.cost) ||
+    extractMoneyValue(newEntity.revenue) !== extractMoneyValue(oldEntity.revenue) ||
     (newEntity.status === "PENDING") !== (oldEntity.status === "PENDING") ||
-    newEntity.isNotCharged !== oldEntity.isNotCharged ||
+    newEntity.context?.paymentObservation?.charged !== oldEntity.context?.paymentObservation?.charged ||
     newEntity.name !== oldEntity.name ||
     newEntity.station !== oldEntity.station ||
     getTaskCounterpartyId(newEntity as any) !== getTaskCounterpartyId(oldEntity as any) ||
@@ -793,10 +808,7 @@ export function hasFinancialPropsChanged(newEntity: any, oldEntity: any): boolea
 
 export function hasOutputPropsChanged(newEntity: any, oldEntity: any): boolean {
   return (
-    newEntity.outputQuantity !== oldEntity.outputQuantity ||
-    newEntity.outputItemName !== oldEntity.outputItemName ||
-    newEntity.outputUnitCost !== oldEntity.outputUnitCost ||
-    newEntity.outputItemPrice !== oldEntity.outputItemPrice ||
+    JSON.stringify(newEntity.context?.productionPlan ?? null) !== JSON.stringify(oldEntity.context?.productionPlan ?? null) ||
     newEntity.station !== oldEntity.station
   );
 }
@@ -892,20 +904,39 @@ export async function updateFinancialRecordsFromItem(
     
     const { getAllFinancials, upsertFinancial } = await import('@/data-store/datastore');
     const allRecords = await getAllFinancials();
-    const relatedRecords = allRecords.filter(r => r.outputItemId === item.id);
+    const relatedRecords: FinancialRecord[] = [];
+    for (const candidate of allRecords) {
+      const links = await getLinksFor({ type: EntityType.FINANCIAL, id: candidate.id });
+      if (links.some(link =>
+        link.linkType === LinkType.FINREC_ITEM &&
+        ((link.source.type === EntityType.ITEM && link.source.id === item.id) ||
+          (link.target.type === EntityType.ITEM && link.target.id === item.id))
+      )) {
+        relatedRecords.push(candidate);
+      }
+    }
 
     for (const record of relatedRecords) {
-      const needsUpdate = 
-        record.outputItemName !== item.name ||
-        record.outputItemPrice !== item.price ||
-        record.outputUnitCost !== item.unitCost;
+      const plan = record.context?.productionPlan;
+      const itemPrice = item.pricing?.targetPrice;
+      const itemUnitCost = item.pricing?.unitCost;
+      const needsUpdate =
+        plan?.outputItemName !== item.name ||
+        extractMoneyValue(plan?.outputItemPrice) !== extractMoneyValue(itemPrice) ||
+        extractMoneyValue(plan?.outputUnitCost) !== extractMoneyValue(itemUnitCost);
 
       if (needsUpdate) {
         const updatedRecord = {
           ...record,
-          outputItemName: item.name,
-          outputItemPrice: item.price || record.outputItemPrice,
-          outputUnitCost: item.unitCost || record.outputUnitCost,
+          context: {
+            ...record.context,
+            productionPlan: {
+              ...plan,
+              outputItemName: item.name,
+              outputItemPrice: itemPrice || plan?.outputItemPrice,
+              outputUnitCost: itemUnitCost || plan?.outputUnitCost,
+            },
+          },
           updatedAt: getUTCNow()
         };
         await upsertFinancial(updatedRecord, { skipWorkflowEffects: true });
