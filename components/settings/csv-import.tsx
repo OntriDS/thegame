@@ -400,8 +400,9 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
 
   const getCSVTemplate = () => {
     // Get valid subtypes from enums to ensure template examples are always current
-    const allStations = getAllStations();
-    const templateStation = allStations.includes('items') ? 'items' : allStations[0] || 'items';
+    // Items no longer persist an administrative station; this value is only
+    // stripped from the legacy example rows below for backward readability.
+    const templateStation = 'items';
     const digitalSubtypes = getSubTypesForItemType(ItemType.DIGITAL);
     const artworkSubtypes = getSubTypesForItemType(ItemType.ARTWORK);
     const printSubtypes = getSubTypesForItemType(ItemType.PRINT);
@@ -415,8 +416,8 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
     // Get valid collections from enums to ensure template examples are always current
     const collections = Object.values(Collection);
 
-    const template = `Station,ItemType,SubItemType,Name,TotalQuantity,Site,Status,Collection,UnitCost,AdditionalCost,Price,Value,QuantitySold,TargetAmount,SoldThisMonth,LastRestockDate,SourceTaskId,Year,MediaMain,MediaThumb,MediaGallery,SourceFileUrl,Width,Height,Size
-    "${templateStation}","${ItemType.DIGITAL}","${digitalSubtypes[0]}","Digital",1,"None","${ItemStatus.IDLE}","${collections[1]}",0.00,0.00,25.00,0.00,0,,,,"",2024,"items/digital/digital-art/digital-main.png","items/digital/digital-art/digital-thumb.jpg","","",,
+    const template = `ItemType,SubItemType,Name,TotalQuantity,Site,Status,Collection,UnitCost,AdditionalCost,Price,Value,QuantitySold,TargetAmount,SoldThisMonth,LastRestockDate,SourceTaskId,Year,MediaMain,MediaThumb,MediaGallery,SourceFileUrl,Width,Height,Size
+    "${ItemType.DIGITAL}","${digitalSubtypes[0]}","Digital",1,"None","${ItemStatus.IDLE}","${collections[1]}",0.00,0.00,25.00,0.00,0,,,,"",2024,"items/digital/digital-art/digital-main.png","items/digital/digital-art/digital-thumb.jpg","","",,
     "${templateStation}","${ItemType.ARTWORK}","${artworkSubtypes[0]}","Artwork",1,"None","${ItemStatus.FOR_SALE}","${collections[2]}",5.00,0.00,150.00,0.00,0,,,,"",2024,"items/artwork/acrylic-on-canvas/artwork-main.png","items/artworks/acrylic-on-canvas/artwork-thumb.jpg","","",,0,0,
     "${templateStation}","${ItemType.PRINT}","${printSubtypes[0]}","Print",1,"None","${ItemStatus.FOR_SALE}","${collections[3]}",5.00,0.00,25.00,0.00,0,,,,"",2024,"items/print/giclee-print/print-main.png",,,"",40,40,
     "${templateStation}","${ItemType.STICKER}","${stickerSubtypes[0]}","Sticker",10,"None","${ItemStatus.FOR_SALE}","${collections[4]}",0.30,0.00,2.50,0.00,0,,,,"",2024,"items/sticker/brilliant-white/sticker-main.png",,,"",8,5,
@@ -426,7 +427,8 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
     "${templateStation}","${ItemType.MATERIAL}","${materialSubtypes[0]}","Paints",1,"None","${ItemStatus.IDLE}","Art Supplies",15.00,0.00,25.00,0.00,0,,,,"",2024,"items/material/art-material/paints-set-main.png",,,"",,,,
     "${templateStation}","${ItemType.EQUIPMENT}","${equipmentSubtypes[0]}","Machine",1,"None","${ItemStatus.IDLE}","Art Tools",45.00,0.00,75.00,0.00,0,,,,"",2024,"items/equipment/workshop-equipment/drill-main.png",,,"",,,`;
 
-    const blob = new Blob([template], { type: 'text/csv' });
+    const normalizedTemplate = template.replace(/"items",/g, '');
+    const blob = new Blob([normalizedTemplate], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
