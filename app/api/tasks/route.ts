@@ -70,6 +70,7 @@ export async function POST(req: NextRequest) {
     const characterId = incomingTaskCharacterId;
 
     const cleanTaskBody = { ...(taskBody as unknown as Record<string, unknown>) } as Record<string, unknown>;
+    const requestedOwnerIds = Array.isArray(taskBody.ownerIds) ? taskBody.ownerIds : undefined;
     delete cleanTaskBody.customerCharacterId;
     // These fields are compatibility inputs only. New Task writes use the
     // canonical schedule/context facets and canonical Links.
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
     delete cleanTaskBody.dueDate;
     delete cleanTaskBody.frequencyConfig;
     delete cleanTaskBody.isCollected;
+    delete cleanTaskBody.ownerIds;
     if (cleanTaskBody.siteId == null) delete cleanTaskBody.siteId;
     if (cleanTaskBody.targetSiteId == null) delete cleanTaskBody.targetSiteId;
 
@@ -201,9 +203,7 @@ export async function POST(req: NextRequest) {
       id,
       ...(parentId ? { parentId } : {}),
       ...(taskBody.outputItemId ? { outputItemId: taskBody.outputItemId } : {}),
-      ...(Array.isArray(taskBody.ownerIds) && taskBody.ownerIds.length > 0
-        ? { ownerIds: taskBody.ownerIds }
-        : {}),
+      ...(requestedOwnerIds !== undefined ? { ownerIds: requestedOwnerIds } : {}),
       createdAt: taskBody.createdAt ? parseDateToUTC(taskBody.createdAt as Date | string | number | null | undefined) : getUTCNow(),
       updatedAt: getUTCNow(),
       schedule: taskBody.schedule || (taskBody.dueDate

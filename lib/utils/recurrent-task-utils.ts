@@ -245,6 +245,7 @@ export async function spawnNextRecurrentInstance(
       ...(scheduledEnd ? { scheduledEnd: toRecurrentUTC(scheduledEnd) } : {}),
     },
     parentId: template.id,
+    ownerIds: template.ownerIds || [],
     context: buildCanonicalInstanceContext(template, template.id),
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -423,6 +424,7 @@ export function spawnRecurrentInstance(
     type: TaskType.RECURRENT_INSTANCE,
     schedule: { dueDate: toRecurrentUTC(dueDate) },
     parentId: template.id, // Instance points to its template
+    ownerIds: template.ownerIds || [],
     context: buildCanonicalInstanceContext(template, template.id),
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -859,7 +861,7 @@ function getCanonicalSpawnBase(template: Task): Record<string, unknown> {
   if (base.siteId == null) delete base.siteId;
   if (base.targetSiteId == null) delete base.targetSiteId;
   if (!base.outputItemId) delete base.outputItemId;
-  if (!Array.isArray(base.ownerIds) || base.ownerIds.length === 0) delete base.ownerIds;
+  delete base.ownerIds;
   return base;
 }
 

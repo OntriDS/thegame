@@ -69,9 +69,13 @@ export async function syncTaskCharacterCounterpartyLinks(task: Task): Promise<vo
 
   const existingLinks = await getLinksFor({ type: EntityType.TASK, id: task.id });
   const taskCharacterLinks = existingLinks.filter((l) => l.linkType === LinkType.TASK_CHARACTER);
+  const reconcileOwners = Object.prototype.hasOwnProperty.call(task, 'ownerIds');
 
   for (const link of taskCharacterLinks) {
-    await removeLink(link.id);
+    const isOwnerLink = String(link.relationship || '').toLowerCase() === 'owner';
+    if (reconcileOwners || !isOwnerLink) {
+      await removeLink(link.id);
+    }
   }
 
   const desiredRelationships: Array<{ id: string; relationship: NonNullable<Link['relationship']> }> = [];
@@ -84,9 +88,11 @@ export async function syncTaskCharacterCounterpartyLinks(task: Task): Promise<vo
         : 'customer',
     });
   }
-  for (const ownerId of getTaskOwnerIds(task)) {
-    if (!desiredRelationships.some((entry) => entry.id === ownerId && entry.relationship === 'owner')) {
-      desiredRelationships.push({ id: ownerId, relationship: 'owner' });
+  if (reconcileOwners) {
+    for (const ownerId of getTaskOwnerIds(task)) {
+      if (!desiredRelationships.some((entry) => entry.id === ownerId && entry.relationship === 'owner')) {
+        desiredRelationships.push({ id: ownerId, relationship: 'owner' });
+      }
     }
   }
 

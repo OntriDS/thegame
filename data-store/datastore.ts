@@ -184,12 +184,16 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
   }
 
   const previous = await repoGetTaskById(task.id);
+  const hasOwnerSelection = Object.prototype.hasOwnProperty.call(task, 'ownerIds');
+  const requestedOwnerIds = hasOwnerSelection ? [...(task.ownerIds || [])] : undefined;
   let normalizedTask =
     task.status === TaskStatus.DONE
       ? { ...task, priority: TaskPriority.NORMAL }
       : task;
   normalizedTask = normalizeTaskOutputTaxonomy(normalizedTask);
-  const saved = await repoUpsertTask(normalizedTask);
+  const persistedTask = { ...normalizedTask } as Task;
+  delete (persistedTask as any).ownerIds;
+  const saved = await repoUpsertTask(persistedTask);
 
   // Identity Shield: Time-Window Deduplication (30 seconds)
   // Only apply to NEW tasks (no previous record found) to allow updates
@@ -257,7 +261,10 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
   // Links (TASK_CHARACTER, etc.) must match the row actually stored.
   if (!options?.skipLinkEffects) {
     const latest = await getTaskById(saved.id);
-    await processLinkEntity(latest ?? saved, EntityType.TASK);
+    const linkInput = latest
+      ? (hasOwnerSelection ? { ...latest, ownerIds: requestedOwnerIds } : latest)
+      : saved;
+    await processLinkEntity(linkInput, EntityType.TASK);
   }
 
   return saved;

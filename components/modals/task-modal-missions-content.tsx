@@ -504,9 +504,7 @@ export default function MissionTreeModalContent({
             }
           : undefined,
       },
-      ...((Array.isArray(ownerId) ? ownerId : (ownerId ? [ownerId] : [])).length > 0
-        ? { ownerIds: Array.isArray(ownerId) ? ownerId : [ownerId] }
-        : {}),
+      ownerIds: Array.isArray(ownerId) ? ownerId : (ownerId ? [ownerId] : []),
       order: determineOrder(),
       
       ...(!isNewItem && (selectedItemId || (task as any)?.outputItemId)
