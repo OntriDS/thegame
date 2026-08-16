@@ -55,7 +55,7 @@ import { VALIDATION_CONSTANTS } from '@/lib/constants/financial-constants';
 import ConfirmationModal from './submodals/confirmation-submodal';
 import { MonthYearSelector } from '@/components/ui/month-year-selector';
 import { ensureCounterpartyRole } from '@/lib/utils/character-role-sync';
-import { getFinancialCounterpartyId } from '@/lib/financial-record-counterparty-id';
+import { getFinancialCounterpartyId, getFinancialCounterpartyRole } from '@/lib/financial-record-counterparty-id';
 import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 
 
@@ -260,7 +260,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         site: record.siteId || '',
         targetSite: record.targetSiteId || '',
         characterId: getFinancialCounterpartyId(record),
-        customerCharacterRole: toCustomerCounterpartyRole(record.context?.counterparty?.role),
+        customerCharacterRole: toCustomerCounterpartyRole(getFinancialCounterpartyRole(record) || undefined),
         isNewCustomer: !getFinancialCounterpartyId(record), // Toggle based on whether customer exists
         newCustomerName: '',
         outputItemType: (productionPlan?.outputItemType as ItemType) || '',

@@ -16,12 +16,19 @@ export function getFinancialCounterpartyId(record?: FinancialRecord | null): str
 export function getFinancialCounterpartyRole(record?: FinancialRecord | null): CustomerCounterpartyRole | null {
   if (!record) return null;
   const canonical = record.context?.counterparty?.role;
-  if (canonical === CharacterRole.CUSTOMER || canonical === CharacterRole.BENEFICIARY) return canonical;
+  if (typeof canonical === 'string') {
+    const normalized = canonical.trim().toLowerCase();
+    if (normalized === CharacterRole.CUSTOMER || normalized === CharacterRole.BENEFICIARY) {
+      return normalized;
+    }
+  }
 
   // Read-only compatibility for records written before the V1 facet existed.
   const legacy = (record as FinancialRecord & { customerCharacterRole?: unknown }).customerCharacterRole;
-  return legacy === CharacterRole.CUSTOMER || legacy === CharacterRole.BENEFICIARY
-    ? legacy as CustomerCounterpartyRole
+  if (typeof legacy !== 'string') return null;
+  const normalizedLegacy = legacy.trim().toLowerCase();
+  return normalizedLegacy === CharacterRole.CUSTOMER || normalizedLegacy === CharacterRole.BENEFICIARY
+    ? normalizedLegacy
     : null;
 }
 
