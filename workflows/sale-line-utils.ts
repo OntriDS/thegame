@@ -3,7 +3,7 @@
 // Sale line processing utilities
 
 import type { Sale, Item, ItemSaleLine, ServiceLine, Task } from '@/types/entities';
-import { LinkType, EntityType, LogEventType, ItemStatus, SaleStatus, FOUNDER_CHARACTER_ID } from '@/types/enums';
+import { LinkType, EntityType, LogEventType, ItemStatus, SaleStatus } from '@/types/enums';
 import { getItemById, upsertItem, deleteItem } from '@/data-store/datastore';
 import { upsertTask } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
@@ -226,9 +226,25 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
     // Create task from the canonical service-line context.
     const productionPlan = serviceContext?.productionPlan;
     const taskPoints = serviceContext?.taskRewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
-    const beneficiaryCharacterId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
     const taskCost = extractMoneyValue(serviceContext?.taskCost);
     const existingOutputItemId = serviceContext?.outputItemId || productionPlan?.outputItemId;
+
+    const taskContext: Task['context'] = {
+      newCustomerName: sale.context?.newCustomerName || undefined,
+      financialIntent: taskCost > 0 ? { costIntent: toMoney(taskCost) } : undefined,
+      rewardIntent: Object.values(taskPoints).some((value) => Number(value) > 0)
+        ? {
+            kind: 'point-reward',
+            points: taskPoints,
+          }
+        : undefined,
+      productionPlan: productionPlan
+        ? {
+            ...productionPlan,
+            outputItemId: existingOutputItemId,
+          }
+        : undefined,
+    };
 
     const serviceTask: Task = {
       id: serviceContext?.taskId || `task-${sale.id}-${line.lineId}`,
@@ -245,22 +261,7 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
       siteId: sale.siteId,
       parentId: serviceContext?.taskParentId || undefined,
       schedule: serviceContext?.taskDueDate ? { dueDate: serviceContext.taskDueDate } : undefined,
-      context: {
-        kind: 'task-context',
-        schemaVersion: 1,
-        newCustomerName: sale.context?.newCustomerName || undefined,
-        financialIntent: taskCost > 0 ? { costIntent: toMoney(taskCost) } : undefined,
-        rewardIntent: {
-          kind: 'point-reward',
-          points: taskPoints,
-          beneficiaryCharacterId,
-          policyVersion: 'sale-service-v1',
-        },
-        productionPlan: {
-          ...productionPlan,
-          outputItemId: existingOutputItemId,
-        },
-      },
+      context: taskContext,
     };
 
     // Save the task
