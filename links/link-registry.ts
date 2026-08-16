@@ -51,7 +51,12 @@ export async function createLink(link: Link, options?: { skipValidation?: boolea
   }
   
   const existing = await getLinksFor(link.source);
-  const dup = existing.find(l => l.linkType===link.linkType && l.target.type===link.target.type && l.target.id===link.target.id);
+  const dup = existing.find(l =>
+    l.linkType === link.linkType &&
+    l.target.type === link.target.type &&
+    l.target.id === link.target.id &&
+    l.relationship === link.relationship
+  );
   if (dup) {
     return false; // Idempotent: silently skip duplicates, return false
   }

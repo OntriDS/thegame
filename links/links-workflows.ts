@@ -4,6 +4,7 @@
 
 import { EntityType, LinkType, LogEventType, TaskStatus, SaleType } from '@/types/enums';
 import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Link } from '@/types/entities';
+import { getTaskOwnerIds } from '@/lib/compatibility/task-selectors';
 import { createLink, removeLink, getLinksFor } from './link-registry';
 import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById } from '@/data-store/repositories/item.repo';
 import { getFinancialById } from '@/data-store/repositories/financial.repo';
@@ -17,12 +18,13 @@ import { getFinancialCounterpartyId } from '@/lib/financial-record-counterparty-
 import { getSaleCharacterId } from '@/lib/sale-character-id';
 import { getAllSites } from '@/data-store/repositories/site.repo';
 
-export function makeLink(linkType: LinkType, source: { type: EntityType; id: string }, target: { type: EntityType; id: string }): Link {
+export function makeLink(linkType: LinkType, source: { type: EntityType; id: string }, target: { type: EntityType; id: string }, relationship?: Link['relationship']): Link {
   return {
     id: uuid(),
     linkType,
     source,
     target,
+    ...(relationship ? { relationship } : {}),
     createdAt: new Date(),
   };
 }
@@ -69,30 +71,44 @@ export async function syncTaskCharacterCounterpartyLinks(task: Task): Promise<vo
   const taskCharacterLinks = existingLinks.filter((l) => l.linkType === LinkType.TASK_CHARACTER);
 
   for (const link of taskCharacterLinks) {
-    if (!desiredId || link.target.id !== desiredId) {
-      await removeLink(link.id);
+    await removeLink(link.id);
+  }
+
+  const desiredRelationships: Array<{ id: string; relationship: NonNullable<Link['relationship']> }> = [];
+  if (desiredId) {
+    desiredRelationships.push({
+      id: desiredId,
+      relationship: task.context?.counterparty?.role === 'beneficiary' || task.customerCharacterRole === 'beneficiary'
+        ? 'beneficiary'
+        : 'customer',
+    });
+  }
+  for (const ownerId of getTaskOwnerIds(task)) {
+    if (!desiredRelationships.some((entry) => entry.id === ownerId && entry.relationship === 'owner')) {
+      desiredRelationships.push({ id: ownerId, relationship: 'owner' });
     }
   }
 
-  if (!desiredId) return;
+  for (const desired of desiredRelationships) {
+    const l = makeLink(
+      LinkType.TASK_CHARACTER,
+      { type: EntityType.TASK, id: task.id },
+      { type: EntityType.CHARACTER, id: desired.id },
+      desired.relationship
+    );
+    const wasCreated = await createLink(l);
 
-  const l = makeLink(
-    LinkType.TASK_CHARACTER,
-    { type: EntityType.TASK, id: task.id },
-    { type: EntityType.CHARACTER, id: desiredId }
-  );
-  const wasCreated = await createLink(l);
-
-  if (wasCreated) {
-    const character = await getCharacterById(desiredId);
-    await appendEntityLog(EntityType.CHARACTER, desiredId, LogEventType.REQUESTED_TASK, {
-      name: character?.name || 'Unknown Character',
-      roles: character?.roles || [],
-      taskId: task.id,
-      taskName: task.name,
-      taskType: task.type,
-      station: task.station
-    });
+    if (wasCreated && desired.relationship !== 'owner') {
+      const character = await getCharacterById(desired.id);
+      await appendEntityLog(EntityType.CHARACTER, desired.id, LogEventType.REQUESTED_TASK, {
+        name: character?.name || 'Unknown Character',
+        roles: character?.roles || [],
+        taskId: task.id,
+        taskName: task.name,
+        taskType: task.type,
+        station: task.station
+      });
+    }
   }
 }
 
@@ -355,6 +371,12 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
   // Get existing links for cleanup
   const existingLinks = await getLinksFor({ type: EntityType.FINANCIAL, id: fin.id });
 
+  // Replace old role-less FINREC_CHARACTER links with the canonical
+  // relationship-bearing form.
+  for (const link of existingLinks.filter((l) => l.linkType === LinkType.FINREC_CHARACTER)) {
+    await removeLink(link.id);
+  }
+
   if (fin.siteId) {
     const l = makeLink(LinkType.FINREC_SITE, { type: EntityType.FINANCIAL, id: fin.id }, { type: EntityType.SITE, id: fin.siteId });
     await createLink(l);
@@ -365,7 +387,8 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
     const l = makeLink(
       LinkType.FINREC_CHARACTER,
       { type: EntityType.FINANCIAL, id: fin.id },
-      { type: EntityType.CHARACTER, id: financialCounterpartyId }
+      { type: EntityType.CHARACTER, id: financialCounterpartyId },
+      getFinancialCounterpartyRole(fin) === 'beneficiary' ? 'beneficiary' : 'customer'
     );
     const wasCreated = await createLink(l);
 

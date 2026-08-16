@@ -128,6 +128,19 @@ export type WorkflowId = string;
 export type IdempotencyKey = string;
 export type EntityRef = { type: EntityType; id: string };
 
+export type CharacterRelationship = 'owner' | 'customer' | 'beneficiary' | 'creator';
+
+/** Runtime link shape. Relationship is present only for role-bearing links. */
+export interface Link {
+  id: string;
+  linkType: LinkType | CanonicalLinkType;
+  source: EntityRef;
+  target: EntityRef;
+  relationship?: CharacterRelationship;
+  createdAt: UtcIsoString;
+  endedAt?: UtcIsoString;
+}
+
 /**
  * VALUE OBJECTS (Strict domain primitives)
  */
@@ -248,11 +261,10 @@ export type TaskSiteLinkV1 = LinkEnvelopeV1<
 
 export type TaskCharacterLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.TASK_CHARACTER,
-  {
-    kind: 'task-character';
-    role: CharacterRole; // Using strict system enum for the Character's role
-  }
->;
+  never
+> & {
+  relationship: CharacterRelationship;
+};
 
 export type TaskPlayerLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.TASK_PLAYER,
@@ -291,11 +303,10 @@ export type ItemSaleLinkV1 = LinkEnvelopeV1<
 
 export type FinrecCharacterLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.FINREC_CHARACTER,
-  {
-    kind: 'finrec-character';
-    relationship: 'beneficiary'; 
-  }
->;
+  never
+> & {
+  relationship: 'customer' | 'beneficiary';
+};
 
 /**
  * The Strict Master Union for all Relationships

@@ -129,7 +129,7 @@ const buildDirectoryAmountTotals = async (characterIds: string[]): Promise<Map<s
       // E.g., gateway commissions on a sale should not be treated as a payout to the customer.
       if (isCustomerRole(getFinancialCounterpartyRole(financial))) continue;
 
-      const amount = Number(financial.cost || 0);
+      const amount = extractMoneyValue(financial.cost);
       if (!Number.isFinite(amount) || amount === 0) continue;
 
       // Costs are stored as negative values in this codebase, so convert for payout totals.

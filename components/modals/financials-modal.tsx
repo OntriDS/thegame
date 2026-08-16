@@ -35,13 +35,14 @@ import {
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, isPersonalStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { getStationDisplayLabel } from '@/lib/constants/business-structure-labels';
 import type { Station, SubItemType } from '@/types/type-aliases';
-import { ItemType, Collection, CharacterRole, FOUNDER_CHARACTER_ID, EntityType, LinkType } from '@/types/enums';
+import { ItemType, Collection, CharacterRole, EntityType, LinkType } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, createItemTypeOptionsWithCategories, createStationCategoryOptions, createCharacterOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
+import { useAuth } from '@/lib/hooks/use-auth';
 import { getCollectionLabel } from '@/lib/constants/collection-labels';
 // Side effects handled by parent component via API calls
 import { v4 as uuid } from 'uuid';
@@ -78,6 +79,7 @@ interface FinancialsModalProps {
 
 export default function FinancialsModal({ record, year, month, open, onOpenChange, onSave, onDelete }: FinancialsModalProps) {
   const { getPreference, setPreference } = useUserPreferences();
+  const { user: authUser } = useAuth();
 
   // User preference functions - memoized to prevent dependency changes
   const getLastUsedStation = useCallback((): Station => {
@@ -280,7 +282,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       });
 
       // Initialize player character
-      setPlayerCharacterId(record.playerCharacterId || FOUNDER_CHARACTER_ID);
+      setPlayerCharacterId(record.playerCharacterId || authUser?.characterId || null);
       setSelectedItemId('');
       setLocalDoneAt(record.lifecycle?.doneAt ? new Date(record.lifecycle.doneAt) : undefined);
 
@@ -360,13 +362,13 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         year: year,
         month: month
       });
-      setPlayerCharacterId(FOUNDER_CHARACTER_ID);
+      setPlayerCharacterId(authUser?.characterId || null);
       setSelectedItemId('');
       setOutputItemTypeSubType('none:');
       setOutputItemStatus(ItemStatus.FOR_SALE);
       setLocalDoneAt(undefined);
     }
-  }, [record, getLastUsedStation, open, year, month]);
+  }, [record, authUser?.characterId, getLastUsedStation, open, year, month]);
 
   // Sync year/month for new records when context changes (fixes stale date if filter changes while modal hidden)
   useEffect(() => {

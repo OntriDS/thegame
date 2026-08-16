@@ -28,7 +28,7 @@ export async function GET(
             CanonicalLinkType.FINREC_CHARACTER
         ];
 
-        const financialLinks = links.filter(l => relevantLinkTypes.includes(l.linkType));
+        const financialLinks = links.filter(l => relevantLinkTypes.includes(l.linkType as CanonicalLinkType));
 
         const finRecIds = financialLinks.map(l => {
             if (l.target.type === EntityType.FINANCIAL) return l.target.id;
