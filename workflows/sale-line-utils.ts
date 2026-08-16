@@ -153,11 +153,11 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     const remainingStock = updatedItem.stock.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0);
 
     // Handle keepInInventoryAfterSold logic
-    const shouldKeepInInventory = item.keepInInventoryAfterSold ?? false;
+    const shouldKeepInInventory = item.context?.keepInInventoryAfterSold ?? false;
 
     // Handle restockToTarget logic (mainly for Network Sales)
-    const shouldRestockToTarget = item.restockToTarget ?? false;
-    const targetAmount = item.targetAmount || 0;
+    const shouldRestockToTarget = item.context?.restockToTarget ?? false;
+    const targetAmount = item.context?.targetAmount || 0;
 
     if (shouldRestockToTarget && targetAmount > 0) {
       // Restock to target quantity (consignment behavior)
@@ -444,7 +444,10 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
           status: ItemStatus.SOLD,
           stock: [{ siteId: sale.siteId || item.stock?.[0]?.siteId || '', quantity: 0 }],
           quantitySold: working.quantity || 0,
-          soldAt: refDate,
+          context: {
+            ...item.context,
+            soldAt: refDate,
+          },
           pricing: {
             ...item.pricing,
             actualSaleValue: toMoney(
@@ -453,7 +456,6 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
             ),
           },
           sourceRecordId: sale.id,
-          characterId: getSaleCharacterId(sale) || getItemCharacterId(item) || null,
           updatedAt: getUTCNow(),
           description: `Sold in ${sale.counterpartyName || 'Sale'} (${formatForDisplay(refDate)})`
         };
@@ -461,7 +463,7 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
         await upsertItem(soldItemEntity, { skipWorkflowEffects: true });
 
         const monthKey = formatArchiveMonthKeyUTC(
-          soldItemEntity.soldAt instanceof Date ? soldItemEntity.soldAt : getUTCNow()
+          soldItemEntity.context?.soldAt ? new Date(soldItemEntity.context.soldAt) : getUTCNow()
         );
         await kvSAdd(buildMonthIndexKey(EntityType.ITEM, monthKey), soldItemEntity.id);
         await kvSAdd(buildArchiveMonthsKey(), monthKey);
@@ -495,8 +497,8 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
         continue;
       }
 
-      const parsedSoldTimestamp = soldCloneForLog.soldAt
-        ? new Date(soldCloneForLog.soldAt)
+      const parsedSoldTimestamp = soldCloneForLog.context?.soldAt
+        ? new Date(soldCloneForLog.context.soldAt)
         : null;
       const logTimestamp =
         parsedSoldTimestamp && Number.isFinite(parsedSoldTimestamp.getTime())
@@ -508,7 +510,7 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
       await appendEntityLog(EntityType.ITEM, resolvedCloneId, LogEventType.SOLD, {
         name: soldCloneForLog.name || 'Unknown Item',
         itemType: soldCloneForLog.type,
-        subItemType: soldCloneForLog.subItemType,
+        subItemType: soldCloneForLog.context?.subItemType,
         soldQuantity: working.quantity || 0,
       }, logTimestamp);
 

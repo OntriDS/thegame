@@ -381,8 +381,12 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           setCollection(formData.collection || Collection.NO_COLLECTION);
           setStatus(formData.status || ItemStatus.FOR_SALE);
           setQuantity(formData.quantity || 0);
-          setUnitCost((formData as any).unitCost || 0);
-          setPrice((formData as any).price || 0);
+      setUnitCost(formData.pricing?.unitCost
+        ? extractMoneyValue(formData.pricing.unitCost)
+        : Number(formData.unitCost ?? 0));
+      setPrice(formData.pricing?.targetPrice
+        ? extractMoneyValue(formData.pricing.targetPrice)
+        : Number(formData.price ?? 0));
           setKeepInInventoryAfterSold(
             typeof (formData as any).keepInInventoryAfterSold === 'boolean'
               ? (formData as any).keepInInventoryAfterSold
@@ -393,15 +397,15 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
               ? (formData as any).restockToTarget
               : false // Default to false
           );
-          setYear((formData as any).year || new Date().getFullYear());
+      setYear(formData.context?.year ?? formData.year ?? new Date().getFullYear());
           setMediaMain(formData.mediaMain || '');
           setMediaThumb(formData.mediaThumb || '');
           setMediaGallery(formData.mediaGallery || '');
-          setSourceFileUrl((formData as any).sourceFileUrl || '');
-          setWidth(formData.width || '');
-          setHeight(formData.height || '');
-          setSize((formData as any).size || '');
-          setTargetAmount((formData as any).targetAmount || '');
+      setSourceFileUrl(formData.context?.sourceFileUrl || formData.sourceFileUrl || '');
+      setWidth(formData.context?.dimensions?.width?.toString() || formData.dimensions?.width?.toString() || '');
+      setHeight(formData.context?.dimensions?.height?.toString() || formData.dimensions?.height?.toString() || '');
+      setSize(formData.context?.size || formData.size || '');
+      setTargetAmount((formData.context?.targetAmount ?? formData.targetAmount ?? '').toString());
           setSite(formData.site || DEFAULT_NONE_SITE);
         } catch (error) {
           console.error('Error loading form data from preferences:', error);
@@ -455,7 +459,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
   const executeQuickSale = useCallback(async (targetItem: Item, siteId: string, quantity: number) => {
     const now = new Date();
-    const unitPrice = (targetItem as any).price ?? 0;
+    const unitPrice = extractMoneyValue(targetItem.pricing?.targetPrice);
     const subtotal = unitPrice * quantity;
     const sale: Sale = {
       id: uuid(),
@@ -504,6 +508,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   }, []);
 
   const executeArchiveOnlySale = useCallback(async (targetItem: Item, siteId: string, quantity: number) => {
+    const unitPrice = extractMoneyValue(targetItem.pricing?.targetPrice);
     const stockClone = (targetItem.stock || []).map(point => ({ ...point }));
     let remaining = quantity;
 
@@ -543,21 +548,18 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       id: snapshotId,
       stock: [{ siteId, quantity }],
       quantitySold: quantity,
-      unitCost: (targetItem as any).unitCost ?? 0,
-      price: (targetItem as any).price ?? 0,
-      value: ((targetItem as any).price ?? 0) * quantity,
+      pricing: targetItem.pricing,
+      value: unitPrice * quantity,
       status: ItemStatus.SOLD,
       createdAt: soldAt,
       updatedAt: soldAt,
-      keepInInventoryAfterSold: (targetItem as any).keepInInventoryAfterSold ?? false,
-      restockToTarget: (targetItem as any).restockToTarget ?? false,
-      links: [],
+      context: targetItem.context,
       metadata: {
         source: 'item-modal',
         mode: 'archive-only',
         siteId,
         quantity,
-        unitPrice: (targetItem as any).price ?? 0,
+        unitPrice,
       },
     } as any;
 
@@ -740,7 +742,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setName(item.name || '');
       setDescription(item.description || '');
       const itemType = item.type || defaultItemType || ItemType.STICKER;
-      const itemSubType = (item as any).subItemType || '';
+      const itemSubType = item.context?.subItemType || '';
       setType(itemType);
       setSubItemType(itemSubType);
       setItemTypeSubType(`${itemType}:${itemSubType}`);
@@ -761,24 +763,24 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setUnitCost(extractMoneyValue(item.pricing?.unitCost) || (item as any).unitCost || 0);
       setPrice(extractMoneyValue(item.pricing?.targetPrice) || (item as any).price || 0);
       setKeepInInventoryAfterSold(
-        typeof (item as any).keepInInventoryAfterSold === 'boolean'
-          ? (item as any).keepInInventoryAfterSold
+        typeof item.context?.keepInInventoryAfterSold === 'boolean'
+          ? item.context.keepInInventoryAfterSold
           : false // Default to false
       );
       setRestockToTarget(
-        typeof (item as any).restockToTarget === 'boolean'
-          ? (item as any).restockToTarget
+        typeof item.context?.restockToTarget === 'boolean'
+          ? item.context.restockToTarget
           : false // Default to false
       );
-      setYear((item as any).year || new Date().getFullYear());
+      setYear(item.context?.year || new Date().getFullYear());
       setMediaMain(item.media?.mainUrl || '');
       setMediaThumb(item.media?.thumbUrl || '');
       setMediaGallery(item.media?.galleryUrls?.join(';') || '');
-          setSourceFileUrl(item.context?.sourceFileUrl || (item as any).sourceFileUrl || '');
-      setWidth((item as any).dimensions?.width?.toString() || '');
-      setHeight((item as any).dimensions?.height?.toString() || '');
-      setSize((item as any).size || '');
-      setTargetAmount((item as any).targetAmount?.toString() || '');
+      setSourceFileUrl(item.context?.sourceFileUrl || '');
+      setWidth(item.context?.dimensions?.width?.toString() || '');
+      setHeight(item.context?.dimensions?.height?.toString() || '');
+      setSize(item.context?.size || '');
+      setTargetAmount(item.context?.targetAmount?.toString() || '');
       setQuantitySold(item.quantitySold || 0);
 
       setOwnerId(getItemCharacterId(item) || null);
@@ -849,7 +851,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setName(selectedItem.name);
         setDescription(selectedItem.description || '');
         setType(selectedItem.type);
-        setSubItemType((selectedItem as any).subItemType || '');
+        setSubItemType(selectedItem.context?.subItemType || '');
         setCollection(selectedItem.collection || Collection.NO_COLLECTION);
         setStatus(selectedItem.status || ItemStatus.FOR_SALE);
         // Calculate quantity: use site-specific if initialSiteId is set, otherwise total
@@ -866,25 +868,25 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setUnitCost(extractMoneyValue(selectedItem.pricing?.unitCost) || (selectedItem as any).unitCost || 0);
         setPrice(extractMoneyValue(selectedItem.pricing?.targetPrice) || (selectedItem as any).price || 0);
         setKeepInInventoryAfterSold(
-          typeof (selectedItem as any).keepInInventoryAfterSold === 'boolean'
-            ? (selectedItem as any).keepInInventoryAfterSold
+          typeof selectedItem.context?.keepInInventoryAfterSold === 'boolean'
+            ? selectedItem.context.keepInInventoryAfterSold
             : false // Default to false
         );
         setRestockToTarget(
-          typeof (selectedItem as any).restockToTarget === 'boolean'
-            ? (selectedItem as any).restockToTarget
+          typeof selectedItem.context?.restockToTarget === 'boolean'
+            ? selectedItem.context.restockToTarget
             : false // Default to false
         );
-        setYear((selectedItem as any).year || new Date().getFullYear());
+        setYear(selectedItem.context?.year || new Date().getFullYear());
         setMediaMain(selectedItem.media?.mainUrl || '');
         setMediaThumb(selectedItem.media?.thumbUrl || '');
         setMediaGallery(selectedItem.media?.galleryUrls?.join(';') || '');
-        setSourceFileUrl(selectedItem.context?.sourceFileUrl || (selectedItem as any).sourceFileUrl || '');
+        setSourceFileUrl(selectedItem.context?.sourceFileUrl || '');
         // Extract dimensions
-        setWidth((selectedItem as any).dimensions?.width?.toString() || '');
-        setHeight((selectedItem as any).dimensions?.height?.toString() || '');
-        setSize((selectedItem as any).size || '');
-        setTargetAmount((selectedItem as any).targetAmount?.toString() || '');
+        setWidth(selectedItem.context?.dimensions?.width?.toString() || '');
+        setHeight(selectedItem.context?.dimensions?.height?.toString() || '');
+        setSize(selectedItem.context?.size || '');
+        setTargetAmount(selectedItem.context?.targetAmount?.toString() || '');
         setQuantitySold(selectedItem.quantitySold || 0);
         setLocalSoldAt(selectedItem.context?.soldAt ? new Date(selectedItem.context.soldAt) : undefined);
         setOwnerId(getItemCharacterId(selectedItem) || null);

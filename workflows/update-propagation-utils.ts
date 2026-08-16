@@ -16,6 +16,7 @@ import { getUTCNow } from '@/lib/utils/utc-utils';
 import { getLinksFor } from '@/links/link-registry';
 import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution';
 import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
+import { getTaskPlayerCharacterId } from '@/lib/compatibility/task-selectors';
 
 const normalizeDate = (value: Date | string | null | undefined): Date => {
   const parsed = parseDateOrNull(value);
@@ -290,7 +291,7 @@ export async function updateItemsCreatedByTask(
         const statePropsChanged = hasStatePropsChanged(task, previousTask);
 
         if (outputPropsChanged || statePropsChanged) {
-          let year = item.year;
+          let year = item.context?.year;
           if (statePropsChanged) {
             const dateToUse = normalizeDate(task.collectedAt || task.doneAt || item.createdAt);
             year = dateToUse.getFullYear();
@@ -306,7 +307,10 @@ export async function updateItemsCreatedByTask(
                   targetPrice: toMoney(taskOutputPrice(task)),
                 }
               : item.pricing,
-            year,
+            context: {
+              ...item.context,
+              year,
+            },
             updatedAt: getUTCNow()
           };
 
@@ -339,7 +343,7 @@ export async function updateItemsCreatedByTask(
           await appendEntityLog(EntityType.ITEM, item.id, LogEventType.UPDATED, {
             name: updatedItem.name,
             itemType: updatedItem.type,
-            subItemType: updatedItem.subItemType,
+            subItemType: updatedItem.context?.subItemType,
             quantity: updatedItem.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0
           }, task.updatedAt || getUTCNow());
 
@@ -511,7 +515,7 @@ export async function updateItemsCreatedByRecord(
         await appendEntityLog(EntityType.ITEM, item.id, LogEventType.UPDATED, {
           name: updatedItem.name,
           itemType: updatedItem.type,
-          subItemType: updatedItem.subItemType,
+          subItemType: updatedItem.context?.subItemType,
           quantity: updatedItem.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0
         }, record.updatedAt || new Date(record.year, record.month - 1, 1));
 
@@ -720,7 +724,9 @@ export async function updatePlayerPointsFromSource(
     }
 
     // Find the target player (resolve from playerCharacterId when present)
-    const playerIdCandidate = newSource?.playerCharacterId || oldSource?.playerCharacterId || FOUNDER_CHARACTER_ID;
+    const playerIdCandidate = sourceType === EntityType.TASK
+      ? getTaskPlayerCharacterId(newSource as Task) || getTaskPlayerCharacterId(oldSource as Task) || FOUNDER_CHARACTER_ID
+      : newSource?.playerCharacterId || oldSource?.playerCharacterId || FOUNDER_CHARACTER_ID;
     const playerId = await resolveToPlayerIdMaybeCharacter(playerIdCandidate);
     const player = await getPlayerById(playerId);
 
@@ -855,10 +861,10 @@ export async function updateTasksFromItem(
   if (!previousItem) return;
 
   // Detect if any shared metadata changed
-  const dataChanged = 
+  const dataChanged =
     item.name !== previousItem.name ||
-    item.price !== previousItem.price ||
-    item.unitCost !== previousItem.unitCost;
+    extractMoneyValue(item.pricing?.targetPrice) !== extractMoneyValue(previousItem.pricing?.targetPrice) ||
+    extractMoneyValue(item.pricing?.unitCost) !== extractMoneyValue(previousItem.pricing?.unitCost);
 
   if (!dataChanged) return;
 
@@ -871,17 +877,24 @@ export async function updateTasksFromItem(
     const relatedTasks = allTasks.filter((t: Task) => t.outputItemId === item.id);
 
     for (const task of relatedTasks) {
-      const needsUpdate = 
-        task.outputItemName !== item.name ||
-        task.outputItemPrice !== item.price ||
-        task.outputUnitCost !== item.unitCost;
+      const plan = task.context?.productionPlan;
+      const needsUpdate =
+        plan?.outputItemName !== item.name ||
+        extractMoneyValue(plan?.outputItemPrice) !== extractMoneyValue(item.pricing?.targetPrice) ||
+        extractMoneyValue(plan?.outputUnitCost) !== extractMoneyValue(item.pricing?.unitCost);
 
       if (needsUpdate) {
         const updatedTask = {
           ...task,
-          outputItemName: item.name,
-          outputItemPrice: item.price || task.outputItemPrice,
-          outputUnitCost: item.unitCost || task.outputUnitCost,
+          context: {
+            ...task.context,
+            productionPlan: {
+              ...plan,
+              outputItemName: item.name,
+              outputItemPrice: item.pricing?.targetPrice,
+              outputUnitCost: item.pricing?.unitCost,
+            },
+          },
           updatedAt: getUTCNow()
         };
         const { upsertTask } = await import('@/data-store/datastore');
@@ -904,10 +917,10 @@ export async function updateFinancialRecordsFromItem(
 ): Promise<void> {
   if (!previousItem) return;
 
-  const dataChanged = 
+  const dataChanged =
     item.name !== previousItem.name ||
-    item.price !== previousItem.price ||
-    item.unitCost !== previousItem.unitCost;
+    extractMoneyValue(item.pricing?.targetPrice) !== extractMoneyValue(previousItem.pricing?.targetPrice) ||
+    extractMoneyValue(item.pricing?.unitCost) !== extractMoneyValue(previousItem.pricing?.unitCost);
 
   if (!dataChanged) return;
 

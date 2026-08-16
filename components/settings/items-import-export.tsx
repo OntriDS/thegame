@@ -13,6 +13,7 @@ import { ItemType, ItemStatus, Collection } from '@/types/enums';
 import { calculateTotalQuantity } from '@/lib/utils/business-utils';
 import { normalizeItemTypeString } from '@/lib/item-taxonomy-normalize';
 import { getCollectionLabel } from '@/lib/constants/collection-labels';
+import { extractMoneyValue } from '@/lib/utils/financial-utils';
 
 export default function ItemsImportExport() {
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -239,22 +240,22 @@ function convertItemsToCSV(items: any[]): string {
       escapeCSVField(site),
       escapeCSVField(item.status),
       escapeCSVField(getCollectionLabel(item.collection || Collection.NO_COLLECTION)),
-      escapeCSVField(item.unitCost || 0),
-      escapeCSVField(item.additionalCost || 0),
-      escapeCSVField(item.price || 0),
-      escapeCSVField(item.value || 0),
+      escapeCSVField(extractMoneyValue(item.pricing?.unitCost)),
+      escapeCSVField(extractMoneyValue(item.pricing?.additionalCost)),
+      escapeCSVField(extractMoneyValue(item.pricing?.targetPrice)),
+      escapeCSVField(extractMoneyValue(item.pricing?.actualSaleValue)),
       escapeCSVField(item.quantitySold || 0),
-      escapeCSVField(item.targetAmount || ''),
-      escapeCSVField(item.soldThisMonth || ''),
-      escapeCSVField(item.lastRestockDate ? item.lastRestockDate.toISOString().split('T')[0] : ''),
+      escapeCSVField(item.context?.targetAmount || ''),
+      escapeCSVField(item.context?.soldThisMonth || ''),
+      escapeCSVField(item.context?.lastRestockDate ? item.context.lastRestockDate.split('T')[0] : ''),
       escapeCSVField(item.sourceTaskId || ''),
-      escapeCSVField(item.year || ''),
-      escapeCSVField(item.dimensions?.width || ''),
-      escapeCSVField(item.dimensions?.height || ''),
-      escapeCSVField(item.size || ''),
-      escapeCSVField(item.media?.main || ''),
-      escapeCSVField(item.media?.thumb || ''),
-      escapeCSVField(item.media?.gallery?.join(';') || ''),
+      escapeCSVField(item.context?.year || ''),
+      escapeCSVField(item.context?.dimensions?.width || ''),
+      escapeCSVField(item.context?.dimensions?.height || ''),
+      escapeCSVField(item.context?.size || ''),
+      escapeCSVField(item.media?.mainUrl || ''),
+      escapeCSVField(item.media?.thumbUrl || ''),
+      escapeCSVField(item.media?.galleryUrls?.join(';') || ''),
       escapeCSVField(item.context?.sourceFileUrl || '')
     ];
     csvRows.push(row.join(','));

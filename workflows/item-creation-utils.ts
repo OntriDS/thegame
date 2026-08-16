@@ -13,7 +13,7 @@ import { getUTCNow } from '@/lib/utils/utc-utils';
 import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution';
 import { getItemCharacterId } from '@/lib/item-character-id';
 import { getFinancialCounterpartyId } from '@/lib/financial-record-counterparty-id';
-import { toMoney } from '@/lib/utils/financial-utils';
+import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 
@@ -59,10 +59,12 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
     const outputItemSubType = plan?.outputItemSubType ?? task.outputItemSubType;
     const outputQuantity = Number(plan?.outputQuantity ?? task.outputQuantity ?? 1);
     const outputItemName = plan?.outputItemName ?? task.outputItemName;
-    const outputItemPrice = Number(plan?.outputItemPrice?.minorUnits ?? task.outputItemPrice ?? 0) /
-      (plan?.outputItemPrice ? 100 : 1);
-    const outputUnitCost = Number(plan?.outputUnitCost?.minorUnits ?? task.outputUnitCost ?? 0) /
-      (plan?.outputUnitCost ? 100 : 1);
+    const outputItemPrice = plan?.outputItemPrice
+      ? extractMoneyValue(plan.outputItemPrice)
+      : Number(task.outputItemPrice ?? 0);
+    const outputUnitCost = plan?.outputUnitCost
+      ? extractMoneyValue(plan.outputUnitCost)
+      : Number(task.outputUnitCost ?? 0);
     const isNewItem = plan?.isNewItem ?? task.isNewItem;
     const isSold = plan?.isSold ?? task.isSold;
 
@@ -196,10 +198,12 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
     const outputItemSubType = plan?.outputItemSubType ?? (record as any).outputItemSubType;
     const outputQuantity = Number(plan?.outputQuantity ?? (record as any).outputQuantity ?? 1);
     const outputItemName = plan?.outputItemName ?? (record as any).outputItemName;
-    const outputItemPrice = Number(plan?.outputItemPrice?.minorUnits ?? (record as any).outputItemPrice ?? 0) /
-      (plan?.outputItemPrice ? 100 : 1);
-    const outputUnitCost = Number(plan?.outputUnitCost?.minorUnits ?? (record as any).outputUnitCost ?? 0) /
-      (plan?.outputUnitCost ? 100 : 1);
+    const outputItemPrice = plan?.outputItemPrice
+      ? extractMoneyValue(plan.outputItemPrice)
+      : Number((record as any).outputItemPrice ?? 0);
+    const outputUnitCost = plan?.outputUnitCost
+      ? extractMoneyValue(plan.outputUnitCost)
+      : Number((record as any).outputUnitCost ?? 0);
     console.log(`[createItemFromRecord] Starting item creation for record: ${record.name} (${record.id})`);
     console.log(`[createItemFromRecord] outputItemType: ${outputItemType}`);
     console.log(`[createItemFromRecord] outputQuantity: ${outputQuantity}`);

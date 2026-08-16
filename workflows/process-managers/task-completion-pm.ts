@@ -15,6 +15,7 @@ import { createFinancialRecordFromTask } from '../financial-record-utils';
 import { createItemFromTask } from '../item-creation-utils';
 import { stagePointsForPlayer } from '../points-rewards-utils';
 import { EffectKeys } from '@/data-store/keys';
+import { getTaskPlayerCharacterId } from '@/lib/compatibility/task-selectors';
 
 export class TaskCompletionProcessManager {
   static async process(execution: WorkflowExecutionV1): Promise<void> {
@@ -95,7 +96,7 @@ export class TaskCompletionProcessManager {
 
     try {
       console.log(`[TaskCompletionPM] Staging points for task ${task.id}`);
-      const playerId = task.playerCharacterId || 'founder';
+      const playerId = getTaskPlayerCharacterId(task) || 'founder';
       await stagePointsForPlayer(playerId, task.context.rewardIntent.points, task.id, EntityType.TASK);
       
       // Resolve claim with lease token

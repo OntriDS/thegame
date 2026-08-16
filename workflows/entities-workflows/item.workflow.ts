@@ -11,7 +11,6 @@ import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { deleteItem } from '@/data-store/datastore';
 import { getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
-import { createCharacterFromItem } from '../character-creation-utils';
 import {
   upsertItem,
   getItemById,
@@ -29,7 +28,6 @@ import { formatForDisplay } from '@/lib/utils/date-display-utils';
 import { isSoldStatus } from '@/lib/utils/status-utils';
 import { getUTCNow, endOfMonthUTC, formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
 import { buildArchiveMonthsKey } from '@/data-store/keys';
-import { getItemCharacterId } from '@/lib/item-character-id';
 
 const STATE_FIELDS = ['status', 'stock', 'quantitySold'];
 
@@ -45,26 +43,12 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.CREATED, {
       name: item.name,
       itemType: item.type,
-      subItemType: (item as any).subItemType || '',
+      subItemType: item.context?.subItemType || '',
       quantity: totalQuantity,
       soldQuantity: 0 // It's newly created, not sold yet
     }, item.createdAt);
 
     await markEffect(effectKey);
-
-    // Character creation from emissary fields - when newOwnerName is provided
-    if (item.newOwnerName && !getItemCharacterId(item)) {
-      const characterEffectKey = EffectKeys.sideEffect('item', item.id, 'characterCreated');
-      if (!(await hasEffect(characterEffectKey))) {
-        const createdCharacter = await createCharacterFromItem(item);
-        if (createdCharacter) {
-          // Update item with the created character ID
-          const updatedItem = { ...item, characterId: createdCharacter.id };
-          await upsertItem(updatedItem, { skipWorkflowEffects: true });
-          await markEffect(characterEffectKey);
-        }
-      }
-    }
 
     return;
   }
@@ -87,7 +71,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
         {
           name: item.name,
           itemType: item.type,
-          subItemType: (item as any).subItemType,
+          subItemType: item.context?.subItemType,
           soldQuantity: item.quantitySold || 0
         },
         item.updatedAt || getUTCNow()
@@ -122,7 +106,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       return;
     }
 
-    const soldAt = item.soldAt || getUTCNow();
+    const soldAt = item.context?.soldAt || getUTCNow();
     const monthKey = formatArchiveMonthKeyUTC(soldAt);
     const primarySite = item.stock?.[0]?.siteId || '';
 
@@ -151,11 +135,11 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     let updatedBaseItem: Item;
     const remainingStock = Math.max(0, previousStockTotal - quantityToSell);
 
-    const shouldKeepInInventory = item.keepInInventoryAfterSold ?? false;
+    const shouldKeepInInventory = item.context?.keepInInventoryAfterSold ?? false;
 
     // Handle restockToTarget logic (consignment behavior)
-    const shouldRestockToTarget = item.restockToTarget ?? false;
-    const targetAmount = item.targetAmount || 0;
+    const shouldRestockToTarget = item.context?.restockToTarget ?? false;
+    const targetAmount = item.context?.targetAmount || 0;
 
     if (shouldRestockToTarget && targetAmount > 0) {
       // Restock to target quantity (consignment behavior)
@@ -189,17 +173,17 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, {
       name: item.name,
       itemType: item.type,
-      subItemType: (item as any).subItemType,
+      subItemType: item.context?.subItemType,
       soldQuantity: quantityToSell
-    }, item.soldAt || soldAt);
+    }, item.context?.soldAt || soldAt);
 
     // 5. LEAN SWEEPER (Since we return early, we must sweep manually here if needed)
-    const leanFieldsChanged = previousItem.name !== item.name || previousItem.type !== item.type || previousItem.subItemType !== (item as any).subItemType;
+    const leanFieldsChanged = previousItem.name !== item.name || previousItem.type !== item.type || previousItem.context?.subItemType !== item.context?.subItemType;
     if (leanFieldsChanged) {
       await updateEntityLeanFields(EntityType.ITEM, item.id, {
         name: item.name,
         itemType: item.type,
-        subItemType: (item as any).subItemType || '',
+        subItemType: item.context?.subItemType || '',
       });
     }
 
@@ -213,7 +197,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   const leanFieldsChanged =
     previousItem.name !== item.name ||
     previousItem.type !== item.type ||
-    previousItem.subItemType !== (item as any).subItemType;
+    previousItem.context?.subItemType !== item.context?.subItemType;
 
   if (leanFieldsChanged) {
     // Map Clone IDs back to Base IDs to update the unified history log
@@ -224,7 +208,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     await updateEntityLeanFields(EntityType.ITEM, baseItemId, {
       name: item.name,
       itemType: item.type,
-      subItemType: (item as any).subItemType || '',
+      subItemType: item.context?.subItemType || '',
     });
   }
   // Propagate changes to Tasks, Financials, and Sales to prevent name reversion
@@ -250,7 +234,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
 
     if (isArchivable) {
       // Maintain month index (soldAt → createdAt)
-      const currentTargetDate = item.soldAt || item.createdAt || getUTCNow();
+      const currentTargetDate = item.context?.soldAt || item.createdAt || getUTCNow();
       const targetMonth = formatArchiveMonthKeyUTC(currentTargetDate);
 
       const { kvSAdd, kvSRem } = await import('@/lib/utils/kv');
@@ -285,14 +269,14 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
           await updateEntityLeanFields(EntityType.ITEM, item.id, {
             name: item.name,
             itemType: item.type,
-            subItemType: (item as any).subItemType || '',
+            subItemType: item.context?.subItemType || '',
           });
         } else {
           // No SOLD entry in this month yet — write one now so the item appears in the log
           await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, {
             name: item.name,
             itemType: item.type,
-            subItemType: (item as any).subItemType,
+            subItemType: item.context?.subItemType,
             soldQuantity: item.quantitySold || 0,
           }, currentTargetDate);
         }
@@ -324,7 +308,7 @@ export async function ensureItemSoldLog(itemId: string): Promise<{
   if (await entityHasLogEvent(EntityType.ITEM, itemId, 'sold')) {
     return { success: true, noop: true };
   }
-  const ts = item.soldAt || item.createdAt || getUTCNow();
+  const ts = item.context?.soldAt || item.createdAt || getUTCNow();
   await appendEntityLog(
     EntityType.ITEM,
     item.id,
@@ -332,7 +316,7 @@ export async function ensureItemSoldLog(itemId: string): Promise<{
     {
       name: item.name,
       itemType: item.type,
-      subItemType: (item as any).subItemType || '',
+      subItemType: item.context?.subItemType || '',
       soldQuantity: item.quantitySold || 0,
     },
     ts

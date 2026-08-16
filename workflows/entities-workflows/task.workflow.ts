@@ -26,6 +26,7 @@ import { createCharacterFromTask } from '../character-creation-utils';
 import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync-server';
 import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
 import { kvSRem } from '@/lib/utils/kv';
+import { getTaskPlayerCharacterId } from '@/lib/compatibility/task-selectors';
 
 // UTC: archive Redis keys use formatArchiveMonthKeyUTC only (see utc-utils.ts + utc-time-system.md).
 import { getUTCNow, formatArchiveMonthKeyUTC, endOfMonthUTC } from '@/lib/utils/utc-utils';
@@ -185,7 +186,7 @@ async function normalizeTaskFailedState(task: Task, previousTask?: Task): Promis
       previousTask.status === TaskStatus.COLLECTED || previousTask.status === TaskStatus.COLLECTED;
     const stagingKey = EffectKeys.sideEffect('task', task.id, 'pointsStaged');
     const pointsRewardedKey = EffectKeys.sideEffect('task', task.id, 'pointsRewarded');
-    const playerRef = task.playerCharacterId || FOUNDER_CHARACTER_ID;
+    const playerRef = getTaskPlayerCharacterId(task) || FOUNDER_CHARACTER_ID;
 
     if (wasCollected && task.context?.rewardIntent?.points) {
       if (await hasEffect(pointsRewardedKey)) {
@@ -394,7 +395,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       const stagingEffectKey = EffectKeys.sideEffect('task', outputsTask.id, 'pointsStaged');
 
       if (outputsTask.context?.rewardIntent?.points && (await hasEffect(stagingEffectKey))) {
-        const playerId = outputsTask.playerCharacterId || FOUNDER_CHARACTER_ID;
+        const playerId = getTaskPlayerCharacterId(outputsTask) || FOUNDER_CHARACTER_ID;
         await rewardPointsToPlayer(playerId, outputsTask.context?.rewardIntent?.points, outputsTask.id, EntityType.TASK, collectedAt);
       }
 
@@ -684,7 +685,7 @@ async function removePlayerPointsFromTask(task: Task): Promise<void> {
     if (!task.context?.rewardIntent?.points) return;
 
     // Get the player from the task (same logic as creation)
-    const playerId = task.playerCharacterId || FOUNDER_CHARACTER_ID;
+    const playerId = getTaskPlayerCharacterId(task) || FOUNDER_CHARACTER_ID;
     const player = await getPlayerById(playerId);
 
     if (!player) return;
@@ -885,7 +886,7 @@ async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date):
         // 3. Reward points if child has rewards and points were staged
         const childStagingKey = EffectKeys.sideEffect('task', childInstance.id, 'pointsStaged');
         if (childInstance.context?.rewardIntent?.points && await hasEffect(childStagingKey)) {
-          const playerId = childInstance.playerCharacterId || FOUNDER_CHARACTER_ID;
+          const playerId = getTaskPlayerCharacterId(childInstance) || FOUNDER_CHARACTER_ID;
           await rewardPointsToPlayer(playerId, childInstance.context?.rewardIntent?.points, childInstance.id, EntityType.TASK, collectedAt);
         }
 

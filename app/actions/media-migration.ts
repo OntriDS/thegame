@@ -27,12 +27,11 @@ export async function initializeItemMedia(dryRun: boolean = true) {
           
           const updatedItem: Item = {
             ...cleanItem,
-            media: item.media || {
-              main: "",
-              thumb: "",
-              gallery: [],
+            media: item.media || { mainUrl: "" },
+            context: {
+              ...item.context,
+              sourceFileUrl: item.context?.sourceFileUrl || undefined,
             },
-            sourceFileUrl: item.sourceFileUrl || "",
             updatedAt: new Date(),
           };
           await upsertItem(updatedItem);

@@ -104,10 +104,11 @@ export async function createCharacterFromFinancial(record: FinancialRecord): Pro
 }
 
 export async function createCharacterFromItem(item: Item): Promise<Character | null> {
-  if (!item.newOwnerName) {
+  const newOwnerName = (item as Item & { context?: Item['context'] & { newOwnerName?: string } }).context?.newOwnerName;
+  if (!newOwnerName) {
     return null;
   }
-  return createCharacterFromEntity('item', item.id, item.name, item.newOwnerName);
+  return createCharacterFromEntity('item', item.id, item.name, newOwnerName);
 }
 
 

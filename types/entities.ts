@@ -215,7 +215,6 @@ export type ItemSiteLinkV1 = LinkEnvelopeV1<
   {
     kind: 'item-site';
     relationship: 'stored' | 'displayed' | 'in-transit';
-    quantity?: number; // How much of the item is at this specific site
   }
 >;
 

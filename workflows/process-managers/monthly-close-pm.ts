@@ -22,6 +22,7 @@ import { WorkflowStatus, EffectClaimStatus, TaskStatus, SaleStatus, EntityType }
 import { saveWorkflowExecution } from '@/data-store/workflow-store';
 import { getTasksForMonth, getSalesForMonth, upsertTask, upsertSale } from '@/data-store/datastore';
 import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
+import { getTaskPlayerCharacterId } from '@/lib/compatibility/task-selectors';
 import { acquireEffectClaim, resolveEffectClaim } from '@/lib/domain/effects/effect-claim-store';
 import { vestPointGrant, getGrantBySource } from '@/lib/domain/progression/point-grant-store';
 import { EffectKeys } from '@/data-store/keys';
@@ -285,7 +286,7 @@ export class MonthlyCloseProcessManager {
     task: Task
   ): Promise<void> {
     // Check if task has a point grant
-    const grant = await getGrantBySource({ type: EntityType.TASK, id: task.id }, task.playerCharacterId || 'founder');
+    const grant = await getGrantBySource({ type: EntityType.TASK, id: task.id }, getTaskPlayerCharacterId(task) || 'founder');
 
     if (!grant) {
       console.log(`[MonthlyClosePM] No grant found for task ${task.id}`);

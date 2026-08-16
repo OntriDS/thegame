@@ -71,6 +71,41 @@ export async function POST(req: NextRequest) {
 
     const cleanTaskBody = { ...(taskBody as unknown as Record<string, unknown>) } as Record<string, unknown>;
     delete cleanTaskBody.customerCharacterId;
+    // These fields are compatibility inputs only. New Task writes use the
+    // canonical schedule/context facets and canonical Links.
+    delete cleanTaskBody.characterId;
+    delete cleanTaskBody.links;
+    delete cleanTaskBody.dueDate;
+    delete cleanTaskBody.frequencyConfig;
+    delete cleanTaskBody.isCollected;
+    if (cleanTaskBody.siteId == null) delete cleanTaskBody.siteId;
+    if (cleanTaskBody.targetSiteId == null) delete cleanTaskBody.targetSiteId;
+
+    const rawContext = (taskBody.context || {}) as Record<string, any>;
+    const rawProductionPlan = rawContext.productionPlan;
+    const hasProductionIntent = Boolean(
+      rawProductionPlan && (
+        rawProductionPlan.outputItemType ||
+        rawProductionPlan.outputItemName ||
+        (taskBody as any).outputItemId
+      )
+    );
+    const rewardPoints = rawContext.rewardIntent?.points;
+    const hasRewardIntent = Boolean(
+      rewardPoints && Object.values(rewardPoints).some((value) => Number(value) > 0)
+    );
+    const canonicalCounterpartyId = rawContext.counterparty?.counterpartyId || characterId;
+    const hasCounterparty = Boolean(canonicalCounterpartyId || rawContext.newCustomerName);
+    const normalizedContext = { ...rawContext };
+    if (!hasProductionIntent) delete normalizedContext.productionPlan;
+    if (!hasRewardIntent) delete normalizedContext.rewardIntent;
+    if (!hasCounterparty) delete normalizedContext.counterparty;
+    else if (!normalizedContext.counterparty) {
+      normalizedContext.counterparty = {
+        counterpartyId: canonicalCounterpartyId,
+        role: (taskBody as any).customerCharacterRole || 'customer',
+      };
+    }
 
     // Normalize frequencyConfig.customDays to parsed UTC instants (preserve client civil day)
     let normalizedFrequencyConfig = taskBody.frequencyConfig;
@@ -164,19 +199,30 @@ export async function POST(req: NextRequest) {
     const task = {
       ...cleanTaskBody,
       id,
-      parentId,
-      links: taskBody.links || [],
-      characterId: characterId || null,
+      ...(parentId ? { parentId } : {}),
+      ...(taskBody.outputItemId ? { outputItemId: taskBody.outputItemId } : {}),
+      ...(Array.isArray(taskBody.ownerIds) && taskBody.ownerIds.length > 0
+        ? { ownerIds: taskBody.ownerIds }
+        : {}),
       createdAt: taskBody.createdAt ? parseDateToUTC(taskBody.createdAt as Date | string | number | null | undefined) : getUTCNow(),
       updatedAt: getUTCNow(),
-      dueDate: taskBody.dueDate ? parseDateToUTC(taskBody.dueDate) : undefined,
+      schedule: taskBody.schedule || (taskBody.dueDate
+        ? { dueDate: parseDateToUTC(taskBody.dueDate) }
+        : undefined),
       doneAt: nextDoneAt,
       collectedAt: nextCollectedAt,
       progress: { percentage: Number.isFinite(nextProgress) ? nextProgress : 0 },
-      isCollected: isRevertingFromTerminal
-        ? false
-        : ((taskBody as Task).isCollected ?? existingTask?.isCollected),
-      frequencyConfig: normalizedFrequencyConfig
+      context: {
+        ...normalizedContext,
+        ...(normalizedFrequencyConfig && (taskBody.type === TaskType.RECURRENT_GROUP || taskBody.type === TaskType.RECURRENT_TEMPLATE)
+          ? {
+              recurrence: {
+                ...(normalizedContext.recurrence || {}),
+                frequencyConfig: normalizedFrequencyConfig,
+              },
+            }
+          : {}),
+      }
     } as unknown as Task;
     const saved = await upsertTask(task, { skipDuplicateCheck });
     return NextResponse.json(saved);

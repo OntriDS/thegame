@@ -235,7 +235,7 @@ export async function spawnNextRecurrentInstance(
   // 7. Spawn the instance
   const formattedDate = formatDayMonthYear(nextDateLocal);
   const instance: Task = {
-    ...template,
+    ...getCanonicalSpawnBase(template),
     id: uuid(),
     name: `${template.name} \u2022 ${formattedDate}`,
     type: TaskType.RECURRENT_INSTANCE,
@@ -245,29 +245,15 @@ export async function spawnNextRecurrentInstance(
       ...(scheduledEnd ? { scheduledEnd: toRecurrentUTC(scheduledEnd) } : {}),
     },
     parentId: template.id,
-    isRecurrentGroup: false,
-    isTemplate: false,
-    context: {
-      ...(template.context || {}),
-      recurrence: {
-        ...(template.context?.recurrence || {}),
-        isRecurrentGroup: false,
-        isTemplate: false,
-        frequencyConfig: undefined,
-        originTemplateId: template.id,
-      },
-    },
+    context: buildCanonicalInstanceContext(template, template.id),
     createdAt: new Date(),
     updatedAt: new Date(),
     order: nextDateLocal.getTime(),
-    links: [],
     // Never inherit terminal / completion DNA from the template (breaks DONE logs, finrecs, archive).
     status: TaskStatus.CREATED,
-    progress: 0,
+    progress: { percentage: 0 },
     doneAt: undefined,
     collectedAt: undefined,
-    isCollected: false,
-    ownerIds: template.ownerIds,
   };
 
   return {
@@ -431,31 +417,20 @@ export function spawnRecurrentInstance(
   const separator = ' \u2022 ';
   const instanceOrder = dueDate.getTime();
   return {
-    ...template,
+    ...getCanonicalSpawnBase(template),
     id: uuid(),
     name: `${template.name}${separator}${formattedDate}`,
     type: TaskType.RECURRENT_INSTANCE,
     schedule: { dueDate: toRecurrentUTC(dueDate) },
     parentId: template.id, // Instance points to its template
-    context: {
-      ...(template.context || {}),
-      recurrence: {
-        ...(template.context?.recurrence || {}),
-        isRecurrentGroup: false,
-        isTemplate: false,
-        frequencyConfig: undefined,
-        originTemplateId: template.id,
-      },
-    },
+    context: buildCanonicalInstanceContext(template, template.id),
     createdAt: new Date(),
     updatedAt: new Date(),
     order: instanceOrder,
-    links: [], // new instance gets fresh links[]
     status: TaskStatus.CREATED,
-    progress: 0,
+    progress: { percentage: 0 },
     doneAt: undefined,
     collectedAt: undefined,
-    ownerIds: template.ownerIds,
   };
 }
 
@@ -839,5 +814,52 @@ export async function validateSpawnOperation(template: Task): Promise<Validation
   }
 
   return { isValid: true };
+}
+
+function buildCanonicalInstanceContext(template: Task, originTemplateId: string) {
+  const source: any = template.context || {};
+  const context: any = {
+    kind: 'task-context',
+    schemaVersion: 1,
+    recurrence: {
+      ...(source.recurrence || {}),
+      isRecurrentGroup: false,
+      isTemplate: false,
+      frequencyConfig: undefined,
+      originTemplateId,
+    },
+  };
+  const productionPlan = source.productionPlan;
+  if (productionPlan && (productionPlan.outputItemType || productionPlan.outputItemName || (template as any).outputItemId)) {
+    context.productionPlan = productionPlan;
+  }
+  if (source.counterparty?.counterpartyId || source.newCustomerName) {
+    context.counterparty = source.counterparty;
+    if (source.newCustomerName) context.newCustomerName = source.newCustomerName;
+  }
+  if (source.rewardIntent && Object.values(source.rewardIntent.points || {}).some((value: unknown) => Number(value) > 0)) {
+    context.rewardIntent = source.rewardIntent;
+  }
+  if (source.financialIntent?.costIntent || source.financialIntent?.revenueIntent) {
+    context.financialIntent = source.financialIntent;
+  }
+  return context;
+}
+
+function getCanonicalSpawnBase(template: Task): Record<string, unknown> {
+  const raw = template as any;
+  const {
+    characterId, links, isCollected, frequencyConfig, isRecurrentGroup, isTemplate,
+    customerCharacterRole, newCustomerName, jungleCoins, rewards,
+    outputItemType, outputItemSubType, outputQuantity, outputUnitCost,
+    outputItemName, outputItemPrice, outputItemCollection, outputItemStatus,
+    isNewItem, isSold, isNotPaid, isNotCharged, playerCharacterId,
+    ...base
+  } = raw;
+  if (base.siteId == null) delete base.siteId;
+  if (base.targetSiteId == null) delete base.targetSiteId;
+  if (!base.outputItemId) delete base.outputItemId;
+  if (!Array.isArray(base.ownerIds) || base.ownerIds.length === 0) delete base.ownerIds;
+  return base;
 }
 

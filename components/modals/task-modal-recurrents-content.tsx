@@ -430,6 +430,9 @@ export default function RecurrentTreeModalContent({
 
     const finalStatus = statusOverride !== undefined ? statusOverride : determineFinalStatus();
     const finalPlayerCharacterId = playerCharacterId || FOUNDER_CHARACTER_ID;
+    const hasCounterparty = Boolean((!isNewCustomer && customerCharacterId) || (isNewCustomer && newCustomerName.trim()));
+    const hasProductionIntent = Boolean(outputItemType || outputItemName.trim() || selectedItemId);
+    const hasRewards = Object.values(rewards.points).some((value) => Number(value) > 0);
 
     return {
       id: draftId.current,
@@ -455,7 +458,6 @@ export default function RecurrentTreeModalContent({
       siteId: formData.site && formData.site !== 'none' ? formData.site : null,
       targetSiteId: formData.targetSite && formData.targetSite !== 'none' ? formData.targetSite : null,
       parentId,
-      characterId: isNewCustomer ? null : customerCharacterId,
       context: {
         ...(task as any)?.context,
         kind: 'task-context',
@@ -471,15 +473,15 @@ export default function RecurrentTreeModalContent({
           recurrenceStart: recurrenceStart?.toISOString(),
           recurrenceEnd: recurrenceEnd?.toISOString(),
         },
-        counterparty: {
+        ...(hasCounterparty ? { counterparty: {
           counterpartyId: isNewCustomer ? null : customerCharacterId,
           role: customerCharacterRole,
-        },
+        } } : { counterparty: undefined }),
         ...(isNewCustomer && newCustomerName.trim() ? { newCustomerName: newCustomerName.trim() } : {}),
         financialIntent: cost || revenue
           ? { costIntent: toMoney(cost), revenueIntent: toMoney(revenue) }
           : undefined,
-        rewardIntent: Object.values(rewards.points).some((value) => Number(value) > 0)
+        rewardIntent: hasRewards
           ? {
               kind: 'point-reward',
               points: rewards.points,
@@ -487,7 +489,7 @@ export default function RecurrentTreeModalContent({
               policyVersion: (task as any)?.context?.rewardIntent?.policyVersion || 'task-modal-v1',
             }
           : undefined,
-        productionPlan: outputItemType || outputItemName.trim() || selectedItemId || (task as any)?.context?.productionPlan
+        productionPlan: hasProductionIntent
           ? {
               ...(task as any)?.context?.productionPlan,
               outputItemType: outputItemType || undefined,
@@ -502,15 +504,15 @@ export default function RecurrentTreeModalContent({
             }
           : undefined,
       },
-      playerCharacterId: finalPlayerCharacterId,
-      ownerIds: status === TaskStatus.NONE
-        ? []
-        : (Array.isArray(ownerId) ? ownerId : (ownerId ? [ownerId] : [])),
+      ...((Array.isArray(ownerId) ? ownerId : (ownerId ? [ownerId] : [])).length > 0
+        ? { ownerIds: Array.isArray(ownerId) ? ownerId : [ownerId] }
+        : {}),
       order: determineOrder(),
       
-      outputItemId: isNewItem ? null : (selectedItemId || task?.outputItemId || null),
-      sourceSaleId: (task as any)?.sourceSaleId ?? undefined,
-      links: (task as any)?.links || [],
+      ...(!isNewItem && (selectedItemId || task?.outputItemId)
+        ? { outputItemId: selectedItemId || task?.outputItemId }
+        : {}),
+      ...((task as any)?.sourceSaleId ? { sourceSaleId: (task as any).sourceSaleId } : {}),
       createdAt: task?.createdAt || getUTCNow(),
       updatedAt: getUTCNow(),
     } as unknown as Task;
