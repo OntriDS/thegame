@@ -128,7 +128,6 @@ export async function POST(request: NextRequest) {
       siteId: normalizeString(body.siteId) || 'site-akiles-ecosystem',
       counterpartyName: normalizeString(body.counterpartyName) || 'akiles-ecosystem',
       characterId: characterId ?? null,
-      salesChannel: SalesStation.ONLINE_SALES as Station,
       lines: lines as SaleLine[],
       totals: total,
     };

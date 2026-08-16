@@ -1026,7 +1026,6 @@ export interface Sale extends EntityEnvelope {
   characterId?: EntityId | null; // Customer
   partnerId?: EntityId | null;   // Booth partner
   playerCharacterId?: EntityId | null;
-  salesChannel?: Station | null;
 
   // Lines & Payments
   lines: SaleLine[];

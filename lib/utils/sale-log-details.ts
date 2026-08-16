@@ -15,7 +15,7 @@ export function getSaleLogDetails(sale: Sale) {
   return {
     name: sale.name || sale.counterpartyName || 'sale',
     type: sale.type,
-    station: sale.salesChannel || stationMap[sale.type] || 'unknown',
+    station: stationMap[sale.type] || 'unknown',
     cost: sale.totals.totalCost || 0,
     revenue: sale.totals.totalRevenue,
     siteId: sale.siteId || '',

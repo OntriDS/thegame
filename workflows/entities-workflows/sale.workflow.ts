@@ -285,7 +285,6 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       getSaleCharacterId(sale) !== getSaleCharacterId(previousSale) ||
       sale.name !== previousSale.name ||
       sale.siteId !== previousSale.siteId ||
-      sale.salesChannel !== previousSale.salesChannel ||
       saleFinrecTimeKey(sale.lifecycle?.doneAt) !== saleFinrecTimeKey(previousSale.doneAt) ||
       saleFinrecTimeKey(sale.saleDate) !== saleFinrecTimeKey(previousSale.saleDate) ||
       saleFinrecTimeKey(sale.lifecycle?.collectedAt) !== saleFinrecTimeKey(previousSale.collectedAt)  !== !!previousSale.isCollected ||

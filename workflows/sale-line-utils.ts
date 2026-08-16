@@ -440,7 +440,7 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
           id: primaryCloneId,
           name: item.name,
           status: ItemStatus.SOLD,
-          stock: [{ siteId: sale.siteId || item.stock?.[0]?.siteId || '', quantity: 0 }],
+          stock: [{ siteId: sale.siteId || item.stock?.[0]?.siteId || 'none', quantity: 0 }],
           quantitySold: working.quantity || 0,
           context: {
             ...item.context,

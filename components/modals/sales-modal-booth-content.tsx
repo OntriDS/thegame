@@ -844,7 +844,6 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         type: SaleType.BOOTH,
         status: status,
         siteId: siteId,
-        salesChannel: SalesStation.BOOTH_SALES as Station,
         characterId: null,
         partnerId:
           viewMode === "Partner" && selectedPartnerId

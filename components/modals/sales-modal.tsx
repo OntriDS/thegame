@@ -15,7 +15,7 @@ import { ArtDesignStation, SalesStation } from '@/lib/storage/taxonomy';
 import { CurrencyExchangeRates } from '@/lib/constants/financial-constants';
 import { buildAutoSaleName, resolveCanonicalSaleTimelineDate } from '@/lib/utils/sale-auto-name-utils';
 import { getSalesChannelFromSaleType, normalizeStationValue } from '@/lib/utils/business-structure-utils';
-import { createStationCategoryOptions, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
+import { createStationCategoryOptions, getCategoryFromCombined } from '@/lib/utils/searchable-select-utils';
 import { extractMoneyValue, roundCurrency2, toMoney } from '@/lib/utils/financial-utils';
 import { getSaleStatusLabel } from '@/lib/constants/status-display-labels';
 import { ClientAPI } from '@/lib/client-api';
@@ -43,6 +43,16 @@ import SalesModalBoothContent, { type BoothSalesViewHandle as SalesModalBoothCon
 import DatesSubmodal from './submodals/dates-submodal';
 import { ensureCounterpartyRole as syncCounterpartyRole } from '@/lib/utils/character-role-sync';
 import { getSaleCharacterId } from '@/lib/sale-character-id';
+
+const normalizeSiteId = (value: string | null | undefined): string =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
 import {
   collectItemSaleLines,
   extractSaleItemTargetIds,
@@ -182,7 +192,6 @@ export default function SalesModal({
   const [recordedPayments, setRecordedPayments] = useState<SalePaymentLine[]>([]);
   const [taskDueDate, setTaskDueDate] = useState<Date | undefined>(undefined);
   const [taskStation, setTaskStation] = useState<Station>(getSalesChannelFromSaleType(SaleType.DIRECT) || SalesStation.DIRECT_SALES);
-  const [salesChannel, setSalesChannel] = useState<Station | null>(null);
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
   const [showClearLinesModal, setShowClearLinesModal] = useState(false);
@@ -391,7 +400,7 @@ export default function SalesModal({
     setSelectedItems((prev) =>
       prev.map((item) => ({
         ...item,
-        siteId: siteId || '',
+        siteId: normalizeSiteId(siteId),
       }))
     );
   }, [siteId]);
@@ -439,7 +448,6 @@ export default function SalesModal({
       setOverallDiscount(sale.context?.overallDiscount || (sale as any).overallDiscount || {});
       setLines(sale.lines || []);
       setPayments(sale.payments || []);
-      setSalesChannel(sale.salesChannel || getSalesChannelFromSaleType(sale.type) || null);
       setQuickRows([]);
 
       if (sale.type === SaleType.BOOTH) {
@@ -568,7 +576,7 @@ export default function SalesModal({
           id: line.lineId?.trim() || `${sale.id}-row-0`,
           itemId: line.itemId,
           itemName: getItemName(line),
-          siteId: sale.siteId || '',
+          siteId: normalizeSiteId(sale.siteId),
           quantity: line.quantity || 0,
           unitPrice: extractMoneyValue((line.unitPrice as any)) || 0,
           total: (line.quantity || 0) * (extractMoneyValue((line.unitPrice as any)) || 0),
@@ -581,7 +589,7 @@ export default function SalesModal({
         id: line.lineId?.trim() || `${sale.id}-row-${idx}`,
         itemId: line.itemId,
         itemName: getItemName(line),
-        siteId: sale.siteId || '',
+        siteId: normalizeSiteId(sale.siteId),
         quantity: line.quantity || 0,
         unitPrice: extractMoneyValue((line.unitPrice as any)) || 0,
         total: (line.quantity || 0) * (extractMoneyValue((line.unitPrice as any)) || 0),
@@ -684,7 +692,6 @@ export default function SalesModal({
     setStatus(SaleStatus.CHARGED);
     setSiteId('');
     setCounterpartyName('');
-    setSalesChannel(getSalesChannelFromSaleType(SaleType.DIRECT) || null);
     setIsNotPaid(false);
     setIsNotCharged(false);
     setOverallDiscount({});
@@ -993,9 +1000,9 @@ export default function SalesModal({
         return [...new Set(availableSites)];
       });
     const uniqueInferredSiteIds = [...new Set(inferredSiteIds)];
-    const effectiveSiteId = siteId.trim() || (
+    const effectiveSiteId = normalizeSiteId(siteId) || (
       uniqueInferredSiteIds.length === 1 ? uniqueInferredSiteIds[0] : ''
-    );
+    ) || 'none';
 
     const doneAtForSave =
       status === SaleStatus.CHARGED || status === SaleStatus.COLLECTED
@@ -1017,7 +1024,6 @@ export default function SalesModal({
       counterpartyName: counterpartyName.trim() || undefined,
       ...(isNewCustomer || !characterId ? {} : { characterId }), // Existing customer only when selected
       playerCharacterId: playerCharacterId,
-      salesChannel: salesChannel || getSalesChannelFromSaleType(type) || null,
       lines: effectiveLines,
       payments: effectivePayments,
       totals: {
@@ -1424,10 +1430,6 @@ export default function SalesModal({
     if (!isNameCustom) {
       setName(getDefaultSaleName(nextType, siteId, getTimelineDateForAutoName()));
     }
-    const channel = getSalesChannelFromSaleType(nextType);
-    if (channel) {
-      setSalesChannel(channel);
-    }
   };
 
   const handleFooterStatusChange = (nextStatus: SaleStatus) => {
@@ -1477,11 +1479,9 @@ export default function SalesModal({
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <span className="shrink-0 text-xs text-muted-foreground">Station:</span>
               <SearchableSelect
-                value={salesChannel ? getStationValue(salesChannel) : ''}
-                onValueChange={(value) => {
-                  const station = getStationFromCombined(value);
-                  setSalesChannel(station as Station);
-                }}
+                value={getStationValue(getSalesChannelFromSaleType(type) as Station)}
+                onValueChange={() => undefined}
+                disabled
                 placeholder="Station"
                 options={createStationCategoryOptions()}
                 autoGroupByCategory={true}

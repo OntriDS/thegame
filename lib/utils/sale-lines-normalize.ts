@@ -110,18 +110,10 @@ export function ensureItemSaleLineIds(sale: Sale): Sale {
   return changed ? { ...sale, lines: next } : sale;
 }
 
-export function normalizeSale<T extends Pick<Sale, 'lines' | 'type' | 'salesChannel'>>(sale: T): T {
+export function normalizeSale<T extends Pick<Sale, 'lines' | 'type'>>(sale: T): T {
   let next = sale as T;
   if (sale?.lines?.length) {
     next = { ...next, lines: normalizeSaleLines(sale.lines as SaleLine[]) } as T;
-  }
-  const s = next as Pick<Sale, 'type' | 'salesChannel'>;
-  const ch = s.salesChannel;
-  if ((ch == null || String(ch).trim() === '') && s.type) {
-    const inferred = getSalesChannelFromSaleType(String(s.type));
-    if (inferred) {
-      next = { ...(next as object), salesChannel: inferred } as T;
-    }
   }
   return next;
 }

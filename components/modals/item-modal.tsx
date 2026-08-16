@@ -943,6 +943,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       const parsedSize = size.trim() || undefined;
 
       // Handle stock quantity - add to existing if item already exists at this site
+      const canonicalSiteId = toKebabCase(site) || DEFAULT_NONE_SITE;
       let updatedStock: StockPoint[] = [];
 
       // Determine if we're editing an existing item (either via prop or selectedItemId)
@@ -962,26 +963,26 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           // We should update that single entry's siteId instead of creating a new one.
           if (updatedStock.length === 1) {
             updatedStock[0] = {
-              siteId: site,
+              siteId: canonicalSiteId,
               quantity: quantity || 0
             };
           } else {
             // Multi-site item: Treat as "Edit Stock at [Site]"
             // If user selects a new site, they are adding/editing stock at THAT site.
             // We do NOT remove stock from other sites (safety first).
-            const existingStockIndex = updatedStock.findIndex(stock => stock.siteId === site);
+            const existingStockIndex = updatedStock.findIndex(stock => stock.siteId === canonicalSiteId);
 
             if (existingStockIndex >= 0) {
               // Update existing quantity at this site
               updatedStock[existingStockIndex] = {
-                siteId: site,
+                siteId: canonicalSiteId,
                 quantity: quantity || 0
               };
               console.log(`📦 Updated stock at ${site}: ${quantity || 0} units`);
             } else {
               // Add new stock point at this site
               updatedStock.push({
-                siteId: site,
+                siteId: canonicalSiteId,
                 quantity: quantity || 0
               });
               console.log(`📦 Added new stock at ${site}: ${quantity || 0} units`);
@@ -991,7 +992,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       } else {
         // Creating new item - single stock point
         updatedStock = [{
-          siteId: site,
+          siteId: canonicalSiteId,
           quantity: quantity || 0
         }];
       }
