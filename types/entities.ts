@@ -129,6 +129,7 @@ export type IdempotencyKey = string;
 export type EntityRef = { type: EntityType; id: string };
 
 export type CharacterRelationship = 'owner' | 'customer' | 'beneficiary' | 'creator';
+export type LinkRelationship = CharacterRelationship | 'points-earned';
 
 /** Runtime link shape. Relationship is present only for role-bearing links. */
 export interface Link {
@@ -136,7 +137,7 @@ export interface Link {
   linkType: LinkType | CanonicalLinkType;
   source: EntityRef;
   target: EntityRef;
-  relationship?: CharacterRelationship;
+  relationship?: LinkRelationship;
   createdAt: UtcIsoString;
   endedAt?: UtcIsoString;
 }
@@ -591,8 +592,6 @@ export interface FinancialIntentFacetV1 {
 export interface RewardIntentFacetV1 {
   kind: 'point-reward';
   points: PointAmountV1;
-  beneficiaryCharacterId: EntityId;
-  policyVersion: string;
 }
 
 export interface TaskContextV1 {

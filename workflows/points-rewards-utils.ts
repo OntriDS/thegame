@@ -110,7 +110,8 @@ export async function awardPointsToPlayer(
     const link = makeLink(
       linkType,
       { type: sourceEntityType, id: sourceId },
-      { type: EntityType.PLAYER, id: resolvedPlayerId }
+      { type: EntityType.PLAYER, id: resolvedPlayerId },
+      sourceType === 'task' ? 'points-earned' : undefined
     );
 
     await createLink(link);
@@ -160,6 +161,18 @@ export async function stagePointsForPlayer(
     };
 
     await upsertPlayer(updatedPlayer);
+
+    // Record the resolved recipient as soon as Task points enter pending state.
+    // The link is idempotent and remains the source evidence when the points
+    // later vest on collection.
+    if (sourceType === 'task') {
+      await createLink(makeLink(
+        LinkType.TASK_PLAYER,
+        { type: EntityType.TASK, id: sourceId },
+        { type: EntityType.PLAYER, id: resolvedPlayerId },
+        'points-earned'
+      ));
+    }
     return true;
   } catch (error) {
     console.error(`[stagePointsForPlayer] ❌ Failed to stage points:`, error);

@@ -1,5 +1,6 @@
 // @ts-nocheck
 // app/api/tasks/route.ts
+// app/api/tasks/route.ts
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { Task } from '@/types/entities';
@@ -7,7 +8,7 @@ import { TaskType, TaskStatus, TaskPriority } from '@/types/enums';
 import { getAllTasks, getActiveTasks, upsertTask, getTasksForMonth, getTaskById } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 // UTC STANDARDIZATION: Using new UTC utilities
-import { getUTCNow } from '@/lib/utils/utc-utils';
+import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
 import { parseDateToUTC } from '@/lib/utils/date-parsers';
 
 const normalizeCharacterId = (value: unknown): string | null => {
@@ -101,6 +102,17 @@ export async function POST(req: NextRequest) {
     const normalizedContext = { ...rawContext };
     if (!hasProductionIntent) delete normalizedContext.productionPlan;
     if (!hasRewardIntent) delete normalizedContext.rewardIntent;
+    else if (normalizedContext.rewardIntent) {
+      // Task points belong to the owner's Player relationship. The old
+      // These fields belonged to retired reward-recipient experiments. The
+      // canonical Task reward facet contains only its kind and point amounts.
+      const {
+        beneficiaryCharacterId: _legacyBeneficiary,
+        policyVersion: _legacyPolicyVersion,
+        ...canonicalRewardIntent
+      } = normalizedContext.rewardIntent;
+      normalizedContext.rewardIntent = canonicalRewardIntent;
+    }
     if (!hasCounterparty) delete normalizedContext.counterparty;
     else if (!normalizedContext.counterparty) {
       normalizedContext.counterparty = {
@@ -184,7 +196,7 @@ export async function POST(req: NextRequest) {
         : isRevertingFromTerminal
           ? undefined
           : requestedStatus === TaskStatus.COLLECTED
-            ? (existingTask?.collectedAt || getUTCNow())
+            ? (existingTask?.collectedAt || (existingTask?.doneAt ? endOfMonthUTC(existingTask.doneAt) : getUTCNow()))
             : existingTask?.collectedAt;
     const existingProgress = typeof existingTask?.progress === 'object'
       ? Number((existingTask.progress as { percentage?: unknown }).percentage ?? 0)

@@ -4,7 +4,7 @@ import { iamService } from '@/lib/iam-service';
 import { TaskStatus, TaskType } from '@/types/enums';
 import { getActiveTasks, getAllTasks, getTaskById, upsertTask } from '@/data-store/datastore';
 import type { Task } from '@/types/entities';
-import { getUTCNow } from '@/lib/utils/utc-utils';
+import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
 import { parseDateToUTC } from '@/lib/utils/date-parsers';
 
 /**
@@ -244,7 +244,7 @@ export async function PATCH(request: NextRequest) {
         : isRevertingFromTerminal
           ? undefined
           : nextStatus === TaskStatus.COLLECTED
-            ? (task.collectedAt ?? getUTCNow())
+            ? (task.collectedAt ?? (task.doneAt ? endOfMonthUTC(task.doneAt) : getUTCNow()))
             : task.collectedAt;
 
     const incomingDoneAt = explicitDoneAt;

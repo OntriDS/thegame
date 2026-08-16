@@ -16,6 +16,7 @@ import { createItemFromTask } from '../item-creation-utils';
 import { stagePointsForPlayer } from '../points-rewards-utils';
 import { EffectKeys } from '@/data-store/keys';
 import { getTaskPlayerCharacterId } from '@/lib/compatibility/task-selectors';
+import { resolveTaskOwnerPlayerId } from '../task-player-resolution';
 
 export class TaskCompletionProcessManager {
   static async process(execution: WorkflowExecutionV1): Promise<void> {
@@ -96,7 +97,8 @@ export class TaskCompletionProcessManager {
 
     try {
       console.log(`[TaskCompletionPM] Staging points for task ${task.id}`);
-      const playerId = getTaskPlayerCharacterId(task) || 'founder';
+      const playerId = await resolveTaskOwnerPlayerId(task);
+      if (!playerId) throw new Error(`Cannot stage Task points: owner has no Player (${task.id})`);
       await stagePointsForPlayer(playerId, task.context.rewardIntent.points, task.id, EntityType.TASK);
       
       // Resolve claim with lease token

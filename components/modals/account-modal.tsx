@@ -43,7 +43,6 @@ export default function AccountModal({ account, character, open, onOpenChange, o
   const [showPasswordUpdate, setShowPasswordUpdate] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [storedPasswordHash, setStoredPasswordHash] = useState('');
 
   // Character selection for linking
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -110,18 +109,6 @@ export default function AccountModal({ account, character, open, onOpenChange, o
           setEmail(account.email || '');
           setPhone(account.phone || '');
           setPassword(''); // Don't show existing password
-          setStoredPasswordHash(account.passwordHash || '');
-
-          if (isFounder && account.id) {
-            try {
-              const refreshedAccount = await ClientAPI.getAccountById(account.id);
-              if (refreshedAccount?.passwordHash) {
-                setStoredPasswordHash(refreshedAccount.passwordHash);
-              }
-            } catch (refreshError) {
-              console.error('[Account Modal] Failed to refresh account credential hash:', refreshError);
-            }
-          }
 
           // Set selected character
           if (account.characterId) {
@@ -153,7 +140,6 @@ export default function AccountModal({ account, character, open, onOpenChange, o
         setNewPassword('');
         setConfirmPassword('');
         setError(null);
-        setStoredPasswordHash('');
       }
     };
 
@@ -259,15 +245,12 @@ export default function AccountModal({ account, character, open, onOpenChange, o
         updatedAt: new Date(),
       } as any; // Cast to any to include password for API
 
-      await ClientAPI.upsertAccount(accountData);
+      // The page owns persistence. Keeping a single save boundary prevents the
+      // modal and its parent from POSTing the same account twice (and makes the
+      // ACCOUNT_CHARACTER reconciliation run exactly once).
+      await onSave(accountData);
 
-      // Dispatch update event
       dispatchEntityUpdated('account');
-
-      // Call parent onSave if provided
-      if (onSave) {
-        await onSave(accountData);
-      }
 
       // Clear form for next create
       if (!account) {
@@ -450,24 +433,6 @@ export default function AccountModal({ account, character, open, onOpenChange, o
                     <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-md">
                       <p className="text-xs text-amber-700 font-medium">
                         Founder-only: You can change this user&apos;s password. The user will need to use the new password on next login.
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="stored-password-hash" className="text-xs font-medium">
-                        Stored Password Hash
-                      </Label>
-                      <Input
-                        id="stored-password-hash"
-                        type="text"
-                        readOnly
-                        value={storedPasswordHash || 'No stored hash available'}
-                        disabled={isSaving}
-                        className="bg-muted/40 font-mono text-xs"
-                        autoComplete="off"
-                      />
-                      <p className="text-[11px] text-amber-700 font-medium">
-                        Security note: passwords are stored as one-way bcrypt hashes, so the original password cannot be recovered.
                       </p>
                     </div>
 

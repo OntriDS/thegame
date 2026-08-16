@@ -17,6 +17,7 @@ import { getLinksFor } from '@/links/link-registry';
 import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution';
 import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 import { getTaskPlayerCharacterId } from '@/lib/compatibility/task-selectors';
+import { resolveTaskOwnerPlayerId } from './task-player-resolution';
 
 const normalizeDate = (value: Date | string | null | undefined): Date => {
   const parsed = parseDateOrNull(value);
@@ -724,8 +725,12 @@ export async function updatePlayerPointsFromSource(
 
     // Find the target player (resolve from playerCharacterId when present)
     const playerIdCandidate = sourceType === EntityType.TASK
-      ? getTaskPlayerCharacterId(newSource as Task) || getTaskPlayerCharacterId(oldSource as Task) || FOUNDER_CHARACTER_ID
+      ? await resolveTaskOwnerPlayerId(newSource as Task) || await resolveTaskOwnerPlayerId(oldSource as Task)
       : newSource?.playerCharacterId || oldSource?.playerCharacterId || FOUNDER_CHARACTER_ID;
+    if (!playerIdCandidate) {
+      console.warn(`[updatePlayerPointsFromSource] Task ${newSource.id} owner has no Player`);
+      return;
+    }
     const playerId = await resolveToPlayerIdMaybeCharacter(playerIdCandidate);
     const player = await getPlayerById(playerId);
 

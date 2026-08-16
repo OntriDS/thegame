@@ -25,8 +25,7 @@ async function toUiAccount(iamAccount: NonNullable<Awaited<ReturnType<typeof iam
     phone: (iamAccount as any).phone,
     isActive: iamAccount.isActive,
     isVerified: iamAccount.isVerified,
-    passwordHash: iamAccount.passwordHash || '',
-    sessionToken: undefined,
+    // Never expose credential material to the browser.
     loginAttempts: 0,
     verificationToken: undefined,
     resetToken: undefined,

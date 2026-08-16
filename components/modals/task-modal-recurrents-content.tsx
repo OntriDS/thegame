@@ -55,7 +55,6 @@ import DatesSubmodal from './submodals/dates-submodal';
 import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
 import ConfirmationModal from './submodals/confirmation-submodal';
 import CascadeStatusConfirmationModal from './submodals/cascade-status-confirmation-submodal';
-import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 import OwnerSelectorModal from './submodals/owner-selector-submodal';
 import { TaskModalFooter } from './task-modal';
 import { ClientAPI } from '@/lib/client-api';
@@ -429,7 +428,7 @@ export default function RecurrentTreeModalContent({
     };
 
     const finalStatus = statusOverride !== undefined ? statusOverride : determineFinalStatus();
-    const finalPlayerCharacterId = playerCharacterId || FOUNDER_CHARACTER_ID;
+    const ownerCharacterId = Array.isArray(ownerId) ? ownerId[0] : ownerId;
     const hasCounterparty = Boolean((!isNewCustomer && customerCharacterId) || (isNewCustomer && newCustomerName.trim()));
     const hasProductionIntent = Boolean(outputItemType || outputItemName.trim() || selectedItemId);
     const hasRewards = Object.values(rewards.points).some((value) => Number(value) > 0);
@@ -485,8 +484,6 @@ export default function RecurrentTreeModalContent({
           ? {
               kind: 'point-reward',
               points: rewards.points,
-              beneficiaryCharacterId: finalPlayerCharacterId,
-              policyVersion: (task as any)?.context?.rewardIntent?.policyVersion || 'task-modal-v1',
             }
           : undefined,
         productionPlan: hasProductionIntent
@@ -505,6 +502,7 @@ export default function RecurrentTreeModalContent({
           : undefined,
       },
       ownerIds: Array.isArray(ownerId) ? ownerId : (ownerId ? [ownerId] : []),
+      ...(ownerCharacterId ? { playerCharacterId: ownerCharacterId } : {}),
       order: determineOrder(),
       
       ...(!isNewItem && (selectedItemId || task?.outputItemId)
@@ -521,6 +519,13 @@ export default function RecurrentTreeModalContent({
 
     if (!name.trim()) {
       setValidationMessage('Task name is required');
+      setShowValidationModal(true);
+      return;
+    }
+    const hasPointReward = Object.values(rewards.points).some((value) => Number(value) > 0);
+    const hasOwner = Array.isArray(ownerId) ? ownerId.length > 0 : Boolean(ownerId);
+    if (hasPointReward && !hasOwner) {
+      setValidationMessage('Assign an owner before adding point rewards');
       setShowValidationModal(true);
       return;
     }
@@ -1160,15 +1165,6 @@ export default function RecurrentTreeModalContent({
           <Button
             type="button"
             variant="outline"
-            onClick={() => setShowPlayerCharacterSelector(true)}
-            className="h-8 text-xs"
-          >
-            <User className="w-3 h-3 mr-1" />
-            {getPlayerName()}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
             onClick={() => setShowOwnerSelector(true)}
             className="h-8 text-xs"
             disabled={!task && type === TaskType.RECURRENT_INSTANCE}
@@ -1341,13 +1337,6 @@ export default function RecurrentTreeModalContent({
           isReversal={cascadeData.isReversal}
         />
       )}
-
-      <PlayerCharacterSelectorModal
-        open={showPlayerCharacterSelector}
-        onOpenChange={setShowPlayerCharacterSelector}
-        onSelect={handlePlayerCharacterSelect}
-        currentPlayerCharacterId={playerCharacterId}
-      />
 
       <OwnerSelectorModal
         open={showOwnerSelector}

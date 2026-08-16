@@ -32,7 +32,7 @@ import {
 import { getCharacterById as dsGetCharacterById } from '@/data-store/repositories/character.repo';
 import { getPlayerById as dsGetPlayerById } from '@/data-store/repositories/player.repo';
 import { upsertCharacter } from '@/data-store/datastore';
-import { getLinksFor, createLink as rosettaCreateLink } from '@/links/link-registry';
+import { getLinksFor, createLink as rosettaCreateLink, removeLink as rosettaRemoveLink } from '@/links/link-registry';
 import { removeAccountEffectsOnDelete } from '@/workflows/entities-workflows/account.workflow';
 import type { Character as GameCharacter, Link, Player } from '@/types/entities';
 
@@ -542,7 +542,22 @@ export class IAMService {
 
     let character = await dsGetCharacterById(characterId);
     if (!character) throw new Error('Character not found in Game Data-Store');
+    if (character.accountId && character.accountId !== accountId) {
+      throw new Error('Character is already linked to another account');
+    }
     const now = getUTCNow();
+
+    // Detach the previous character pointer when this account is re-linked.
+    // The canonical link and the character compatibility pointer must agree.
+    if (account.characterId && account.characterId !== characterId) {
+      const previousCharacter = await dsGetCharacterById(account.characterId);
+      if (previousCharacter?.accountId === accountId) {
+        await upsertCharacter(
+          { ...previousCharacter, accountId: null, updatedAt: now },
+          { skipWorkflowEffects: true, skipLinkEffects: true }
+        );
+      }
+    }
     if (!character.accountId) {
       await upsertCharacter(
         {
@@ -558,6 +573,20 @@ export class IAMService {
     account.characterId = characterId;
     account.updatedAt = toUTCISOString(now);
     await kvSet(buildAccountKey(accountId), account);
+
+    // ACCOUNT_CHARACTER is the relationship authority. Re-linking an account
+    // must end the previous relationship before creating the new one; otherwise
+    // the account accumulates stale character links while the IAM pointer only
+    // shows the latest character.
+    const accountLinks = await getLinksFor({ type: EntityType.ACCOUNT, id: accountId });
+    await Promise.all(
+      accountLinks
+        .filter(link =>
+          link.linkType === LinkType.ACCOUNT_CHARACTER &&
+          (link.target.type !== EntityType.CHARACTER || link.target.id !== characterId)
+        )
+        .map(link => rosettaRemoveLink(link.id))
+    );
 
     const link: Link = {
       id: uuidv4(),

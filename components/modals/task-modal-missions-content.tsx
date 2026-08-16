@@ -31,7 +31,6 @@ import { v4 as uuid } from 'uuid';
 import { ORDER_INCREMENT, PROGRESS_MAX, PROGRESS_STEP, PRICE_STEP } from '@/lib/constants/app-constants';
 import { computeNextSiblingOrder } from '@/lib/utils/task-order-utils';
 import { Calendar as CalendarIcon, Network, User } from 'lucide-react';
-import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 import OwnerSelectorModal from './submodals/owner-selector-submodal';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
@@ -440,7 +439,7 @@ export default function MissionTreeModalContent({
     };
 
     const finalStatus = determineFinalStatus();
-    const finalPlayerCharacterId = playerCharacterId || FOUNDER_CHARACTER_ID;
+    const ownerCharacterId = Array.isArray(ownerId) ? ownerId[0] : ownerId;
     const hasCounterparty = Boolean((!isNewCustomer && customerCharacterId) || (isNewCustomer && newCustomerName.trim()));
     const hasProductionIntent = Boolean(outputItemType || outputItemName.trim() || selectedItemId);
     const hasRewards = Object.values(rewards.points).some((value) => Number(value) > 0);
@@ -485,8 +484,6 @@ export default function MissionTreeModalContent({
           ? {
               kind: 'point-reward',
               points: rewards.points,
-              beneficiaryCharacterId: finalPlayerCharacterId,
-              policyVersion: (task as any)?.context?.rewardIntent?.policyVersion || 'task-modal-v1',
             }
           : undefined,
         productionPlan: hasProductionIntent
@@ -505,6 +502,7 @@ export default function MissionTreeModalContent({
           : undefined,
       },
       ownerIds: Array.isArray(ownerId) ? ownerId : (ownerId ? [ownerId] : []),
+      ...(ownerCharacterId ? { playerCharacterId: ownerCharacterId } : {}),
       order: determineOrder(),
       
       ...(!isNewItem && (selectedItemId || (task as any)?.outputItemId)
@@ -520,6 +518,13 @@ export default function MissionTreeModalContent({
     if (isLoading || isSaving) return;
     if (!name.trim()) {
       setValidationMessage('Task name is required');
+      setShowValidationModal(true);
+      return;
+    }
+    const hasPointReward = Object.values(rewards.points).some((value) => Number(value) > 0);
+    const hasOwner = Array.isArray(ownerId) ? ownerId.length > 0 : Boolean(ownerId);
+    if (hasPointReward && !hasOwner) {
+      setValidationMessage('Assign an owner before adding point rewards');
       setShowValidationModal(true);
       return;
     }
@@ -1087,15 +1092,6 @@ export default function MissionTreeModalContent({
           <Button
             type="button"
             variant="outline"
-            onClick={() => setShowPlayerCharacterSelector(true)}
-            className="h-8 text-xs"
-          >
-            <User className="w-3 h-3 mr-1" />
-            {getPlayerName()}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
             onClick={() => setShowOwnerSelector(true)}
             className="h-8 text-xs"
           >
@@ -1275,14 +1271,6 @@ export default function MissionTreeModalContent({
           setScheduledEndTime(val.scheduledEnd ? format(val.scheduledEnd, 'HH:mm') : '');
         }}
         isRecurrent={false}
-      />
-
-      {/* Player Character Selector Modal */}
-      <PlayerCharacterSelectorModal
-        open={showPlayerCharacterSelector}
-        onOpenChange={setShowPlayerCharacterSelector}
-        onSelect={handlePlayerCharacterSelect}
-        currentPlayerCharacterId={playerCharacterId}
       />
 
       {/* Owner Selector Modal */}

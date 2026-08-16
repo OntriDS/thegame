@@ -42,8 +42,8 @@ async function toUiAccount(
     phone: iamAccount.phone,
     isActive: iamAccount.isActive ?? true,
     isVerified: iamAccount.isVerified ?? false,
-    passwordHash: iamAccount.passwordHash || '',
-    sessionToken: undefined,
+    // Never expose credential material to the browser. Password changes use
+    // the dedicated password endpoint and return only the safe account view.
     loginAttempts: 0,
     verificationToken: undefined,
     resetToken: undefined,
@@ -81,8 +81,7 @@ export async function GET(req: NextRequest) {
       phone: undefined,
       isActive: true,
       isVerified: true,
-    passwordHash: '',
-      sessionToken: undefined,
+      // M2M rows also never expose credential material.
       loginAttempts: 0,
       verificationToken: undefined,
       resetToken: undefined,
@@ -162,7 +161,7 @@ export async function POST(req: NextRequest) {
       await iamService.linkAccountToCharacter(created.id, String(characterId));
 
       const updated = await iamService.getAccountById(created.id);
-      return NextResponse.json(updated);
+      return NextResponse.json(updated ? await toUiAccount(updated) : null);
     }
 
     // ── Update existing account ──
@@ -180,7 +179,7 @@ export async function POST(req: NextRequest) {
     }
 
     const updated = await iamService.getAccountById(existing.id);
-    return NextResponse.json(updated);
+    return NextResponse.json(updated ? await toUiAccount(updated) : null);
   } catch (error: any) {
     console.error('[Accounts API] POST error:', error);
     return NextResponse.json({ error: error.message || 'Failed to save account' }, { status: 500 });

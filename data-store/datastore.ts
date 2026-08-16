@@ -6,7 +6,7 @@ import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settle
 import { roundSaleTotals } from '@/lib/utils/financial-utils';
 import { ensureItemSaleLineIds, normalizeSale } from '@/lib/utils/sale-lines-normalize';
 import type { TaskSnapshot, ItemSnapshot, SaleSnapshot, FinancialSnapshot } from '@/types/archive';
-import { CharacterRole, EntityType, ItemType, TaskPriority, TaskStatus, FinancialStatus, TaskType, SaleStatus, ItemStatus } from '@/types/enums';
+import { CharacterRole, EntityType, EntitySchemaVersion, ItemType, TaskPriority, TaskStatus, FinancialStatus, TaskType, SaleStatus, ItemStatus } from '@/types/enums';
 import {
   upsertTask as repoUpsertTask,
   getAllTasks as repoGetAllTasks,
@@ -191,7 +191,14 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
       ? { ...task, priority: TaskPriority.NORMAL }
       : task;
   normalizedTask = normalizeTaskOutputTaxonomy(normalizedTask);
-  const persistedTask = { ...normalizedTask } as Task;
+  // The envelope is owned by the persistence boundary. Modal payloads may omit
+  // version, but a persisted Task may not: new rows start at 0 and every update
+  // advances from the stored version.
+  const persistedTask = {
+    ...normalizedTask,
+    schemaVersion: normalizedTask.schemaVersion ?? EntitySchemaVersion.V1,
+    version: previous ? ((previous.version ?? 0) + 1) : (normalizedTask.version ?? 0),
+  } as Task;
   delete (persistedTask as any).ownerIds;
   const saved = await repoUpsertTask(persistedTask);
 

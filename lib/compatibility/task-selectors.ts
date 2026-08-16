@@ -102,7 +102,10 @@ export function getTaskOwnerIds(task: Task): string[] {
   return [];
 }
 
-/** Canonical reward recipient; root playerCharacterId is compatibility-only. */
+/**
+ * Task point recipient compatibility pointer. Task rewards belong to the
+ * owner's Player relationship; rewardIntent has no beneficiary field.
+ */
 export function getTaskPlayerCharacterId(task: Task): string | null {
-  return task.context?.rewardIntent?.beneficiaryCharacterId || (task as any).playerCharacterId || null;
+  return (task as any).playerCharacterId || getTaskOwnerIds(task)[0] || null;
 }
