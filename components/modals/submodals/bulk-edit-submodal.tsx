@@ -21,6 +21,7 @@ import { getSiteNameFromId } from '@/lib/utils/site-options-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { getCollectionLabel } from '@/lib/constants/collection-labels';
 import DeleteModal from './delete-submodal';
+import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 
 interface BulkEditModalProps {
   open: boolean;
@@ -136,7 +137,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
       const itemCollection = item.collection || Collection.NO_COLLECTION;
       if (collectionFilter !== 'all' && itemCollection !== collectionFilter) return false;
       if (siteFilter !== 'all' && !item.stock.some(stockPoint => stockPoint.siteId === siteFilter)) return false;
-      if (subItemFilter !== 'all' && (item as any).subItemType !== subItemFilter) return false;
+      if (subItemFilter !== 'all' && item.context?.subItemType !== subItemFilter) return false;
       if (statusFilter !== 'all' && item.status !== statusFilter) return false;
       return true;
     });
@@ -178,14 +179,39 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
           if (field === 'quantity') {
             updatedItem = { ...item, stock: updateStockAtPrimarySite(item, newValue) };
           } else if (field === 'targetAmount') {
-            (updatedItem as any).targetAmount = newValue > 0 ? newValue : undefined;
-            (updatedItem as any).restockToTarget = newValue > 0 ? (item as any).restockToTarget : false;
+            updatedItem = {
+              ...item,
+              context: {
+                ...item.context,
+                targetAmount: newValue > 0 ? newValue : undefined,
+                restockToTarget: newValue > 0 ? item.context?.restockToTarget : false,
+              },
+            };
+          } else if (field === 'price' || field === 'unitCost') {
+            updatedItem = {
+              ...item,
+              pricing: {
+                ...item.pricing,
+                ...(field === 'price' ? { targetPrice: toMoney(newValue) } : { unitCost: toMoney(newValue) }),
+              },
+            };
+          } else if (field === 'size') {
+            updatedItem = {
+              ...item,
+              context: { ...item.context, size: String(newValue) || undefined },
+            };
           } else {
             updatedItem = { ...item, [field]: newValue };
           }
         } else if (booleanFields.has(field)) {
           newValue = value === 'true';
-          updatedItem = { ...item, [field]: newValue };
+          updatedItem = {
+            ...item,
+            context: {
+              ...item.context,
+              [field]: newValue,
+            },
+          };
         } else if (field === 'status') {
           newValue = value as ItemStatus;
           updatedItem = { ...item, status: newValue };
@@ -465,7 +491,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
                     <div className="flex justify-between items-center">
                       <span className="font-medium">{item.name}</span>
                       <span className="text-sm text-muted-foreground">
-                        {(item as any).subItemType && `${(item as any).subItemType} • `}
+                        {item.context?.subItemType && `${item.context.subItemType} • `}
                         {item.collection && `${getCollectionLabel(item.collection)} • `}
                         {item.stock?.[0]?.siteId && (
                           <>
@@ -474,7 +500,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
                         )}
                         {item.status && `${getItemStatusLabel(item.status)} • `}
                         Qty: {item.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0}
-                        {(item as any).targetAmount ? ` / Target: ${(item as any).targetAmount}` : ''}
+                        {item.context?.targetAmount ? ` / Target: ${item.context.targetAmount}` : ''}
                       </span>
                     </div>
                   </Label>

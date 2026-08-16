@@ -302,7 +302,13 @@ export function InventoryDisplay({
 
       // Then load additional items in the background (for instant tab switching)
       if (activeTab !== InventoryTab.SOLD_ITEMS) {
-        const allItems = await ClientAPI.getItems();
+        const allItems = await ClientAPI.getItems(
+          undefined,
+          undefined,
+          undefined,
+          selectedStatus === 'all' ? undefined : selectedStatus,
+          selectedSite === 'all' ? undefined : selectedSite,
+        );
         if (requestId === lastRequestIdRef.current) {
           setItems(allItems);
         }
@@ -1834,7 +1840,6 @@ export function InventoryDisplay({
                       <div className="min-w-0 flex-1">Name</div>
                       <div className="w-28 shrink-0">Collection</div>
                       <div className="w-24 shrink-0">Subtype</div>
-                      <div className="w-28 shrink-0 text-center">Station</div>
                       <div className="w-32 shrink-0 text-center">Site</div>
                       <div className="w-16 shrink-0 text-center">Q</div>
                       <div className="w-24 shrink-0 text-center">P$</div>
@@ -2468,7 +2473,7 @@ export function InventoryDisplay({
                         )}
                     </div>
 
-                    {/* Row 3: Combined Metadata (Station, Dims, Collection, Year) */}
+                    {/* Row 3: Item classification, dimensions, collection, and year */}
                     <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 mb-auto text-[10px] text-muted-foreground font-medium">
                       {getItemClassification(item) && (
                         <span className="text-[9px] font-bold text-muted-foreground bg-secondary/40 px-1 py-0.5 rounded uppercase tracking-wider">
@@ -2775,7 +2780,7 @@ export function InventoryDisplay({
                       <span className={getItemYear(artwork) != null ? '' : 'text-rose-500/80'}>{getItemYear(artwork) ?? 'missing'}</span>
                     </div>
 
-                    {/* Row 3: Site (badge) / Station / Collection */}
+                    {/* Row 3: Site, item classification, and collection */}
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs leading-snug text-muted-foreground">
                       <span className="text-[9px] font-bold text-muted-foreground bg-secondary/80 px-1.5 py-0.5 rounded uppercase tracking-wider">
                         {siteName || 'No site'}

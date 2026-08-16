@@ -223,9 +223,9 @@ export default function SaleItemsSubModal({
           itemId: item.id,
           itemName: item.name,
           siteId: specificSiteId || selectedSiteId, // Use specific site from selection if available
-          unitPrice: extractMoneyValue(item.pricing?.targetPrice) || (item as any).price || 0,
+          unitPrice: extractMoneyValue(item.pricing?.targetPrice),
           quantity: 1,
-          total: (extractMoneyValue(item.pricing?.targetPrice) || (item as any).price || 0) * 1,
+          total: extractMoneyValue(item.pricing?.targetPrice) * 1,
           usdExpression: '',
           crcExpression: '',
           totalUSD: 0,

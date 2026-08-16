@@ -14,7 +14,7 @@ import { ItemNameField } from '@/components/ui/item-name-field';
 import { Switch } from '@/components/ui/switch';
 import { FileReference, Item, Site, StockPoint, Sale, SaleLine } from '@/types/entities';
 import type { Money } from '@/types/entities';
-import { ItemType, ItemStatus, Collection, EntityType, EntitySchemaVersion, STATION_CATEGORIES, SaleType, SaleStatus, PaymentMethod, Currency } from '@/types/enums';
+import { ItemType, ItemStatus, Collection, EntityType, EntitySchemaVersion, SaleType, SaleStatus, PaymentMethod, Currency } from '@/types/enums';
 import { getItemStatusLabel } from '@/lib/constants/status-display-labels';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined } from '@/lib/utils/searchable-select-utils';
@@ -153,9 +153,11 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   };
 
   const r2Prefix = useMemo(() => {
-    const parts: string[] = [];
-    if (type) parts.push(String(type));
-    if (subItemType) parts.push(String(subItemType));
+    // Items always use the public R2 `items` namespace. Their business
+    // station is not part of the Item entity and must never be inferred here.
+    const parts: string[] = ['items'];
+    if (type) parts.push(toKebabCase(String(type)));
+    if (subItemType) parts.push(toKebabCase(String(subItemType)));
     return parts.join('/');
   }, [type, subItemType]);
 
@@ -181,19 +183,17 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       const trimmed = raw.trim();
       if (!trimmed) return '';
       if (!autoPrefixR2 || !r2Prefix) return trimmed;
+
+      // Preserve absolute media URLs exactly as entered.
+      if (/^[a-z][a-z\d+.-]*:\/\//i.test(trimmed)) return trimmed;
       
       // If it already starts with the current prefix, we are good
-      if (trimmed.startsWith(r2Prefix)) return trimmed;
-      
-      // Prevent double-prefixing if it looks like it already has a valid R2 station prefix.
-      // We derive this list from the actual STATION_CATEGORIES defined in enums.ts
-      const allStations = Object.values(STATION_CATEGORIES).flat() as string[];
-      
-      const firstPart = trimmed.split('/')[0].toLowerCase();
-      if (allStations.includes(firstPart)) {
-        // If it starts with a known station, assume it's already a full path
-        return trimmed;
-      }
+      if (trimmed === r2Prefix || trimmed.startsWith(`${r2Prefix}/`)) return trimmed;
+
+      // Any `items/...` key is already in the canonical Item namespace. Do
+      // not prepend the current type/subtype again when editing an existing
+      // item or when the subtype has changed.
+      if (trimmed === 'items' || trimmed.startsWith('items/')) return trimmed;
       
       return `${r2Prefix}/${trimmed}`;
     },
@@ -597,17 +597,17 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         const remainingQuantity = refreshed.stock?.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0) || 0;
         setQuantity(remainingQuantity);
         setStatus(refreshed.status || ItemStatus.FOR_SALE);
-        setPrice(extractMoneyValue(refreshed.pricing?.targetPrice) || (refreshed as any).price || 0);
-        setUnitCost(extractMoneyValue(refreshed.pricing?.unitCost) || (refreshed as any).unitCost || 0);
+        setPrice(extractMoneyValue(refreshed.pricing?.targetPrice));
+        setUnitCost(extractMoneyValue(refreshed.pricing?.unitCost));
         setCollection(refreshed.collection || Collection.NO_COLLECTION);
         setKeepInInventoryAfterSold(
-          typeof (refreshed as any).keepInInventoryAfterSold === 'boolean'
-            ? (refreshed as any).keepInInventoryAfterSold
+          typeof refreshed.context?.keepInInventoryAfterSold === 'boolean'
+            ? refreshed.context.keepInInventoryAfterSold
             : false // Default to false
         );
         setRestockToTarget(
-          typeof (refreshed as any).restockToTarget === 'boolean'
-            ? (refreshed as any).restockToTarget
+          typeof refreshed.context?.restockToTarget === 'boolean'
+            ? refreshed.context.restockToTarget
             : false // Default to false
         );
 
@@ -760,8 +760,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setQuantity(item.stock?.reduce((total: number, stockPoint) => total + stockPoint.quantity, 0) || 0);
       }
 
-      setUnitCost(extractMoneyValue(item.pricing?.unitCost) || (item as any).unitCost || 0);
-      setPrice(extractMoneyValue(item.pricing?.targetPrice) || (item as any).price || 0);
+      setUnitCost(extractMoneyValue(item.pricing?.unitCost));
+      setPrice(extractMoneyValue(item.pricing?.targetPrice));
       setKeepInInventoryAfterSold(
         typeof item.context?.keepInInventoryAfterSold === 'boolean'
           ? item.context.keepInInventoryAfterSold
@@ -837,6 +837,39 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     loadOwnerCharacter();
   }, [ownerId]);
 
+  // Ownership is canonical Link data, not an Item root field.
+  useEffect(() => {
+    const entityId = item?.id || selectedItemId;
+    if (!entityId) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: entityId });
+        const ownerLink = links.find((link: ItemRelationshipLink) => {
+          if (link.linkType !== LinkType.ITEM_CHARACTER) return false;
+          const itemIsSource = link.source.type === EntityType.ITEM && link.source.id === entityId;
+          const itemIsTarget = link.target.type === EntityType.ITEM && link.target.id === entityId;
+          return (itemIsSource && link.target.type === EntityType.CHARACTER) ||
+            (itemIsTarget && link.source.type === EntityType.CHARACTER);
+        });
+        if (cancelled) return;
+        const nextOwnerId = ownerLink?.source.type === EntityType.CHARACTER
+          ? ownerLink.source.id
+          : ownerLink?.target.type === EntityType.CHARACTER
+            ? ownerLink.target.id
+            : null;
+        setOwnerId(nextOwnerId);
+      } catch (error) {
+        if (!cancelled) console.error('Failed to load Item owner link:', error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [item?.id, selectedItemId]);
+
   // Handle setting owner character
   const handleSetOwner = (characterId: string | null) => {
     setOwnerId(characterId);
@@ -865,8 +898,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           setSite(selectedItem.stock?.[0]?.siteId || '');
         }
 
-        setUnitCost(extractMoneyValue(selectedItem.pricing?.unitCost) || (selectedItem as any).unitCost || 0);
-        setPrice(extractMoneyValue(selectedItem.pricing?.targetPrice) || (selectedItem as any).price || 0);
+        setUnitCost(extractMoneyValue(selectedItem.pricing?.unitCost));
+        setPrice(extractMoneyValue(selectedItem.pricing?.targetPrice));
         setKeepInInventoryAfterSold(
           typeof selectedItem.context?.keepInInventoryAfterSold === 'boolean'
             ? selectedItem.context.keepInInventoryAfterSold
@@ -1019,13 +1052,15 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           size: parsedSize,
           year,
           sourceFileUrl: sourceFileUrl || undefined,
-          keepInInventoryAfterSold,
-          restockToTarget,
-          targetAmount: targetAmount && !isNaN(parseFloat(targetAmount)) ? parseFloat(targetAmount) : undefined,
+          ...(keepInInventoryAfterSold ? { keepInInventoryAfterSold: true } : {}),
+          ...(restockToTarget ? { restockToTarget: true } : {}),
+          ...(targetAmount && !isNaN(parseFloat(targetAmount))
+            ? { targetAmount: parseFloat(targetAmount) }
+            : {}),
           soldAt,
         },
-        sourceTaskId: existingItem?.sourceTaskId ?? null,
-        sourceRecordId: existingItem?.sourceRecordId ?? null,
+        ...(existingItem?.sourceTaskId ? { sourceTaskId: existingItem.sourceTaskId } : {}),
+        ...(existingItem?.sourceRecordId ? { sourceRecordId: existingItem.sourceRecordId } : {}),
         // Preserve creation date and optimistic-concurrency version when editing.
         createdAt: existingItem?.createdAt || getUTCNow(),
         updatedAt: getUTCNow(),
@@ -1039,6 +1074,18 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
       // Emit pure item entity - Links System handles all relationships automatically
       await onSave(newItem);
+
+      // Draft ownership is selected before the Item has an entity ID in the
+      // link submodal. Create the canonical ownership link after persistence.
+      if (isCreatingNewItem && ownerId) {
+        await ClientAPI.createLink({
+          id: uuid(),
+          linkType: LinkType.ITEM_CHARACTER,
+          source: { type: EntityType.ITEM, id: newItem.id },
+          target: { type: EntityType.CHARACTER, id: ownerId },
+          createdAt: getUTCNow(),
+        });
+      }
 
       // Dispatch UI update events AFTER successful save
       dispatchEntityUpdated(entityTypeToKind(EntityType.ITEM));

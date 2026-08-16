@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { extractMoneyValue } from '@/lib/utils/financial-utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Item, Site } from '@/types/entities';
@@ -164,7 +165,7 @@ export default function CharacterInventorySubmodal({
                             {item.status && (
                               <span>Status: {item.status}</span>
                             )}
-                            {(item as any).price != null ? ` - ${(item as any).price} J$` : ''}
+                            {item.pricing?.targetPrice ? ` - $${extractMoneyValue(item.pricing.targetPrice).toFixed(2)}` : ''}
                           </div>
                         </div>
                       </div>
