@@ -236,7 +236,6 @@ async function createCustomerCharacter(input: {
     isActive: true,
     createdAt: now,
     updatedAt: now,
-    links: [],
     contactEmail: input.email,
     contactPhone: input.phone,
     contactPhoneCountryCode: input.phoneCountryCode,

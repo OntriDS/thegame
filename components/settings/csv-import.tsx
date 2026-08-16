@@ -244,7 +244,6 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         sourceTaskId,
         createdAt: new Date(),
         updatedAt: new Date(),
-        links: [] // initialize links array
       } as unknown as Item;
     }));
 

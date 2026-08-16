@@ -20,7 +20,8 @@ export async function POST(req: NextRequest) {
   
   try {
     const body = (await req.json()) as Player;
-    const cleanBody = { ...(body as Player & { characterIds?: unknown }) };
+    const { links: _dropEmbeddedLinks, ...bodyWithoutLinks } = body as Player & { characterIds?: unknown };
+    const cleanBody = { ...bodyWithoutLinks };
     delete cleanBody.characterIds;
     const incomingCharacterId = typeof body.characterId === 'string'
       ? body.characterId.trim()
@@ -30,7 +31,6 @@ export async function POST(req: NextRequest) {
       ...(cleanBody as Player),
       id: cleanBody.id || uuid(),
       characterId: incomingCharacterId || null,
-      links: cleanBody.links || [],
       createdAt: cleanBody.createdAt ? new Date(cleanBody.createdAt) : new Date(),
       updatedAt: new Date(),
       lastActiveAt: cleanBody.lastActiveAt ? new Date(cleanBody.lastActiveAt) : new Date()

@@ -55,7 +55,6 @@ async function toUiAccount(
         ? ''
         : iamAccount.playerId || (character as any)?.playerId || '',
     lastActiveAt: new Date(iamAccount.updatedAt || Date.now()),
-    links: [],
     character,
     type,
     createdAt: new Date(iamAccount.createdAt || Date.now()),
@@ -92,7 +91,6 @@ export async function GET(req: NextRequest) {
       characterId: '',
       playerId: undefined,
       lastActiveAt: new Date(app.createdAt),
-      links: [],
       character: {
         id: 'system',
         name: app.appId,
@@ -107,7 +105,6 @@ export async function GET(req: NextRequest) {
         isActive: true,
         createdAt: new Date(app.createdAt),
         updatedAt: new Date(app.createdAt),
-        links: [],
       },
       type: 'm2m',
       createdAt: new Date(app.createdAt),

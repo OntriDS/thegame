@@ -275,13 +275,14 @@ async function handleBulkOperation<T>(
           } else if (mode === 'merge') {
             // Update if exists, add if new - ALWAYS skip workflow effects and links during bulk operations
             if (existing) {
-              // Preserve identity fields: id, createdAt, links
+              // Preserve identity fields: id and createdAt
+              const { links: _existingLinks, ...existingWithoutLinks } = existing as any;
+              const { links: _recordLinks, ...recordWithoutLinks } = record as any;
               const merged: T = {
-                ...existing,
-                ...record,
+                ...existingWithoutLinks,
+                ...recordWithoutLinks,
                 id: (existing as any).id,
                 createdAt: (existing as any).createdAt,
-                links: (existing as any).links || [],
                 updatedAt: new Date()
               } as T;
               await upsertFn(merged, { skipWorkflowEffects: true, skipLinkEffects: true });

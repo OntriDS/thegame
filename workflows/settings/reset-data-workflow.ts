@@ -654,7 +654,6 @@ export class ResetDataWorkflow {
           metadata: { type: SiteType.PHYSICAL, businessType: PhysicalBusinessType.STORAGE, settlementId: '', googleMapsAddress: '' },
           createdAt: getUTCNow(),
           updatedAt: getUTCNow(),
-          links: []
         },
         {
           id: 'drive',
@@ -663,7 +662,6 @@ export class ResetDataWorkflow {
           metadata: { type: SiteType.DIGITAL_SITE, digitalType: DigitalSiteType.REPOSITORY },
           createdAt: getUTCNow(),
           updatedAt: getUTCNow(),
-          links: []
         },
         {
           id: 'none',
@@ -672,7 +670,6 @@ export class ResetDataWorkflow {
           metadata: { type: SiteType.SYSTEM, systemType: SystemSiteType.UNIVERSAL_TRACKING },
           createdAt: getUTCNow(),
           updatedAt: getUTCNow(),
-          links: []
         }
       ];
 

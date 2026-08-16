@@ -316,7 +316,6 @@ function buildDraftItem(input: {
     price: input.price,
     value: 0,
     quantitySold: 0,
-    links: [],
     media: {
       main: NEW_ITEM_MEDIA_PLACEHOLDER,
     },

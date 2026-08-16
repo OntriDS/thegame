@@ -174,8 +174,7 @@ function generateTargetData(
     description: `Auto-generated from ${trigger.entityType} ${trigger.entityId}`,
     createdAt: new Date(),
     updatedAt: new Date(),
-    isCollected: false,
-    links: []
+    isCollected: false
   };
 
   // Keep directional payload generation neutral.

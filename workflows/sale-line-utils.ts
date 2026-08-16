@@ -244,7 +244,6 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
       order: ORDER_INCREMENT,
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
-      links: [],
       siteId: sale.siteId,
       parentId: serviceContext?.taskParentId || undefined,
       schedule: serviceContext?.taskDueDate ? { dueDate: serviceContext.taskDueDate } : undefined,

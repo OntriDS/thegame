@@ -44,10 +44,10 @@ export async function POST(req: NextRequest) {
   
   try {
     const body = (await req.json()) as Site;
+    const { links: _dropEmbeddedLinks, ...bodyRest } = body;
     const site = {
-      ...body,
+      ...bodyRest,
       id: body.id || uuid(),
-      links: body.links || [],
       createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
       updatedAt: new Date()
     };

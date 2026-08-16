@@ -28,12 +28,12 @@ export async function POST(req: NextRequest) {
   }
   try {
     const body = (await req.json()) as Business;
+    const { links: _dropEmbeddedLinks, ...bodyRest } = body;
     const entity: Business = {
-      ...body,
+      ...bodyRest,
       id: body.id || uuid(),
       createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
       updatedAt: new Date(),
-      links: body.links || []
     };
     const saved = await upsertBusiness(entity);
 

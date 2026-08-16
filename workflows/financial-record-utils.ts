@@ -727,7 +727,6 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       doneAt: derived.dateToUse,
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
-      links: [],
       characterId: saleCounterpartyId,
       customerCharacterRole: saleCounterpartyId ? CharacterRole.CUSTOMER : undefined,
     };
@@ -837,7 +836,6 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       doneAt: split.date,
       updatedAt: getUTCNow(),
       createdAt: incomeRecord?.createdAt || getUTCNow(),
-      links: incomeRecord?.links || [],
     characterId: saleCounterpartyId,
       customerCharacterRole: saleCounterpartyId ? CharacterRole.CUSTOMER : undefined,
     } as FinancialRecord;
@@ -885,7 +883,6 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         doneAt: split.date,
         updatedAt: getUTCNow(),
         createdAt: payoutRecord?.createdAt || getUTCNow(),
-        links: payoutRecord?.links || [],
         characterId: payoutCounterpartyId,
         customerCharacterRole: payoutCounterpartyId ? CharacterRole.BENEFICIARY : undefined,
       } as FinancialRecord;
@@ -977,7 +974,6 @@ export async function createFinancialRecordFromPointsExchange(
       status: FinancialStatus.DONE,
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
-      links: []
     } as FinancialRecord;
 
     // Store the financial record
@@ -1078,7 +1074,6 @@ export async function createFinancialRecordFromJ$CashOut(
       exchangeCounterAmount: cashOutType === 'ZAPS' ? amountPaid : undefined,
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
-      links: []
     };
 
     // Create company FinancialRecord (J$ buyback with cost)
@@ -1102,7 +1097,6 @@ export async function createFinancialRecordFromJ$CashOut(
       exchangeCounterAmount: cashOutType === 'ZAPS' ? amountPaid : undefined,
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
-      links: []
     };
 
     // Store records

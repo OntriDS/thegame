@@ -114,7 +114,6 @@ export async function POST(request: NextRequest) {
     const sale: Sale = {
       id: orderId,
       name: `Ecosystem Order ${orderId}`,
-      links: [],
       createdAt: now,
       updatedAt: now,
       description: `Order created by M2M from Akiles Ecosystem`,

@@ -47,10 +47,10 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as FinancialRecord;
     const createdAt = body.createdAt ? new Date(body.createdAt) : new Date();
     const updatedAt = new Date(Math.max(Date.now(), createdAt.getTime()));
+    const { links: _dropEmbeddedLinks, ...bodyRest } = body;
     const financial = {
-      ...body,
+      ...bodyRest,
       id: body.id || uuid(),
-      links: body.links || [],
       createdAt,
       updatedAt,
       collectedAt: body.collectedAt ? new Date(body.collectedAt) : undefined,

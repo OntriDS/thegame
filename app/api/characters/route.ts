@@ -337,11 +337,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const { links: _dropEmbeddedLinks, ...bodyRest } = body;
     const character = {
-      ...body,
+      ...bodyRest,
       roles: normalizedIncomingRoles,
       id: body.id || uuid(),
-      links: body.links || [],
       createdAt: body.createdAt ? new Date(body.createdAt) : getUTCNow(),
       updatedAt: getUTCNow(),
       lastActiveAt: body.lastActiveAt ? new Date(body.lastActiveAt) : getUTCNow(),

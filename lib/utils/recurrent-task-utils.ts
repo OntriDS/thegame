@@ -362,7 +362,6 @@ export function createRecurrentGroup(
     createdAt: new Date(),
     updatedAt: new Date(),
     isCollected: false,
-    links: [], // initialize links array
     ownerId: null,
   };
 }
@@ -402,7 +401,6 @@ export function createRecurrentTemplate(
     rewards: { points: { xp: 0, rp: 0, fp: 0, hp: 0 } },
     createdAt: new Date(),
     updatedAt: new Date(),
-    links: [], // initialize links array
     ownerIds: [],
   };
 }

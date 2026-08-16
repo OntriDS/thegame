@@ -230,7 +230,6 @@ export function ContractSubmodal({
                 notes: notes || undefined,
                 createdAt: initialData?.createdAt || new Date(),
                 updatedAt: new Date(),
-                links: (initialData as any)?.links || [], // Copy existing links if updating
             } as unknown as Contract;
 
             onSave(contract);

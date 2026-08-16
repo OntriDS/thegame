@@ -54,11 +54,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = (await req.json()) as Sale & { customerId?: unknown };
-    const { customerId: _dropLegacySaleCustomerId, ...bodyRest } = body;
+    const { customerId: _dropLegacySaleCustomerId, links: _dropEmbeddedLinks, ...bodyRest } = body;
     const sale = {
       ...bodyRest,
       id: body.id || uuid(),
-      links: body.links || [],
       createdAt: body.createdAt ? parseDateToUTC(body.createdAt) : getUTCNow(),
       updatedAt: getUTCNow(),
       saleDate: body.saleDate ? parseDateToUTC(body.saleDate) : startOfDayUTC(getUTCNow()),

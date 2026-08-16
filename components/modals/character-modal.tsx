@@ -262,7 +262,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         createdAt: character?.createdAt || new Date(),
         updatedAt: new Date(),
         isActive: character?.isActive ?? true,  // Character is active by default
-        links: (character as any)?.links || [],
 
         // Keep accountId only while an active IAM row is driving identity; otherwise clear stale pointers (e.g. after admin disable/delete)
         accountId: identityManagedByAccount ? (character?.accountId ?? null) : null,

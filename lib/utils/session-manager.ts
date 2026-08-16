@@ -59,7 +59,6 @@ export class SessionManager {
         id: sessionId,
         name: defaultName,
         description: '',
-        links: [],
         userId,
         model,
         messageCount: 0,
@@ -245,7 +244,7 @@ export class SessionManager {
         throw new Error('Invalid session export format');
       }
 
-      const sessionData = importData.session;
+      const { links: _dropEntityLinks, ...sessionData } = importData.session;
 
       // Check session limit before importing
       const existingSessions = await getAllSessions();
@@ -258,7 +257,6 @@ export class SessionManager {
         id: this.generateSessionId(),
         name: sessionData.name,
         description: sessionData.description,
-        links: sessionData.links,
         userId: sessionData.userId,
         model: sessionData.model,
         messageCount: sessionData.messageCount,

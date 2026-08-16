@@ -54,7 +54,6 @@ export async function createCharacterFromEntity(
       isActive: true,
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
-      links: []  // initialize links array
     };
     
     // Store the character in DataStore

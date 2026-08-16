@@ -220,7 +220,6 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
         metadata,
         createdAt: site?.createdAt || new Date(),
         updatedAt: new Date(),
-        links: (site as any)?.links || [], // embedded mirror; registry is source of truthe;
       } as unknown as Site;
 
       await onSave(siteData);

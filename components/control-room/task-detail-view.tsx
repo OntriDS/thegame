@@ -296,7 +296,6 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
       createdAt: new Date(),
       updatedAt: new Date(),
       
-      links: [] // initialize links array
     } as unknown as Task;
     setPrefillTemplateTask(prefill);
     setShowTemplateModal(true);
@@ -367,7 +366,6 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
       createdAt: new Date(),
       updatedAt: new Date(),
       
-      links: [] // initialize links array
     } as unknown as Task;
     setPrefillMissionTreeTask(prefill);
     setShowMissionTreeModal(true);

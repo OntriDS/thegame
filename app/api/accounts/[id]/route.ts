@@ -35,7 +35,6 @@ async function toUiAccount(iamAccount: NonNullable<Awaited<ReturnType<typeof iam
     characterId: iamAccount.characterId || character?.id || '',
     playerId: iamAccount.playerId || character?.playerId || '',
     lastActiveAt: new Date(iamAccount.updatedAt || Date.now()),
-    links: [],
     character,
     type: undefined,
     createdAt: new Date(iamAccount.createdAt || Date.now()),

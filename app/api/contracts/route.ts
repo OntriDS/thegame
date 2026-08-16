@@ -27,12 +27,12 @@ export async function POST(req: NextRequest) {
   }
   try {
     const body = (await req.json()) as Contract;
+    const { links: _dropEmbeddedLinks, ...bodyRest } = body;
     const contract: Contract = {
-      ...body,
+      ...bodyRest,
       id: body.id || uuid(),
       createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
       updatedAt: new Date(),
-      links: body.links || []
     };
     const saved = await upsertContract(contract);
     return NextResponse.json(saved);

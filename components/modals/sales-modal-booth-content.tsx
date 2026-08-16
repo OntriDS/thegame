@@ -873,7 +873,6 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
           },
           boothSaleContext: boothMetadata.boothSaleContext,
         },
-        links: (sale as any)?.links || [],
 
         // Canonical lifecycle state
         createdAt: sale?.createdAt || new Date(),
