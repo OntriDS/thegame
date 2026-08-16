@@ -1015,7 +1015,7 @@ export default function SalesModal({
       status,
       siteId: effectiveSiteId,
       counterpartyName: counterpartyName.trim() || undefined,
-      characterId: isNewCustomer ? null : characterId,  // Ambassador: Existing customer
+      ...(isNewCustomer || !characterId ? {} : { characterId }), // Existing customer only when selected
       playerCharacterId: playerCharacterId,
       salesChannel: salesChannel || getSalesChannelFromSaleType(type) || null,
       lines: effectiveLines,
@@ -1025,7 +1025,7 @@ export default function SalesModal({
         discountTotal: toMoney(totalDiscountR),
         taxTotal: toMoney(taxTotalR),
         totalRevenue: toMoney(totalRevenue),
-        totalCost: toMoney(totalCost),
+        ...(isProductMode ? {} : { totalCost: toMoney(totalCost) }),
       },
       lifecycle: {
         ...sale?.lifecycle,
