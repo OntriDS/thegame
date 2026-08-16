@@ -32,10 +32,12 @@ export function normalizeSaleLine(line: unknown): SaleLine | null {
   const kind = String(line.kind ?? '');
 
   if (kind === 'service') {
-    const { metadata, ...withoutLegacyMetadata } = line as any;
+    const { metadata, taxAmount, ...withoutLegacyMetadata } = line as any;
+    const normalizedTax = normalizeOptionalMoneyValue(taxAmount);
     return {
       ...withoutLegacyMetadata,
       kind: 'service',
+      ...(normalizedTax !== undefined ? { taxAmount: normalizedTax } : {}),
       ...(withoutLegacyMetadata.settlement || metadata
         ? { settlement: withoutLegacyMetadata.settlement || metadata }
         : {}),
@@ -70,7 +72,8 @@ export function normalizeSaleLine(line: unknown): SaleLine | null {
   if (kind === 'item' || (typeof line.itemId === 'string' && line.itemId.length > 0)) {
     const itemId = String(line.itemId ?? '');
     if (!itemId) return null;
-    const { metadata, ...withoutLegacyMetadata } = line as any;
+    const { metadata, taxAmount, ...withoutLegacyMetadata } = line as any;
+    const normalizedTax = normalizeOptionalMoneyValue(taxAmount);
     return {
       ...withoutLegacyMetadata,
       kind: 'item',
@@ -78,9 +81,7 @@ export function normalizeSaleLine(line: unknown): SaleLine | null {
       itemId,
       quantity: Number(line.quantity) || 1,
       unitPrice: normalizeMoneyValue(line.unitPrice),
-      ...(normalizeOptionalMoneyValue(line.taxAmount) !== undefined
-        ? { taxAmount: normalizeOptionalMoneyValue(line.taxAmount) }
-        : {}),
+      ...(normalizedTax !== undefined ? { taxAmount: normalizedTax } : {}),
       ...(withoutLegacyMetadata.settlement || metadata
         ? { settlement: withoutLegacyMetadata.settlement || metadata }
         : {}),

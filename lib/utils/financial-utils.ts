@@ -62,8 +62,9 @@ export function roundCurrency2(value: number): number {
 export function roundSaleTotals(sale: Sale): Sale {
   if (!sale.totals) return sale;
   const t = sale.totals;
+  const { discountTotal: _discountTotal, taxTotal: _taxTotal, ...totalsWithoutUnusedZeros } = t;
   const next: Sale['totals'] = {
-    ...t,
+    ...totalsWithoutUnusedZeros,
     subtotal: toMoney(roundCurrency2(extractMoneyValue(t.subtotal as Money | number | undefined))),
     totalRevenue: toMoney(roundCurrency2(extractMoneyValue(t.totalRevenue as Money | number | undefined))),
   };
