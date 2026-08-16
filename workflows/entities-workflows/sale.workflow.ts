@@ -423,6 +423,8 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   // (!isNotPaid && !isNotCharged). Reuses `isCharged` so this never drifts from
   // processChargedSaleLines / milestone logging.
   // =========================================================================
+  const isCharged = sale.status !== SaleStatus.CANCELLED &&
+    (sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED);
   const hasItemLines = sale.lines?.some(l => l.kind === 'item');
   if (isCharged && hasItemLines) {
     await ensureSoldItemEntities(sale, previousSale);
