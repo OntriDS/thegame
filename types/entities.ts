@@ -479,14 +479,14 @@ export interface StockPointV1 {
 
 export interface ItemPricingV1 {
   unitCost: Money;
-  additionalCost: Money;
+  additionalCost?: Money;
   targetPrice: Money;
   actualSaleValue?: Money;
 }
 
 export interface ItemMediaV1 {
   main?: any;
-  mainUrl: string; // R2 Key
+  mainUrl?: string; // R2 Key
   thumbUrl?: string;
   galleryUrls?: string[];
 }
@@ -518,7 +518,7 @@ export interface Item extends EntityEnvelope {
   quantitySold: number;
 
   pricing: ItemPricingV1;
-  media: ItemMediaV1;
+  media?: ItemMediaV1;
 
   // Ambassador Fields
   sourceTaskId?: EntityId | null;

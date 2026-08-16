@@ -141,16 +141,12 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       ),
       pricing: {
         unitCost: toMoney(outputUnitCost),
-        additionalCost: toMoney(0),
         targetPrice: toMoney(outputItemPrice),
       },
       quantitySold: 0,
       sourceTaskId: task.id, // Link item back to the task that created it
       createdAt: now,
       updatedAt: now,
-      media: {
-        mainUrl: "",
-      },
       context: {
         kind: 'item-context',
         schemaVersion: 1,
@@ -281,16 +277,12 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       status: getDefaultItemStatus(outputItemType || '', plan?.isSold || (record as any).isSold || false, plan?.outputItemStatus ?? (record as any).outputItemStatus),
       pricing: {
         unitCost: toMoney(outputUnitCost),
-        additionalCost: toMoney(0),
         targetPrice: toMoney(outputItemPrice),
       },
       quantitySold: 0,
       sourceRecordId: record.id, // Link item back to the record that created it
       createdAt: now,
       updatedAt: now,
-      media: {
-        mainUrl: "",
-      },
       context: {
         kind: 'item-context',
         schemaVersion: 1,

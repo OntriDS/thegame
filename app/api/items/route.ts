@@ -239,16 +239,26 @@ export async function POST(req: NextRequest) {
         quantitySold: Number(rawItem.quantitySold) || 0,
         pricing: {
           unitCost: existingPricing.unitCost || toMoney(legacyUnitCost),
-          additionalCost: existingPricing.additionalCost || toMoney(Number(rawItem.additionalCost) || 0),
+          ...(existingPricing.additionalCost || rawItem.additionalCost !== undefined
+            ? { additionalCost: existingPricing.additionalCost || toMoney(Number(rawItem.additionalCost) || 0) }
+            : {}),
           targetPrice: existingPricing.targetPrice || toMoney(legacyPrice),
           actualSaleValue: existingPricing.actualSaleValue,
         },
-        media: {
-          main: existingMedia.main,
-          mainUrl: existingMedia.mainUrl || existingMedia.main || '',
-          thumbUrl: existingMedia.thumbUrl || existingMedia.thumb,
-          galleryUrls: existingMedia.galleryUrls || existingMedia.gallery,
-        },
+        ...((existingMedia.main || existingMedia.mainUrl || existingMedia.thumb || existingMedia.thumbUrl ||
+          (Array.isArray(existingMedia.gallery) && existingMedia.gallery.length > 0) ||
+          (Array.isArray(existingMedia.galleryUrls) && existingMedia.galleryUrls.length > 0))
+          ? {
+              media: {
+                ...(existingMedia.main ? { main: existingMedia.main } : {}),
+                ...(existingMedia.mainUrl || existingMedia.main ? { mainUrl: existingMedia.mainUrl || existingMedia.main } : {}),
+                ...(existingMedia.thumbUrl || existingMedia.thumb ? { thumbUrl: existingMedia.thumbUrl || existingMedia.thumb } : {}),
+                ...(existingMedia.galleryUrls?.length || existingMedia.gallery?.length
+                  ? { galleryUrls: existingMedia.galleryUrls || existingMedia.gallery }
+                  : {}),
+              },
+            }
+          : {}),
         ...(typeof rawItem.sourceTaskId === 'string' && rawItem.sourceTaskId.trim()
           ? { sourceTaskId: rawItem.sourceTaskId.trim() }
           : {}),

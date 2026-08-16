@@ -1024,6 +1024,12 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         ? (localSoldAt ?? existingItem?.context?.soldAt ?? getUTCNow())
         : undefined;
 
+      const media = {
+        ...(finalMediaMain ? { mainUrl: finalMediaMain } : {}),
+        ...(finalMediaThumb ? { thumbUrl: finalMediaThumb } : {}),
+        ...(finalMediaGalleryArray?.length ? { galleryUrls: finalMediaGalleryArray } : {}),
+      };
+
       const newItem: Item = {
         id: finalId,
         schemaVersion: EntitySchemaVersion.V1,
@@ -1033,14 +1039,9 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         collection: collection as Collection,
         status,
         quantitySold,
-        media: {
-          mainUrl: finalMediaMain,
-          thumbUrl: finalMediaThumb || undefined,
-          galleryUrls: finalMediaGalleryArray,
-        },
+        ...(Object.keys(media).length > 0 ? { media } : {}),
         pricing: {
           unitCost: toMoney(unitCost),
-          additionalCost: toMoney(0),
           targetPrice: toMoney(price),
         },
         stock: updatedStock,
