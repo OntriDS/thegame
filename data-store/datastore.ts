@@ -191,12 +191,20 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
       ? { ...task, priority: TaskPriority.NORMAL }
       : task;
   normalizedTask = normalizeTaskOutputTaxonomy(normalizedTask);
-  const taskCounterparty = (normalizedTask as any).__counterparty;
+  const rawTaskCounterparty = (normalizedTask as any).__counterparty || (normalizedTask as any).context?.counterparty || null;
+  const taskCounterparty = rawTaskCounterparty?.counterpartyId
+    ? { id: rawTaskCounterparty.counterpartyId, role: rawTaskCounterparty.role }
+    : rawTaskCounterparty;
   // The envelope is owned by the persistence boundary. Modal payloads may omit
   // version, but a persisted Task may not: new rows start at 0 and every update
   // advances from the stored version.
+  const persistedContext = (normalizedTask as any).context
+    ? { ...(normalizedTask as any).context }
+    : undefined;
+  if (persistedContext) delete persistedContext.counterparty;
   const persistedTask = {
     ...normalizedTask,
+    ...(persistedContext ? { context: persistedContext } : {}),
     schemaVersion: normalizedTask.schemaVersion ?? EntitySchemaVersion.V1,
     version: previous ? ((previous.version ?? 0) + 1) : (normalizedTask.version ?? 0),
   } as Task;
