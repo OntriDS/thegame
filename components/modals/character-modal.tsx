@@ -28,7 +28,7 @@ import {
   canViewAccountInfo,
 } from '@/lib/game-mechanics/roles-rules';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { Network, Info, Package, MapPin, Building2 } from 'lucide-react';
+import { Network, Info, Package, MapPin, Building2, BadgeCheck } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import DeleteModal from './submodals/delete-submodal';
@@ -332,7 +332,18 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="w-full max-w-5xl max-h-[90vh] overflow-y-auto" zIndexLayer="MODALS">
           <DialogHeader>
-            <DialogTitle>{character ? 'Edit Character' : 'Create Character'}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {character ? 'Edit Character' : 'Create Character'}
+              {identityManagedByAccount && (
+                <span
+                  className="inline-flex items-center text-blue-600 dark:text-blue-400"
+                  title="Identity and contact data are managed by the linked Account"
+                  aria-label="Identity and contact data are managed by the linked Account"
+                >
+                  <BadgeCheck className="h-4 w-4" />
+                </span>
+              )}
+            </DialogTitle>
             <DialogDescription>
               {character ? 'Modify the character details below' : 'Fill in the character information to create a new character'}
             </DialogDescription>
@@ -351,12 +362,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
               {/* Column 1: NATIVE (Contact Info) */}
               <div className="space-y-3">
                 {/* Personal Data - Read-only for PLAYER role */}
-                {identityManagedByAccount && (
-                  <div className="text-xs p-2 border rounded bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-200">
-                    Personal data managed by Account. Edit from <strong>Player Modal → Edit Account</strong>.
-                  </div>
-                )}
-
                 <div className="space-y-2">
                   <Label htmlFor="char-name" className="text-xs">
                     Name * {identityManagedByAccount && <span className="text-muted-foreground">(from Account)</span>}
