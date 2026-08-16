@@ -191,6 +191,7 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
       ? { ...task, priority: TaskPriority.NORMAL }
       : task;
   normalizedTask = normalizeTaskOutputTaxonomy(normalizedTask);
+  const taskCounterparty = (normalizedTask as any).__counterparty;
   // The envelope is owned by the persistence boundary. Modal payloads may omit
   // version, but a persisted Task may not: new rows start at 0 and every update
   // advances from the stored version.
@@ -200,6 +201,7 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
     version: previous ? ((previous.version ?? 0) + 1) : (normalizedTask.version ?? 0),
   } as Task;
   delete (persistedTask as any).ownerIds;
+  delete (persistedTask as any).__counterparty;
   const saved = await repoUpsertTask(persistedTask);
 
   // Identity Shield: Time-Window Deduplication (30 seconds)
@@ -261,7 +263,10 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
 
   if (!options?.skipWorkflowEffects) {
     const { onTaskUpsert } = await import('@/workflows/entities-workflows/task.workflow');
-    await onTaskUpsert(saved, previous || undefined);
+    await onTaskUpsert(
+      taskCounterparty ? ({ ...saved, __counterparty: taskCounterparty } as Task) : saved,
+      previous || undefined
+    );
   }
 
   // onTaskUpsert may call nested upsertTask(skipWorkflowEffects) and update KV; `saved` can be stale.
@@ -269,8 +274,12 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
   if (!options?.skipLinkEffects) {
     const latest = await getTaskById(saved.id);
     const linkInput = latest
-      ? (hasOwnerSelection ? { ...latest, ownerIds: requestedOwnerIds } : latest)
-      : saved;
+      ? {
+          ...latest,
+          ...(hasOwnerSelection ? { ownerIds: requestedOwnerIds } : {}),
+          ...(taskCounterparty ? { __counterparty: taskCounterparty } : {}),
+        }
+      : (taskCounterparty ? { ...saved, __counterparty: taskCounterparty } : saved);
     await processLinkEntity(linkInput, EntityType.TASK);
   }
 

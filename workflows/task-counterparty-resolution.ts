@@ -33,6 +33,14 @@ const normalizeId = (value: unknown): string | null => {
 };
 
 async function resolveByTaskFields(task: Task): Promise<ResolvedTaskCounterparty | null> {
+  const commandCounterparty = (task as any).__counterparty;
+  if (commandCounterparty?.id) {
+    return {
+      characterId: normalizeId(commandCounterparty.id),
+      characterRole: normalizeRole(commandCounterparty.role) || CharacterRole.CUSTOMER,
+      source: 'task-field',
+    };
+  }
   const characterId = getTaskCounterpartyId(task);
   if (!characterId) return null;
 
@@ -90,7 +98,9 @@ export async function resolveCounterpartyForTask(task: Task): Promise<ResolvedTa
 
 export const getTaskCounterpartyId = (task?: Task | null): string | null => {
   if (!task) return null;
-  return normalizeId(task.context?.counterparty?.counterpartyId) || normalizeId(task.characterId);
+  return normalizeId((task as any).__counterparty?.id) ||
+    normalizeId(task.context?.counterparty?.counterpartyId) ||
+    normalizeId(task.characterId);
 };
 
 export function withResolvedTaskCounterparty(task: Task, resolution: ResolvedTaskCounterparty): Task {
@@ -109,18 +119,9 @@ export function withResolvedTaskCounterparty(task: Task, resolution: ResolvedTas
 
   return {
     ...task,
-    characterId: resolution.characterId,
-    customerCharacterRole: characterRole,
-    context: {
-      ...task.context,
-      kind: 'task-context',
-      schemaVersion: 1,
-      counterparty: {
-        ...(task.context?.counterparty || {}),
-        counterpartyId: resolution.characterId,
-        role: characterRole,
-      },
-    }
+    __counterparty: resolution.characterId
+      ? { id: resolution.characterId, role: characterRole }
+      : null,
   };
 }
 

@@ -350,6 +350,16 @@ export default function MissionTreeModalContent({
         .filter((link: any) => link.linkType === 'TASK_CHARACTER' && link.relationship === 'owner' && link.target?.type === 'character')
         .map((link: any) => link.target.id)[0];
       if (ownerId) setOwnerId(ownerId);
+      const counterpartyLink = links.find((link: any) =>
+        link.linkType === 'TASK_CHARACTER' &&
+        (link.relationship === CharacterRole.CUSTOMER || link.relationship === CharacterRole.BENEFICIARY) &&
+        link.target?.type === 'character'
+      );
+      if (counterpartyLink) {
+        setCustomerCharacterId(counterpartyLink.target.id);
+        setCustomerCharacterRole(counterpartyLink.relationship as CharacterRole);
+        setIsNewCustomer(false);
+      }
     }).catch(() => undefined);
     return () => { cancelled = true; };
   }, [open, task?.id, task?.updatedAt]);
@@ -439,7 +449,6 @@ export default function MissionTreeModalContent({
     };
 
     const finalStatus = determineFinalStatus();
-    const ownerCharacterId = Array.isArray(ownerId) ? ownerId[0] : ownerId;
     const hasCounterparty = Boolean((!isNewCustomer && customerCharacterId) || (isNewCustomer && newCustomerName.trim()));
     const hasProductionIntent = Boolean(outputItemType || outputItemName.trim() || selectedItemId);
     const hasRewards = Object.values(rewards.points).some((value) => Number(value) > 0);
@@ -472,10 +481,6 @@ export default function MissionTreeModalContent({
         ...(task as any)?.context,
         kind: 'task-context',
         schemaVersion: 1,
-        ...(hasCounterparty ? { counterparty: {
-          counterpartyId: isNewCustomer ? null : customerCharacterId,
-          role: customerCharacterRole,
-        } } : { counterparty: undefined }),
         ...(isNewCustomer && newCustomerName.trim() ? { newCustomerName: newCustomerName.trim() } : {}),
         financialIntent: cost || revenue
           ? { costIntent: toMoney(cost), revenueIntent: toMoney(revenue) }
@@ -501,8 +506,9 @@ export default function MissionTreeModalContent({
             }
           : undefined,
       },
+      counterpartyCharacterId: !isNewCustomer && customerCharacterId ? customerCharacterId : null,
+      counterpartyRole: hasCounterparty ? customerCharacterRole : null,
       ownerIds: Array.isArray(ownerId) ? ownerId : (ownerId ? [ownerId] : []),
-      ...(ownerCharacterId ? { playerCharacterId: ownerCharacterId } : {}),
       order: determineOrder(),
       
       ...(!isNewItem && (selectedItemId || (task as any)?.outputItemId)

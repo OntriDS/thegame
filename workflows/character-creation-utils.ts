@@ -78,7 +78,13 @@ export async function createCharacterFromTask(task: Task): Promise<Character | n
   if (!newCustomerName) {
     return null;
   }
-  return createCharacterFromEntity('task', task.id, task.name, newCustomerName, task.context?.counterparty?.role || task.customerCharacterRole || CharacterRole.CUSTOMER);
+  return createCharacterFromEntity(
+    'task',
+    task.id,
+    task.name,
+    newCustomerName,
+    (task as any).__counterparty?.role || task.context?.counterparty?.role || task.customerCharacterRole || CharacterRole.CUSTOMER
+  );
 }
 
 export async function createCharacterFromSale(sale: Sale): Promise<Character | null> {

@@ -64,8 +64,7 @@ export async function processLinkEntity(entity: any, entityType: EntityType): Pr
  * Removes stale links when the counterparty changes or is cleared; creates the link when missing.
  */
 export async function syncTaskCharacterCounterpartyLinks(task: Task): Promise<void> {
-  const desiredId =
-    getTaskCounterpartyId(task);
+  const desiredId = getTaskCounterpartyId(task);
 
   const existingLinks = await getLinksFor({ type: EntityType.TASK, id: task.id });
   const taskCharacterLinks = existingLinks.filter((l) => l.linkType === LinkType.TASK_CHARACTER);
@@ -82,7 +81,8 @@ export async function syncTaskCharacterCounterpartyLinks(task: Task): Promise<vo
   if (desiredId) {
     desiredRelationships.push({
       id: desiredId,
-      relationship: (typeof task.context?.counterparty?.role === 'string' && task.context.counterparty.role.toLowerCase() === 'beneficiary') ||
+      relationship: (typeof (task as any).__counterparty?.role === 'string' && (task as any).__counterparty.role.toLowerCase() === 'beneficiary') ||
+        (typeof task.context?.counterparty?.role === 'string' && task.context.counterparty.role.toLowerCase() === 'beneficiary') ||
         (typeof task.customerCharacterRole === 'string' && task.customerCharacterRole.toLowerCase() === 'beneficiary')
         ? 'beneficiary'
         : 'customer',

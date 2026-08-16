@@ -415,6 +415,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     const effectKey = EffectKeys.sideEffect('task', task.id, 'characterCreated');
     if (!(await hasEffect(effectKey))) {
       const normalizedCustomerCharacterRole =
+        (taskForCounterparty as any).__counterparty?.role ??
         taskForCounterparty.context?.counterparty?.role ??
         taskForCounterparty.customerCharacterRole ??
         CharacterRole.CUSTOMER;
@@ -423,14 +424,9 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         // Update task with the created character ID
         const updatedTask = {
           ...taskForCounterparty,
-          characterId: createdCharacter.id,
-          context: {
-            ...(taskForCounterparty.context || {}),
-            counterparty: {
-              ...(taskForCounterparty.context?.counterparty || {}),
-              counterpartyId: createdCharacter.id,
-              role: normalizedCustomerCharacterRole as CustomerCounterpartyRole,
-            },
+          __counterparty: {
+            id: createdCharacter.id,
+            role: normalizedCustomerCharacterRole as CustomerCounterpartyRole,
           },
         };
         await upsertTask(updatedTask, { skipWorkflowEffects: true });
