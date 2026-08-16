@@ -91,7 +91,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
 
       // For now, we'll auto-adjust stock to allow the sale to proceed
       // TODO: UI validation should handle this with user confirmation
-      const targetSiteId = (sale.siteId && sale.siteId !== 'none' && sale.siteId !== 'None' ? sale.siteId : null) || (item.stock[0]?.siteId) || '';
+      const targetSiteId = (sale.siteId && sale.siteId !== 'none' && sale.siteId !== 'None' ? sale.siteId : null) || (item.stock[0]?.siteId) || 'none';
 
       let siteStockPoint = item.stock.find(sp => sp.siteId === targetSiteId);
 
@@ -164,8 +164,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
       updatedItem = {
         ...updatedItem,
         status: ItemStatus.FOR_SALE,
-        quantitySold: 0, // Always 0 for inventory items
-        stock: [{ siteId: sale.siteId || updatedItem.stock[0]?.siteId || '', quantity: targetAmount }],
+        stock: [{ siteId: sale.siteId || updatedItem.stock[0]?.siteId || 'none', quantity: targetAmount }],
         updatedAt: getUTCNow()
       };
       await upsertItem(updatedItem, { skipWorkflowEffects: true });
@@ -175,7 +174,6 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
       updatedItem = {
         ...updatedItem,
         status: ItemStatus.FOR_SALE, // Keep item active
-        quantitySold: 0, // Always 0 for inventory items
         updatedAt: getUTCNow()
       };
 

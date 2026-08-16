@@ -515,7 +515,8 @@ export interface Item extends EntityEnvelope {
   
   // UNIFIED STOCK SYSTEM: Absolute source of truth for quantity
   stock: StockPointV1[];
-  quantitySold: number;
+  /** Present only on sold archive clones; live inventory derives quantity from stock. */
+  quantitySold?: number;
 
   pricing: ItemPricingV1;
   media?: ItemMediaV1;

@@ -221,6 +221,8 @@ export async function POST(req: NextRequest) {
       const existingContext = rawItem.context || {};
       const existingPricing = rawItem.pricing || {};
       const existingMedia = rawItem.media || {};
+      const rawAdditionalCost = existingPricing.additionalCost ?? rawItem.additionalCost;
+      const hasAdditionalCost = rawAdditionalCost != null && extractMoneyValue(rawAdditionalCost) !== 0;
       const legacyUnitCost = Number(rawItem.unitCost) || 0;
       const legacyPrice = Number(rawItem.price) || 0;
 
@@ -236,12 +238,10 @@ export async function POST(req: NextRequest) {
         collection: rawItem.collection || undefined,
         status: rawItem.status || ItemStatus.CREATED,
         stock: Array.isArray(rawItem.stock) ? rawItem.stock : [],
-        quantitySold: Number(rawItem.quantitySold) || 0,
+        ...(Number(rawItem.quantitySold) > 0 ? { quantitySold: Number(rawItem.quantitySold) } : {}),
         pricing: {
           unitCost: existingPricing.unitCost || toMoney(legacyUnitCost),
-          ...(existingPricing.additionalCost || rawItem.additionalCost !== undefined
-            ? { additionalCost: existingPricing.additionalCost || toMoney(Number(rawItem.additionalCost) || 0) }
-            : {}),
+          ...(hasAdditionalCost ? { additionalCost: rawAdditionalCost } : {}),
           targetPrice: existingPricing.targetPrice || toMoney(legacyPrice),
           actualSaleValue: existingPricing.actualSaleValue,
         },

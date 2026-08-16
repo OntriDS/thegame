@@ -143,7 +143,6 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
         unitCost: toMoney(outputUnitCost),
         targetPrice: toMoney(outputItemPrice),
       },
-      quantitySold: 0,
       sourceTaskId: task.id, // Link item back to the task that created it
       createdAt: now,
       updatedAt: now,
@@ -158,7 +157,7 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
         {
           siteId: (task.targetSiteId && task.targetSiteId !== 'none' && task.targetSiteId !== 'None' ? task.targetSiteId : null) ||
             (task.siteId && task.siteId !== 'none' && task.siteId !== 'None' ? task.siteId : null) ||
-            '', // Default to no-site (temporary fallback)
+            'none',
           quantity: outputQuantity
         }
       ]
@@ -279,7 +278,6 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
         unitCost: toMoney(outputUnitCost),
         targetPrice: toMoney(outputItemPrice),
       },
-      quantitySold: 0,
       sourceRecordId: record.id, // Link item back to the record that created it
       createdAt: now,
       updatedAt: now,
@@ -291,7 +289,7 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       },
       stock: [
         {
-          siteId: resolvedSiteId, // Default to None (no site) when not provided
+          siteId: resolvedSiteId || 'none',
           quantity: outputQuantity
         }
       ]

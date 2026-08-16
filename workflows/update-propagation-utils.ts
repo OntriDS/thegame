@@ -657,7 +657,6 @@ export async function updateItemsFromSale(
         const lineValue = linePrice * (line.quantity || 0);
         const updatedItem = {
           ...item,
-          quantitySold: (item.quantitySold || 0) + (line.quantity || 0),
           context: {
             ...item.context,
             soldAt: item.context?.soldAt || (sale.lifecycle?.doneAt || sale.saleDate || getUTCNow()),

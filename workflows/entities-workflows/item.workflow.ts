@@ -108,7 +108,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
 
     const soldAt = item.context?.soldAt || getUTCNow();
     const monthKey = formatArchiveMonthKeyUTC(soldAt);
-    const primarySite = item.stock?.[0]?.siteId || '';
+    const primarySite = item.stock?.[0]?.siteId || 'none';
 
     // 2. CREATE THE SOLD BATCH CLONE FOR THE ARCHIVE (Sold Items Tab)
     const cloneId = `${item.id}-manualsold-${Date.now()}`;
@@ -146,7 +146,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       updatedBaseItem = {
         ...item,
         status: ItemStatus.FOR_SALE,
-        quantitySold: 0, // Always 0 for inventory items
         stock: [{ siteId: primarySite, quantity: targetAmount }],
         updatedAt: getUTCNow()
       };
@@ -157,7 +156,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       updatedBaseItem = {
         ...item,
         status: ItemStatus.FOR_SALE, // Keep item active
-        quantitySold: 0, // Always 0 for inventory items
         stock: [{ siteId: primarySite, quantity: remainingStock }],
         updatedAt: getUTCNow()
       };

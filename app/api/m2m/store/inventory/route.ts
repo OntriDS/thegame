@@ -315,7 +315,6 @@ function buildDraftItem(input: {
     additionalCost: 0,
     price: input.price,
     value: 0,
-    quantitySold: 0,
     media: {
       main: NEW_ITEM_MEDIA_PLACEHOLDER,
     },

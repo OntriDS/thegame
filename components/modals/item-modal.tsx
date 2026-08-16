@@ -46,7 +46,7 @@ interface ItemModalProps {
   initialSiteId?: string;
 }
 
-const DEFAULT_NONE_SITE = 'None';
+const DEFAULT_NONE_SITE = 'none';
 
 // Links are loaded from the registry/API as relationship records. They are
 // deliberately not embedded in Item; keep this boundary type limited to the
@@ -533,7 +533,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     const updatedItem: Item = {
       ...targetItem,
       stock: filteredStock,
-      quantitySold: (targetItem.quantitySold || 0) + quantity,
       status: totalRemaining <= 0 ? ItemStatus.SOLD : targetItem.status,
       updatedAt: new Date(),
       createdAt: targetItem.createdAt ? new Date(targetItem.createdAt) : new Date(),
@@ -1030,6 +1029,10 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         ...(finalMediaGalleryArray?.length ? { galleryUrls: finalMediaGalleryArray } : {}),
       };
 
+      const isSoldArchiveRow = Boolean(
+        existingItem?.sourceRecordId || existingItem?.id.includes('-sold-') || existingItem?.id.includes('-manualsold-')
+      );
+
       const newItem: Item = {
         id: finalId,
         schemaVersion: EntitySchemaVersion.V1,
@@ -1038,7 +1041,9 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         type,
         collection: collection as Collection,
         status,
-        quantitySold,
+        // Live inventory rows never carry sold quantity. Sold quantities belong
+        // exclusively to archive clones created by the sale workflow.
+        ...(isSoldArchiveRow ? { quantitySold } : {}),
         ...(Object.keys(media).length > 0 ? { media } : {}),
         pricing: {
           unitCost: toMoney(unitCost),
