@@ -3,6 +3,7 @@
 
 import { v4 as uuid } from 'uuid';
 import { getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
+import { toMoney } from '@/lib/utils/financial-utils';
 import type { ItemSaleLine, Sale, SaleLine, ServiceLine } from '@/types/entities';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -13,7 +14,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 function normalizeMoneyValue(value: unknown): unknown {
   if (isRecord(value) && typeof value.minorUnits === 'string') return value;
   const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : 0;
+  return toMoney(Number.isFinite(numeric) ? numeric : 0);
 }
 
 export function normalizeSaleLine(line: unknown): SaleLine | null {
@@ -70,6 +71,7 @@ export function normalizeSaleLine(line: unknown): SaleLine | null {
       itemId,
       quantity: Number(line.quantity) || 1,
       unitPrice: normalizeMoneyValue(line.unitPrice),
+      ...(line.taxAmount !== undefined ? { taxAmount: normalizeMoneyValue(line.taxAmount) } : {}),
       ...(withoutLegacyMetadata.settlement || metadata
         ? { settlement: withoutLegacyMetadata.settlement || metadata }
         : {}),

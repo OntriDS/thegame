@@ -98,9 +98,9 @@ function buildItemLinesFromSelection(items: SaleItemLine[]): SaleLine[] {
     kind: 'item',
     itemId: item.itemId,
     quantity: item.quantity,
-    unitPrice: item.unitPrice as any,
+    unitPrice: toMoney(item.unitPrice),
     description: `Sale of ${item.itemName}`,
-    taxAmount: 0 as any,
+    taxAmount: toMoney(0),
   } as any));
 }
 
@@ -824,9 +824,9 @@ export default function SalesModal({
         kind: 'item',
         itemId: item.itemId,
         quantity: item.quantity,
-        unitPrice: item.unitPrice as any,
+        unitPrice: toMoney(item.unitPrice),
         description: `Sale of ${item.itemName}`,
-        taxAmount: 0 as any,
+        taxAmount: toMoney(0),
       } as any));
     } else if (isServiceMode) {
       // Handle SERVICE/ONE - create service line from task fields
@@ -900,9 +900,9 @@ export default function SalesModal({
           kind: 'item',
           itemId: resolvedId,
           quantity: r.quantity,
-          unitPrice: r.unitPrice as any,
+          unitPrice: toMoney(r.unitPrice),
           description: '',
-          taxAmount: 0 as any,
+          taxAmount: toMoney(0),
         } as any);
       }
       effectiveLines = built;
@@ -948,7 +948,7 @@ export default function SalesModal({
     }, 0);
 
     const totalDiscount = discountAmount + lineDiscountTotal;
-    const taxTotal = lines.reduce((total, line) => total + extractMoneyValue(line.taxAmount), 0);
+    const taxTotal = effectiveLines.reduce((total, line) => total + extractMoneyValue(line.taxAmount), 0);
     const subtotalR = roundCurrency2(subtotal);
     const totalDiscountR = roundCurrency2(totalDiscount);
     const taxTotalR = roundCurrency2(taxTotal);
@@ -977,14 +977,39 @@ export default function SalesModal({
     const normalizedSaleDate = saleDate instanceof Date ? saleDate : new Date(saleDate as unknown as string);
     const safeSaleDate = Number.isFinite(normalizedSaleDate.getTime()) ? normalizedSaleDate : new Date();
 
+    // A manually selected site always wins. If the user leaves it blank, inherit
+    // the only unambiguous stock site represented by the sale's item lines.
+    const inferredSiteIds = effectiveLines
+      .filter((line): line is ItemSaleLine => line.kind === 'item')
+      .flatMap(line => {
+        const item = items.find(candidate => candidate.id === line.itemId);
+        const availableSites = item?.stock
+          ?.filter(stock => stock.quantity > 0 && stock.siteId?.trim())
+          .map(stock => stock.siteId.trim()) ?? [];
+        return [...new Set(availableSites)];
+      });
+    const uniqueInferredSiteIds = [...new Set(inferredSiteIds)];
+    const effectiveSiteId = siteId.trim() || (
+      uniqueInferredSiteIds.length === 1 ? uniqueInferredSiteIds[0] : ''
+    );
+
+    const doneAtForSave =
+      status === SaleStatus.CHARGED || status === SaleStatus.COLLECTED
+        ? (localDoneAt ?? sale?.lifecycle?.doneAt ?? new Date())
+        : localDoneAt;
+    const collectedAtForSave =
+      status === SaleStatus.COLLECTED
+        ? (localCollectedAt ?? sale?.lifecycle?.collectedAt ?? new Date())
+        : localCollectedAt;
+
     const saleData: any = {
       id: draftId.current,
-      name: (name?.trim() || buildAutoSaleName(type, siteId, getTimelineDateForAutoName(), sites)),
+      name: (name?.trim() || buildAutoSaleName(type, effectiveSiteId, getTimelineDateForAutoName(), sites)),
       description: description.trim() || undefined,
       saleDate: safeSaleDate,
       type,
       status,
-      siteId,
+      siteId: effectiveSiteId,
       counterpartyName: counterpartyName.trim() || undefined,
       characterId: isNewCustomer ? null : characterId,  // Ambassador: Existing customer
       playerCharacterId: playerCharacterId,
@@ -1000,8 +1025,8 @@ export default function SalesModal({
       },
       lifecycle: {
         ...sale?.lifecycle,
-        doneAt: localDoneAt,
-        collectedAt: localCollectedAt,
+        ...(doneAtForSave ? { doneAt: doneAtForSave } : {}),
+        ...(collectedAtForSave ? { collectedAt: collectedAtForSave } : {}),
       },
       workflowRefs: sale?.workflowRefs,
       createdAt: sale?.createdAt || new Date(),
@@ -1079,7 +1104,7 @@ export default function SalesModal({
       quantity: 1,
       unitPrice: toMoney(0),
       description: '',
-      taxAmount: 0 as any,
+      taxAmount: toMoney(0),
     };
     setLines([...lines, newLine]);
   };
@@ -1124,9 +1149,9 @@ export default function SalesModal({
         kind: 'item',
         itemId: resolvedId,
         quantity: r.quantity,
-        unitPrice: r.unitPrice as any,
+        unitPrice: toMoney(r.unitPrice),
         description: '',
-        taxAmount: 0 as any,
+        taxAmount: toMoney(0),
       } as any);
     }
     setLines(materialized);
