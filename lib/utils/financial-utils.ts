@@ -65,10 +65,12 @@ export function roundSaleTotals(sale: Sale): Sale {
   const next: Sale['totals'] = {
     ...t,
     subtotal: toMoney(roundCurrency2(extractMoneyValue(t.subtotal as Money | number | undefined))),
-    discountTotal: toMoney(roundCurrency2(extractMoneyValue(t.discountTotal as Money | number | undefined))),
-    taxTotal: toMoney(roundCurrency2(extractMoneyValue(t.taxTotal as Money | number | undefined))),
     totalRevenue: toMoney(roundCurrency2(extractMoneyValue(t.totalRevenue as Money | number | undefined))),
   };
+  const discountTotal = roundCurrency2(extractMoneyValue(t.discountTotal as Money | number | undefined));
+  const taxTotal = roundCurrency2(extractMoneyValue(t.taxTotal as Money | number | undefined));
+  if (discountTotal !== 0) next.discountTotal = toMoney(discountTotal);
+  if (taxTotal !== 0) next.taxTotal = toMoney(taxTotal);
   if (t.totalCost !== undefined && t.totalCost !== null) {
     next.totalCost = toMoney(roundCurrency2(extractMoneyValue(t.totalCost as Money | number)));
   }

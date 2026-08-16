@@ -2,7 +2,6 @@
 // Legacy: kind 'bundle' + itemId → kind 'item'. ItemType.BUNDLE stays on Item only.
 
 import { v4 as uuid } from 'uuid';
-import { getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import { toMoney } from '@/lib/utils/financial-utils';
 import type { ItemSaleLine, Sale, SaleLine, ServiceLine } from '@/types/entities';
 
@@ -15,6 +14,14 @@ function normalizeMoneyValue(value: unknown): unknown {
   if (isRecord(value) && typeof value.minorUnits === 'string') return value;
   const numeric = Number(value);
   return toMoney(Number.isFinite(numeric) ? numeric : 0);
+}
+
+function normalizeOptionalMoneyValue(value: unknown): unknown {
+  if (value === undefined || value === null || value === '') return undefined;
+  const numeric = isRecord(value) && typeof value.minorUnits === 'string'
+    ? Number(value.minorUnits) / 100
+    : Number(value);
+  return Number.isFinite(numeric) && numeric !== 0 ? normalizeMoneyValue(value) : undefined;
 }
 
 export function normalizeSaleLine(line: unknown): SaleLine | null {
@@ -50,7 +57,7 @@ export function normalizeSaleLine(line: unknown): SaleLine | null {
         quantity: Number(line.quantity) || 1,
         unitPrice: normalizeMoneyValue(line.unitPrice),
         description: typeof line.description === 'string' ? line.description : undefined,
-        taxAmount: line.taxAmount !== undefined ? normalizeMoneyValue(line.taxAmount) : undefined,
+        taxAmount: normalizeOptionalMoneyValue(line.taxAmount),
         discount: line.discount as ItemSaleLine['discount'],
         settlement,
       };
@@ -71,7 +78,9 @@ export function normalizeSaleLine(line: unknown): SaleLine | null {
       itemId,
       quantity: Number(line.quantity) || 1,
       unitPrice: normalizeMoneyValue(line.unitPrice),
-      ...(line.taxAmount !== undefined ? { taxAmount: normalizeMoneyValue(line.taxAmount) } : {}),
+      ...(normalizeOptionalMoneyValue(line.taxAmount) !== undefined
+        ? { taxAmount: normalizeOptionalMoneyValue(line.taxAmount) }
+        : {}),
       ...(withoutLegacyMetadata.settlement || metadata
         ? { settlement: withoutLegacyMetadata.settlement || metadata }
         : {}),

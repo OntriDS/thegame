@@ -1034,8 +1034,8 @@ export interface Sale extends EntityEnvelope {
   // Precomputed totals
   totals: {
     subtotal: Money;
-    discountTotal: Money;
-    taxTotal: Money;
+    discountTotal?: Money;
+    taxTotal?: Money;
     totalRevenue: Money;
     totalCost?: Money;
   };

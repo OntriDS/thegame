@@ -16,6 +16,17 @@ import type {
 
 const ITEM_TYPE_VALUES = new Set<string>(Object.values(ItemType));
 
+function normalizeItemSiteId(value: unknown): string {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'none';
+}
+
 export function normalizeItemTypeString(raw: string | undefined | null): ItemType | undefined {
   if (raw == null) return undefined;
   const s = String(raw).trim();
@@ -50,6 +61,10 @@ export function normalizeItemTaxonomyFields(entity: Item): Item {
   return {
     ...entity,
     type: nextType as ItemType,
+    stock: (entity.stock ?? []).map((point) => ({
+      ...point,
+      siteId: normalizeItemSiteId(point.siteId),
+    })),
     context: {
       ...entity.context,
       subItemType: (nextSub ?? entity.context?.subItemType) as SubItemType,
