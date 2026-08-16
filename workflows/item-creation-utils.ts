@@ -72,9 +72,10 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
     console.log(`[createItemFromTask] outputItemType: ${outputItemType}`);
     console.log(`[createItemFromTask] outputQuantity: ${outputQuantity}`);
 
-    if (task.outputItemId && !isNewItem) {
-      console.log(`[createItemFromTask] Existing item detected (outputItemId=${task.outputItemId}) - updating stock`);
-      const existingItem = await getItemById(task.outputItemId);
+    const existingOutputItemId = plan?.outputItemId ?? task.outputItemId;
+    if (existingOutputItemId && !isNewItem) {
+      console.log(`[createItemFromTask] Existing item detected (outputItemId=${existingOutputItemId}) - updating stock`);
+      const existingItem = await getItemById(existingOutputItemId);
       if (existingItem) {
         const destinationSiteId =
           (task.targetSiteId && task.targetSiteId !== 'none' && task.targetSiteId !== 'None' ? task.targetSiteId : null) ||
@@ -107,7 +108,7 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
         console.log(`[createItemFromTask] ✅ Incremented existing item stock: ${savedItem.id} (+${quantityToAdd} at ${destinationSiteId})`);
         return savedItem;
       } else {
-        console.warn(`[createItemFromTask] outputItemId=${task.outputItemId} not found. Falling back to new item creation.`);
+        console.warn(`[createItemFromTask] outputItemId=${existingOutputItemId} not found. Falling back to new item creation.`);
       }
     }
 

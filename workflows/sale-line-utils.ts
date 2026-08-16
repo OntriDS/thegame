@@ -3,7 +3,7 @@
 // Sale line processing utilities
 
 import type { Sale, Item, ItemSaleLine, ServiceLine, Task } from '@/types/entities';
-import { LinkType, EntityType, LogEventType, ItemStatus, SaleStatus } from '@/types/enums';
+import { LinkType, EntityType, LogEventType, ItemStatus, SaleStatus, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import { getItemById, upsertItem, deleteItem } from '@/data-store/datastore';
 import { upsertTask } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
@@ -214,55 +214,56 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
   try {
     console.log(`[processServiceLine] Processing service sale: ${line.description}`);
 
+    const serviceContext = line.context;
+
     // Idempotency check
     const taskCreatedKey = EffectKeys.sideEffect('sale', sale.id, `taskCreated:${line.lineId}`);
     const hasBeenCreated = await hasEffect(taskCreatedKey);
 
-    if (hasBeenCreated || !line.createTask) {
+    if (hasBeenCreated || !serviceContext?.createTask) {
       console.log(`[processServiceLine] Task already created or not requested for line ${line.lineId}, skipping`);
       return;
     }
 
-    // Create task from service line
+    // Create task from the canonical service-line context.
+    const productionPlan = serviceContext?.productionPlan;
+    const taskPoints = serviceContext?.taskRewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
+    const beneficiaryCharacterId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
+    const taskCost = extractMoneyValue(serviceContext?.taskCost);
+    const existingOutputItemId = serviceContext?.outputItemId || productionPlan?.outputItemId;
+
     const serviceTask: Task = {
-      id: line.taskId || `task-${sale.id}-${line.lineId}`,
+      id: serviceContext?.taskId || `task-${sale.id}-${line.lineId}`,
       name: line.description || 'Service Task',
       description: `Service from sale: ${sale.counterpartyName}`,
-      type: line.taskType || 'TASK' as any,
+      type: serviceContext?.taskType || 'TASK' as any,
       status: 'Created' as any,
       priority: 'Normal' as any,
       station: line.station,
-      progress: 0,
+      progress: { percentage: 0 },
       order: ORDER_INCREMENT,
-      cost: line.taskCost || 0,
-      revenue: 0, // Tasks from sales don't get revenue - it stays in the sale
-      rewards: line.taskRewards ? { points: line.taskRewards } : { points: { xp: 0, rp: 0, fp: 0, hp: 0 } },
-      
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
       links: [],
-      // Ambassador Fields - inherit from sale
       siteId: sale.siteId,
-      targetSiteId: line.taskTargetSiteId || undefined,
-      sourceSaleId: sale.id, // Link task back to sale
-      characterId: getSaleCharacterId(sale),
-      playerCharacterId: sale.playerCharacterId || null,
-      newCustomerName: sale.context?.newCustomerName || undefined,
-      // Additional fields from service line
-      parentId: line.taskParentId || undefined,
-      dueDate: line.taskDueDate || undefined,
-      // Emissary fields for item creation
-      outputItemType: line.outputItemType || undefined,
-      outputItemSubType: line.outputItemSubType || undefined,
-      outputQuantity: line.outputItemQuantity || undefined,
-      outputItemName: line.outputItemName || undefined,
-      outputUnitCost: line.outputUnitCost || undefined,
-      outputItemCollection: line.outputItemCollection || undefined,
-      outputItemPrice: line.outputItemPrice || undefined,
-      outputItemId: line.outputItemId || null,
-      isNewItem: (line.isNewItem ?? line.isNewOutputItem) ?? true,
-      isSold: line.isSold || false,
-      outputItemStatus: line.outputItemStatus || (line.isSold ? ItemStatus.SOLD : ItemStatus.CREATED)
+      parentId: serviceContext?.taskParentId || undefined,
+      schedule: serviceContext?.taskDueDate ? { dueDate: serviceContext.taskDueDate } : undefined,
+      context: {
+        kind: 'task-context',
+        schemaVersion: 1,
+        newCustomerName: sale.context?.newCustomerName || undefined,
+        financialIntent: taskCost > 0 ? { costIntent: toMoney(taskCost) } : undefined,
+        rewardIntent: {
+          kind: 'point-reward',
+          points: taskPoints,
+          beneficiaryCharacterId,
+          policyVersion: 'sale-service-v1',
+        },
+        productionPlan: {
+          ...productionPlan,
+          outputItemId: existingOutputItemId,
+        },
+      },
     };
 
     // Save the task

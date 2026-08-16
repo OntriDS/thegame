@@ -91,10 +91,10 @@ export async function POST(request: NextRequest) {
     const nextSale = {
       ...sale,
       status: requestedStatus,
-      isCollected: sale.isCollected || false,
-      isNotPaid: false,
-      isNotCharged: false,
-      chargedAt: getUTCNow(),
+      lifecycle: {
+        ...(sale.lifecycle || {}),
+        doneAt: sale.lifecycle?.doneAt || getUTCNow(),
+      },
       totals: {
         ...(sale.totals || {}),
         totalCost: toMoney(extractMoneyValue(sale.totals?.totalCost) + commission),

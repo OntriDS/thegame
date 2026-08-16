@@ -132,9 +132,6 @@ export async function POST(request: NextRequest) {
       salesChannel: SalesStation.ONLINE_SALES as Station,
       lines: lines as SaleLine[],
       totals: total,
-      isNotPaid: true,
-      isNotCharged: true,
-      isCollected: false,
     };
 
     const saved = await upsertSale(sale);

@@ -843,8 +843,6 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         saleDate: saleDate,
         type: SaleType.BOOTH,
         status: status,
-        isNotPaid: isNotPaid,
-        isNotCharged: isNotCharged,
         siteId: siteId,
         salesChannel: SalesStation.BOOTH_SALES as Station,
         characterId: null,

@@ -428,15 +428,15 @@ export default function SalesModal({
       setCounterpartyName(sale.counterpartyName || '');
       setCharacterId(getSaleCharacterId(sale) || '');
       setIsNewCustomer(!getSaleCharacterId(sale)); // Toggle to "Existing" if customer exists
-      setNewCustomerName(''); // Clear new customer name
-      setIsNotPaid((sale as any).isNotPaid || false);
-      setIsNotCharged((sale as any).isNotCharged || false);
-      setIsCollected((sale as any).isCollected || false);
+      setNewCustomerName(sale.context?.newCustomerName || '');
+      setIsNotPaid(sale.status === SaleStatus.PENDING);
+      setIsNotCharged(sale.status === SaleStatus.PENDING || sale.status === SaleStatus.ON_HOLD);
+      setIsCollected(sale.status === SaleStatus.COLLECTED);
       setCost(roundCurrency2(extractMoneyValue(sale.totals?.totalCost)));
       setRevenue(roundCurrency2(extractMoneyValue(sale.totals?.totalRevenue)));
       setLocalDoneAt(sale.lifecycle?.doneAt ? new Date(sale.lifecycle.doneAt) : undefined);
       setLocalCollectedAt(sale.lifecycle?.collectedAt ? new Date(sale.lifecycle.collectedAt) : undefined);
-      setOverallDiscount((sale as any).overallDiscount || {});
+      setOverallDiscount(sale.context?.overallDiscount || (sale as any).overallDiscount || {});
       setLines(sale.lines || []);
       setPayments(sale.payments || []);
       setSalesChannel(sale.salesChannel || getSalesChannelFromSaleType(sale.type) || null);
@@ -477,21 +477,23 @@ export default function SalesModal({
         if (hasServiceLines && sale.lines) {
           const serviceLine = sale.lines.find(line => line.kind === 'service');
           if (serviceLine) {
+            const serviceContext = (serviceLine as ServiceLine).context;
+            const productionPlan = serviceContext?.productionPlan;
             setTaskItemData({
-              outputItemType: (serviceLine as any).outputItemType || '',
-              outputItemSubType: (serviceLine as any).outputItemSubType || '',
-              outputItemQuantity: (serviceLine as any).outputItemQuantity || 1,
-              outputItemName: (serviceLine as any).outputItemName || '',
-              outputUnitCost: (serviceLine as any).outputUnitCost || 0,
-              outputItemCollection: (serviceLine as any).outputItemCollection || '',
-              outputItemPrice: (serviceLine as any).outputItemPrice || 0,
-              targetSite: (serviceLine as any).taskTargetSiteId || '',
-              outputItemStatus: (serviceLine as any).isSold ? ItemStatus.SOLD : ItemStatus.FOR_SALE,
-              existingItemId: (serviceLine as any).outputItemId || null,
-              isNewItem: (serviceLine as any).isNewItem ?? !(serviceLine as any).outputItemId,
+              outputItemType: productionPlan?.outputItemType || (serviceLine as any).outputItemType || '',
+              outputItemSubType: productionPlan?.outputItemSubType || (serviceLine as any).outputItemSubType || '',
+              outputItemQuantity: productionPlan?.outputQuantity || (serviceLine as any).outputItemQuantity || 1,
+              outputItemName: productionPlan?.outputItemName || (serviceLine as any).outputItemName || '',
+              outputUnitCost: extractMoneyValue(productionPlan?.outputUnitCost) || (serviceLine as any).outputUnitCost || 0,
+              outputItemCollection: productionPlan?.outputItemCollection || (serviceLine as any).outputItemCollection || '',
+              outputItemPrice: extractMoneyValue(productionPlan?.outputItemPrice) || (serviceLine as any).outputItemPrice || 0,
+              targetSite: serviceContext?.taskTargetSiteId || (serviceLine as any).taskTargetSiteId || '',
+              outputItemStatus: productionPlan?.outputItemStatus || ((serviceLine as any).isSold ? ItemStatus.SOLD : ItemStatus.FOR_SALE),
+              existingItemId: serviceContext?.outputItemId || (serviceLine as any).outputItemId || null,
+              isNewItem: productionPlan?.isNewItem ?? (serviceLine as any).isNewItem ?? !(serviceLine as any).outputItemId,
             });
             setTaskPointsData({
-              points: (serviceLine as any).taskRewards || { xp: 0, rp: 0, fp: 0, hp: 0 },
+              points: serviceContext?.taskRewards?.points || (serviceLine as any).taskRewards || { xp: 0, rp: 0, fp: 0, hp: 0 },
             });
           }
         }
@@ -500,7 +502,7 @@ export default function SalesModal({
       // Initialize player character
       setPlayerCharacterId(sale.playerCharacterId || FOUNDER_CHARACTER_ID);
 
-      const emissaryPts = (sale as any).rewards?.points;
+      const emissaryPts = sale.context?.rewardIntent?.points || (sale as any).rewards?.points;
       setPlayerPoints({
         xp: emissaryPts?.xp ?? 0,
         rp: emissaryPts?.rp ?? 0,
@@ -833,32 +835,36 @@ export default function SalesModal({
         lineId: existingServiceLine?.lineId || uuid(),
         kind: 'service',
         station: taskStation,
-        revenue: taskRevenue, // This is the SALE revenue for SALE_FINREC
+        revenue: toMoney(taskRevenue), // This is the SALE revenue for SALE_FINREC
         description: taskName || 'Service',
-        taxAmount: 0 as any,
-        createTask: true,  // Always create task for SERVICE/ONE
-        taskId: selectedTaskId || undefined,
-        taskType: taskType,
-        taskParentId: taskParentId || undefined,
-        taskDueDate: taskDueDate,
-        taskTargetSiteId: taskTargetSiteId || undefined,
-        taskRewards: taskPointsData.points, // These are for the Task being created
-        taskCost: taskCost,
-        // Task item creation data from mini-submodal
-        outputItemType: taskItemData.outputItemType || undefined,
-        outputItemSubType: taskItemData.outputItemSubType || undefined,
-        outputItemQuantity: taskItemData.outputItemQuantity || undefined,
-        outputItemName: taskItemData.outputItemName || undefined,
-        outputUnitCost: taskItemData.outputUnitCost || undefined,
-        outputItemCollection: taskItemData.outputItemCollection || undefined,
-        outputItemPrice: taskItemData.outputItemPrice || undefined,
-        targetSite: taskItemData.targetSite || undefined,
-        outputItemStatus: taskItemData.outputItemStatus || undefined,
-        outputItemId: taskItemData.isNewItem ? undefined : (taskItemData.existingItemId || undefined),
-        isNewItem: taskItemData.isNewItem,
-        isNewOutputItem: taskItemData.isNewItem,
-        isSold: taskItemData.outputItemStatus === ItemStatus.SOLD,
-      } as any];
+        taxAmount: toMoney(0),
+        context: {
+          kind: 'service-line-context',
+          schemaVersion: 1,
+          createTask: true,
+          taskId: selectedTaskId || undefined,
+          taskType,
+          taskParentId: taskParentId || undefined,
+          taskDueDate: taskDueDate?.toISOString(),
+          taskTargetSiteId: taskTargetSiteId || undefined,
+          taskRewards: { points: taskPointsData.points },
+          taskCost: toMoney(taskCost),
+          outputItemId: taskItemData.isNewItem ? undefined : (taskItemData.existingItemId || undefined),
+          productionPlan: {
+            outputItemId: taskItemData.isNewItem ? undefined : (taskItemData.existingItemId || undefined),
+            outputItemType: taskItemData.outputItemType || undefined,
+            outputItemSubType: taskItemData.outputItemSubType || undefined,
+            outputQuantity: taskItemData.outputItemQuantity || undefined,
+            outputItemName: taskItemData.outputItemName || undefined,
+            outputUnitCost: taskItemData.outputUnitCost ? toMoney(taskItemData.outputUnitCost) : undefined,
+            outputItemCollection: taskItemData.outputItemCollection || undefined,
+            outputItemPrice: taskItemData.outputItemPrice ? toMoney(taskItemData.outputItemPrice) : undefined,
+            outputItemStatus: taskItemData.outputItemStatus || undefined,
+            isNewItem: taskItemData.isNewItem,
+            isSold: taskItemData.outputItemStatus === ItemStatus.SOLD,
+          },
+        },
+      } as ServiceLine];
 
     } else if (!manualLines && quickRows.length > 0) {
       const existingItemLines = lines.filter((l): l is ItemSaleLine => l.kind === 'item');
@@ -981,15 +987,8 @@ export default function SalesModal({
       siteId,
       counterpartyName: counterpartyName.trim() || undefined,
       characterId: isNewCustomer ? null : characterId,  // Ambassador: Existing customer
-      newCustomerName: isNewCustomer ? newCustomerName : undefined,  // EMISSARY: Name for new customer character creation
       playerCharacterId: playerCharacterId,
-      rewards: hasEmissarySalePoints
-        ? { points: { ...playerPoints } }
-        : undefined,
       salesChannel: salesChannel || getSalesChannelFromSaleType(type) || null,
-      isNotPaid,
-      isNotCharged,
-      overallDiscount: Object.keys(overallDiscount).length > 0 ? overallDiscount : undefined,
       lines: effectiveLines,
       payments: effectivePayments,
       totals: {
@@ -1013,6 +1012,15 @@ export default function SalesModal({
         ...sale?.context,
         kind: 'sale-context',
         schemaVersion: 1,
+        newCustomerName: isNewCustomer ? (newCustomerName.trim() || undefined) : undefined,
+        rewardIntent: hasEmissarySalePoints
+          ? {
+              kind: 'point-reward',
+              points: { ...playerPoints },
+              beneficiaryCharacterId: playerCharacterId || FOUNDER_CHARACTER_ID,
+              policyVersion: 'sales-modal-v1',
+            }
+          : undefined,
         overallDiscount: Object.keys(overallDiscount).length > 0 ? overallDiscount : undefined,
       },
     };

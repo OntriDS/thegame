@@ -571,6 +571,7 @@ export interface TaskCounterpartyFacetV1 {
 }
 
 export interface ProductionPlanFacetV1 {
+  outputItemId?: EntityId;
   outputItemType?: string;
   outputItemSubType?: SubItemType;
   outputQuantity?: number;
@@ -927,6 +928,7 @@ export interface ServiceLineContextV1 {
   taskTargetSiteId?: EntityId;
   taskRewards?: Rewards;
   taskCost?: Money;
+  outputItemId?: EntityId;
   productionPlan?: ProductionPlanFacetV1; // Shared from TaskContextV1
 }
 

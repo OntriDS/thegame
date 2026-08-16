@@ -281,7 +281,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       saleFinrecTimeKey(sale.saleDate) !== saleFinrecTimeKey(previousSale.saleDate) ||
       saleFinrecTimeKey(sale.lifecycle?.collectedAt) !== saleFinrecTimeKey(previousSale.collectedAt)  !== !!previousSale.isCollected ||
       !(sale.status === SaleStatus.PENDING) !== !(previousSale.status === SaleStatus.PENDING) ||
-      !!sale.isNotCharged !== !!previousSale.isNotCharged;
+      sale.status !== previousSale.status;
 
     // Propagate to Financial Records
     if (hasFinancialDriversChanged) {
@@ -541,7 +541,8 @@ async function removePlayerPointsFromSale(saleId: string, sale?: Sale | null): P
       return;
     }
 
-    const pointsToRemove = resolved.rewards!.points;
+    const pointsToRemove = resolved.context?.rewardIntent?.points;
+    if (!pointsToRemove) return;
 
     const hasPoints =
       (pointsToRemove.xp || 0) > 0 ||
@@ -673,4 +674,3 @@ async function removeSoldItemRowsForDeletedSale(saleId: string, sale: Sale | nul
     console.error(`[removeSoldItemRowsForDeletedSale] ❌ Failed for sale ${saleId}:`, error);
   }
 }
-

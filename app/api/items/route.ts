@@ -249,8 +249,12 @@ export async function POST(req: NextRequest) {
           thumbUrl: existingMedia.thumbUrl || existingMedia.thumb,
           galleryUrls: existingMedia.galleryUrls || existingMedia.gallery,
         },
-        sourceTaskId: rawItem.sourceTaskId ?? null,
-        sourceRecordId: rawItem.sourceRecordId ?? null,
+        ...(typeof rawItem.sourceTaskId === 'string' && rawItem.sourceTaskId.trim()
+          ? { sourceTaskId: rawItem.sourceTaskId.trim() }
+          : {}),
+        ...(typeof rawItem.sourceRecordId === 'string' && rawItem.sourceRecordId.trim()
+          ? { sourceRecordId: rawItem.sourceRecordId.trim() }
+          : {}),
         context: {
           kind: 'item-context',
           schemaVersion: 1,
