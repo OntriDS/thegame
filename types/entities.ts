@@ -601,6 +601,7 @@ export interface TaskContextV1 {
   schemaVersion: 1;
   recurrence?: RecurrenceFacetV1;
   counterparty?: TaskCounterpartyFacetV1;
+  newCustomerName?: string;
   productionPlan?: ProductionPlanFacetV1;
   financialIntent?: FinancialIntentFacetV1;
   rewardIntent?: RewardIntentFacetV1;

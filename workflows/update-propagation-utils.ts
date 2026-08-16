@@ -35,6 +35,13 @@ const parseDateOrNull = (value: Date | string | null | undefined): Date | null =
   return null;
 };
 
+const taskProductionPlan = (task: Task) => task.context?.productionPlan;
+const taskIsNewItem = (task: Task): boolean => Boolean(taskProductionPlan(task)?.isNewItem ?? (task as any).isNewItem);
+const taskOutputQuantity = (task: Task): number => Number(taskProductionPlan(task)?.outputQuantity ?? (task as any).outputQuantity ?? 0);
+const taskOutputName = (task: Task): string | undefined => taskProductionPlan(task)?.outputItemName ?? (task as any).outputItemName;
+const taskOutputUnitCost = (task: Task): number => extractMoneyValue(taskProductionPlan(task)?.outputUnitCost) || Number((task as any).outputUnitCost || 0);
+const taskOutputPrice = (task: Task): number => extractMoneyValue(taskProductionPlan(task)?.outputItemPrice) || Number((task as any).outputItemPrice || 0);
+
 const toDateTimestamp = (value: Date | string | null | undefined): number => {
   return parseDateOrNull(value)?.getTime() ?? 0;
 };
@@ -249,7 +256,7 @@ export async function updateItemsCreatedByTask(
     // OPTIMIZED: Only load items created by this task (already filtered by index)
     const relatedItems = await getItemsBySourceTaskId(task.id);
 
-    if (!task.isNewItem && previousTask.isNewItem && relatedItems.length > 0) {
+    if (!taskIsNewItem(task) && taskIsNewItem(previousTask) && relatedItems.length > 0) {
       const removalKey = EffectKeys.sideEffect('task', task.id, `removeCreatedItems:${toDateTimestamp(task.updatedAt)}`);
       if (!(await hasEffect(removalKey))) {
         for (const item of relatedItems) {
@@ -264,7 +271,7 @@ export async function updateItemsCreatedByTask(
       }
     }
 
-    if (task.isNewItem || previousTask.isNewItem) {
+    if (taskIsNewItem(task) || taskIsNewItem(previousTask)) {
       for (const item of relatedItems) {
         const updateKey = EffectKeys.sideEffect('task', task.id, `updateItem:${item.id}:${toDateTimestamp(task.updatedAt)}`);
 
@@ -275,10 +282,10 @@ export async function updateItemsCreatedByTask(
 
         // Check if output properties changed
         const outputPropsChanged =
-          task.outputQuantity !== previousTask.outputQuantity ||
-          task.outputItemName !== previousTask.outputItemName ||
-          task.outputUnitCost !== previousTask.outputUnitCost ||
-          task.outputItemPrice !== previousTask.outputItemPrice;
+          taskOutputQuantity(task) !== taskOutputQuantity(previousTask) ||
+          taskOutputName(task) !== taskOutputName(previousTask) ||
+          taskOutputUnitCost(task) !== taskOutputUnitCost(previousTask) ||
+          taskOutputPrice(task) !== taskOutputPrice(previousTask);
 
         const statePropsChanged = hasStatePropsChanged(task, previousTask);
 
@@ -291,9 +298,14 @@ export async function updateItemsCreatedByTask(
 
           const updatedItem = {
             ...item,
-            name: outputPropsChanged ? (task.outputItemName || item.name) : item.name,
-            unitCost: outputPropsChanged ? (task.outputUnitCost || item.unitCost) : item.unitCost,
-            price: outputPropsChanged ? (task.outputItemPrice || item.price) : item.price,
+            name: outputPropsChanged ? (taskOutputName(task) || item.name) : item.name,
+            pricing: outputPropsChanged
+              ? {
+                  ...item.pricing,
+                  unitCost: toMoney(taskOutputUnitCost(task)),
+                  targetPrice: toMoney(taskOutputPrice(task)),
+                }
+              : item.pricing,
             year,
             updatedAt: getUTCNow()
           };
@@ -303,8 +315,8 @@ export async function updateItemsCreatedByTask(
           // otherwise we add the delta (e.g. +3) to the initial value (e.g. 4), resulting in 7.
           const wasJustCreated = await hasEffect(EffectKeys.sideEffect('task', task.id, 'itemCreated'));
 
-          if (!wasJustCreated && task.outputQuantity !== previousTask.outputQuantity) {
-            const quantityDiff = (task.outputQuantity || 0) - (previousTask.outputQuantity || 0);
+          if (!wasJustCreated && taskOutputQuantity(task) !== taskOutputQuantity(previousTask)) {
+            const quantityDiff = taskOutputQuantity(task) - taskOutputQuantity(previousTask);
             if (quantityDiff !== 0) {
               // Update the first stock point (or create one if none exists)
               if (updatedItem.stock && updatedItem.stock.length > 0) {
@@ -396,14 +408,14 @@ export async function updateItemsCreatedByTask(
       console.log(`[updateItemsCreatedByTask] ✅ Adjusted stock for existing item ${itemId} (Δ${quantityDelta} @ ${siteId})`);
     };
 
-    const currentExistingItemId = (!task.isNewItem && task.outputItemId) ? task.outputItemId : null;
-    const previousExistingItemId = (!previousTask.isNewItem && previousTask.outputItemId) ? previousTask.outputItemId : null;
+    const currentExistingItemId = (!taskIsNewItem(task) && task.outputItemId) ? task.outputItemId : null;
+    const previousExistingItemId = (!taskIsNewItem(previousTask) && previousTask.outputItemId) ? previousTask.outputItemId : null;
 
     if (currentExistingItemId || previousExistingItemId) {
       const currentSite = resolveSiteFromTask(task);
       const previousSite = resolveSiteFromTask(previousTask);
-      const currentQuantity = task.outputQuantity || 0;
-      const previousQuantity = previousTask.outputQuantity || 0;
+      const currentQuantity = taskOutputQuantity(task);
+      const previousQuantity = taskOutputQuantity(previousTask);
 
       if (currentExistingItemId && previousExistingItemId && currentExistingItemId === previousExistingItemId) {
         if (currentSite === previousSite) {

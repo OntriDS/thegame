@@ -43,7 +43,7 @@ import { computeNextSiblingOrder } from '@/lib/utils/task-order-utils';
 import { Calendar as CalendarIcon, Repeat, Network, User } from 'lucide-react';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { format } from 'date-fns';
-import { toMoney } from '@/lib/utils/financial-utils';
+import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 import { FrequencyConfig } from '@/components/ui/frequency-calendar';
 // UTC STANDARDIZATION: Using new UTC utilities
 import { validateFrequencyConfig } from '@/lib/utils/recurrent-validation';;
@@ -222,8 +222,8 @@ export default function RecurrentTreeModalContent({
         setScheduledEndTime('');
       }
       const fi = existingTask.context?.financialIntent;
-      setCost(fi?.costIntent ? Number(fi.costIntent.minorUnits) : execTask.cost ?? 0);
-      setRevenue(fi?.revenueIntent ? Number(fi.revenueIntent.minorUnits) : execTask.revenue ?? 0);
+      setCost(fi?.costIntent ? extractMoneyValue(fi.costIntent) : execTask.cost ?? 0);
+      setRevenue(fi?.revenueIntent ? extractMoneyValue(fi.revenueIntent) : execTask.revenue ?? 0);
       setIsCollected(existingTask.status === TaskStatus.COLLECTED || execTask.isCollected || false);
       setFormData({
         site: existingTask.siteId || 'none',
@@ -236,9 +236,9 @@ export default function RecurrentTreeModalContent({
       setOutputItemSubType(taskSubType);
       setOutputItemTypeSubType(taskItemType ? `${taskItemType}:${taskSubType}` : 'none:');
       setOutputQuantity(pp?.outputQuantity || execTask.outputQuantity || 1);
-      setOutputUnitCost(pp?.outputUnitCost ? Number(pp.outputUnitCost.minorUnits) : execTask.outputUnitCost || 0);
+      setOutputUnitCost(pp?.outputUnitCost ? extractMoneyValue(pp.outputUnitCost) : execTask.outputUnitCost || 0);
       setOutputItemName(pp?.outputItemName || execTask.outputItemName || '');
-      setOutputItemPrice(pp?.outputItemPrice ? Number(pp.outputItemPrice.minorUnits) : execTask.outputItemPrice || 0);
+      setOutputItemPrice(pp?.outputItemPrice ? extractMoneyValue(pp.outputItemPrice) : execTask.outputItemPrice || 0);
       setIsNewItem(pp?.isNewItem ?? execTask.isNewItem ?? !Boolean(existingTask.outputItemId));
       setIsSold(pp?.isSold ?? execTask.isSold ?? false);
       setOutputItemStatus(
@@ -275,7 +275,7 @@ export default function RecurrentTreeModalContent({
         }
       );
       const rec = existingTask.context?.recurrence;
-      setRecurrenceStart(rec?.recurrenceStart ? new Date(rec.recurrenceStart) : execTask.recurrenceStart ? new Date(execTask.recurrenceStart) : new Date());
+      setRecurrenceStart(rec?.recurrenceStart ? new Date(rec.recurrenceStart) : execTask.recurrenceStart ? new Date(execTask.recurrenceStart) : undefined);
       setRecurrenceEnd(rec?.recurrenceEnd ? new Date(rec.recurrenceEnd) : execTask.recurrenceEnd ? new Date(execTask.recurrenceEnd) : undefined);
       setParentId(existingTask.parentId || null);
     },
@@ -452,29 +452,10 @@ export default function RecurrentTreeModalContent({
             ...(finalScheduledEnd ? { scheduledEnd: finalScheduledEnd.toISOString() } : {}),
           }
         : undefined,
-      cost,
-      revenue,
       siteId: formData.site && formData.site !== 'none' ? formData.site : null,
       targetSiteId: formData.targetSite && formData.targetSite !== 'none' ? formData.targetSite : null,
-      outputItemType: (outputItemType || undefined) as ItemType | undefined,
-      outputItemSubType: (outputItemSubType || undefined) as SubItemType | undefined,
-      outputQuantity,
-      outputUnitCost,
-      outputItemPrice,
-      outputItemStatus,
-      outputItemName: outputItemName.trim() || undefined,
-      rewards: {
-        points: {
-          xp: rewards.points.xp,
-          rp: rewards.points.rp,
-          fp: rewards.points.fp,
-          hp: rewards.points.hp,
-        },
-      },
       parentId,
       characterId: isNewCustomer ? null : customerCharacterId,
-      newCustomerName: isNewCustomer ? newCustomerName.trim() || undefined : undefined,
-      customerCharacterRole,
       context: {
         ...(task as any)?.context,
         kind: 'task-context',
@@ -494,10 +475,19 @@ export default function RecurrentTreeModalContent({
           counterpartyId: isNewCustomer ? null : customerCharacterId,
           role: customerCharacterRole,
         },
+        ...(isNewCustomer && newCustomerName.trim() ? { newCustomerName: newCustomerName.trim() } : {}),
         financialIntent: cost || revenue
           ? { costIntent: toMoney(cost), revenueIntent: toMoney(revenue) }
           : undefined,
-        productionPlan: outputItemType || outputItemName.trim() || !isNewItem
+        rewardIntent: Object.values(rewards.points).some((value) => Number(value) > 0)
+          ? {
+              kind: 'point-reward',
+              points: rewards.points,
+              beneficiaryCharacterId: finalPlayerCharacterId,
+              policyVersion: (task as any)?.context?.rewardIntent?.policyVersion || 'task-modal-v1',
+            }
+          : undefined,
+        productionPlan: outputItemType || outputItemName.trim() || selectedItemId || (task as any)?.context?.productionPlan
           ? {
               ...(task as any)?.context?.productionPlan,
               outputItemType: outputItemType || undefined,
@@ -518,8 +508,6 @@ export default function RecurrentTreeModalContent({
         : (Array.isArray(ownerId) ? ownerId : (ownerId ? [ownerId] : [])),
       order: determineOrder(),
       
-      isNewItem,
-      isSold,
       outputItemId: isNewItem ? null : (selectedItemId || task?.outputItemId || null),
       sourceSaleId: (task as any)?.sourceSaleId ?? undefined,
       links: (task as any)?.links || [],

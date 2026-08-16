@@ -43,7 +43,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { format } from 'date-fns'; // Keeping for time formatting (HH:mm)
 import { formatForDisplay, formatDayMonth } from '@/lib/utils/date-display-utils';
 import { getUTCNow } from '@/lib/utils/utc-utils';
-import { toMoney } from '@/lib/utils/financial-utils';
+import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 import { TaskModalFooter } from './task-modal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { ensureCounterpartyRole } from '@/lib/utils/character-role-sync';
@@ -219,8 +219,8 @@ export default function MissionTreeModalContent({
       }
 
       const fi = existingTask.context?.financialIntent;
-      setCost(fi?.costIntent ? Number(fi.costIntent.minorUnits) : execTask.cost ?? 0);
-      setRevenue(fi?.revenueIntent ? Number(fi.revenueIntent.minorUnits) : execTask.revenue ?? 0);
+      setCost(fi?.costIntent ? extractMoneyValue(fi.costIntent) : execTask.cost ?? 0);
+      setRevenue(fi?.revenueIntent ? extractMoneyValue(fi.revenueIntent) : execTask.revenue ?? 0);
       setIsCollected(existingTask.status === TaskStatus.COLLECTED || execTask.isCollected || false);
       setFormData({
         site: existingTask.siteId || 'none',
@@ -234,11 +234,11 @@ export default function MissionTreeModalContent({
       setOutputItemTypeSubType(taskItemType ? `${taskItemType}:${taskSubType}` : 'none:');
       setOutputQuantity(pp?.outputQuantity || execTask.outputQuantity || 1);
       setOutputQuantityString(String(pp?.outputQuantity || execTask.outputQuantity || 1));
-      setOutputUnitCost(pp?.outputUnitCost ? Number(pp.outputUnitCost.minorUnits) : execTask.outputUnitCost || 0);
-      setOutputUnitCostString(String(pp?.outputUnitCost ? Number(pp.outputUnitCost.minorUnits) : execTask.outputUnitCost || 0));
+      setOutputUnitCost(pp?.outputUnitCost ? extractMoneyValue(pp.outputUnitCost) : execTask.outputUnitCost || 0);
+      setOutputUnitCostString(String(pp?.outputUnitCost ? extractMoneyValue(pp.outputUnitCost) : execTask.outputUnitCost || 0));
       setOutputItemName(pp?.outputItemName || execTask.outputItemName || '');
-      setOutputItemPrice(pp?.outputItemPrice ? Number(pp.outputItemPrice.minorUnits) : execTask.outputItemPrice || 0);
-      setOutputItemPriceString(String(pp?.outputItemPrice ? Number(pp.outputItemPrice.minorUnits) : execTask.outputItemPrice || 0));
+      setOutputItemPrice(pp?.outputItemPrice ? extractMoneyValue(pp.outputItemPrice) : execTask.outputItemPrice || 0);
+      setOutputItemPriceString(String(pp?.outputItemPrice ? extractMoneyValue(pp.outputItemPrice) : execTask.outputItemPrice || 0));
       setIsNewItem(pp?.isNewItem ?? execTask.isNewItem ?? !Boolean(existingTask.outputItemId));
       setIsSold(pp?.isSold ?? execTask.isSold ?? false);
       setOutputItemStatus(
@@ -451,37 +451,22 @@ export default function MissionTreeModalContent({
       type,
       station,
       progress,
-      dueDate,
       doneAt:
         finalStatus === TaskStatus.DONE || finalStatus === TaskStatus.FAILED || finalStatus === TaskStatus.COLLECTED
           ? localDoneAt
           : undefined,
       collectedAt: finalStatus === TaskStatus.COLLECTED ? localCollectedAt : undefined,
-      scheduledStart: finalScheduledStart,
-      scheduledEnd: finalScheduledEnd,
-      cost,
-      revenue,
+      schedule: dueDate || finalScheduledStart || finalScheduledEnd
+        ? {
+            ...(dueDate ? { dueDate: dueDate.toISOString() } : {}),
+            ...(finalScheduledStart ? { scheduledStart: finalScheduledStart.toISOString() } : {}),
+            ...(finalScheduledEnd ? { scheduledEnd: finalScheduledEnd.toISOString() } : {}),
+          }
+        : undefined,
       siteId: formData.site && formData.site !== 'none' ? formData.site : null,
       targetSiteId: formData.targetSite && formData.targetSite !== 'none' ? formData.targetSite : null,
-      outputItemType: (outputItemType || undefined) as ItemType | undefined,
-      outputItemSubType: (outputItemSubType || undefined) as SubItemType | undefined,
-      outputQuantity,
-      outputUnitCost,
-      outputItemPrice,
-      outputItemStatus,
-      outputItemName: outputItemName.trim() || undefined,
-      rewards: {
-        points: {
-          xp: rewards.points.xp,
-          rp: rewards.points.rp,
-          fp: rewards.points.fp,
-          hp: rewards.points.hp,
-        },
-      },
       parentId,
       characterId: isNewCustomer ? null : customerCharacterId,
-      newCustomerName: isNewCustomer ? newCustomerName.trim() || undefined : undefined,
-      customerCharacterRole,
       context: {
         ...(task as any)?.context,
         kind: 'task-context',
@@ -490,10 +475,19 @@ export default function MissionTreeModalContent({
           counterpartyId: isNewCustomer ? null : customerCharacterId,
           role: customerCharacterRole,
         },
+        ...(isNewCustomer && newCustomerName.trim() ? { newCustomerName: newCustomerName.trim() } : {}),
         financialIntent: cost || revenue
           ? { costIntent: toMoney(cost), revenueIntent: toMoney(revenue) }
           : undefined,
-        productionPlan: outputItemType || outputItemName.trim() || !isNewItem
+        rewardIntent: Object.values(rewards.points).some((value) => Number(value) > 0)
+          ? {
+              kind: 'point-reward',
+              points: rewards.points,
+              beneficiaryCharacterId: finalPlayerCharacterId,
+              policyVersion: (task as any)?.context?.rewardIntent?.policyVersion || 'task-modal-v1',
+            }
+          : undefined,
+        productionPlan: outputItemType || outputItemName.trim() || selectedItemId || (task as any)?.context?.productionPlan
           ? {
               ...(task as any)?.context?.productionPlan,
               outputItemType: outputItemType || undefined,
@@ -514,11 +508,7 @@ export default function MissionTreeModalContent({
         : (Array.isArray(ownerId) ? ownerId : (ownerId ? [ownerId] : [])),
       order: determineOrder(),
       
-      isNewItem,
-      isSold,
       outputItemId: isNewItem ? null : (selectedItemId || (task as any)?.outputItemId || null),
-      isRecurrentGroup: task ? getTaskIsRecurrentGroup(task) : false,
-      isTemplate: task ? getTaskIsTemplate(task) : false,
       sourceSaleId: (task as any)?.sourceSaleId ?? undefined,
       links: (task as any)?.links || [],
       createdAt: task?.createdAt || getUTCNow(),

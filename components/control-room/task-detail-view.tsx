@@ -26,6 +26,7 @@ import { fromRecurrentUTC } from '@/lib/utils/utc-utils';;
 import { computeNextSiblingOrder } from '@/lib/utils/task-order-utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import ConfirmationModal from '@/components/modals/submodals/confirmation-submodal';
+import { extractMoneyValue } from '@/lib/utils/financial-utils';
 
 interface TaskDetailViewProps {
   node: TreeNode | null;
@@ -719,8 +720,8 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
 
         {/* Financial Information */}
         {(() => {
-          const costValue = Number(task.context?.financialIntent?.costIntent?.minorUnits || 0) / 100;
-          const revenueValue = Number(task.context?.financialIntent?.revenueIntent?.minorUnits || 0) / 100;
+          const costValue = extractMoneyValue(task.context?.financialIntent?.costIntent);
+          const revenueValue = extractMoneyValue(task.context?.financialIntent?.revenueIntent);
           
           if (costValue === 0 && revenueValue === 0) return null;
 

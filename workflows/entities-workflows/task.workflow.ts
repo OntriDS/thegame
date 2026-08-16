@@ -407,10 +407,12 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   // Tasks are not physical entities; skip MOVED logging even if site references change.
 
   // Character creation from emissary fields - when newCustomerName is provided
-  if (task.newCustomerName && !getTaskCounterpartyId(taskForCounterparty)) {
+  const newCustomerName = task.context?.newCustomerName || task.newCustomerName;
+  if (newCustomerName && !getTaskCounterpartyId(taskForCounterparty)) {
     const effectKey = EffectKeys.sideEffect('task', task.id, 'characterCreated');
     if (!(await hasEffect(effectKey))) {
       const normalizedCustomerCharacterRole =
+        taskForCounterparty.context?.counterparty?.role ??
         taskForCounterparty.customerCharacterRole ??
         CharacterRole.CUSTOMER;
       const createdCharacter = await createCharacterFromTask(taskForCounterparty);
@@ -419,7 +421,14 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         const updatedTask = {
           ...taskForCounterparty,
           characterId: createdCharacter.id,
-          customerCharacterRole: normalizedCustomerCharacterRole as CustomerCounterpartyRole
+          context: {
+            ...(taskForCounterparty.context || {}),
+            counterparty: {
+              ...(taskForCounterparty.context?.counterparty || {}),
+              counterpartyId: createdCharacter.id,
+              role: normalizedCustomerCharacterRole as CustomerCounterpartyRole,
+            },
+          },
         };
         await upsertTask(updatedTask, { skipWorkflowEffects: true });
         taskForCounterparty = updatedTask;
@@ -725,8 +734,10 @@ export async function uncompleteTask(taskId: string, previousTerminalTask?: Task
       if (!task.doneAt && !task.collectedAt) return;
     }
 
-    if (!task.isNewItem && task.outputItemId) {
-      const quantityToRemove = task.outputQuantity || 0;
+    const productionPlan = task.context?.productionPlan;
+    const isNewItem = productionPlan?.isNewItem ?? task.isNewItem;
+    if (!isNewItem && task.outputItemId) {
+      const quantityToRemove = productionPlan?.outputQuantity ?? task.outputQuantity ?? 0;
       if (quantityToRemove > 0) {
         const existingItem = await getItemById(task.outputItemId);
         if (existingItem) {

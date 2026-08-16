@@ -32,6 +32,14 @@ import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution'
 import { getSaleCharacterId } from '@/lib/sale-character-id';
 import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 
+const getTaskMoneyValue = (task: Task, field: 'costIntent' | 'revenueIntent'): number => {
+  const money = task.context?.financialIntent?.[field];
+  return money ? extractMoneyValue(money) : Number((task as any)[field === 'costIntent' ? 'cost' : 'revenue'] || 0);
+};
+
+const getTaskIsNewItem = (task: Task): boolean =>
+  Boolean(task.context?.productionPlan?.isNewItem ?? (task as any).isNewItem);
+
 /**
  * Get the current J$ Balance for an entity (Character or Player)
  * Source of Truth: Sum of 'jungleCoins' field in all linked Financial Records
@@ -148,10 +156,8 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
     console.log(`[createFinancialRecordFromTask] Starting financial record creation for task: ${task.name} (${task.id})`);
 
     // Check if task has cost or revenue
-    const taskCost = Number(task.context?.financialIntent?.costIntent?.minorUnits ?? task.cost ?? 0) /
-      (task.context?.financialIntent?.costIntent ? 100 : 1);
-    const taskRevenue = Number(task.context?.financialIntent?.revenueIntent?.minorUnits ?? task.revenue ?? 0) /
-      (task.context?.financialIntent?.revenueIntent ? 100 : 1);
+    const taskCost = getTaskMoneyValue(task, 'costIntent');
+    const taskRevenue = getTaskMoneyValue(task, 'revenueIntent');
     if (!taskCost && !taskRevenue) {
       console.log(`[createFinancialRecordFromTask] Task ${task.name} has no cost or revenue, skipping financial record creation`);
       return null;
@@ -242,18 +248,19 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
 
     // Check if any financial properties changed
     const financialPropsChanged =
-      previousTask.cost !== task.cost ||
-      previousTask.revenue !== task.revenue ||
+      getTaskMoneyValue(previousTask, 'costIntent') !== getTaskMoneyValue(task, 'costIntent') ||
+      getTaskMoneyValue(previousTask, 'revenueIntent') !== getTaskMoneyValue(task, 'revenueIntent') ||
       (previousTask.status === "PENDING") !== (task.status === "PENDING") ||
       previousTask.isNotCharged !== task.isNotCharged ||
       previousTask.outputItemId !== task.outputItemId ||
-      previousTask.isNewItem !== task.isNewItem ||
+      getTaskIsNewItem(previousTask) !== getTaskIsNewItem(task) ||
       previousTask.name !== task.name ||
       previousTask.station !== task.station ||
       previousTask.siteId !== task.siteId ||
       previousTask.targetSiteId !== task.targetSiteId ||
       getTaskCounterpartyId(previousTask) !== getTaskCounterpartyId(task) ||
-      previousTask.customerCharacterRole !== task.customerCharacterRole;
+      (previousTask.context?.counterparty?.role || previousTask.customerCharacterRole) !==
+      (task.context?.counterparty?.role || task.customerCharacterRole);
 
     if (!financialPropsChanged) {
       console.log(`[updateFinancialRecordFromTask] No financial properties changed for task ${task.id}, skipping update`);
@@ -265,19 +272,19 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
       ...existingFinrec,
       name: task.name,
       description: `Financial record from task: ${task.name}`,
-      cost: task.cost || 0,
-      revenue: task.revenue || 0,
+      cost: toMoney(getTaskMoneyValue(task, 'costIntent')),
+      revenue: toMoney(getTaskMoneyValue(task, 'revenueIntent')),
       station: task.station,
       siteId: task.siteId,
       targetSiteId: task.targetSiteId,
       characterId: getTaskCounterpartyId(task),
-      customerCharacterRole: task.customerCharacterRole || CharacterRole.CUSTOMER,
+      customerCharacterRole: task.context?.counterparty?.role || task.customerCharacterRole || CharacterRole.CUSTOMER,
       isNotPaid: (task.status === "PENDING"),
       isNotCharged: task.isNotCharged,
-      outputItemId: task.isNewItem ? null : (task.outputItemId || null),
-      isNewItem: task.isNewItem,
+      outputItemId: getTaskIsNewItem(task) ? null : (task.outputItemId || null),
+      isNewItem: getTaskIsNewItem(task),
       rewards: undefined,
-      netCashflow: (task.revenue || 0) - (task.cost || 0),
+      netCashflow: toMoney(getTaskMoneyValue(task, 'revenueIntent') - getTaskMoneyValue(task, 'costIntent')),
       doneAt: existingFinrec.doneAt || (task.doneAt ? task.doneAt as Date : (task.collectedAt ? task.collectedAt as Date : undefined)),
       updatedAt: getUTCNow()
     };

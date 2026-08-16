@@ -75,10 +75,11 @@ export async function createCharacterFromEntity(
  */
 
 export async function createCharacterFromTask(task: Task): Promise<Character | null> {
-  if (!task.newCustomerName) {
+  const newCustomerName = task.context?.newCustomerName || task.newCustomerName;
+  if (!newCustomerName) {
     return null;
   }
-  return createCharacterFromEntity('task', task.id, task.name, task.newCustomerName, task.customerCharacterRole || CharacterRole.CUSTOMER);
+  return createCharacterFromEntity('task', task.id, task.name, newCustomerName, task.context?.counterparty?.role || task.customerCharacterRole || CharacterRole.CUSTOMER);
 }
 
 export async function createCharacterFromSale(sale: Sale): Promise<Character | null> {

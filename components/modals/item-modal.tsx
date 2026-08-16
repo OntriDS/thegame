@@ -34,6 +34,7 @@ import OwnerSubmodal from './submodals/owner-submodal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { LinkType } from '@/types/enums';
 import { getCollectionLabel } from '@/lib/constants/collection-labels';
+import { extractMoneyValue } from '@/lib/utils/financial-utils';
 import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
 
 interface ItemModalProps {
@@ -594,8 +595,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         const remainingQuantity = refreshed.stock?.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0) || 0;
         setQuantity(remainingQuantity);
         setStatus(refreshed.status || ItemStatus.FOR_SALE);
-        setPrice((refreshed as any).price || 0);
-        setUnitCost((refreshed as any).unitCost || 0);
+        setPrice(extractMoneyValue(refreshed.pricing?.targetPrice) || (refreshed as any).price || 0);
+        setUnitCost(extractMoneyValue(refreshed.pricing?.unitCost) || (refreshed as any).unitCost || 0);
         setCollection(refreshed.collection || Collection.NO_COLLECTION);
         setKeepInInventoryAfterSold(
           typeof (refreshed as any).keepInInventoryAfterSold === 'boolean'
@@ -757,8 +758,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setQuantity(item.stock?.reduce((total: number, stockPoint) => total + stockPoint.quantity, 0) || 0);
       }
 
-      setUnitCost((item as any).unitCost || 0);
-      setPrice((item as any).price || 0);
+      setUnitCost(extractMoneyValue(item.pricing?.unitCost) || (item as any).unitCost || 0);
+      setPrice(extractMoneyValue(item.pricing?.targetPrice) || (item as any).price || 0);
       setKeepInInventoryAfterSold(
         typeof (item as any).keepInInventoryAfterSold === 'boolean'
           ? (item as any).keepInInventoryAfterSold
@@ -862,8 +863,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           setSite(selectedItem.stock?.[0]?.siteId || '');
         }
 
-        setUnitCost((selectedItem as any).unitCost || 0);
-        setPrice((selectedItem as any).price || 0);
+        setUnitCost(extractMoneyValue(selectedItem.pricing?.unitCost) || (selectedItem as any).unitCost || 0);
+        setPrice(extractMoneyValue(selectedItem.pricing?.targetPrice) || (selectedItem as any).price || 0);
         setKeepInInventoryAfterSold(
           typeof (selectedItem as any).keepInInventoryAfterSold === 'boolean'
             ? (selectedItem as any).keepInInventoryAfterSold

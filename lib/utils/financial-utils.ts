@@ -38,9 +38,16 @@ export function extractMoneyValue(val: Money | number | undefined | null): numbe
 }
 
 /** Convert a numeric amount to a Money object */
-export function toMoney(amount: number, currency: string = 'USD'): Money {
+export function toMoney(amount: number | Money, currency: string = 'USD'): Money {
+  // Keep this boundary idempotent if a caller already has canonical Money.
+  // This prevents accidental minor-unit multiplication when data crosses
+  // modal/workflow boundaries more than once.
+  if (amount && typeof amount === 'object' && typeof amount.minorUnits === 'string') {
+    return amount;
+  }
+  const numericAmount = Number(amount);
   return {
-    minorUnits: String(Math.round(amount * 100)),
+    minorUnits: String(Math.round((Number.isFinite(numericAmount) ? numericAmount : 0) * 100)),
     currency
   };
 }

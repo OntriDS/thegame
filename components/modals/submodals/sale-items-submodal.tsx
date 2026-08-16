@@ -15,6 +15,7 @@ import { Trash2, Plus } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
 import { ItemType, ItemStatus } from '@/types/enums';
 import { AdminStation } from '@/lib/storage/taxonomy';
+import { extractMoneyValue } from '@/lib/utils/financial-utils';
 
 // Default values for quick-created items
 /** Sold rows show clean display name; id is rendered in a dedicated row below. */
@@ -222,9 +223,9 @@ export default function SaleItemsSubModal({
           itemId: item.id,
           itemName: item.name,
           siteId: specificSiteId || selectedSiteId, // Use specific site from selection if available
-          unitPrice: (item as any).price || 0,
+          unitPrice: extractMoneyValue(item.pricing?.targetPrice) || (item as any).price || 0,
           quantity: 1,
-          total: ((item as any).price || 0) * 1,
+          total: (extractMoneyValue(item.pricing?.targetPrice) || (item as any).price || 0) * 1,
           usdExpression: '',
           crcExpression: '',
           totalUSD: 0,
@@ -614,4 +615,3 @@ export default function SaleItemsSubModal({
     </Dialog>
   );
 }
-

@@ -20,6 +20,7 @@ import { ItemNameField } from '@/components/ui/item-name-field';
 import { ClientAPI } from '@/lib/client-api';
 import { Item, Site } from '@/types/entities';
 import { getCollectionLabel } from '@/lib/constants/collection-labels';
+import { extractMoneyValue } from '@/lib/utils/financial-utils';
 
 interface ItemCreationData {
   outputItemType: ItemType | '';
@@ -148,8 +149,8 @@ export default function ItemEmissarySubModal({
         setOutputItemName(selectedItem.name);
         setOutputItemType(selectedItem.type);
         setOutputItemSubType(''); // Items don't have subType property
-        setOutputUnitCost((selectedItem as any).unitCost);
-        setOutputItemPrice((selectedItem as any).price);
+      setOutputUnitCost(extractMoneyValue(selectedItem.pricing?.unitCost) || (selectedItem as any).unitCost || 0);
+      setOutputItemPrice(extractMoneyValue(selectedItem.pricing?.targetPrice) || (selectedItem as any).price || 0);
         setOutputItemCollection(selectedItem.collection || '');
         setOutputItemTypeSubType(`${selectedItem.type}:`);
       }
