@@ -201,10 +201,14 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
   const persistedContext = (normalizedTask as any).context
     ? { ...(normalizedTask as any).context }
     : undefined;
-  if (persistedContext) delete persistedContext.counterparty;
+  if (persistedContext) {
+    delete persistedContext.counterparty;
+    delete persistedContext.kind;
+    delete persistedContext.schemaVersion;
+  }
   const persistedTask = {
     ...normalizedTask,
-    ...(persistedContext ? { context: persistedContext } : {}),
+    ...(persistedContext && Object.keys(persistedContext).length > 0 ? { context: persistedContext } : {}),
     schemaVersion: normalizedTask.schemaVersion ?? EntitySchemaVersion.V1,
     version: previous ? ((previous.version ?? 0) + 1) : (normalizedTask.version ?? 0),
   } as Task;

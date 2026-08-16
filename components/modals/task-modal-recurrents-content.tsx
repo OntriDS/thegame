@@ -468,8 +468,6 @@ export default function RecurrentTreeModalContent({
       parentId,
       context: {
         ...(task as any)?.context,
-        kind: 'task-context',
-        schemaVersion: 1,
         recurrence: {
           ...(task as any)?.context?.recurrence,
           isRecurrentGroup: type === TaskType.RECURRENT_GROUP,

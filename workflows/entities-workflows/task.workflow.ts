@@ -393,9 +393,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         station: outputsTask.station,
       }, collectedAt);
 
-      const stagingEffectKey = EffectKeys.sideEffect('task', outputsTask.id, 'pointsStaged');
-
-      if (outputsTask.context?.rewardIntent?.points && (await hasEffect(stagingEffectKey))) {
+      if (outputsTask.context?.rewardIntent?.points) {
         const playerId = await resolveTaskOwnerPlayerId(outputsTask);
         if (!playerId) throw new Error(`Cannot vest Task points: owner has no Player (${outputsTask.id})`);
         await rewardPointsToPlayer(playerId, outputsTask.context?.rewardIntent?.points, outputsTask.id, EntityType.TASK, collectedAt);
@@ -627,11 +625,9 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
     // 6. Remove log entries across all months using the new helper
     await removeLogEntriesAcrossMonths(EntityType.TASK, entry => entry.entityId === task.id);
 
-    if (task.context?.rewardIntent?.points) {
-      await removeLogEntriesAcrossMonths(EntityType.PLAYER, entry =>
-        entry.sourceId === task.id || entry.sourceTaskId === task.id
-      );
-    }
+    await removeLogEntriesAcrossMonths(EntityType.PLAYER, entry =>
+      entry.sourceId === task.id || entry.sourceTaskId === task.id
+    );
 
     await removeLogEntriesAcrossMonths(EntityType.ITEM, entry =>
       entry.sourceTaskId === task.id

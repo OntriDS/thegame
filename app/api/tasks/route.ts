@@ -110,6 +110,7 @@ export async function POST(req: NextRequest) {
     const canonicalCounterpartyId = requestedCounterpartyId || characterId;
     const hasCounterparty = Boolean(canonicalCounterpartyId || rawContext.newCustomerName);
     const normalizedContext = { ...rawContext };
+    delete normalizedContext.schemaVersion;
     if (!hasProductionIntent) delete normalizedContext.productionPlan;
     if (!hasRewardIntent) delete normalizedContext.rewardIntent;
     else if (normalizedContext.rewardIntent) {
@@ -245,7 +246,7 @@ export async function POST(req: NextRequest) {
       doneAt: nextDoneAt,
       collectedAt: nextCollectedAt,
       progress: { percentage: Number.isFinite(nextProgress) ? nextProgress : 0 },
-      context: {
+      context: Object.keys({
         ...normalizedContext,
         ...(normalizedFrequencyConfig && (taskBody.type === TaskType.RECURRENT_GROUP || taskBody.type === TaskType.RECURRENT_TEMPLATE)
           ? {
@@ -255,7 +256,17 @@ export async function POST(req: NextRequest) {
               },
             }
           : {}),
-      },
+      }).length > 0 ? {
+        ...normalizedContext,
+        ...(normalizedFrequencyConfig && (taskBody.type === TaskType.RECURRENT_GROUP || taskBody.type === TaskType.RECURRENT_TEMPLATE)
+          ? {
+              recurrence: {
+                ...(normalizedContext.recurrence || {}),
+                frequencyConfig: normalizedFrequencyConfig,
+              },
+            }
+          : {}),
+      } : undefined,
       __counterparty: hasCounterparty
         ? {
             id: canonicalCounterpartyId,

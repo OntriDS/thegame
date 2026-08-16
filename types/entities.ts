@@ -595,8 +595,6 @@ export interface RewardIntentFacetV1 {
 }
 
 export interface TaskContextV1 {
-  kind: 'task-context';
-  schemaVersion: 1;
   recurrence?: RecurrenceFacetV1;
   counterparty?: TaskCounterpartyFacetV1;
   newCustomerName?: string;
@@ -642,7 +640,7 @@ export interface TaskBaseV1 extends EntityEnvelope {
 export interface TaskGroupV1 extends TaskBaseV1 {
   type: StructuralTaskType;
   status: TaskStatus.NONE;
-  context: TaskContextV1;
+  context?: TaskContextV1;
 }
 
 export interface ExecutableTaskV1 extends TaskBaseV1 {
@@ -655,7 +653,7 @@ export interface ExecutableTaskV1 extends TaskBaseV1 {
   doneAt?: UtcIsoString;
   collectedAt?: UtcIsoString;
 
-  context: TaskContextV1;
+  context?: TaskContextV1;
 }
 
 export type Task = TaskGroupV1 | ExecutableTaskV1;

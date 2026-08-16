@@ -388,8 +388,6 @@ export function createRecurrentTemplate(
     order: 0,
     parentId,
     context: {
-      kind: 'task-context',
-      schemaVersion: 1,
       recurrence: {
         isRecurrentGroup: false,
         isTemplate: true,
@@ -819,8 +817,6 @@ export async function validateSpawnOperation(template: Task): Promise<Validation
 function buildCanonicalInstanceContext(template: Task, originTemplateId: string) {
   const source: any = template.context || {};
   const context: any = {
-    kind: 'task-context',
-    schemaVersion: 1,
     recurrence: {
       ...(source.recurrence || {}),
       isRecurrentGroup: false,

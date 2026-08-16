@@ -479,8 +479,6 @@ export default function MissionTreeModalContent({
       parentId,
       context: {
         ...(task as any)?.context,
-        kind: 'task-context',
-        schemaVersion: 1,
         ...(isNewCustomer && newCustomerName.trim() ? { newCustomerName: newCustomerName.trim() } : {}),
         financialIntent: cost || revenue
           ? { costIntent: toMoney(cost), revenueIntent: toMoney(revenue) }
