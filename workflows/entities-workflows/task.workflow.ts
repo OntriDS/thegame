@@ -2,7 +2,7 @@
 // workflows/entities-workflows/task.workflow.ts
 // Task-specific workflow with state vs descriptive field detection
 
-import { CharacterRole, EntityType, LogEventType, TaskStatus, TaskType, FOUNDER_CHARACTER_ID, ItemStatus, WorkflowStatus } from '@/types/enums';
+import { CharacterRole, EntityType, LogEventType, TaskStatus, TaskType, ItemStatus, WorkflowStatus } from '@/types/enums';
 import type { CustomerCounterpartyRole, Task, WorkflowExecutionV1 } from '@/types/entities';
 import { executeWorkflow } from '../coordinator';
 import { appendEntityLog, updateEntityLeanFields, removeLogEntriesAcrossMonths } from '../entities-logging';
@@ -336,10 +336,10 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         updatedAt: getUTCNow()
       };
       
-      // Fire and forget shadow coordinator
-      executeWorkflow(execution).catch(err => {
-        console.error(`[SHADOW] Error starting coordinator for task ${outputsTask.id}`, err);
-      });
+      // Completion effects are part of the Task command outcome. Await the
+      // coordinator so Item creation and point staging cannot be abandoned
+      // when the request finishes.
+      await executeWorkflow(execution);
     }
   }
 

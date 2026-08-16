@@ -326,7 +326,11 @@ export class MonthlyCloseProcessManager {
     sale: Sale
   ): Promise<void> {
     // Check if sale has a point grant
-    const grant = await getGrantBySource({ type: EntityType.SALE, id: sale.id }, sale.playerCharacterId || 'founder');
+    if (!sale.playerCharacterId) {
+      console.log(`[MonthlyClosePM] Sale ${sale.id} has no explicit Player recipient; skipping point grant lookup`);
+      return;
+    }
+    const grant = await getGrantBySource({ type: EntityType.SALE, id: sale.id }, sale.playerCharacterId);
 
     if (!grant) {
       console.log(`[MonthlyClosePM] No grant found for sale ${sale.id}`);

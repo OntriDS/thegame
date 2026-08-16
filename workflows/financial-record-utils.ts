@@ -279,8 +279,6 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
       targetSiteId: task.targetSiteId,
       characterId: getTaskCounterpartyId(task),
       customerCharacterRole: task.context?.counterparty?.role || task.customerCharacterRole || CharacterRole.CUSTOMER,
-      isNotPaid: (task.status === "PENDING"),
-      isNotCharged: task.isNotCharged,
       outputItemId: getTaskIsNewItem(task) ? null : (task.outputItemId || null),
       isNewItem: getTaskIsNewItem(task),
       rewards: undefined,
@@ -552,8 +550,6 @@ async function upsertPrimarySaleFinrecFromSale(
     cost,
     revenue: totalRevenue,
     jungleCoins: existing.context?.rewardIntent?.points ?? 0,
-    isNotPaid: sale.status === SaleStatus.PENDING,
-    isNotCharged: sale.status === SaleStatus.PENDING || sale.status === SaleStatus.ON_HOLD,
     rewards: undefined,
     netCashflow,
     
@@ -714,8 +710,6 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       cost,
       revenue: initialRevenue,
       jungleCoins: 0,
-      isNotPaid: sale.status === SaleStatus.PENDING,
-      isNotCharged: sale.status === SaleStatus.PENDING || sale.status === SaleStatus.ON_HOLD,
       rewards: undefined,
       netCashflow,
       
@@ -827,8 +821,6 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       cost: split.myBoothCost,
       netCashflow: split.myGross - split.myBoothCost,
       status: ((sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED) ) ? FinancialStatus.DONE : FinancialStatus.PENDING,
-      isNotPaid: sale.status === SaleStatus.PENDING,
-      isNotCharged: sale.status === SaleStatus.PENDING || sale.status === SaleStatus.ON_HOLD,
       doneAt: split.date,
       updatedAt: getUTCNow(),
       createdAt: incomeRecord?.createdAt || getUTCNow(),
@@ -874,8 +866,6 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         cost: split.partnerCommFromMe,
         netCashflow: split.myCommFromPartner - split.partnerCommFromMe,
         status: ((sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED) ) ? FinancialStatus.DONE : FinancialStatus.PENDING,
-        isNotPaid: sale.status === SaleStatus.PENDING,
-        isNotCharged: sale.status === SaleStatus.PENDING || sale.status === SaleStatus.ON_HOLD,
         doneAt: split.date,
         updatedAt: getUTCNow(),
         createdAt: payoutRecord?.createdAt || getUTCNow(),
@@ -963,8 +953,6 @@ export async function createFinancialRecordFromPointsExchange(
       cost: 0, // No cost, just points exchange
       revenue: 0, // No revenue, just currency exchange
       jungleCoins: j$Received, // J$ received from exchange
-      isNotPaid: false,
-      isNotCharged: false,
       rewards: undefined,
       netCashflow: 0, // No cashflow, just currency exchange
       status: FinancialStatus.DONE,
@@ -1065,8 +1053,6 @@ export async function createFinancialRecordFromJ$CashOut(
       cost: 0,
       revenue: 0,
       jungleCoins: -j$Sold, // Negative: J$ deducted from player
-      isNotPaid: false,
-      isNotCharged: false,
       netCashflow: 0,
       
       exchangeType,
@@ -1088,8 +1074,6 @@ export async function createFinancialRecordFromJ$CashOut(
       cost: cashOutType === 'USD' ? amountPaid : 0, // USD cost for USD cash-out, 0 for Zaps (Zaps tracked separately)
       revenue: 0,
       jungleCoins: j$Sold, // Positive: J$ returns to company treasury
-      isNotPaid: false,
-      isNotCharged: false,
       netCashflow: cashOutType === 'USD' ? -amountPaid : 0,
       
       exchangeType,

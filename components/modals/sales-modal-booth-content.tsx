@@ -103,10 +103,6 @@ export interface BoothSalesViewProps {
   // Status State
   status: SaleStatus;
   setStatus: (status: SaleStatus) => void;
-  isNotPaid: boolean;
-  setIsNotPaid: (val: boolean) => void;
-  isNotCharged: boolean;
-  setIsNotCharged: (val: boolean) => void;
 
   // Financial
   exchangeRate?: number;
@@ -177,10 +173,6 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       isSaving,
       status,
       setStatus,
-      isNotPaid,
-      setIsNotPaid,
-      isNotCharged,
-      setIsNotCharged,
       onDelete,
       exchangeRate = 500, // Deep fallback if network fails
     },
@@ -861,8 +853,6 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
 
         context: {
           ...(sale?.context || {}),
-          kind: "sale-context",
-          schemaVersion: 1,
           boothFee: toMoney(boothCost, "CRC"),
           paymentBreakdown: {
             bitcoin: toMoney(paymentBitcoin, "USD"),

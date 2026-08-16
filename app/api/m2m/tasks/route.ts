@@ -268,7 +268,6 @@ export async function PATCH(request: NextRequest) {
       ...(ownerId !== undefined ? { ownerId } : {}),
       ...(rawDoneAt !== undefined || status ? { doneAt: nextDoneAt } : {}),
       ...(rawCollectedAt !== undefined || status ? { collectedAt: nextCollectedAt } : {}),
-      ...(isRevertingFromTerminal ? { isCollected: false } : {}),
       updatedAt: new Date(),
     };
 

@@ -3,7 +3,7 @@ import type { Player, Rewards } from '@/types/entities';
 import { getPlayerById, getCharacterById, upsertPlayer } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
-import { LinkType, EntityType, FOUNDER_CHARACTER_ID, FOUNDER_PLAYER_ID } from '@/types/enums';
+import { LinkType, EntityType, FOUNDER_PLAYER_ID } from '@/types/enums';
 import { appendPlayerPointsLog } from './entities-logging';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 
@@ -11,9 +11,9 @@ import { getUTCNow } from '@/lib/utils/utc-utils';
  * Resolve a candidate id (playerId or characterId) to a valid playerId.
  * - If it's already a player id, return as-is.
  * - Else, if it's a character id, return character.playerId.
- * - Else, fallback to FOUNDER_PLAYER_ID.
+ * - Otherwise return null; callers must handle an unresolved recipient.
  */
-export async function resolveToPlayerIdMaybeCharacter(candidateId?: string | null): Promise<string> {
+export async function resolveToPlayerIdMaybeCharacter(candidateId?: string | null): Promise<string | null> {
   try {
     if (candidateId) {
       const asPlayer = await getPlayerById(candidateId);
@@ -22,9 +22,9 @@ export async function resolveToPlayerIdMaybeCharacter(candidateId?: string | nul
       if (asCharacter?.playerId) return asCharacter.playerId;
     }
   } catch (e) {
-    console.warn('[resolveToPlayerIdMaybeCharacter] Resolution error, falling back:', e);
+    console.warn('[resolveToPlayerIdMaybeCharacter] Resolution error:', e);
   }
-  return FOUNDER_PLAYER_ID;
+  return null;
 }
 
 /**
@@ -45,6 +45,7 @@ export async function awardPointsToPlayer(
     if (!points) return;
 
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(playerId);
+    if (!resolvedPlayerId) return;
 
     // Get the player
     const player = await getPlayerById(resolvedPlayerId);
@@ -138,6 +139,7 @@ export async function stagePointsForPlayer(
     if (!points) return false;
 
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(playerId);
+    if (!resolvedPlayerId) return false;
 
     const player = await getPlayerById(resolvedPlayerId);
     if (!player) return false;
@@ -194,6 +196,7 @@ export async function withdrawStagedPointsFromPlayer(
     if (!points) return;
 
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(characterId);
+    if (!resolvedPlayerId) return;
 
     const player = await getPlayerById(resolvedPlayerId);
     if (!player) return;
@@ -238,6 +241,7 @@ export async function unrewardPointsForPlayer(
     if (!points) return;
 
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(characterId);
+    if (!resolvedPlayerId) return;
 
     const player = await getPlayerById(resolvedPlayerId);
     if (!player) return;
@@ -297,6 +301,7 @@ export async function rewardPointsToPlayer(
     if (!points) return;
 
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(characterId);
+    if (!resolvedPlayerId) return;
 
     const player = await getPlayerById(resolvedPlayerId);
     if (!player) return;

@@ -222,16 +222,12 @@ async function handleBulkOperation<T>(
                 record.status = 'Created';
                 break;
               case EntityType.SALE:
-                // Sales: default to "PENDING" with safe payment flags to avoid points/lines processing
+                // Sales: default to PENDING; status is the payment authority.
                 record.status = SaleStatus.PENDING;
-                if (record.isNotPaid === undefined) record.isNotPaid = true;
-                if (record.isNotCharged === undefined) record.isNotCharged = true;
                 break;
               case EntityType.FINANCIAL:
-                // Financials: default to "Created" with safe payment flags
+                // Financials: default to pending; status is the payment authority.
                 record.status = record.status || 'Created';
-                if (record.isNotPaid === undefined) record.isNotPaid = true;
-                if (record.isNotCharged === undefined) record.isNotCharged = true;
                 break;
               case EntityType.SITE:
                 // Sites: default to "Active" (sites start as Active, not Created)
@@ -240,14 +236,7 @@ async function handleBulkOperation<T>(
               // Items, Characters, Players: any status is safe (no side effects)
             }
           } else {
-            // Even if status is provided, ensure safe payment flags for Sales and Financials
-            if (entityType === EntityType.SALE) {
-              if (record.isNotPaid === undefined) record.isNotPaid = true;
-              if (record.isNotCharged === undefined) record.isNotCharged = true;
-            } else if (entityType === EntityType.FINANCIAL) {
-              if (record.isNotPaid === undefined) record.isNotPaid = true;
-              if (record.isNotCharged === undefined) record.isNotCharged = true;
-            }
+            // Provided statuses remain authoritative; do not add retired payment flags.
           }
 
           // Generate business key

@@ -21,7 +21,6 @@ import { ensureFinancialDoneLog } from '../entities-workflows/financial.workflow
 import { appendEntityLog } from '../entities-logging';
 import { processSaleLines } from '../sale-line-utils';
 import { stagePointsForPlayer, rewardPointsToPlayer } from '../points-rewards-utils';
-import { FOUNDER_CHARACTER_ID } from '@/types/enums';
 
 export class SaleSettlementProcessManager {
   static async process(execution: WorkflowExecutionV1): Promise<void> {
@@ -299,8 +298,12 @@ export class SaleSettlementProcessManager {
         console.log(`[SaleSettlementPM] Staging points for sale ${sale.id}`);
         const logTimestamp = sale.lifecycle?.doneAt || (sale as any).chargedAt || getUTCNow();
         
-        const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
-        await stagePointsForPlayer(playerId, sale.context?.rewardIntent?.points, sale.id, EntityType.SALE, logTimestamp);
+        const playerId = sale.playerCharacterId;
+        if (!playerId) throw new Error(`Cannot stage Sale points: no explicit Player recipient (${sale.id})`);
+        const staged = await stagePointsForPlayer(playerId, sale.context?.rewardIntent?.points, sale.id, EntityType.SALE, logTimestamp);
+        if (sale.context?.rewardIntent?.points && !staged) {
+          throw new Error(`Cannot stage Sale points: recipient Player not found or points are empty (${sale.id})`);
+        }
 
         const resolved = await resolveEffectClaim({
           idempotencyKey: effectKey,
@@ -364,7 +367,8 @@ export class SaleSettlementProcessManager {
         console.log(`[SaleSettlementPM] Vesting points for sale ${sale.id}`);
         const logTimestamp = sale.lifecycle?.collectedAt || sale.lifecycle?.doneAt || (sale as any).chargedAt || getUTCNow();
         
-        const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
+        const playerId = sale.playerCharacterId;
+        if (!playerId) throw new Error(`Cannot vest Sale points: no explicit Player recipient (${sale.id})`);
         await rewardPointsToPlayer(playerId, sale.context?.rewardIntent?.points, sale.id, EntityType.SALE, logTimestamp);
 
         const resolved = await resolveEffectClaim({

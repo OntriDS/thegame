@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/modal-toggle-tooltip';
 import { Task, Item, Site } from '@/types/entities';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
-import { TaskType, TaskStatus, TaskPriority, ItemType, ItemStatus, FOUNDER_CHARACTER_ID, EntityType, CharacterRole, RecurrentFrequency } from '@/types/enums';
+import { TaskType, TaskStatus, TaskPriority, ItemType, ItemStatus, EntityType, CharacterRole, RecurrentFrequency } from '@/types/enums';
 import { getTaskFrequencyConfig, getTaskIsRecurrentGroup, getTaskIsTemplate, getTaskOwnerIds, getTaskProgress, getTaskScheduledEnd, getTaskScheduledStart } from '@/lib/compatibility/task-selectors';
 import { getItemStatusLabel, getTaskStatusLabel } from '@/lib/constants/status-display-labels';
 import { getTaskPriorityLabel, getTaskTypeLabel } from '@/lib/constants/task-taxonomy-labels';
@@ -121,7 +121,6 @@ export default function RecurrentTreeModalContent({
   const [scheduledEndTime, setScheduledEndTime] = useState<string>('');
   const [cost, setCost] = useState(0);
   const [revenue, setRevenue] = useState(0);
-  const [isCollected, setIsCollected] = useState(false);
   const [formData, setFormData] = useState({ site: 'none' as string, targetSite: 'none' as string });
   const [outputItemType, setOutputItemType] = useState<ItemType | ''>('');
   const [outputItemSubType, setOutputItemSubType] = useState<SubItemType | ''>('');
@@ -141,7 +140,6 @@ export default function RecurrentTreeModalContent({
   const [isNewCustomer, setIsNewCustomer] = useState(true);
   const [newCustomerName, setNewCustomerName] = useState('');
   const [customerCharacterRole, setCustomerCharacterRole] = useState<CharacterRole>(CharacterRole.CUSTOMER);
-  const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(FOUNDER_CHARACTER_ID);
   const [showScheduler, setShowScheduler] = useState(false);
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
@@ -149,7 +147,6 @@ export default function RecurrentTreeModalContent({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDatesModal, setShowDatesModal] = useState(false);
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
-  const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
   const [ownerId, setOwnerId] = useState<string | string[] | null>(null);
   const [showOwnerSelector, setShowOwnerSelector] = useState(false);
   const [showArchiveCollectionModal, setShowArchiveCollectionModal] = useState(false);
@@ -223,7 +220,6 @@ export default function RecurrentTreeModalContent({
       const fi = existingTask.context?.financialIntent;
       setCost(fi?.costIntent ? extractMoneyValue(fi.costIntent) : execTask.cost ?? 0);
       setRevenue(fi?.revenueIntent ? extractMoneyValue(fi.revenueIntent) : execTask.revenue ?? 0);
-      setIsCollected(existingTask.status === TaskStatus.COLLECTED || execTask.isCollected || false);
       setFormData({
         site: existingTask.siteId || 'none',
         targetSite: existingTask.targetSiteId || 'none',
@@ -256,7 +252,6 @@ export default function RecurrentTreeModalContent({
       setIsNewCustomer(!Boolean(existingTaskCounterpartyId));
       setNewCustomerName(execTask.newCustomerName || '');
       setCustomerCharacterRole(normalizeTaskCounterpartyRole(existingTask.context?.counterparty?.role ?? execTask.customerCharacterRole));
-      setPlayerCharacterId(existingTask.playerCharacterId || FOUNDER_CHARACTER_ID);
       setOwnerId(getTaskOwnerIds(existingTask)[0] || null);
       setRewards({
         points: {
@@ -300,7 +295,6 @@ export default function RecurrentTreeModalContent({
     setScheduledEndTime('');
     setCost(0);
     setRevenue(0);
-    setIsCollected(false);
     setFormData({ site: 'none', targetSite: 'none' });
     setOutputItemType('');
     setOutputItemSubType('');
@@ -318,8 +312,7 @@ export default function RecurrentTreeModalContent({
     setIsNewCustomer(true);
     setNewCustomerName('');
     setCustomerCharacterRole(CharacterRole.CUSTOMER);
-    setPlayerCharacterId(FOUNDER_CHARACTER_ID);
-    setOwnerId(FOUNDER_CHARACTER_ID);
+    setOwnerId(null);
     setRewards({ points: { xp: 0, rp: 0, fp: 0, hp: 0 } });
     setFrequencyConfig({
       type: RecurrentFrequency.ONCE,
@@ -632,11 +625,6 @@ export default function RecurrentTreeModalContent({
     setLocalCollectedAt(newDates.collectedAt);
   };
 
-  const handlePlayerCharacterSelect = (characterId: string | null) => {
-    if (characterId) setPlayerCharacterId(characterId);
-    setShowPlayerCharacterSelector(false);
-  };
-
   const handleAutoCalculateUnitCost = () => {
     if (outputQuantity > 0) {
       const unitCost = Math.round((cost / outputQuantity) * 100) / 100;
@@ -696,11 +684,6 @@ export default function RecurrentTreeModalContent({
     return `${owners[0].name} +${owners.length - 1}`;
   };
 
-  const getPlayerName = () => {
-    if (!playerCharacterId) return 'Player';
-    const p = allCharacters.find(c => c.id === playerCharacterId);
-    return p ? p.name : 'Player';
-  };
 
   return (
     <>
@@ -1206,7 +1189,6 @@ export default function RecurrentTreeModalContent({
                 }
                 setStatus(newStatus);
                 if (newStatus === TaskStatus.FAILED) {
-                  setIsCollected(false);
                   setLocalCollectedAt(undefined);
                 }
                 if (
@@ -1217,7 +1199,6 @@ export default function RecurrentTreeModalContent({
                 ) {
                   setLocalDoneAt(undefined);
                   setLocalCollectedAt(undefined);
-                  setIsCollected(false);
                 }
                 if (newStatus === TaskStatus.CREATED || newStatus === TaskStatus.ON_HOLD) {
                   setProgress(0);

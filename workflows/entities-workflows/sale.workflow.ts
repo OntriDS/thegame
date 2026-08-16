@@ -2,7 +2,7 @@
 // workflows/entities-workflows/sale.workflow.ts
 // Sale-specific workflow with CHARGED, CANCELLED, COLLECTED events
 
-import { EntityType, LogEventType, FOUNDER_CHARACTER_ID, SaleStatus, SaleType, WorkflowStatus } from '@/types/enums';
+import { EntityType, LogEventType, SaleStatus, SaleType, WorkflowStatus } from '@/types/enums';
 import type { ItemSaleLine, Sale, WorkflowExecutionV1 } from '@/types/entities';
 import {
   appendEntityLog,
@@ -36,8 +36,6 @@ import { buildMonthIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { getSaleLogDetails } from '@/lib/utils/sale-log-details';
 import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
 import { getSaleCharacterId } from '@/lib/sale-character-id';
-
-const STATE_FIELDS = ['status', 'isNotPaid', 'isNotCharged', 'postedAt', 'doneAt', 'cancelledAt'];
 
 function saleHasRewardPoints(sale: Sale): boolean {
   const p = sale.context?.rewardIntent?.points;
@@ -287,7 +285,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       sale.siteId !== previousSale.siteId ||
       saleFinrecTimeKey(sale.lifecycle?.doneAt) !== saleFinrecTimeKey(previousSale.doneAt) ||
       saleFinrecTimeKey(sale.saleDate) !== saleFinrecTimeKey(previousSale.saleDate) ||
-      saleFinrecTimeKey(sale.lifecycle?.collectedAt) !== saleFinrecTimeKey(previousSale.collectedAt)  !== !!previousSale.isCollected ||
+      saleFinrecTimeKey(sale.lifecycle?.collectedAt) !== saleFinrecTimeKey(previousSale.collectedAt) ||
       !(sale.status === SaleStatus.PENDING) !== !(previousSale.status === SaleStatus.PENDING) ||
       sale.status !== previousSale.status;
 
@@ -351,7 +349,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   // We sweep all available months to completely eradicate Snapshot-era ghost duplicates.
   // ---------------------------------------------------------------------------
   const isNowArchived = sale.status === SaleStatus.COLLECTED ;
-  const wasArchived = previousSale && (previousSale.status === SaleStatus.COLLECTED || previousSale.isCollected);
+  const wasArchived = previousSale && previousSale.status === SaleStatus.COLLECTED;
 
   const getArchiveMonth = (s: Sale) => {
     if (s.collectedAt) {
@@ -548,7 +546,11 @@ async function removePlayerPointsFromSale(saleId: string, sale?: Sale | null): P
       return;
     }
 
-    const playerId = resolved.playerCharacterId || FOUNDER_CHARACTER_ID;
+    const playerId = resolved.playerCharacterId;
+    if (!playerId) {
+      console.warn(`[removePlayerPointsFromSale] Sale ${saleId} has no explicit Player recipient; skipping point rollback.`);
+      return;
+    }
     const player = await getPlayerById(playerId);
 
     if (!player) {

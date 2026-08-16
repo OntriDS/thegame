@@ -5,7 +5,7 @@
 
 import type { Task, Sale, FinancialRecord, Item, Character } from '@/types/entities';
 import { getUTCNow } from '@/lib/utils/utc-utils';
-import { CharacterRole, FOUNDER_CHARACTER_ID, FOUNDER_PLAYER_ID } from '@/types/enums';
+import { CharacterRole } from '@/types/enums';
 import { upsertCharacter } from '@/data-store/datastore';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
@@ -49,7 +49,6 @@ export async function createCharacterFromEntity(
       inventory: [],
       achievements: [],
       purchasedAmount: 0,
-      playerId: FOUNDER_PLAYER_ID, // Use Founder Player ID for characters created from entities
       lastActiveAt: getUTCNow(),
       isActive: true,
       createdAt: getUTCNow(),

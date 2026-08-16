@@ -3,7 +3,7 @@
 // Comprehensive update propagation across ALL entity relationships
 
 import type { Task, Item, Sale, FinancialRecord, Character, Player } from '@/types/entities';
-import { EntityType, FOUNDER_CHARACTER_ID, TaskStatus, CharacterRole, LinkType, SaleType, SaleStatus } from '@/types/enums';
+import { EntityType, TaskStatus, CharacterRole, LinkType, SaleType, SaleStatus } from '@/types/enums';
 import { clearEffect, hasEffect, markEffect } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getFinancialsBySourceTaskId, getFinancialsBySourceSaleId, getFinancialById, upsertFinancial, removeFinancial } from '@/data-store/datastore';
@@ -111,7 +111,7 @@ export async function updateFinancialRecordsFromTask(
         task.cost !== previousTask.cost ||
         task.revenue !== previousTask.revenue ||
         (task.status === "PENDING") !== (previousTask.status === "PENDING") ||
-        task.isNotCharged !== previousTask.isNotCharged ||
+        task.status !== previousTask.status ||
         getTaskCounterpartyId(task) !== getTaskCounterpartyId(previousTask) ||
         task.customerCharacterRole !== previousTask.customerCharacterRole ||
         task.name !== previousTask.name ||
@@ -224,8 +224,6 @@ export async function updateTasksFromFinancialRecord(
           ...task,
           cost: record.cost,
           revenue: record.revenue,
-          isNotPaid: (record.status === FinancialStatus.PENDING),
-          isNotCharged: record.isNotCharged,
           characterId: getTaskCounterpartyId(record as unknown as Task),
           customerCharacterRole: (record as any).customerCharacterRole || CharacterRole.CUSTOMER,
           name: record.name,
@@ -693,11 +691,15 @@ export async function updatePlayerPointsFromSource(
 ): Promise<void> {
   try {
     console.log(`[updatePlayerPointsFromSource] Updating player points from ${sourceType}: ${newSource.name}`);
-    // Guardrails: Only propagate points when the source is truly finalized
-    // - Task: must be Done in both old and new versions
+    // Guardrails: Only propagate points when the source is truly finalized.
+    // Collected is a canonical status, not the retired isCollected flag.
     if (sourceType === EntityType.TASK) {
-      const wasCompleted = oldSource?.status === TaskStatus.DONE && !!oldSource?.doneAt;
-      const isCompleted = newSource?.status === TaskStatus.DONE && !!newSource?.doneAt;
+      const wasCompleted =
+        (oldSource?.status === TaskStatus.DONE || oldSource?.status === TaskStatus.COLLECTED) &&
+        !!oldSource?.doneAt;
+      const isCompleted =
+        (newSource?.status === TaskStatus.DONE || newSource?.status === TaskStatus.COLLECTED) &&
+        !!newSource?.doneAt;
       if (!wasCompleted || !isCompleted) {
         console.log('[updatePlayerPointsFromSource] Task not completed in both versions, skipping delta');
         return;
@@ -726,7 +728,7 @@ export async function updatePlayerPointsFromSource(
     // Find the target player (resolve from playerCharacterId when present)
     const playerIdCandidate = sourceType === EntityType.TASK
       ? await resolveTaskOwnerPlayerId(newSource as Task) || await resolveTaskOwnerPlayerId(oldSource as Task)
-      : newSource?.playerCharacterId || oldSource?.playerCharacterId || FOUNDER_CHARACTER_ID;
+      : newSource?.playerCharacterId || oldSource?.playerCharacterId || null;
     if (!playerIdCandidate) {
       console.warn(`[updatePlayerPointsFromSource] Task ${newSource.id} owner has no Player`);
       return;
@@ -748,7 +750,7 @@ export async function updatePlayerPointsFromSource(
 
     // Update player points and totalPoints
     // Determine if we should update Rewarded (Available) or Pending/Staged points
-    const isCollected = newSource.isCollected === true;
+    const isCollected = newSource.status === TaskStatus.COLLECTED;
 
     let updatedPlayer: any;
 
@@ -808,7 +810,6 @@ export async function updatePlayerPointsFromSource(
 export function hasStatePropsChanged(newEntity: any, oldEntity: any): boolean {
   return (
     newEntity.status !== oldEntity.status ||
-    newEntity.isCollected !== oldEntity.isCollected ||
     toDateTimestamp(newEntity.doneAt) !== toDateTimestamp(oldEntity.doneAt) ||
     toDateTimestamp(newEntity.collectedAt) !== toDateTimestamp(oldEntity.collectedAt) ||
     toDateTimestamp(newEntity.saleDate) !== toDateTimestamp(oldEntity.saleDate)

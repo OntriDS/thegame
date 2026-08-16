@@ -3,7 +3,7 @@
 // Recurrent task management utilities
 
 import { Task } from '@/types/entities';
-import { TaskType, RecurrentFrequency, TaskStatus, TaskPriority, EntityType, LogEventType, FOUNDER_CHARACTER_ID } from '@/types/enums';
+import { TaskType, RecurrentFrequency, TaskStatus, TaskPriority, EntityType, LogEventType } from '@/types/enums';
 import { getAllTasks, upsertTask, getTasksByParentId, getTaskById } from '@/data-store/datastore';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { appendEntityLog } from '@/workflows/entities-logging';
@@ -361,7 +361,6 @@ export function createRecurrentGroup(
     rewards: { points: { xp: 0, rp: 0, fp: 0, hp: 0 } },
     createdAt: new Date(),
     updatedAt: new Date(),
-    isCollected: false,
     ownerId: null,
   };
 }
@@ -467,7 +466,6 @@ export async function archiveCompletedInstances(parentId: string): Promise<Task[
   const updatedInstances = instances.map(instance => ({
     ...instance,
     status: TaskStatus.COLLECTED as any,
-    isCollected: true,
     updatedAt: new Date()
   } as Task));
 

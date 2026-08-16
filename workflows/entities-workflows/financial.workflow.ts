@@ -2,7 +2,7 @@
 // Financial-specific workflow: PENDING vs DONE (paid+charged); no COLLECTED / finrec points
 import { isValid } from 'date-fns';
 
-import { EntityType, LogEventType, FOUNDER_CHARACTER_ID, FinancialStatus } from '@/types/enums';
+import { EntityType, LogEventType, FinancialStatus } from '@/types/enums';
 import type { FinancialRecord } from '@/types/entities';
 import {
   appendEntityLog,
@@ -32,8 +32,6 @@ import { buildMonthIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { recalculateCharacterWallet } from '../financial-record-utils';
 import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync-server';
 import { getFinancialCounterpartyId, getFinancialCounterpartyRole } from '@/lib/financial-record-counterparty-id';
-const STATE_FIELDS = ['isNotPaid', 'isNotCharged'];
-
 /**
  * Anchor date for financial logs / archive: doneAt, else closing date of year/month (not last-save createdAt),
  * else createdAt, else fallback.
@@ -557,7 +555,8 @@ async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
     }
 
     // Get the player from the record (same logic as creation)
-    const playerId = record.playerCharacterId || FOUNDER_CHARACTER_ID;
+    const playerId = record.playerCharacterId;
+    if (!playerId) return;
     const player = await getPlayerById(playerId);
 
     if (!player) {

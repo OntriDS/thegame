@@ -11,12 +11,11 @@ export function isTaskCompleted(task: Task): boolean {
 }
 
 /**
- * History-safe row: done, collected, failed, or explicitly marked collected.
+ * History-safe row: done, collected, or failed.
  * Deleting a **parent** task must never hard-remove these — only clear `parentId` (orphan) so History stays intact.
  * Active child tasks are only removed when the user explicitly opts in to cascade delete.
  */
 export function isTaskHistoryTerminal(task: Task): boolean {
-  if ((task as any).isCollected) return true;
   return (
     task.status === TaskStatus.DONE ||
     task.status === TaskStatus.COLLECTED ||

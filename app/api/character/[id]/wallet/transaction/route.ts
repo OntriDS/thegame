@@ -45,10 +45,7 @@ export async function POST(
                 cost: toMoney(0),
                 revenue: toMoney(0),
                 jungleCoins: amount, // Positive = Added to wallet
-                isNotPaid: false,
-                isNotCharged: false, // Instant
                 netCashflow: toMoney(0),
-                isCollected: false,
                 createdAt: new Date(),
                 updatedAt: new Date()
             } as unknown as FinancialRecord;
@@ -67,10 +64,7 @@ export async function POST(
                 cost: toMoney(0),
                 revenue: toMoney(0),
                 jungleCoins: -amount, // Negative = Deducted
-                isNotPaid: false,
-                isNotCharged: false,
                 netCashflow: toMoney(0),
-                isCollected: false,
                 createdAt: new Date(),
                 updatedAt: new Date()
             } as unknown as FinancialRecord;

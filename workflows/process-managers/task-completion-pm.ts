@@ -36,18 +36,29 @@ export class TaskCompletionProcessManager {
         execution.stepOutcomes = {};
       }
 
-      // Step 1: Stage Points
-      await this.processPoints(execution, task);
-      
-      // Step 2: Financial Record Creation
-      await this.processFinancial(execution, task);
+      // These effects are independent. A missing owner link must not prevent
+      // an otherwise valid financial or production intent from being applied.
+      // Each step records its own failure and can be retried/reconciled.
+      const stepErrors: string[] = [];
+      for (const [stepName, step] of [
+        ['stagePoints', () => this.processPoints(execution, task)],
+        ['createFinancialRecord', () => this.processFinancial(execution, task)],
+        ['createItem', () => this.processItems(execution, task)],
+      ] as const) {
+        try {
+          await step();
+        } catch (error: any) {
+          const message = error?.message || `${stepName} failed`;
+          stepErrors.push(`${stepName}: ${message}`);
+          console.error(`[TaskCompletionPM] ${stepName} failed for ${task.id}; continuing independent steps`, error);
+        }
+      }
 
-      // Step 3: Item Creation
-      await this.processItems(execution, task);
-
-      // Mark workflow as completed
-      execution.state = WorkflowStatus.COMPLETED;
-      execution.currentStep = 'completed';
+      execution.state = stepErrors.length > 0
+        ? WorkflowStatus.FAILED_RETRYABLE
+        : WorkflowStatus.COMPLETED;
+      execution.currentStep = stepErrors.length > 0 ? 'reconcile' : 'completed';
+      if (stepErrors.length > 0) execution.lastErrorCode = stepErrors.join(' | ');
       execution.updatedAt = getUTCNow();
       await saveWorkflowExecution(execution);
 

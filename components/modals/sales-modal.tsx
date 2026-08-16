@@ -9,7 +9,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sale, SaleLine, Item, Discount, Site, Character, Task, ItemSaleLine, ServiceLine, Business, Contract } from '@/types/entities';
-import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, CharacterRole, EntityType, FOUNDER_CHARACTER_ID } from '@/types/enums';
+import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, CharacterRole, EntityType } from '@/types/enums';
 import type { Station } from '@/types/type-aliases';
 import { ArtDesignStation, SalesStation } from '@/lib/storage/taxonomy';
 import { CurrencyExchangeRates } from '@/lib/constants/financial-constants';
@@ -141,8 +141,6 @@ export default function SalesModal({
   const [status, setStatus] = useState<SaleStatus>(SaleStatus.CHARGED);
   const [siteId, setSiteId] = useState<string>('');
   const [counterpartyName, setCounterpartyName] = useState('');
-  const [isNotPaid, setIsNotPaid] = useState(false); // Default: Paid = true (not not paid)
-  const [isNotCharged, setIsNotCharged] = useState(false); // Default: Charged = true (not not charged)
   const [overallDiscount, setOverallDiscount] = useState<Discount>({});
   const [lines, setLines] = useState<SaleLine[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
@@ -171,7 +169,6 @@ export default function SalesModal({
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
   const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(null);
   const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
-  const [isCollected, setIsCollected] = useState(false);
   const [showArchiveCollectionModal, setShowArchiveCollectionModal] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{
     status: SaleStatus;
@@ -255,17 +252,6 @@ export default function SalesModal({
     const newValue = !emissaryColumnExpanded;
     setEmissaryColumnExpanded(newValue);
     setPreference('sales-modal-emissary-expanded', String(newValue));
-  };
-
-  // Update Sale Status based on Charged Status (only IsNotCharged affects Sale Status)
-  const updateSaleStatus = (isNotCharged: boolean) => {
-    if (isNotCharged) {
-      setStatus(SaleStatus.PENDING); // "PENDING" (Not Charged)
-    } else {
-      setStatus(SaleStatus.CHARGED); // "CHARGED" (Is Charged)
-      // Magic: When charged, automatically set as paid too
-      setIsNotPaid(false);
-    }
   };
 
   const handleDatesUpdate = (newDates: { createdAt?: Date; doneAt?: Date; collectedAt?: Date }) => {
@@ -438,9 +424,6 @@ export default function SalesModal({
       setCharacterId(getSaleCharacterId(sale) || '');
       setIsNewCustomer(!getSaleCharacterId(sale)); // Toggle to "Existing" if customer exists
       setNewCustomerName(sale.context?.newCustomerName || '');
-      setIsNotPaid(sale.status === SaleStatus.PENDING);
-      setIsNotCharged(sale.status === SaleStatus.PENDING || sale.status === SaleStatus.ON_HOLD);
-      setIsCollected(sale.status === SaleStatus.COLLECTED);
       setCost(roundCurrency2(extractMoneyValue(sale.totals?.totalCost)));
       setRevenue(roundCurrency2(extractMoneyValue(sale.totals?.totalRevenue)));
       setLocalDoneAt(sale.lifecycle?.doneAt ? new Date(sale.lifecycle.doneAt) : undefined);
@@ -508,7 +491,7 @@ export default function SalesModal({
       }
 
       // Initialize player character
-      setPlayerCharacterId(sale.playerCharacterId || FOUNDER_CHARACTER_ID);
+      setPlayerCharacterId(sale.playerCharacterId || null);
 
       const emissaryPts = sale.context?.rewardIntent?.points || (sale as any).rewards?.points;
       setPlayerPoints({
@@ -528,7 +511,7 @@ export default function SalesModal({
       // New sale - always reset form when sale is null/undefined
       resetForm();
       // Initialize player character for new sale
-      setPlayerCharacterId(FOUNDER_CHARACTER_ID);
+      setPlayerCharacterId(null);
       // Mark as initialized
       didInitRef.current = true;
       // Generate new ID for new sale session
@@ -692,8 +675,6 @@ export default function SalesModal({
     setStatus(SaleStatus.CHARGED);
     setSiteId('');
     setCounterpartyName('');
-    setIsNotPaid(false);
-    setIsNotCharged(false);
     setOverallDiscount({});
     setLines([]);
     setPayments([]);
@@ -1052,8 +1033,6 @@ export default function SalesModal({
           ? {
               kind: 'point-reward',
               points: { ...playerPoints },
-              beneficiaryCharacterId: playerCharacterId || FOUNDER_CHARACTER_ID,
-              policyVersion: 'sales-modal-v1',
             }
           : undefined,
         overallDiscount: Object.keys(overallDiscount).length > 0 ? overallDiscount : undefined,
@@ -1392,13 +1371,6 @@ export default function SalesModal({
     isSaving,
     status,
     setStatus,
-    isNotPaid,
-    setIsNotPaid,
-    isNotCharged,
-    setIsNotCharged: (val: boolean) => {
-      setIsNotCharged(val);
-      updateSaleStatus(val);
-    },
     onDelete: sale?.id ? (() => setShowDeleteModal(true)) : undefined,
     exchangeRate: exchangeRates?.colonesToUsd,
   };

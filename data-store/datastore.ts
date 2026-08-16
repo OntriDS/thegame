@@ -273,6 +273,18 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
   // Phase 2: Rolling Summary Update
   await SummaryService.updateTaskCounters(saved, previous || undefined);
 
+  // Task completion effects resolve the owner through TASK_CHARACTER Links.
+  // Create/reconcile those Links before running the workflow so point staging
+  // never races the relationship materialization.
+  if (!options?.skipLinkEffects) {
+    const linkInput = {
+      ...saved,
+      ...(hasOwnerSelection ? { ownerIds: requestedOwnerIds } : {}),
+      ...(taskCounterparty ? { __counterparty: taskCounterparty } : {}),
+    };
+    await processLinkEntity(linkInput, EntityType.TASK);
+  }
+
   if (!options?.skipWorkflowEffects) {
     const { onTaskUpsert } = await import('@/workflows/entities-workflows/task.workflow');
     await onTaskUpsert(
@@ -281,8 +293,9 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
     );
   }
 
-  // onTaskUpsert may call nested upsertTask(skipWorkflowEffects) and update KV; `saved` can be stale.
-  // Links (TASK_CHARACTER, etc.) must match the row actually stored.
+  // onTaskUpsert may call nested upsertTask(skipWorkflowEffects) and update KV;
+  // re-run Link reconciliation against the row actually stored. This second
+  // pass also creates TASK_ITEM/TASK_FINREC Links after their effects exist.
   if (!options?.skipLinkEffects) {
     const latest = await getTaskById(saved.id);
     const linkInput = latest
@@ -1218,7 +1231,7 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
 
 export async function getAllSales(): Promise<Sale[]> {
   const sales = await repoGetAllSales();
-  return sales.filter(sale => !sale.isCollected).map(s => normalizeSale(s));
+  return sales.filter(sale => sale.status !== SaleStatus.COLLECTED).map(s => normalizeSale(s));
 }
 
 // Phase 5: Unified & Optimized Sales fetching (Active + Archive)
@@ -1673,8 +1686,7 @@ export async function getArchivedTasksByMonth(mmyy: string): Promise<Task[]> {
   const { TaskStatus } = await import('@/types/enums');
   return tasks.filter(t =>
     t.status === TaskStatus.DONE ||
-    t.status === TaskStatus.COLLECTED ||
-    t.isCollected
+    t.status === TaskStatus.COLLECTED
   );
 }
 
@@ -1695,8 +1707,7 @@ export async function getArchivedSalesByMonth(mmyy: string): Promise<Sale[]> {
   // Maintain existing Archive Vault filtering logic
   return sales.filter(s =>
     s.status === SaleStatus.CHARGED ||
-    s.status === SaleStatus.COLLECTED ||
-    s.isCollected
+    s.status === SaleStatus.COLLECTED
   );
 }
 

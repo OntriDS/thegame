@@ -308,8 +308,7 @@ export class SummaryService {
     );
     const countableTasks = tasks.filter(t =>
       t.status === TaskStatus.DONE ||
-      t.status === TaskStatus.COLLECTED ||
-      (t as any).isCollected
+      t.status === TaskStatus.COLLECTED
     );
     const withCashflow = financials.filter(
       (f) =>

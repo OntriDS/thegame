@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Character } from '@/types/entities';
-import { CharacterRole, FOUNDER_CHARACTER_ID } from '@/types/enums';
+import { CharacterRole } from '@/types/enums';
 import { Search, User, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
@@ -26,19 +26,14 @@ export default function PlayerCharacterSelectorModal({
 }: PlayerCharacterSelectorModalProps) {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedId, setSelectedId] = useState<string | null>(currentPlayerCharacterId || FOUNDER_CHARACTER_ID);
+  const [selectedId, setSelectedId] = useState<string | null>(currentPlayerCharacterId || null);
   const [loading, setLoading] = useState(true);
 
-  // Load characters when modal opens and auto-select default if null
+  // Load characters when modal opens; selection is explicit.
   useEffect(() => {
     if (open) {
       loadCharacters();
-      const defaultId = currentPlayerCharacterId || FOUNDER_CHARACTER_ID;
-      setSelectedId(defaultId);
-      // Auto-select the default when modal opens (only if parent has no value)
-      if (!currentPlayerCharacterId) {
-        onSelect(defaultId);
-      }
+      setSelectedId(currentPlayerCharacterId || null);
     }
   }, [open, currentPlayerCharacterId, onSelect]);
 

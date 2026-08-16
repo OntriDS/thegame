@@ -1,7 +1,7 @@
 // workflows/entities-workflows/player.workflow.ts
 // Player-specific workflow with LEVEL_UP, POINTS_CHANGED events
 
-import { EntityType, LogEventType, FOUNDER_CHARACTER_ID } from '@/types/enums';
+import { EntityType, LogEventType } from '@/types/enums';
 import type { Player } from '@/types/entities';
 import { appendEntityLog, updateEntityLeanFields, appendPlayerPointsChangedLog, upsertPlayerPointsChangedLog } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
