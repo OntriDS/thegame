@@ -32,6 +32,7 @@ import { ORDER_INCREMENT, PROGRESS_MAX, PROGRESS_STEP, PRICE_STEP } from '@/lib/
 import { computeNextSiblingOrder } from '@/lib/utils/task-order-utils';
 import { Calendar as CalendarIcon, Network, User } from 'lucide-react';
 import OwnerSelectorModal from './submodals/owner-selector-submodal';
+import { useAuth } from '@/lib/hooks/use-auth';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 import DatesSubmodal from './submodals/dates-submodal';
@@ -97,6 +98,7 @@ export default function MissionTreeModalContent({
   isLoading = false,
 }: MissionTreeModalContentProps) {
   const { getPreference, setPreference } = useUserPreferences();
+  const { user: authUser } = useAuth();
 
   // Mission-specific state (NO frequencyConfig)
   const [name, setName] = useState('');
@@ -144,6 +146,14 @@ export default function MissionTreeModalContent({
   const [customerCharacterRole, setCustomerCharacterRole] = useState<CharacterRole>(CharacterRole.CUSTOMER);
   const [ownerId, setOwnerId] = useState<string | string[] | null>(null);
   const [showOwnerSelector, setShowOwnerSelector] = useState(false);
+
+  useEffect(() => {
+    if (!open || !authUser?.characterId) return;
+    setOwnerId((current) => {
+      const hasOwner = Array.isArray(current) ? current.length > 0 : Boolean(current);
+      return hasOwner ? current : authUser.characterId!;
+    });
+  }, [open, authUser?.characterId]);
   const [showScheduler, setShowScheduler] = useState(false);
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
@@ -445,6 +455,9 @@ export default function MissionTreeModalContent({
     const hasCounterparty = Boolean((!isNewCustomer && customerCharacterId) || (isNewCustomer && newCustomerName.trim()));
     const hasProductionIntent = Boolean(outputItemType || outputItemName.trim() || selectedItemId);
     const hasRewards = Object.values(rewards.points).some((value) => Number(value) > 0);
+    const effectiveOwnerIds = Array.isArray(ownerId)
+      ? ownerId
+      : (ownerId ? [ownerId] : (authUser?.characterId ? [authUser.characterId] : []));
 
     return {
       id: draftId.current,
@@ -499,7 +512,7 @@ export default function MissionTreeModalContent({
       },
       counterpartyCharacterId: !isNewCustomer && customerCharacterId ? customerCharacterId : null,
       counterpartyRole: hasCounterparty ? customerCharacterRole : null,
-      ownerIds: Array.isArray(ownerId) ? ownerId : (ownerId ? [ownerId] : []),
+      ownerIds: effectiveOwnerIds,
       order: determineOrder(),
       
       ...(!isNewItem && (selectedItemId || (task as any)?.outputItemId)
@@ -519,7 +532,7 @@ export default function MissionTreeModalContent({
       return;
     }
     const hasPointReward = Object.values(rewards.points).some((value) => Number(value) > 0);
-    const hasOwner = Array.isArray(ownerId) ? ownerId.length > 0 : Boolean(ownerId);
+    const hasOwner = (Array.isArray(ownerId) ? ownerId.length > 0 : Boolean(ownerId)) || Boolean(authUser?.characterId);
     if (hasPointReward && !hasOwner) {
       setValidationMessage('Assign an owner before adding point rewards');
       setShowValidationModal(true);

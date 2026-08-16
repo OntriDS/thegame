@@ -56,6 +56,7 @@ import ArchiveCollectionConfirmationModal from './submodals/archive-collection-c
 import ConfirmationModal from './submodals/confirmation-submodal';
 import CascadeStatusConfirmationModal from './submodals/cascade-status-confirmation-submodal';
 import OwnerSelectorModal from './submodals/owner-selector-submodal';
+import { useAuth } from '@/lib/hooks/use-auth';
 import { TaskModalFooter } from './task-modal';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
@@ -95,6 +96,7 @@ export default function RecurrentTreeModalContent({
   isLoading = false,
 }: RecurrentTreeModalContentProps) {
   const { getPreference, setPreference } = useUserPreferences();
+  const { user: authUser } = useAuth();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -149,6 +151,14 @@ export default function RecurrentTreeModalContent({
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
   const [ownerId, setOwnerId] = useState<string | string[] | null>(null);
   const [showOwnerSelector, setShowOwnerSelector] = useState(false);
+
+  useEffect(() => {
+    if (!open || !authUser?.characterId) return;
+    setOwnerId((current) => {
+      const hasOwner = Array.isArray(current) ? current.length > 0 : Boolean(current);
+      return hasOwner ? current : authUser.characterId!;
+    });
+  }, [open, authUser?.characterId]);
   const [showArchiveCollectionModal, setShowArchiveCollectionModal] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{
     status: TaskStatus;
@@ -434,6 +444,9 @@ export default function RecurrentTreeModalContent({
     const hasCounterparty = Boolean((!isNewCustomer && customerCharacterId) || (isNewCustomer && newCustomerName.trim()));
     const hasProductionIntent = Boolean(outputItemType || outputItemName.trim() || selectedItemId);
     const hasRewards = Object.values(rewards.points).some((value) => Number(value) > 0);
+    const effectiveOwnerIds = Array.isArray(ownerId)
+      ? ownerId
+      : (ownerId ? [ownerId] : (authUser?.characterId ? [authUser.characterId] : []));
 
     return {
       id: draftId.current,
@@ -499,7 +512,7 @@ export default function RecurrentTreeModalContent({
       },
       counterpartyCharacterId: !isNewCustomer && customerCharacterId ? customerCharacterId : null,
       counterpartyRole: hasCounterparty ? customerCharacterRole : null,
-      ownerIds: Array.isArray(ownerId) ? ownerId : (ownerId ? [ownerId] : []),
+      ownerIds: effectiveOwnerIds,
       order: determineOrder(),
       
       ...(!isNewItem && (selectedItemId || task?.outputItemId)
@@ -520,7 +533,7 @@ export default function RecurrentTreeModalContent({
       return;
     }
     const hasPointReward = Object.values(rewards.points).some((value) => Number(value) > 0);
-    const hasOwner = Array.isArray(ownerId) ? ownerId.length > 0 : Boolean(ownerId);
+    const hasOwner = (Array.isArray(ownerId) ? ownerId.length > 0 : Boolean(ownerId)) || Boolean(authUser?.characterId);
     if (hasPointReward && !hasOwner) {
       setValidationMessage('Assign an owner before adding point rewards');
       setShowValidationModal(true);

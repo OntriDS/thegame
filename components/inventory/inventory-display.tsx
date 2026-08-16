@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ClientAPI } from '@/lib/client-api';
 import { Item } from '@/types/entities';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
-import { ItemType, ItemCategory, ItemStatus, InventoryTab, Collection, DigitalSubType, ArtworkSubType, PrintSubType, StickerSubType } from '@/types/enums';
+import { ItemType, ItemCategory, ItemStatus, InventoryTab, Collection, DigitalSubType, ArtworkSubType, PrintSubType, StickerSubType, BundleSubType } from '@/types/enums';
 import { isSoldStatus } from '@/lib/utils/status-utils';
 import { getItemStatusLabel } from '@/lib/constants/status-display-labels';
 import { getItemCategory } from '@/lib/utils/item-utils';
@@ -1934,7 +1934,9 @@ export function InventoryDisplay({
 
   // Sticker Bundles View - Location-based mixed sticker collections
   const renderStickerBundlesTab = () => {
-    const filteredBundles = getFilteredItems(ItemType.BUNDLE);
+    const filteredBundles = getFilteredItems(ItemType.BUNDLE).filter(
+      item => getItemSubtype(item) === BundleSubType.STICKERS
+    );
 
     // Group bundles by their primary location (site with highest quantity, or first if all equal)
     const groupedBundles = filteredBundles.reduce((acc, bundle) => {
@@ -2146,23 +2148,217 @@ export function InventoryDisplay({
     );
   };
 
-  // Print Bundles Tab - Future implementation
+  // Print Bundles View - Location-based mixed print collections
   const renderPrintBundlesTab = () => {
+    const filteredBundles = getFilteredItems(ItemType.BUNDLE).filter(
+      item => getItemSubtype(item) === BundleSubType.PRINTS
+    );
+
+    // Group bundles by their primary location (site with highest quantity, or first if all equal)
+    const groupedBundles = filteredBundles.reduce((acc, bundle) => {
+      let location: string;
+      if (bundle.stock.length === 0) {
+        location = 'No Location';
+      } else if (bundle.stock.length === 1) {
+        location = bundle.stock[0].siteId;
+      } else {
+        // Find the site with the highest quantity
+        const primaryStock = bundle.stock.reduce((max, current) =>
+          current.quantity > max.quantity ? current : max
+        );
+        location = primaryStock.siteId;
+      }
+
+      if (!acc[location]) acc[location] = [];
+      acc[location].push(bundle);
+      return acc;
+    }, {} as Record<string, Item[]>);
+
+    // Sort items within each group
+    Object.keys(groupedBundles).forEach(key => {
+      groupedBundles[key] = sortItems(groupedBundles[key]);
+    });
+
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h3 className="text-lg font-semibold">Print Bundles</h3>
           </div>
-          <Button size="sm" className="bg-primary hover:bg-primary/90" disabled>
-            Add Print Bundle (Coming Soon)
+          <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={() => handleAddBundle(ItemType.BUNDLE)}>
+            Add Print Bundle
           </Button>
         </div>
 
-        <div className="text-center py-8 text-muted-foreground">
-          <Package2 className="w-16 h-16 mx-auto mb-4 opacity-50" />
-          <p>Print Bundles will be available soon!</p>
-          <p className="text-sm">This feature is under development.</p>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Object.entries(groupedBundles).map(([location, bundles]) => (
+            <div key={location} className="border rounded-lg">
+              <div className="bg-muted/50 px-3 py-2 border-b">
+                <h4 className="font-medium text-sm">
+                  <MapPin className="w-4 h-4 inline mr-1" />
+                  {location === 'No Location' ? 'No Location' : location}
+                </h4>
+              </div>
+              <div className="p-3">
+                <div className="space-y-2">
+                  {bundles.map(bundle => (
+                    <div key={bundle.id} className="bg-card border rounded p-2 hover:bg-accent/50">
+                      <div className="flex items-start justify-between gap-3">
+                        {/* Left side - Name and editable fields */}
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="font-medium text-sm">
+                            {editingField?.itemId === bundle.id && editingField?.field === 'name' ? (
+                              <Input
+                                value={bundle.name}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                  const updated = { ...bundle, name: e.target.value };
+                                  handleSaveItem(updated);
+                                }}
+                                onBlur={() => setEditingField(null)}
+                                className="h-6 px-1 py-0"
+                              />
+                            ) : (
+                              <div
+                                className="cursor-pointer hover:bg-blue-50 px-1 py-0.5 rounded transition-colors"
+                                onClick={() => setEditingField({ itemId: bundle.id, field: 'name' })}
+                                title="Click to edit name"
+                              >
+                                {bundle.name}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="text-xs text-muted-foreground">
+                            {getItemClassification(bundle)}
+                          </div>
+
+                          <div className="text-xs text-muted-foreground flex items-center gap-2">
+                            <div className="flex items-center gap-1">
+                              <span className="text-muted-foreground">Target:</span>
+                              <span className="px-1">
+                                {getItemTargetAmount(bundle) || 0}
+                              </span>
+                            </div>
+                            <span>•</span>
+                            <div className="flex items-center gap-1">
+                              <span className="text-muted-foreground">Quantity:</span>
+                              {editingField?.itemId === bundle.id && editingField?.field === 'quantity' ? (
+                                <NumericInput
+                                  value={bundle.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}
+                                  onChange={async (quantity) => {
+                                    const siteId = getPrimaryStockSiteId(bundle);
+                                    if (!siteId) {
+                                      setStatusModalConfig({
+                                        title: 'Inline save failed',
+                                        message: `Could not update stock for "${bundle.name}". No valid location available.`,
+                                        options: [
+                                          {
+                                            label: 'Dismiss',
+                                            action: () => setShowStatusModal(false),
+                                          },
+                                        ],
+                                      });
+                                      setShowStatusModal(true);
+                                      return;
+                                    }
+
+                                    const updated = await ClientAPI.updateStockAtSite(bundle.id, siteId, quantity);
+                                    handleSaveItem(updated);
+                                  }}
+                                  onBlur={() => setEditingField(null)}
+                                  className="h-6 w-16 px-1 py-0 text-center"
+                                  step={1}
+                                  min={0}
+                                />
+                              ) : (
+                                <span
+                                  className="cursor-pointer hover:bg-blue-50 px-1 py-0.5 rounded"
+                                  onClick={() => setEditingField({ itemId: bundle.id, field: 'quantity' })}
+                                  title="Click to edit quantity"
+                                >
+                                  {bundle.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <span className="text-muted-foreground">Status:</span>
+                              {editingField?.itemId === bundle.id && editingField?.field === 'status' ? (
+                                <Select
+                                  value={bundle.status}
+                                  onValueChange={(value) => {
+                                    const updated = { ...bundle, status: value as ItemStatus };
+                                    handleSaveItem(updated);
+                                    setEditingField(null);
+                                  }}
+                                >
+                                  <SelectTrigger className="h-6 px-1 py-0 w-36">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {Object.values(ItemStatus).map((s: ItemStatus) => (
+                                      <SelectItem key={s} value={s}>{getItemStatusLabel(s)}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <span
+                                  className="cursor-pointer hover:bg-blue-50 px-1 py-0.5 rounded"
+                                  onClick={() => setEditingField({ itemId: bundle.id, field: 'status' })}
+                                  title="Click to edit status"
+                                >
+                                  {bundle.status}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right side - Stock, Price, Actions */}
+                        <div className="flex flex-col items-end gap-2 text-right">
+                          <div className="text-sm">
+                            {editingField?.itemId === bundle.id && editingField?.field === 'price' ? (
+                              <NumericInput
+                                value={getItemPrice(bundle)}
+                                onChange={(price) => {
+                                  const updated = {
+                                    ...bundle,
+                                    pricing: { ...bundle.pricing, targetPrice: toMoney(price) },
+                                  };
+                                  handleSaveItem(updated);
+                                }}
+                                onBlur={() => setEditingField(null)}
+                                className="h-6 w-24 text-right"
+                              />
+                            ) : (
+                              <span
+                                className="cursor-pointer hover:bg-blue-50 px-1 py-0.5 rounded"
+                                onClick={() => setEditingField({ itemId: bundle.id, field: 'price' })}
+                                title="Click to edit price"
+                              >
+                                {formatCurrency(getItemPrice(bundle))}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="text-sm font-bold">
+                            <span className="px-1">{bundle.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}/{getItemTargetAmount(bundle) || 0}</span>
+                          </div>
+
+                          <div className="flex gap-1">
+                            <Button size="sm" variant="ghost" className="h-7 text-xs px-2" onClick={(e) => { e.stopPropagation(); handleEditBundle(bundle, location); }}>
+                              Edit
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );

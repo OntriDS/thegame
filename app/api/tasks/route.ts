@@ -1,6 +1,5 @@
 // @ts-nocheck
 // app/api/tasks/route.ts
-// app/api/tasks/route.ts
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { Task } from '@/types/entities';
@@ -72,9 +71,6 @@ export async function POST(req: NextRequest) {
 
     const cleanTaskBody = { ...(taskBody as unknown as Record<string, unknown>) } as Record<string, unknown>;
     const requestedOwnerIds = Array.isArray(taskBody.ownerIds) ? taskBody.ownerIds : undefined;
-    delete cleanTaskBody.customerCharacterId;
-    delete cleanTaskBody.counterpartyCharacterId;
-    delete cleanTaskBody.counterpartyRole;
     // These fields are compatibility inputs only. New Task writes use the
     // canonical schedule/context facets and canonical Links.
     delete cleanTaskBody.characterId;
@@ -101,14 +97,6 @@ export async function POST(req: NextRequest) {
     const hasRewardIntent = Boolean(
       rewardPoints && Object.values(rewardPoints).some((value) => Number(value) > 0)
     );
-    const requestedCounterpartyId = normalizeCharacterId(
-      (taskBody as any).counterpartyCharacterId ?? rawContext.counterparty?.counterpartyId
-    );
-    const requestedCounterpartyRole = String(
-      (taskBody as any).counterpartyRole ?? rawContext.counterparty?.role ?? ''
-    ).trim().toLowerCase();
-    const canonicalCounterpartyId = requestedCounterpartyId || characterId;
-    const hasCounterparty = Boolean(canonicalCounterpartyId || rawContext.newCustomerName);
     const normalizedContext = { ...rawContext };
     delete normalizedContext.schemaVersion;
     if (!hasProductionIntent) delete normalizedContext.productionPlan;
@@ -139,9 +127,6 @@ export async function POST(req: NextRequest) {
         delete normalizedContext.financialIntent;
       }
     }
-    // Counterparty identity is command input for TASK_CHARACTER Link
-    // reconciliation, never part of the persisted Task entity.
-    delete normalizedContext.counterparty;
 
     // Normalize frequencyConfig.customDays to parsed UTC instants (preserve client civil day)
     let normalizedFrequencyConfig = taskBody.frequencyConfig;
@@ -267,12 +252,6 @@ export async function POST(req: NextRequest) {
             }
           : {}),
       } : undefined,
-      __counterparty: hasCounterparty
-        ? {
-            id: canonicalCounterpartyId,
-            role: requestedCounterpartyRole || (taskBody as any).customerCharacterRole || 'customer',
-          }
-        : null,
     } as unknown as Task;
     const saved = await upsertTask(task, { skipDuplicateCheck });
     return NextResponse.json(saved);
