@@ -18,6 +18,7 @@ import {
   type PlayerConversionRatesKv,
 } from '@/lib/constants/financial-constants';
 import { PlayerDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
+import { getUTCNow, startOfMonthUTC } from '@/lib/utils/utc-utils';
 
 type PointMap = {
   xp: number;
@@ -95,8 +96,7 @@ function PlayerPageContent() {
   const lastRefreshRef = useRef(0);
 
   const monthStart = useMemo(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
+    return startOfMonthUTC(getUTCNow());
   }, []);
 
   const mainPlayer = useMemo(() => {
@@ -126,6 +126,11 @@ function PlayerPageContent() {
 
   const computeAndSetUnexchanged = useCallback(
     (entries: any[], player: Player | null) => {
+      if (!player) {
+        setUnexchangedPoints(createZeroPoints());
+        return;
+      }
+
       // Use pendingPoints directly if available (Source of Truth for Earned Points)
       if (player?.pendingPoints) {
         setUnexchangedPoints({
@@ -161,11 +166,21 @@ function PlayerPageContent() {
 
       const entries = playerLogData?.entries ?? [];
       setPlayerLog(entries);
-      setConversionRates(
-        ratesData && typeof ratesData === 'object'
-          ? (ratesData as PlayerConversionRatesKv)
-          : null,
-      );
+      const rawRates = ratesData && typeof ratesData === 'object'
+        ? (ratesData as Partial<PlayerConversionRatesKv>)
+        : null;
+      const normalizedRates = rawRates
+        ? {
+            xpToJ$: Number(rawRates.xpToJ$) || 0,
+            rpToJ$: Number(rawRates.rpToJ$) || 0,
+            fpToJ$: Number(rawRates.fpToJ$) || 0,
+            hpToJ$: Number(rawRates.hpToJ$) || 0,
+            j$ToUSD: Number(rawRates.j$ToUSD) || 0,
+            colonesToUsd: Number(rawRates.colonesToUsd) || 0,
+            bitcoinToUsd: Number(rawRates.bitcoinToUsd) || 0,
+          }
+        : null;
+      setConversionRates(normalizedRates);
       setPlayers(playersData ?? []);
       setPersonalAssets(personalAssetsData ?? null);
 
@@ -174,7 +189,8 @@ function PlayerPageContent() {
       if (mainPlayer) {
         try {
           const j$BalanceData = await ClientAPI.getPlayerJungleCoinsBalance(mainPlayer.id);
-          setJungleCoinsBalance(j$BalanceData?.totalJ$ ?? 0);
+          const totalJ$ = Number(j$BalanceData?.totalJ$);
+          setJungleCoinsBalance(Number.isFinite(totalJ$) ? totalJ$ : 0);
         } catch (error) {
           console.error('Failed to fetch J$ balance:', error);
           setJungleCoinsBalance(0);
@@ -273,7 +289,7 @@ function PlayerPageContent() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl">
             <TrendingUp className="h-5 w-5 text-primary" />
-            Current Month Holdings (Earned & Collected)
+            Current Holdings & Pending Points
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -314,7 +330,7 @@ function PlayerPageContent() {
           <div className="border-t pt-4">
             <div className="flex items-center gap-2 mb-3">
               <Coins className="h-4 w-4 text-primary" />
-              <span className="font-semibold text-sm">Exchange Preview — Earned Points (Pending Collection)</span>
+              <span className="font-semibold text-sm">Exchange Preview — Pending Points</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-sm">
               {[

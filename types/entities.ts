@@ -442,8 +442,6 @@ export interface Site extends EntityEnvelope {
   description?: string;
   metadata: SiteMetadata;
   status: SiteStatus; // SiteStatus enum - Active or Inactive
-  ownerId?: string | null; // ID of the Character who owns this site
-  // links inherited from BaseEntity as Link[]
 }
 
 // NOTE: Characters are NOT sites!
@@ -1119,22 +1117,19 @@ export interface PointAmountV1 {
 }
 
 export interface Player extends EntityEnvelope {
-  // 1. IDENTITY & AUTHENTICATION (Ambassador Field)
-  accountId?: EntityId | null;     // 🏛️ AMBASSADOR FIELD (links to Account entity)
-
-  // 2. PROGRESSION & REWARDS - Earned from business activities
+  // 1. PROGRESSION & REWARDS - Earned from business activities
   level: number;                 // Player level (starts at 0)
   totalPoints: PointAmountV1;    // Aggregate of all earned points
   points: PointAmountV1;         // Current available (vested) points
   pendingPoints?: PointAmountV1; // Earned but not vested (staged) points
 
-  // 3. CHARACTER MANAGEMENT
+  // 2. CHARACTER MANAGEMENT
   characterId?: EntityId | null;   // 🏛️ Main character managed by this player
 
-  // 4. BADGES
+  // 3. BADGES
   badges: PlayerBadge[];           // Role-based recognition badges
 
-  // 5. LIFECYCLE & METRICS
+  // 4. LIFECYCLE & METRICS
   lastActiveAt: UtcIsoString;
   totalTasksCompleted: number;
   totalSalesCompleted: number;

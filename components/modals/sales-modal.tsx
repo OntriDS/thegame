@@ -953,16 +953,11 @@ export default function SalesModal({
     const totalDiscountR = roundCurrency2(totalDiscount);
     const taxTotalR = roundCurrency2(taxTotal);
     const totalRevenue = roundCurrency2((subtotalR - totalDiscountR + taxTotalR) as any);
-    // Product sales have a cost even when the user does not enter a separate
-    // service cost. Derive it from the canonical item unit cost; preserve an
-    // explicitly entered cost when one exists.
-    const itemCost = effectiveLines
-      .filter((line): line is ItemSaleLine => line.kind === 'item')
-      .reduce((total, line) => {
-        const item = items.find(candidate => candidate.id === line.itemId);
-        return total + (line.quantity * extractMoneyValue(item?.pricing?.unitCost));
-      }, 0);
-    const totalCost = roundCurrency2(cost !== 0 ? cost : itemCost);
+    // Product acquisition/production cost is already recorded when the item
+    // enters inventory. It must not be charged again on the sale. Sale cost is
+    // reserved for service-sale costs entered in this modal; booth settlement
+    // applies its own canonical cost calculation in its workflow.
+    const totalCost = isProductMode ? 0 : roundCurrency2(cost);
 
     // Convert recordedPayments (SalePaymentLine[]) to Payment[] format
     const effectivePayments = recordedPayments.length > 0

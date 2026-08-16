@@ -1349,7 +1349,14 @@ export async function removeCharacter(id: string): Promise<void> {
 // PLAYERS
 export async function upsertPlayer(player: Player, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Player> {
   const previous = await repoGetPlayerById(player.id);
-  const saved = await repoUpsertPlayer(player);
+  // Player authentication is resolved through Account ↔ Character. Do not
+  // carry the obsolete embedded accountId or entity links into new writes.
+  const {
+    accountId: _legacyAccountId,
+    links: _embeddedLinks,
+    ...canonicalPlayer
+  } = player as Player & { accountId?: string | null; links?: unknown };
+  const saved = await repoUpsertPlayer(canonicalPlayer as Player);
 
   if (!options?.skipWorkflowEffects) {
     const { onPlayerUpsert } = await import('@/workflows/entities-workflows/player.workflow');

@@ -12,6 +12,7 @@ import { appendPlayerPointsUpdateLog } from '../entities-logging';
 import type { Task } from '@/types/entities';
 // UTC STANDARDIZATION: Using new UTC utilities
 import { getUTCNow, toUTCISOString } from '@/lib/utils/utc-utils';
+import { resolveToPlayerIdMaybeCharacter } from '../points-rewards-utils';
 
 const STATE_FIELDS = ['level', 'totalPoints', 'points', 'isActive'];
 
@@ -128,7 +129,9 @@ export async function logPlayerUpdateFromTask(task: Task, oldTask: Task): Promis
     }
     
     // Get main player ID (V0.1 constant)
-    const mainPlayerId = FOUNDER_CHARACTER_ID;
+    const mainPlayerId = await resolveToPlayerIdMaybeCharacter(
+      task.playerCharacterId || oldTask.playerCharacterId || FOUNDER_CHARACTER_ID
+    );
     
     await appendPlayerPointsUpdateLog(
       mainPlayerId,
@@ -180,7 +183,9 @@ export async function updatePlayerPointsFromTask(task: Task, oldTask: Task): Pro
     }
     
     // Get main player
-    const mainPlayerId = FOUNDER_CHARACTER_ID;
+    const mainPlayerId = await resolveToPlayerIdMaybeCharacter(
+      task.playerCharacterId || oldTask.playerCharacterId || FOUNDER_CHARACTER_ID
+    );
     const mainPlayer = await getPlayerById(mainPlayerId);
     
     if (!mainPlayer) {

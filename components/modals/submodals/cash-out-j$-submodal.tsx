@@ -10,7 +10,7 @@ import { Player, Character } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { CharacterRole } from '@/types/enums';
-import { BITCOIN_SATOSHIS_PER_BTC } from '@/lib/constants/financial-constants';
+import { BITCOIN_SATOSHIS_PER_BTC, type CurrencyExchangeRates } from '@/lib/constants/financial-constants';
 
 interface CashOutJ$ModalProps {
   player: Player | null;
@@ -18,7 +18,7 @@ interface CashOutJ$ModalProps {
   currentJ$Balance: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCashOut: (j$Sold: number, cashOutType: 'USD' | 'ZAPS', j$Rate?: number, zapsRate?: number) => Promise<void>;
+  onCashOut: (j$Sold: number, cashOutType: 'USD' | 'ZAPS', j$Rate: number, zapsRate?: number) => Promise<void>;
 }
 
 export default function CashOutJ$Modal({
@@ -31,7 +31,7 @@ export default function CashOutJ$Modal({
 }: CashOutJ$ModalProps) {
   const [j$ToCashOut, setJ$ToCashOut] = useState(0);
   const [cashOutType, setCashOutType] = useState<'USD' | 'ZAPS'>('USD');
-  const [conversionRates, setConversionRates] = useState<any>(null);
+  const [conversionRates, setConversionRates] = useState<CurrencyExchangeRates | null>(null);
   const [isCashingOut, setIsCashingOut] = useState(false);
   const [companyStation, setCompanyStation] = useState<'Team' | null>(null);
   const [zapsRate, setZapsRate] = useState<number | undefined>(undefined);
@@ -56,16 +56,22 @@ export default function CashOutJ$Modal({
       const loadRates = async () => {
         try {
           const rates = await ClientAPI.getFinancialConversionRates();
-          setConversionRates(rates);
+          const normalizedRates: CurrencyExchangeRates = {
+            colonesToUsd: Number(rates?.colonesToUsd) || 0,
+            bitcoinToUsd: Number(rates?.bitcoinToUsd) || 0,
+            j$ToUSD: Number(rates?.j$ToUSD) || 0,
+          };
+          setConversionRates(normalizedRates);
           setBitcoinPriceError(null);
 
           // Calculate Zaps rate if Bitcoin price is available
-          if (rates?.bitcoinToUsd && rates.bitcoinToUsd > 0) {
-            const j$Rate = 10; // 1 J$ = $10 USD
-            const calculatedZapsRate = (j$Rate / rates.bitcoinToUsd) * BITCOIN_SATOSHIS_PER_BTC;
+          if (normalizedRates.j$ToUSD > 0 && normalizedRates.bitcoinToUsd > 0) {
+            const calculatedZapsRate = (normalizedRates.j$ToUSD / normalizedRates.bitcoinToUsd) * BITCOIN_SATOSHIS_PER_BTC;
             setZapsRate(calculatedZapsRate);
           } else {
-            setBitcoinPriceError('Bitcoin price not available');
+            setBitcoinPriceError(normalizedRates.j$ToUSD > 0
+              ? 'Bitcoin price not available'
+              : 'J$ conversion rate is not configured');
             setZapsRate(undefined);
           }
         } catch (error) {
@@ -86,7 +92,7 @@ export default function CashOutJ$Modal({
     return null;
   }
 
-  const j$Rate = 10; // Default: 1 J$ = $10 USD
+  const j$Rate = conversionRates?.j$ToUSD ?? 0;
 
   // Calculate USD equivalent
   const usdEquivalent = j$ToCashOut * j$Rate;
@@ -97,6 +103,7 @@ export default function CashOutJ$Modal({
   // Validation
   const canCashOut = j$ToCashOut > 0 &&
     j$ToCashOut <= currentJ$Balance &&
+    j$Rate > 0 &&
     (cashOutType === 'USD' || (cashOutType === 'ZAPS' && zapsRate !== undefined && !bitcoinPriceError));
 
   const handleCashOut = async () => {

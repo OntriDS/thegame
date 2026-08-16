@@ -487,11 +487,16 @@ export async function processCharacterEffects(character: Character): Promise<voi
 }
 
 export async function processPlayerEffects(player: Player): Promise<void> {
-  // PLAYER_CHARACTER links (single primary character)
-  if (player.characterId) {
-    const characterId = String(player.characterId).trim();
-    if (!characterId) return;
+  // PLAYER_CHARACTER is the canonical relationship. Reconcile it on every
+  // save so changing the primary character cannot leave stale links behind.
+  const existingLinks = await getLinksFor({ type: EntityType.PLAYER, id: player.id });
+  const existingCharacterLinks = existingLinks.filter((link) => link.linkType === LinkType.PLAYER_CHARACTER);
+  for (const link of existingCharacterLinks) {
+    await removeLink(link.id);
+  }
 
+  const characterId = typeof player.characterId === 'string' ? player.characterId.trim() : '';
+  if (characterId) {
     const link = makeLink(
       LinkType.PLAYER_CHARACTER,
       { type: EntityType.PLAYER, id: player.id },

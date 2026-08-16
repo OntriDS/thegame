@@ -448,8 +448,9 @@ export async function validateBusinessRules(
       case 'ACCOUNT_PLAYER':
         // Validate that player belongs to the account
         const playerForAccount = await getPlayerById(target.id);
-        if (playerForAccount && playerForAccount.accountId !== source.id) {
-          warnings.push(`Player accountId (${playerForAccount.accountId}) does not match source account ID (${source.id})`);
+        const legacyPlayerAccountId = (playerForAccount as (typeof playerForAccount & { accountId?: string | null }) | null)?.accountId;
+        if (legacyPlayerAccountId && legacyPlayerAccountId !== source.id) {
+          warnings.push(`Legacy Player accountId (${legacyPlayerAccountId}) does not match source account ID (${source.id})`);
         }
         break;
 
@@ -464,8 +465,9 @@ export async function validateBusinessRules(
       case 'PLAYER_ACCOUNT':
         // Validate that player belongs to the account
         const playerWithAccount = await getPlayerById(source.id);
-        if (playerWithAccount && playerWithAccount.accountId !== target.id) {
-          warnings.push(`Player accountId (${playerWithAccount.accountId}) does not match target account ID (${target.id})`);
+        const legacyPlayerAccountIdForReverse = (playerWithAccount as (typeof playerWithAccount & { accountId?: string | null }) | null)?.accountId;
+        if (legacyPlayerAccountIdForReverse && legacyPlayerAccountIdForReverse !== target.id) {
+          warnings.push(`Legacy Player accountId (${legacyPlayerAccountIdForReverse}) does not match target account ID (${target.id})`);
         }
         break;
 

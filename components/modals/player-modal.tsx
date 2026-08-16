@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Network, Coins, Target, TrendingUp, Flag } from 'lucide-react';
 import { Player, Character } from '@/types/entities';
-import { EntityType, FOUNDER_PLAYER_ID } from '@/types/enums';
+import { EntityType, FOUNDER_PLAYER_ID, LinkType } from '@/types/enums';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import {
   createEmptyPlayerConversionRatesForm,
@@ -92,13 +92,27 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
           }
 
           if (playerToLoad) {
-            const resolveCharactersForPlayer = (allChars: Character[], p: Player): Character[] => {
+            const resolveCharactersForPlayer = async (allChars: Character[], p: Player): Promise<Character[]> => {
               const byId = new Map(allChars.map((c) => [c.id, c]));
               const ordered: Character[] = [];
+              const playerLinks = await ClientAPI.getLinksFor({ type: EntityType.PLAYER, id: p.id });
+              for (const link of playerLinks) {
+                if (
+                  link.linkType !== LinkType.PLAYER_CHARACTER ||
+                  link.source?.type !== EntityType.PLAYER ||
+                  link.source?.id !== p.id ||
+                  link.target?.type !== EntityType.CHARACTER
+                ) continue;
+                const linkedCharacter = byId.get(link.target.id);
+                if (linkedCharacter && !ordered.some((character) => character.id === linkedCharacter.id)) {
+                  ordered.push(linkedCharacter);
+                }
+              }
+
               const primaryId = p.characterId?.trim();
               if (primaryId) {
                 const c = byId.get(primaryId);
-                if (c) ordered.push(c);
+                if (c && !ordered.some((character) => character.id === c.id)) ordered.push(c);
               }
 
               if (ordered.length === 0) {
@@ -134,7 +148,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
                 return null;
               }),
               ClientAPI.getPlayerJungleCoinsBalance(playerToLoad.id).then(result =>
-                result.totalJ$ || 0
+                Number(result.totalJ$) || 0
               ).catch(error => {
                 console.error('Failed to load Jungle Coins balance:', error);
                 return 0;
@@ -406,7 +420,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             // Reload J$ balance from FinancialRecord entries
             try {
               const j$BalanceResult = await ClientAPI.getPlayerJungleCoinsBalance(playerData.id);
-              setJungleCoinsBalance(j$BalanceResult.totalJ$ || 0);
+              setJungleCoinsBalance(Number(j$BalanceResult.totalJ$) || 0);
             } catch (error) {
               console.error('Failed to reload J$ balance:', error);
             }
@@ -435,18 +449,21 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
         onOpenChange={setShowCashOutModal}
         onCashOut={async (j$Sold, cashOutType, j$Rate, zapsRate) => {
           const playerCharacterId = characters.length > 0 ? characters[0].id : null;
+          if (!Number.isFinite(j$Rate) || j$Rate <= 0) {
+            throw new Error('J$ conversion rate is not configured. Set it on the Player page first.');
+          }
           try {
             await ClientAPI.cashOutJ$(
               playerData!.id,
               playerCharacterId,
               j$Sold,
-              j$Rate || 10,
+              j$Rate,
               cashOutType,
               zapsRate
             );
             // Reload J$ balance
             const j$BalanceResult = await ClientAPI.getPlayerJungleCoinsBalance(playerData!.id);
-            setJungleCoinsBalance(j$BalanceResult.totalJ$ || 0);
+            setJungleCoinsBalance(Number(j$BalanceResult.totalJ$) || 0);
             setShowCashOutModal(false);
             // Dispatch update events
             dispatchEntityUpdated(entityTypeToKind(EntityType.PLAYER));

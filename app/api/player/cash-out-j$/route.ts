@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       playerId, 
       playerCharacterId, 
       j$Sold, 
-      j$Rate = 10, // Default: 1 J$ = $10 USD (for USD cash-out)
+      j$Rate,
       cashOutType = 'USD', // Default to USD
       zapsRate // Required for ZAPS cash-out: sats per J$
     } = body;
@@ -57,6 +57,13 @@ export async function POST(req: NextRequest) {
     if (!playerId || !j$Sold || j$Sold <= 0) {
       return NextResponse.json(
         { error: 'Missing or invalid required fields: playerId, j$Sold (must be > 0)' },
+        { status: 400 }
+      );
+    }
+
+    if (typeof j$Rate !== 'number' || !Number.isFinite(j$Rate) || j$Rate <= 0) {
+      return NextResponse.json(
+        { error: 'J$ conversion rate is not configured. Set it before cashing out.' },
         { status: 400 }
       );
     }

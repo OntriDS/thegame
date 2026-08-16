@@ -20,7 +20,11 @@ export async function POST(req: NextRequest) {
   
   try {
     const body = (await req.json()) as Player;
-    const { links: _dropEmbeddedLinks, ...bodyWithoutLinks } = body as Player & { characterIds?: unknown };
+    const {
+      links: _dropEmbeddedLinks,
+      accountId: _dropEmbeddedAccountId,
+      ...bodyWithoutLinks
+    } = body as Player & { characterIds?: unknown; accountId?: unknown };
     const cleanBody = { ...bodyWithoutLinks };
     delete cleanBody.characterIds;
     const incomingCharacterId = typeof body.characterId === 'string'

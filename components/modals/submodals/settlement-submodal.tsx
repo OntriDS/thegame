@@ -112,7 +112,9 @@ export default function SettlementSubmodal({
         name: name.trim(),
         regionId,
         googleMapsAddress: googleMapsAddress.trim(),
-        coordinates: coordinates?.lat && coordinates?.lng ? coordinates : undefined,
+        coordinates: coordinates && Number.isFinite(coordinates.lat) && Number.isFinite(coordinates.lng)
+          ? coordinates
+          : undefined,
         isActive,
         isUnlocked: parentRegionUnlocked ? isUnlocked : false,
         createdAt: settlement?.createdAt || new Date(),

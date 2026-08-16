@@ -1001,11 +1001,14 @@ export async function createFinancialRecordFromJ$CashOut(
   playerId: string,
   playerCharacterId: string | null,
   j$Sold: number,
-  j$Rate: number = 10, // Default: 1 J$ = $10 USD (for USD cash-out)
+  j$Rate: number,
   cashOutType: 'USD' | 'ZAPS' = 'USD',
   zapsRate?: number // Optional: J$ to Zaps rate (sats per J$). If not provided, calculated from Bitcoin price
 ): Promise<{ personalRecord: FinancialRecord; companyRecord: FinancialRecord }> {
   try {
+    if (!Number.isFinite(j$Rate) || j$Rate <= 0) {
+      throw new Error('J$ conversion rate is not configured. Set it before cashing out.');
+    }
     console.log(`[createFinancialRecordFromJ$CashOut] Creating financial records for cash-out: ${j$Sold} J$ for ${cashOutType}`);
 
     // Determine company station (always Team for buybacks now that Founder is removed as a station)
@@ -1034,7 +1037,7 @@ export async function createFinancialRecordFromJ$CashOut(
           throw new Error('Bitcoin price not available. Please fetch Bitcoin price before cashing out to Zaps.');
         }
 
-        const j$ValueInUSD = j$Rate; // Default: 10 USD per J$
+        const j$ValueInUSD = j$Rate;
 
         // Calculate sats per J$: (j$ValueInUSD / bitcoinPrice) * satsPerBTC
         calculatedZapsRate = (j$ValueInUSD / bitcoinPrice) * BITCOIN_SATOSHIS_PER_BTC;

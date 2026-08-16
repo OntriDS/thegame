@@ -94,9 +94,7 @@ export default function CharacterInventorySubmodal({
 
       const allSites = await ClientAPI.getSites();
       
-      const sites = allSites.filter((site: Site) => 
-        site.ownerId === characterId || siteIds.has(site.id)
-      );
+      const sites = allSites.filter((site: Site) => siteIds.has(site.id));
 
       setOwnedItems([...itemsByOwner, ...linkedItems]);
       setOwnedSites(sites);

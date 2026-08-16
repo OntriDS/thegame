@@ -185,6 +185,11 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
       return;
     }
 
+    if (siteType === SiteType.PHYSICAL && !settlementId.trim()) {
+      alert('Please select a settlement for a physical site.');
+      return;
+    }
+
     setIsSaving(true);
 
     try {
@@ -197,7 +202,9 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
           businessType,
           settlementId,
           googleMapsAddress,
-          coordinates: coordinates?.lat && coordinates?.lng ? coordinates : undefined
+          coordinates: coordinates && Number.isFinite(coordinates.lat) && Number.isFinite(coordinates.lng)
+            ? coordinates
+            : undefined
         } as PhysicalSiteMetadata;
       } else if (siteType === SiteType.DIGITAL_SITE) {
         metadata = {
@@ -312,7 +319,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
   };
 
   const openGoogleMapsForCoords = () => {
-    if (coordinates?.lat && coordinates?.lng) {
+    if (coordinates && Number.isFinite(coordinates.lat) && Number.isFinite(coordinates.lng)) {
       window.open(
         `https://www.google.com/maps?q=${encodeURIComponent(`${coordinates!.lat},${coordinates!.lng}`)}`,
         '_blank'
@@ -554,7 +561,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                       className="h-8 text-sm bg-muted/50"
                     />
                   </div>
-                  {!!(coordinates?.lat && coordinates?.lng) && (
+                  {!!(coordinates && Number.isFinite(coordinates.lat) && Number.isFinite(coordinates.lng)) && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       <Button
                         type="button"

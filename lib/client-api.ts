@@ -843,7 +843,7 @@ export const ClientAPI = {
     playerId: string,
     playerCharacterId: string | null,
     j$Sold: number,
-    j$Rate: number = 10,
+    j$Rate: number,
     cashOutType: 'USD' | 'ZAPS' = 'USD',
     zapsRate?: number
   ): Promise<any> => {

@@ -9,7 +9,10 @@ import { Coins } from 'lucide-react';
 import { Player } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { ClientAPI } from '@/lib/client-api';
-import { hasConfiguredPlayerConversionRates } from '@/lib/constants/financial-constants';
+import {
+  hasConfiguredPlayerConversionRates,
+  type PlayerConversionRatesKv,
+} from '@/lib/constants/financial-constants';
 
 interface ExchangePointsModalProps {
   player: Player | null;
@@ -23,7 +26,7 @@ export default function ExchangePointsModal({ player, open, onOpenChange, onExch
   const [fpToExchange, setFpToExchange] = useState(0);
   const [rpToExchange, setRpToExchange] = useState(0);
   const [xpToExchange, setXpToExchange] = useState(0);
-  const [conversionRates, setConversionRates] = useState<any | undefined>(undefined);
+  const [conversionRates, setConversionRates] = useState<PlayerConversionRatesKv | undefined>(undefined);
   const [isExchanging, setIsExchanging] = useState(false);
 
   useEffect(() => {
@@ -31,7 +34,19 @@ export default function ExchangePointsModal({ player, open, onOpenChange, onExch
       setConversionRates(undefined);
       const loadRates = async () => {
         const rates = await ClientAPI.getPlayerConversionRates();
-        setConversionRates(rates ?? null);
+        if (!rates) {
+          setConversionRates(undefined);
+          return;
+        }
+        setConversionRates({
+          xpToJ$: Number(rates.xpToJ$) || 0,
+          rpToJ$: Number(rates.rpToJ$) || 0,
+          fpToJ$: Number(rates.fpToJ$) || 0,
+          hpToJ$: Number(rates.hpToJ$) || 0,
+          j$ToUSD: Number(rates.j$ToUSD) || 0,
+          colonesToUsd: Number(rates.colonesToUsd) || 0,
+          bitcoinToUsd: Number(rates.bitcoinToUsd) || 0,
+        });
       };
       loadRates();
 

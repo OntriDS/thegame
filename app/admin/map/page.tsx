@@ -219,9 +219,12 @@ function MapPageContent() {
       
       // Save site using ClientAPI (workflows handled server-side)
       const finalSite = await ClientAPI.upsertSite(site);
-      
-
-      
+      setSites((current) => {
+        const withoutCurrent = current.filter((item) => item.id !== finalSite.id);
+        return [...withoutCurrent, finalSite];
+      });
+      setIsSitesDataLoaded(true);
+      setIsMapDataLoaded(false);
       setShowSiteModal(false);
       // Update selectedSite with fresh data BEFORE modal closes (fixes stale UI issue)
       setSelectedSite(finalSite);
