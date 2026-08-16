@@ -45,6 +45,7 @@ function SalesPageContent() {
     setSelectedMonthKey,
     availableMonths,
     atomicSummary,
+    refreshSummary,
   } = useMonthlySummary();
   const [monthlySalesProfit, setMonthlySalesProfit] = useState<number>(0);
   const characterById = useMemo(() => {
@@ -156,8 +157,16 @@ function SalesPageContent() {
     }
   };
 
-  // Listen for sale updates (event-driven refresh)
-  useEntityUpdates('sale', loadSales);
+  // A sale update affects two independent read models: the sales list and the
+  // atomic monthly counters used by the summary cards. Refresh both together.
+  const refreshSalesPage = useCallback(async () => {
+    await Promise.all([
+      loadSales(),
+      Promise.resolve(refreshSummary()),
+    ]);
+  }, [loadSales, refreshSummary]);
+
+  useEntityUpdates('sale', refreshSalesPage);
 
   const getStatusBadge = (status: SaleStatus) => {
     const statusColors: Record<SaleStatus, string> = {
