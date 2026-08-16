@@ -186,13 +186,43 @@ export function normalizeFinancialRecordFields(record: FinancialRecord): Financi
     netCashflow,
     jungleCoinsValue,
     outputItemId,
+    links,
+    description,
+    siteId,
+    targetSiteId,
+    characterId,
+    playerCharacterId,
+    sourceTaskId,
+    sourceSaleId,
+    salesChannel,
     ...canonicalBase
   } = raw;
 
-  const paymentObservation = raw.context?.paymentObservation ?? {
-    paid: !Boolean(isNotPaid ?? raw.status === 'pending'),
-    charged: !Boolean(isNotCharged),
-  };
+  const paymentObservation = raw.context?.paymentObservation ??
+    (isNotPaid || isNotCharged
+      ? {
+          paid: !Boolean(isNotPaid),
+          charged: !Boolean(isNotCharged),
+        }
+      : undefined);
+  const counterpartyId = raw.context?.counterparty?.counterpartyId ?? raw.characterId ?? null;
+  const counterpartyRole = raw.context?.counterparty?.role ?? customerCharacterRole;
+  const counterparty = counterpartyId || newCustomerName
+    ? {
+        ...(raw.context?.counterparty || {}),
+        counterpartyId,
+        role: counterpartyRole,
+      }
+    : undefined;
+  const normalizedContext = { ...(raw.context || {}) } as Record<string, unknown>;
+  if (normalizedContext.jungleCoins === 0) delete normalizedContext.jungleCoins;
+  if (!normalizedContext.newCustomerName) delete normalizedContext.newCustomerName;
+  if (!productionPlan) delete normalizedContext.productionPlan;
+  if (!paymentObservation ||
+      (raw.status === 'done' && paymentObservation.paid && paymentObservation.charged)) {
+    delete normalizedContext.paymentObservation;
+  }
+  delete normalizedContext.counterparty;
 
   return {
     ...canonicalBase,
@@ -202,30 +232,42 @@ export function normalizeFinancialRecordFields(record: FinancialRecord): Financi
     revenue,
     netCashflow: toMoneyValue(raw.netCashflow ?? numericRevenue - numericCost),
     status: raw.status ?? (isNotPaid ? 'pending' : 'done'),
-    // Temporary read-compatibility mirrors. Canonical readers must use
-    // status/context; these remain until every older projection is migrated.
-    isNotPaid: Boolean(isNotPaid ?? raw.status === 'pending'),
-    isNotCharged: Boolean(isNotCharged),
-    customerCharacterRole,
-    jungleCoins: raw.context?.jungleCoins ?? jungleCoins ?? 0,
-    lifecycle: {
-      ...(raw.lifecycle || {}),
-      doneAt: raw.lifecycle?.doneAt ?? doneAt,
-      collectedAt: raw.lifecycle?.collectedAt ?? collectedAt,
-    },
+    ...(description ? { description } : {}),
+    ...(siteId != null ? { siteId } : {}),
+    ...(targetSiteId != null ? { targetSiteId } : {}),
+    ...(characterId != null ? { characterId } : {}),
+    ...(playerCharacterId != null ? { playerCharacterId } : {}),
+    ...(sourceTaskId != null ? { sourceTaskId } : {}),
+    ...(sourceSaleId != null ? { sourceSaleId } : {}),
+    ...(salesChannel != null ? { salesChannel } : {}),
+    ...(
+      raw.lifecycle?.doneAt || raw.lifecycle?.collectedAt || doneAt || collectedAt
+        ? {
+            lifecycle: {
+              ...(raw.lifecycle || {}),
+              ...(raw.lifecycle?.doneAt ?? doneAt ? { doneAt: raw.lifecycle?.doneAt ?? doneAt } : {}),
+              ...(raw.lifecycle?.collectedAt ?? collectedAt ? { collectedAt: raw.lifecycle?.collectedAt ?? collectedAt } : {}),
+            },
+          }
+        : {}
+    ),
     context: {
-      ...(raw.context || {}),
+      ...normalizedContext,
       kind: 'financial-record-context',
       schemaVersion: 1,
-      counterparty: {
-        ...(raw.context?.counterparty || {}),
-        counterpartyId: raw.context?.counterparty?.counterpartyId ?? raw.characterId ?? null,
-        role: raw.context?.counterparty?.role ?? customerCharacterRole,
-      },
-      jungleCoins: raw.context?.jungleCoins ?? jungleCoins ?? 0,
-      paymentObservation,
-      newCustomerName: raw.context?.newCustomerName ?? newCustomerName,
-      productionPlan,
+      ...(counterparty ? { counterparty } : {}),
+      ...((raw.context?.jungleCoins ?? jungleCoins) !== undefined &&
+        (raw.context?.jungleCoins ?? jungleCoins) !== 0
+        ? { jungleCoins: raw.context?.jungleCoins ?? jungleCoins }
+        : {}),
+      ...(paymentObservation &&
+        (!paymentObservation.paid || !paymentObservation.charged || Boolean(isNotPaid) || Boolean(isNotCharged))
+        ? { paymentObservation }
+        : {}),
+      ...((raw.context?.newCustomerName ?? newCustomerName)
+        ? { newCustomerName: raw.context?.newCustomerName ?? newCustomerName }
+        : {}),
+      ...(productionPlan ? { productionPlan } : {}),
     },
   } as FinancialRecord;
 }

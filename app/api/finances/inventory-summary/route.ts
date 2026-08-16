@@ -5,6 +5,7 @@ import { requireAdminAuth } from '@/lib/api-auth';
 import { ItemType } from '@/types/enums';
 import { Item } from '@/types/entities';
 import { normalizeItemTypeString } from '@/lib/item-taxonomy-normalize';
+import { extractMoneyValue } from '@/lib/utils/financial-utils';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -64,8 +65,12 @@ export async function GET(req: NextRequest) {
             // If no quantity, it contributes 0 to value/cost
             if (quantity <= 0) return;
 
-            const pricePerUnit = Number(item.price ?? item.value ?? 0);
-            const costPerUnit = Number(item.unitCost ?? 0) + Number(item.additionalCost ?? 0);
+            // Item pricing is canonicalized under pricing.*. The root fields
+            // are legacy compatibility inputs and are not present on V1 items.
+            const pricePerUnit = extractMoneyValue(item.pricing?.targetPrice);
+            const costPerUnit =
+              extractMoneyValue(item.pricing?.unitCost) +
+              extractMoneyValue(item.pricing?.additionalCost);
 
             totals[bucketKey].value += pricePerUnit * quantity;
             totals[bucketKey].cost += costPerUnit * quantity;

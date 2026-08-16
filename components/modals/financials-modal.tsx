@@ -568,20 +568,32 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
           : formData.status,
       lifecycle: {
         ...record?.lifecycle,
-        doneAt: localDoneAt,
+        doneAt:
+          localDoneAt ??
+          (String(formData.status) !== String(FinancialStatus.PENDING) ? new Date() : undefined),
       },
       context: {
         kind: 'financial-record-context',
         schemaVersion: 1,
-        counterparty: {
-          counterpartyId: formData.isNewCustomer ? null : formData.characterId,
-          role: formData.customerCharacterRole,
-        },
-        jungleCoins: formData.jungleCoins,
-        paymentObservation: {
-          paid: !formData.isNotPaid,
-          charged: !formData.isNotCharged,
-        },
+        ...(
+          (formData.isNewCustomer ? formData.newCustomerName : formData.characterId)
+            ? {
+                counterparty: {
+                  counterpartyId: formData.isNewCustomer ? null : formData.characterId,
+                  role: formData.customerCharacterRole,
+                },
+              }
+            : {}
+        ),
+        ...(formData.jungleCoins !== 0 ? { jungleCoins: formData.jungleCoins } : {}),
+        ...(formData.isNotPaid || formData.isNotCharged
+          ? {
+              paymentObservation: {
+                paid: !formData.isNotPaid,
+                charged: !formData.isNotCharged,
+              },
+            }
+          : {}),
         newCustomerName: formData.isNewCustomer ? formData.newCustomerName : undefined,
         productionPlan: formData.outputItemType || formData.outputItemName
           ? {
