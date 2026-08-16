@@ -46,11 +46,6 @@ export interface SalesModalDirectContentCommonProps {
   onCostChange: (value: number) => void;
   revenue: number;
   onRevenueChange: (value: number) => void;
-  isNotPaid: boolean;
-  setIsNotPaid: (value: boolean) => void;
-  isNotCharged: boolean;
-  setIsNotCharged: (value: boolean) => void;
-  updateSaleStatus: (isNotCharged: boolean) => void;
   playerPoints: { xp: number; rp: number; fp: number; hp: number };
   setPlayerPoints: React.Dispatch<React.SetStateAction<{ xp: number; rp: number; fp: number; hp: number }>>;
   description: string;
@@ -113,11 +108,6 @@ export default function SalesModalDirectContent({
   onCostChange,
   revenue,
   onRevenueChange,
-  isNotPaid,
-  setIsNotPaid,
-  isNotCharged,
-  setIsNotCharged,
-  updateSaleStatus,
   playerPoints,
   setPlayerPoints,
   description,
@@ -366,31 +356,6 @@ export default function SalesModalDirectContent({
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs">Payment Status</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setIsNotPaid(!isNotPaid)}
-                      className={`h-8 text-xs ${isNotPaid ? 'border-orange-500 text-orange-600' : ''}`}
-                    >
-                      {isNotPaid ? "⚠ Not Paid" : "✓ Paid"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        const newIsNotCharged = !isNotCharged;
-                        setIsNotCharged(newIsNotCharged);
-                        updateSaleStatus(newIsNotCharged);
-                      }}
-                      className={`h-8 text-xs ${isNotCharged ? 'border-orange-500 text-orange-600' : ''}`}
-                    >
-                      {isNotCharged ? "⚠ Not Charged" : "✓ Charged"}
-                    </Button>
-                  </div>
-                </div>
               </div>
 
               {emissaryColumnExpanded && (
@@ -671,31 +636,6 @@ export default function SalesModalDirectContent({
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs">Payment Status</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setIsNotPaid(!isNotPaid)}
-                      className={`h-8 text-xs ${isNotPaid ? 'border-orange-500 text-orange-600' : ''}`}
-                    >
-                      {isNotPaid ? "⚠ Not Paid" : "✓ Paid"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        const newIsNotCharged = !isNotCharged;
-                        setIsNotCharged(newIsNotCharged);
-                        updateSaleStatus(newIsNotCharged);
-                      }}
-                      className={`h-8 text-xs ${isNotCharged ? 'border-orange-500 text-orange-600' : ''}`}
-                    >
-                      {isNotCharged ? "⚠ Not Charged" : "✓ Charged"}
-                    </Button>
-                  </div>
-                </div>
               </div>
 
               {emissaryColumnExpanded && (

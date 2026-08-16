@@ -40,11 +40,6 @@ export type SalesModalNetworkContentProps = Pick<
   | 'onCostChange'
   | 'revenue'
   | 'onRevenueChange'
-  | 'isNotPaid'
-  | 'setIsNotPaid'
-  | 'isNotCharged'
-  | 'setIsNotCharged'
-  | 'updateSaleStatus'
   | 'playerPoints'
   | 'setPlayerPoints'
   | 'description'
@@ -86,11 +81,6 @@ export default function SalesModalNetworkContent({
   onCostChange,
   revenue,
   onRevenueChange,
-  isNotPaid,
-  setIsNotPaid,
-  isNotCharged,
-  setIsNotCharged,
-  updateSaleStatus,
   playerPoints,
   setPlayerPoints,
   description,
@@ -271,32 +261,6 @@ export default function SalesModalNetworkContent({
                       className="h-8 text-sm"
                     />
                   </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs">Payment Status</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setIsNotPaid(!isNotPaid)}
-                    className={`h-8 text-xs ${isNotPaid ? 'border-orange-500 text-orange-600' : ''}`}
-                  >
-                    {isNotPaid ? '⚠ Not Paid' : '✓ Paid'}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      const newIsNotCharged = !isNotCharged;
-                      setIsNotCharged(newIsNotCharged);
-                      updateSaleStatus(newIsNotCharged);
-                    }}
-                    className={`h-8 text-xs ${isNotCharged ? 'border-orange-500 text-orange-600' : ''}`}
-                  >
-                    {isNotCharged ? '⚠ Not Charged' : '✓ Charged'}
-                  </Button>
                 </div>
               </div>
 

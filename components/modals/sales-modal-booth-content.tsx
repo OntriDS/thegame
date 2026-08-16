@@ -242,11 +242,12 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       const serviceLines = lines.filter((l) => {
         // Aggressive fallback for older records that might have lost their 'station' or 'kind' enumerations
         const isServiceOrItem = l.kind === "service" || l.kind === "item";
+        const lineStation = String((l as any).station || '').trim().toLowerCase();
         const hasPartnerStation = [
-          "Booth-Sales",
-          "Partner-Sales",
-          "Partner Sales",
-        ].includes((l as any).station as string);
+          'booth-sales',
+          'partner-sales',
+          'partner sales',
+        ].includes(lineStation);
         const hasHistoricalDescription = l.description?.includes("[Partner:");
         const hasPartnerVault = Boolean(
           l.settlement?.partnerId,
@@ -263,10 +264,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         const amountCRC =
           line.settlement?.originalAmountCRC ?? line.salePriceCrc ?? 0;
         const amountUSD =
-          (line.settlement?.originalAmountUSD ??
-            line.revenue ??
-            line.quantity * line.unitPrice) ||
-          0;
+          line.settlement?.originalAmountUSD ??
+          (line.revenue !== undefined
+            ? extractMoneyValue(line.revenue)
+            : (line.quantity || 0) * extractMoneyValue(line.unitPrice));
         const desc = line.description || "";
         const categoryMatch = desc.includes("] ") ? desc.split("] ")[1] : desc;
 
@@ -732,7 +733,6 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         // Descriptive label
         description: `[Partner: ${getPartnerName(selectedPartnerId)}] ${quickCat}`,
         taxAmount: toMoney(0),
-        createTask: false,
         settlement: {
           originalAmountCRC: amountCRC,
           originalAmountUSD: amountUSD,
@@ -875,12 +875,14 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         },
         links: (sale as any)?.links || [],
 
-        // Lifecycle defaults
+        // Canonical lifecycle state
         createdAt: sale?.createdAt || new Date(),
         updatedAt: new Date(),
-        
-        doneAt: doneAt,
-        collectedAt: collectedAt,
+        lifecycle: {
+          ...(sale?.lifecycle || {}),
+          doneAt: doneAt?.toISOString(),
+          collectedAt: collectedAt?.toISOString(),
+        },
       } as unknown as Sale;
 
       // 5. Pass to Parent

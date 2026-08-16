@@ -16,7 +16,7 @@ import {
 import { SaleType, SaleStatus } from "@/types/enums";
 import { getSaleStatusLabel } from "@/lib/constants/status-display-labels";
 import { formatDateDDMMYYYY, getMonthName } from "@/lib/constants/date-constants";
-import { getAllSiteNames } from "@/lib/utils/site-options-utils";
+import { createSiteOptions } from "@/lib/utils/site-options-utils";
 import { Plus, Calendar, DollarSign, Package, TrendingUp, Archive, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import SalesModal from "@/components/modals/sales-modal";
@@ -224,8 +224,8 @@ function SalesPageContent() {
 
       // General service costs
       const serviceLineCosts = sale.lines
-        .filter(l => l.kind === 'service' && (l as any).taskCost)
-        .reduce((sum, l) => sum + extractMoneyValue((l as any).taskCost), 0);
+        .filter(l => l.kind === 'service' && ((l as any).context?.taskCost ?? (l as any).taskCost) !== undefined)
+        .reduce((sum, l) => sum + extractMoneyValue((l as any).context?.taskCost ?? (l as any).taskCost), 0);
       cost = hasExplicitCost ? explicitCost : serviceLineCosts;
       netProfit = grossRevenue - cost;
     }
@@ -410,8 +410,8 @@ function SalesPageContent() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Sites</SelectItem>
-                    {getAllSiteNames(sites).map(site => (
-                      <SelectItem key={site} value={site}>{site}</SelectItem>
+                    {createSiteOptions(sites).map(site => (
+                      <SelectItem key={site.value} value={site.value}>{site.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
