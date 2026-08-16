@@ -5,7 +5,7 @@ import { toUTC, getUTCNow } from './utc-utils';
  * Get the month (1-12) for a given entity based on canonical month fields.
  * - FinancialRecord: entity.month
  * - Sale: saleDate (fallback createdAt)
- * - Task: collectedAt → doneAt → createdAt
+ * - Task: doneAt → collectedAt → createdAt
  * - Item: createdAt (active inventory context)
  */
 export function getEntityMonth(entity: Task | Sale | FinancialRecord | Item): number {
@@ -19,7 +19,7 @@ export function getEntityMonth(entity: Task | Sale | FinancialRecord | Item): nu
   if ((entity as any).collectedAt !== undefined || (entity as any).doneAt !== undefined || (entity as any).createdAt !== undefined) {
     const anyEntity = entity as any;
     const date: Date | string | null =
-      anyEntity.collectedAt || anyEntity.doneAt || anyEntity.createdAt || null;
+      anyEntity.doneAt || anyEntity.collectedAt || anyEntity.createdAt || null;
     return date ? toUTC(date).getUTCMonth() + 1 : getUTCNow().getUTCMonth() + 1;
   }
   return getUTCNow().getUTCMonth() + 1;
@@ -29,7 +29,7 @@ export function getEntityMonth(entity: Task | Sale | FinancialRecord | Item): nu
  * Get the year (YYYY) for a given entity based on canonical month fields.
  * - FinancialRecord: entity.year
  * - Sale: saleDate (fallback createdAt)
- * - Task: collectedAt → doneAt → createdAt
+ * - Task: doneAt → collectedAt → createdAt
  * - Item: createdAt (active inventory context)
  */
 export function getEntityYear(entity: Task | Sale | FinancialRecord | Item): number {
@@ -43,7 +43,7 @@ export function getEntityYear(entity: Task | Sale | FinancialRecord | Item): num
   if ((entity as any).collectedAt !== undefined || (entity as any).doneAt !== undefined || (entity as any).createdAt !== undefined) {
     const anyEntity = entity as any;
     const date: Date | string | null =
-      anyEntity.collectedAt || anyEntity.doneAt || anyEntity.createdAt || null;
+      anyEntity.doneAt || anyEntity.collectedAt || anyEntity.createdAt || null;
     return date ? toUTC(date).getUTCFullYear() : getUTCNow().getUTCFullYear();
   }
   return getUTCNow().getUTCFullYear();

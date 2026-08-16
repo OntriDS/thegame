@@ -330,18 +330,33 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full max-w-5xl max-h-[90vh] overflow-y-auto" zIndexLayer="MODALS">
+        <DialogContent className="w-full max-w-6xl max-h-[90vh] overflow-y-auto" zIndexLayer="MODALS">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {character ? 'Edit Character' : 'Create Character'}
               {identityManagedByAccount && (
-                <span
-                  className="inline-flex items-center text-blue-600 dark:text-blue-400"
-                  title="Identity and contact data are managed by the linked Account"
-                  aria-label="Identity and contact data are managed by the linked Account"
-                >
-                  <BadgeCheck className="h-4 w-4" />
-                </span>
+                <>
+                  <span
+                    className="inline-flex items-center text-blue-600 dark:text-blue-400"
+                    title="Identity and contact data are managed by the linked Account"
+                    aria-label="Identity and contact data are managed by the linked Account"
+                  >
+                    <BadgeCheck className="h-4 w-4" />
+                  </span>
+                  {canViewAccountInfo(roles) && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowAccountInfo(true)}
+                      className="h-6 w-6"
+                      title="View Account Information"
+                      aria-label="View Account Information"
+                    >
+                      <Info className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </>
               )}
             </DialogTitle>
             <DialogDescription>
@@ -556,19 +571,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                 </Button>
               )}
 
-              {/* Account Info Button - Only for FOUNDER/ADMIN roles */}
-              {character && canViewAccountInfo(roles) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAccountInfo(true)}
-                  className="h-8 text-xs"
-                  title="View Account Information"
-                >
-                  <Info className="h-4 w-4" />
-                </Button>
-              )}
-
               {/* Links Button - Only when editing existing character */}
               {character && (
                 <Button
@@ -646,7 +648,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
             <div className="flex items-center gap-2 ml-auto">
               <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>Cancel</Button>
               <Button onClick={handleSave} className="h-8 text-xs" disabled={!name.trim() || isSaving}>
-                {isSaving ? 'Saving...' : (character ? 'Update' : 'Create')} Character
+                {isSaving ? 'Saving...' : (character ? 'Update' : 'Create')}
               </Button>
             </div>
           </DialogFooter>

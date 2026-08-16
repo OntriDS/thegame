@@ -4,6 +4,7 @@ import { Task } from '@/types/entities';
 import { RecurrentFrequency, TaskType } from '@/types/enums';
 import { FrequencyConfig } from '@/components/ui/frequency-calendar';
 import { fromRecurrentUTC, toRecurrentUTC, addDaysUTC, addWeeksUTC, addMonthsUTC } from '@/lib/utils/utc-utils';;
+import { getTaskDueDate, getTaskFrequencyConfig, getTaskLastSpawnedDate, getTaskRecurrenceEnd, getTaskRecurrenceStart, getTaskScheduledEnd, getTaskScheduledStart } from '@/lib/compatibility/task-selectors';
 
 export interface TaskOccurrence {
   task: Task;
@@ -19,34 +20,39 @@ function normalizeDate(value?: Date | string | null): Date | null {
 }
 
 function getBaseStart(task: Task): Date | null {
-  const isOnce = task.frequencyConfig?.type === RecurrentFrequency.ONCE;
+  const frequency = getTaskFrequencyConfig(task);
+  const lastSpawnedDate = getTaskLastSpawnedDate(task);
+  const dueDate = getTaskDueDate(task);
+  const recurrenceStart = getTaskRecurrenceStart(task);
+  const isOnce = frequency?.type === RecurrentFrequency.ONCE;
   const todayLocal = fromRecurrentUTC(new Date());
 
   if (isOnce) {
-    if (task.lastSpawnedDate) {
-      const lastSpawned = fromRecurrentUTC(task.lastSpawnedDate);
+    if (lastSpawnedDate) {
+      const lastSpawned = fromRecurrentUTC(lastSpawnedDate);
       const nextDay = addDaysUTC(lastSpawned, 1);
       return nextDay.getTime() > todayLocal.getTime() ? nextDay : todayLocal;
     }
     
-    if (task.dueDate) return fromRecurrentUTC(new Date(task.dueDate));
+    if (dueDate) return fromRecurrentUTC(new Date(dueDate));
     
     // No due date: use today or recurrenceStart, whichever is later
-    const start = task.recurrenceStart ? fromRecurrentUTC(new Date(task.recurrenceStart)) : todayLocal;
+    const start = recurrenceStart ? fromRecurrentUTC(new Date(recurrenceStart)) : todayLocal;
     return start.getTime() > todayLocal.getTime() ? start : todayLocal;
   }
 
   // JIT Model: Start from the explicit recurrence boundary if provided
-  const boundaryStart = task.recurrenceStart ? new Date(task.recurrenceStart) : null;
+  const boundaryStart = recurrenceStart ? new Date(recurrenceStart) : null;
   if (boundaryStart) return fromRecurrentUTC(boundaryStart);
 
-  const scheduledStart = task.scheduledStart ? fromRecurrentUTC(new Date(task.scheduledStart)) : null;
-  return scheduledStart || (task.dueDate ? fromRecurrentUTC(new Date(task.dueDate)) : null);
+  const scheduledStartValue = getTaskScheduledStart(task);
+  const scheduledStart = scheduledStartValue ? fromRecurrentUTC(new Date(scheduledStartValue)) : null;
+  return scheduledStart || (dueDate ? fromRecurrentUTC(new Date(dueDate)) : null);
 }
 
 function getDurationMs(task: Task): number {
-  const scheduledStart = normalizeDate(task.scheduledStart as any);
-  const scheduledEnd = normalizeDate(task.scheduledEnd as any);
+  const scheduledStart = normalizeDate(getTaskScheduledStart(task) as any);
+  const scheduledEnd = normalizeDate(getTaskScheduledEnd(task) as any);
   if (scheduledStart && scheduledEnd) {
     const duration = scheduledEnd.getTime() - scheduledStart.getTime();
     if (duration > 0) return duration;
@@ -56,13 +62,15 @@ function getDurationMs(task: Task): number {
 
 function getStopDate(task: Task, config?: FrequencyConfig): Date | null {
   // JIT Model: Stop at the explicit recurrence boundary if provided
-  const boundaryEnd = task.recurrenceEnd ? new Date(task.recurrenceEnd) : null;
+  const recurrenceEnd = getTaskRecurrenceEnd(task);
+  const boundaryEnd = recurrenceEnd ? new Date(recurrenceEnd) : null;
   if (boundaryEnd) return fromRecurrentUTC(boundaryEnd);
 
   if (config?.stopsAfter?.type === 'date' && config.stopsAfter.value) {
     return fromRecurrentUTC(new Date(config.stopsAfter.value));
   }
-  const dueDate = task.dueDate ? fromRecurrentUTC(new Date(task.dueDate)) : null;
+  const dueDateValue = getTaskDueDate(task);
+  const dueDate = dueDateValue ? fromRecurrentUTC(new Date(dueDateValue)) : null;
   return dueDate;
 }
 
@@ -96,7 +104,7 @@ export function getOccurrencesForRange(task: Task, rangeStart: Date, rangeEnd: D
     task.type === TaskType.RECURRENT_GROUP ||
     task.type === TaskType.RECURRENT_TEMPLATE ||
     task.type === TaskType.RECURRENT_INSTANCE;
-  const frequency = isRecurrentType ? (task.frequencyConfig as FrequencyConfig | undefined) : undefined;
+  const frequency = isRecurrentType ? (getTaskFrequencyConfig(task) as FrequencyConfig | undefined) : undefined;
   const stopDate = getStopDate(task, frequency);
   const maxOccurrences =
     frequency?.stopsAfter?.type === 'times' && typeof frequency.stopsAfter.value === 'number'
@@ -131,8 +139,9 @@ export function getOccurrencesForRange(task: Task, rangeStart: Date, rangeEnd: D
     let count = 0;
     for (const day of customDays) {
       const start = new Date(day);
-      if (task.scheduledStart) {
-        const scheduledStartLocal = fromRecurrentUTC(new Date(task.scheduledStart));
+      const scheduledStartValue = getTaskScheduledStart(task);
+      if (scheduledStartValue) {
+        const scheduledStartLocal = fromRecurrentUTC(new Date(scheduledStartValue));
         start.setHours(scheduledStartLocal.getHours(), scheduledStartLocal.getMinutes(), scheduledStartLocal.getSeconds(), 0);
       }
       if (start.getTime() < baseStart.getTime()) continue;

@@ -7,11 +7,15 @@ import { formatArchiveMonthKeyUTC, getUTCNow } from '@/lib/utils/utc-utils';
 /**
  * Month bucket `MM-yy` for reactive task archive indexing — must match
  * `getTaskArchiveMonth` in `task.workflow.ts` (UTC calendar fields only).
+ *
+ * A task belongs to the month in which it was completed, not the month in
+ * which somebody later collected it. Collection is a lifecycle transition;
+ * it must not move an already-completed task to a different History month.
  */
 export function getTaskArchiveMonthKeyUTC(task: Task): string | null {
   let raw: Date | string | undefined;
   if (task.status === TaskStatus.COLLECTED) {
-    raw = task.collectedAt || task.doneAt || task.createdAt;
+    raw = task.doneAt || task.collectedAt || task.createdAt;
   } else {
     raw = task.doneAt || task.createdAt;
   }

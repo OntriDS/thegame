@@ -6,6 +6,7 @@ import { kvSMembers } from '@/lib/utils/kv';
 import { buildMonthIndexKey, buildTaskActiveIndexKey } from '@/data-store/keys';
 import { formatArchiveMonthKeyUTCFromParts } from '@/lib/utils/utc-utils';
 import { isTaskActive, isTaskCompleted } from '@/lib/utils/task-active-utils';
+import { getTaskArchiveMonthKeyUTC } from '@/lib/utils/task-archive-index-utils';
 import { TaskStatus, EntityType } from '@/types/enums';
 import { INTEGRITY_ISSUES_CAP, type IntegrityAuditResult, type IntegrityIssue } from './types';
 import { toMMYY } from './integrity-audits';
@@ -41,8 +42,9 @@ function inCalendarMonth(d: Date | null | undefined, month: number, year: number
 }
 
 /**
- * Tasks in History scope for month X: collected index + active DONE in month.
- * Flags missing or cross-month doneAt / collectedAt vs that month.
+ * Tasks in History scope for month X: terminal tasks indexed by completion
+ * month. Collection may happen later and must not move a task to another
+ * History month.
  */
 export async function auditTaskTimelineVsMonthIndex(month: number, year: number): Promise<IntegrityAuditResult> {
   const mmyy = toMMYY(month, year);
@@ -65,22 +67,13 @@ export async function auditTaskTimelineVsMonthIndex(month: number, year: number)
       );
       continue;
     }
-    const ca = toDate((task as any).collectedAt as unknown);
-    if (ca == null) {
+    const expectedMonth = getTaskArchiveMonthKeyUTC(task);
+    if (expectedMonth !== monthKey) {
       pushIssue(
         issues,
         total,
-        'TASK_COLLECTED_INDEX_MISSING_COLLECTED_AT',
-        `Task ${id} is in collected index for ${mmyy} but collectedAt is missing`,
-        EntityType.TASK,
-        id
-      );
-    } else if (!inCalendarMonth(ca, month, year)) {
-      pushIssue(
-        issues,
-        total,
-        'TASK_COLLECTED_INDEX_WRONG_COLLECTED_MONTH',
-        `Task ${id} is in collected index for ${mmyy} but collectedAt is ${ca.toISOString()} (different month)`,
+        'TASK_COMPLETED_INDEX_WRONG_COMPLETION_MONTH',
+        `Task ${id} is in ${mmyy} index but its canonical completion month is ${expectedMonth ?? 'unknown'}`,
         EntityType.TASK,
         id
       );

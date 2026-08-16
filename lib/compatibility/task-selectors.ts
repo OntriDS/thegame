@@ -41,6 +41,23 @@ export function getTaskFrequencyConfig(task: Task): any {
   return (task as any).frequencyConfig;
 }
 
+export function getTaskRecurrenceStart(task: Task): Date | string | null | undefined {
+  return task.context?.recurrence?.recurrenceStart ?? (task as any).recurrenceStart;
+}
+
+export function getTaskRecurrenceEnd(task: Task): Date | string | null | undefined {
+  return task.context?.recurrence?.recurrenceEnd ?? (task as any).recurrenceEnd;
+}
+
+export function getTaskLastSpawnedDate(task: Task): Date | string | null | undefined {
+  return task.context?.recurrence?.lastSpawnedDate ?? (task as any).lastSpawnedDate;
+}
+
+export function getTaskDueDate(task: Task): Date | string | null | undefined {
+  if (isExecutableTaskV1(task) && task.schedule?.dueDate) return task.schedule.dueDate;
+  return (task as any).dueDate;
+}
+
 // -----------------------------------------------------------------------------
 // SCHEDULE FACET / PROGRESS
 // -----------------------------------------------------------------------------

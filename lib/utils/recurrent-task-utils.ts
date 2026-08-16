@@ -15,6 +15,7 @@ import { isTaskHistoryTerminal } from '@/lib/utils/task-active-utils';
 import { toRecurrentUTC, fromRecurrentUTC, getNextWeekdayFromDate, addDaysUTC, addWeeksUTC, addMonthsUTC, getUTCCivilDayStartMs, utcCalendarDayKey } from '@/lib/utils/utc-utils';;
 import { getSafetyLimitDate, SpawnErrorCode, validateFrequencyConfig, type ValidationResult } from './recurrent-validation';
 import { clampToValidUTC, toUTC } from './utc-utils';
+import { getTaskDueDate, getTaskFrequencyConfig, getTaskIsTemplate, getTaskLastSpawnedDate, getTaskRecurrenceEnd, getTaskRecurrenceStart, getTaskScheduledEnd, getTaskScheduledStart } from '@/lib/compatibility/task-selectors';
 
 export interface SpawnNextResult {
   instance: Task | null;
@@ -68,15 +69,19 @@ export async function spawnNextRecurrentInstance(
 
   // 2. Get reference date
   // Priority: 1. lastSpawnedDate, 2. recurrenceStart, 3. fallback to dueDate or now
-  let referenceDate = template.lastSpawnedDate 
-    ? fromRecurrentUTC(template.lastSpawnedDate) 
-    : (template.recurrenceStart 
-        ? fromRecurrentUTC(template.recurrenceStart) 
-        : fromRecurrentUTC(template.dueDate || new Date()));
-  let hasReferenceLastSpawn = Boolean(template.lastSpawnedDate);
+  const frequencyConfig = getTaskFrequencyConfig(template);
+  const lastSpawnedDate = getTaskLastSpawnedDate(template);
+  const recurrenceStart = getTaskRecurrenceStart(template);
+  const dueDate = getTaskDueDate(template);
+  let referenceDate = lastSpawnedDate
+    ? fromRecurrentUTC(lastSpawnedDate)
+    : (recurrenceStart
+        ? fromRecurrentUTC(recurrenceStart)
+        : fromRecurrentUTC(dueDate || new Date()));
+  let hasReferenceLastSpawn = Boolean(lastSpawnedDate);
 
   // 3. Prepare frequency helpers
-  const config = template.frequencyConfig!;
+  const config = frequencyConfig!;
   const customDates = config.type === RecurrentFrequency.CUSTOM
     ? (config.customDays || [])
       .map((d: any) => (d instanceof Date ? d : new Date(d)))
@@ -138,10 +143,10 @@ export async function spawnNextRecurrentInstance(
           const nextDay = addDaysUTC(referenceDate, 1);
           return nextDay.getTime() > todayLocal.getTime() ? nextDay : toRecurrentUTC(todayLocal);
         }
-        if (template.dueDate) {
-          return fromRecurrentUTC(template.dueDate);
+        if (dueDate) {
+          return fromRecurrentUTC(dueDate);
         }
-        const start = template.recurrenceStart ? fromRecurrentUTC(template.recurrenceStart) : todayLocal;
+        const start = recurrenceStart ? fromRecurrentUTC(recurrenceStart) : todayLocal;
         return start.getTime() > todayLocal.getTime() ? toRecurrentUTC(start) : toRecurrentUTC(todayLocal);
       }
 
@@ -208,8 +213,10 @@ export async function spawnNextRecurrentInstance(
 
   const nextDateLocal = fromRecurrentUTC(nextDate);
   // 6. Derive scheduled times aligned to nextDate
-  const templateStart = template.scheduledStart ? new Date(template.scheduledStart) : null;
-  const templateEnd = template.scheduledEnd ? new Date(template.scheduledEnd) : null;
+  const templateStartValue = getTaskScheduledStart(template);
+  const templateEndValue = getTaskScheduledEnd(template);
+  const templateStart = templateStartValue ? new Date(templateStartValue) : null;
+  const templateEnd = templateEndValue ? new Date(templateEndValue) : null;
   let scheduledStart: Date | undefined;
   let scheduledEnd: Date | undefined;
 
@@ -232,13 +239,24 @@ export async function spawnNextRecurrentInstance(
     id: uuid(),
     name: `${template.name} \u2022 ${formattedDate}`,
     type: TaskType.RECURRENT_INSTANCE,
-    dueDate: nextDateLocal,
-    scheduledStart,
-    scheduledEnd,
+    schedule: {
+      dueDate: toRecurrentUTC(nextDateLocal),
+      ...(scheduledStart ? { scheduledStart: toRecurrentUTC(scheduledStart) } : {}),
+      ...(scheduledEnd ? { scheduledEnd: toRecurrentUTC(scheduledEnd) } : {}),
+    },
     parentId: template.id,
     isRecurrentGroup: false,
     isTemplate: false,
-    frequencyConfig: undefined,
+    context: {
+      ...(template.context || {}),
+      recurrence: {
+        ...(template.context?.recurrence || {}),
+        isRecurrentGroup: false,
+        isTemplate: false,
+        frequencyConfig: undefined,
+        originTemplateId: template.id,
+      },
+    },
     createdAt: new Date(),
     updatedAt: new Date(),
     order: nextDateLocal.getTime(),
@@ -249,7 +267,7 @@ export async function spawnNextRecurrentInstance(
     doneAt: undefined,
     collectedAt: undefined,
     isCollected: false,
-    ownerId: template.ownerId,
+    ownerIds: template.ownerIds,
   };
 
   return {
@@ -271,7 +289,13 @@ export async function updateTemplateLastSpawnedDate(
 
   await upsertTask({
     ...template,
-    lastSpawnedDate: toRecurrentUTC(spawnDate),
+    context: {
+      ...(template.context || {}),
+      recurrence: {
+        ...(template.context?.recurrence || {}),
+        lastSpawnedDate: toRecurrentUTC(spawnDate),
+      },
+    },
     updatedAt: new Date()
   }, { skipWorkflowEffects: true });
 }
@@ -285,7 +309,13 @@ export async function resetTemplateSpawnState(templateId: string): Promise<void>
 
   await upsertTask({
     ...template,
-    lastSpawnedDate: undefined,
+    context: {
+      ...(template.context || {}),
+      recurrence: {
+        ...(template.context?.recurrence || {}),
+        lastSpawnedDate: undefined,
+      },
+    },
     updatedAt: new Date()
   }, { skipWorkflowEffects: true });
 }
@@ -371,17 +401,22 @@ export function createRecurrentTemplate(
     progress: 0,
     order: 0,
     parentId,
-    isRecurrentGroup: false,
-    isTemplate: true,
-    frequencyConfig,
+    context: {
+      kind: 'task-context',
+      schemaVersion: 1,
+      recurrence: {
+        isRecurrentGroup: false,
+        isTemplate: true,
+        frequencyConfig,
+      },
+    },
     cost: 0,
     revenue: 0,
     rewards: { points: { xp: 0, rp: 0, fp: 0, hp: 0 } },
     createdAt: new Date(),
     updatedAt: new Date(),
-    isCollected: false,
     links: [], // initialize links array
-    ownerId: null,
+    ownerIds: [],
   };
 }
 
@@ -400,11 +435,18 @@ export function spawnRecurrentInstance(
     id: uuid(),
     name: `${template.name}${separator}${formattedDate}`,
     type: TaskType.RECURRENT_INSTANCE,
-    dueDate,
+    schedule: { dueDate: toRecurrentUTC(dueDate) },
     parentId: template.id, // Instance points to its template
-    isRecurrentGroup: false,
-    isTemplate: false,
-    frequencyConfig: undefined, // Instances don't have frequency config
+    context: {
+      ...(template.context || {}),
+      recurrence: {
+        ...(template.context?.recurrence || {}),
+        isRecurrentGroup: false,
+        isTemplate: false,
+        frequencyConfig: undefined,
+        originTemplateId: template.id,
+      },
+    },
     createdAt: new Date(),
     updatedAt: new Date(),
     order: instanceOrder,
@@ -413,8 +455,7 @@ export function spawnRecurrentInstance(
     progress: 0,
     doneAt: undefined,
     collectedAt: undefined,
-    isCollected: false,
-    ownerId: template.ownerId,
+    ownerIds: template.ownerIds,
   };
 }
 
@@ -433,7 +474,7 @@ export async function getRecurrentHierarchy(parentId: string): Promise<{
     getTasksByParentId(parentId)
   ]);
 
-  const templates = children.filter(t => t.isTemplate);
+  const templates = children.filter(t => getTaskIsTemplate(t));
   const instances = children.filter(t => t.type === TaskType.RECURRENT_INSTANCE);
 
   return { parent, templates, instances };
@@ -689,7 +730,8 @@ export async function validateSpawnOperation(template: Task): Promise<Validation
   }
 
   // 2. Check frequency configuration
-  if (!template.frequencyConfig) {
+  const config = getTaskFrequencyConfig(template);
+  if (!config) {
     return {
       isValid: false,
       errorCode: SpawnErrorCode.NO_FREQUENCY_CONFIG,
@@ -698,7 +740,7 @@ export async function validateSpawnOperation(template: Task): Promise<Validation
   }
 
   // 3. Validate frequency config structure
-  const freqValidation = validateFrequencyConfig(template.frequencyConfig);
+  const freqValidation = validateFrequencyConfig(config);
   if (!freqValidation.isValid) {
     return {
       isValid: false,
@@ -706,8 +748,6 @@ export async function validateSpawnOperation(template: Task): Promise<Validation
       errorMessage: freqValidation.error
     };
   }
-
-  const config = template.frequencyConfig;
 
   // 4. Check stop conditions
   // (removed ONCE frequency check to allow manual spawning)
@@ -734,8 +774,9 @@ export async function validateSpawnOperation(template: Task): Promise<Validation
   // Check safety limit
   const safetyLimit = getSafetyLimitDate(template);
   if (safetyLimit) {
-    const lastSpawnedDay = template.lastSpawnedDate
-      ? getUTCCivilDayStartMs(template.lastSpawnedDate)
+    const lastSpawnedDate = getTaskLastSpawnedDate(template);
+    const lastSpawnedDay = lastSpawnedDate
+      ? getUTCCivilDayStartMs(lastSpawnedDate)
       : null;
     const safetyLimitDay = getUTCCivilDayStartMs(safetyLimit);
 
@@ -759,14 +800,14 @@ export async function validateSpawnOperation(template: Task): Promise<Validation
     }
 
     const referenceSource =
-      template.lastSpawnedDate ??
-      template.recurrenceStart ??
-      template.dueDate ??
+      getTaskLastSpawnedDate(template) ??
+      getTaskRecurrenceStart(template) ??
+      getTaskDueDate(template) ??
       new Date();
     const refDayMs = getUTCCivilDayStartMs(
       referenceSource instanceof Date ? referenceSource : new Date(referenceSource)
     );
-    const hasLastSpawn = Boolean(template.lastSpawnedDate);
+    const hasLastSpawn = Boolean(getTaskLastSpawnedDate(template));
 
     const customDates = config.customDays
       .map((d: any) => (d instanceof Date ? d : new Date(d)))

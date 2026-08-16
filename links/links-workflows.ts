@@ -78,7 +78,8 @@ export async function syncTaskCharacterCounterpartyLinks(task: Task): Promise<vo
   if (desiredId) {
     desiredRelationships.push({
       id: desiredId,
-      relationship: task.context?.counterparty?.role === 'beneficiary' || task.customerCharacterRole === 'beneficiary'
+      relationship: (typeof task.context?.counterparty?.role === 'string' && task.context.counterparty.role.toLowerCase() === 'beneficiary') ||
+        (typeof task.customerCharacterRole === 'string' && task.customerCharacterRole.toLowerCase() === 'beneficiary')
         ? 'beneficiary'
         : 'customer',
     });

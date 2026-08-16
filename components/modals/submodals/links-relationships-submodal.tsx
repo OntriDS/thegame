@@ -244,6 +244,13 @@ function LinkCard({
   const isSource = link.source.id === currentEntity.id;
   const otherEntity = isSource ? link.target : link.source;
   const direction = isSource ? '→' : '←';
+  const relationship = typeof link.relationship === 'string'
+    ? link.relationship.trim().toLowerCase()
+    : typeof link.context?.relationship === 'string'
+      ? link.context.relationship.trim().toLowerCase()
+      : typeof link.context?.role === 'string'
+        ? link.context.role.trim().toLowerCase()
+        : null;
 
   const getEntityDisplayName = (entityType: EntityType, entityId: string): string => {
     const key = `${entityType}:${entityId}`;
@@ -263,6 +270,11 @@ function LinkCard({
               <Badge variant="outline" className="text-xs">Outgoing →</Badge>
             ) : (
               <Badge variant="outline" className="text-xs">← Incoming</Badge>
+            )}
+            {relationship && (
+              <Badge variant="outline" className="text-[10px] lowercase px-1.5 py-0">
+                {relationship}
+              </Badge>
             )}
           </div>
           <Button
@@ -324,4 +336,3 @@ function LinkCard({
     </Card>
   );
 }
-

@@ -47,6 +47,12 @@ import { toMoney } from '@/lib/utils/financial-utils';
 import { TaskModalFooter } from './task-modal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { ensureCounterpartyRole } from '@/lib/utils/character-role-sync';
+import { ClientAPI } from '@/lib/client-api';
+
+const normalizeTaskCounterpartyRole = (role: unknown): CharacterRole =>
+  typeof role === 'string' && role.trim().toLowerCase() === CharacterRole.BENEFICIARY
+    ? CharacterRole.BENEFICIARY
+    : CharacterRole.CUSTOMER;
 
 interface MissionTreeModalContentProps {
   task?: Task | null;
@@ -110,8 +116,6 @@ export default function MissionTreeModalContent({
   const [scheduledEndTime, setScheduledEndTime] = useState<string>('');
   const [cost, setCost] = useState(0);
   const [revenue, setRevenue] = useState(0);
-  const [isNotPaid, setIsNotPaid] = useState(false);
-  const [isNotCharged, setIsNotCharged] = useState(false);
   const [isCollected, setIsCollected] = useState(false);
 
   // Emissary fields
@@ -217,8 +221,6 @@ export default function MissionTreeModalContent({
       const fi = existingTask.context?.financialIntent;
       setCost(fi?.costIntent ? Number(fi.costIntent.minorUnits) : execTask.cost ?? 0);
       setRevenue(fi?.revenueIntent ? Number(fi.revenueIntent.minorUnits) : execTask.revenue ?? 0);
-      setIsNotPaid(((existingTask as any).status === "PENDING") || false);
-      setIsNotCharged(execTask.isNotCharged || false);
       setIsCollected(existingTask.status === TaskStatus.COLLECTED || execTask.isCollected || false);
       setFormData({
         site: existingTask.siteId || 'none',
@@ -252,7 +254,7 @@ export default function MissionTreeModalContent({
       setCustomerCharacterId(existingTaskCounterpartyId);
       setIsNewCustomer(!Boolean(existingTaskCounterpartyId));
       setNewCustomerName(execTask.newCustomerName || '');
-      setCustomerCharacterRole(existingTask.context?.counterparty?.role ?? execTask.customerCharacterRole ?? CharacterRole.CUSTOMER);
+      setCustomerCharacterRole(normalizeTaskCounterpartyRole(existingTask.context?.counterparty?.role ?? execTask.customerCharacterRole));
       setPlayerCharacterId(existingTask.playerCharacterId || FOUNDER_CHARACTER_ID);
       setOwnerId(getTaskOwnerIds(existingTask)[0] || null);
       setRewards({
@@ -287,8 +289,6 @@ export default function MissionTreeModalContent({
     setScheduledEndTime('');
     setCost(0);
     setRevenue(0);
-    setIsNotPaid(false);
-    setIsNotCharged(false);
     setIsCollected(false);
     setFormData({ site: 'none', targetSite: 'none' });
     setOutputItemType('');
@@ -341,6 +341,19 @@ export default function MissionTreeModalContent({
     hasInitializedRef.current = true;
     initializedTaskIdRef.current = hydrateKey;
   }, [open, task, initializeFromTask, initializeForNewTask]);
+
+  useEffect(() => {
+    if (!open || !task?.id) return;
+    let cancelled = false;
+    void ClientAPI.getLinksFor({ type: EntityType.TASK, id: task.id }).then((links) => {
+      if (cancelled) return;
+      const ownerId = links
+        .filter((link: any) => link.linkType === 'TASK_CHARACTER' && link.relationship === 'owner' && link.target?.type === 'character')
+        .map((link: any) => link.target.id)[0];
+      if (ownerId) setOwnerId(ownerId);
+    }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [open, task?.id, task?.updatedAt]);
 
   useEffect(() => {
     if (customerCharacterId) {
@@ -448,8 +461,6 @@ export default function MissionTreeModalContent({
       scheduledEnd: finalScheduledEnd,
       cost,
       revenue,
-      isNotPaid,
-      isNotCharged,
       siteId: formData.site && formData.site !== 'none' ? formData.site : null,
       targetSiteId: formData.targetSite && formData.targetSite !== 'none' ? formData.targetSite : null,
       outputItemType: (outputItemType || undefined) as ItemType | undefined,
@@ -498,7 +509,9 @@ export default function MissionTreeModalContent({
           : undefined,
       },
       playerCharacterId: finalPlayerCharacterId,
-      ownerId: status === TaskStatus.NONE ? null : (task ? getTaskOwnerIds(task)[0] || null : ownerId),
+      ownerIds: status === TaskStatus.NONE
+        ? []
+        : (Array.isArray(ownerId) ? ownerId : (ownerId ? [ownerId] : [])),
       order: determineOrder(),
       
       isNewItem,
@@ -579,20 +592,6 @@ export default function MissionTreeModalContent({
     setOutputItemSubType(newSubType);
     if (!outputItemName) {
       setOutputItemName(`${newItemType} ${newSubType}`);
-    }
-  };
-
-  const handleNotPaidChange = (newValue: boolean) => {
-    setIsNotPaid(newValue);
-    if (newValue) {
-      setIsNotPaid(true);
-    }
-  };
-
-  const handleNotChargedChange = (newValue: boolean) => {
-    setIsNotCharged(newValue);
-    if (newValue) {
-      setIsNotCharged(true);
     }
   };
 
@@ -840,27 +839,6 @@ export default function MissionTreeModalContent({
                     />
                   </div>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleNotPaidChange(!isNotPaid)}
-                  className={`h-8 text-xs ${isNotPaid ? 'border-orange-500 text-orange-600 hover:bg-orange-50' : ''}`}
-                >
-                  {isNotPaid ? '⚠ Not Paid' : '✓ Paid'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleNotChargedChange(!isNotCharged)}
-                  className={`h-8 text-xs ${isNotCharged ? 'border-orange-500 text-orange-600 hover:bg-orange-50' : ''}`}
-                >
-                  {isNotCharged ? '⚠ Not Charged' : '✓ Charged'}
-                </Button>
               </div>
 
               <div className="space-y-2">
@@ -1198,7 +1176,6 @@ export default function MissionTreeModalContent({
               <SelectContent>
                 {Object.values(TaskStatus)
                   .filter((taskStatus) => {
-                    if (taskStatus === TaskStatus.COLLECTED && (isNotPaid || isNotCharged)) return false;
                     if (status === TaskStatus.FAILED && taskStatus === TaskStatus.COLLECTED) return false;
                     return true;
                   })

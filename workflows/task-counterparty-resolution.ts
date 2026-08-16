@@ -17,8 +17,11 @@ export interface ResolvedTaskCounterparty {
 }
 
 const normalizeRole = (role: unknown): CustomerCounterpartyRole | null => {
-  if (role === CharacterRole.CUSTOMER || role === CharacterRole.BENEFICIARY) {
-    return role;
+  if (typeof role === 'string') {
+    const normalized = role.trim().toLowerCase();
+    if (normalized === CharacterRole.CUSTOMER || normalized === CharacterRole.BENEFICIARY) {
+      return normalized;
+    }
   }
   return null;
 };
@@ -45,14 +48,15 @@ async function resolveByTaskCharacterLink(taskId: string): Promise<ResolvedTaskC
     (link) =>
       link.linkType === LinkType.TASK_CHARACTER &&
       link.target.type === EntityType.CHARACTER &&
-      !!link.target.id
+      !!link.target.id &&
+      (link.relationship === CharacterRole.CUSTOMER || link.relationship === CharacterRole.BENEFICIARY)
   );
 
   if (!taskCharacterLink) return null;
 
   return {
     characterId: taskCharacterLink.target.id,
-    characterRole: CharacterRole.CUSTOMER,
+    characterRole: normalizeRole(taskCharacterLink.relationship) || CharacterRole.CUSTOMER,
     source: 'task-character-link'
   };
 }

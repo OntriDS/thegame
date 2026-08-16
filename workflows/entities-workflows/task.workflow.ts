@@ -28,7 +28,7 @@ import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
 import { kvSRem } from '@/lib/utils/kv';
 
 // UTC: archive Redis keys use formatArchiveMonthKeyUTC only (see utc-utils.ts + utc-time-system.md).
-import { getUTCNow, formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
+import { getUTCNow, formatArchiveMonthKeyUTC, endOfMonthUTC } from '@/lib/utils/utc-utils';
 import { parseDateToUTC } from '@/lib/utils/date-parsers';
 import { getTaskArchiveMonthKeyUTC } from '@/lib/utils/task-archive-index-utils';
 
@@ -354,7 +354,11 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       collectedAtRaw = Number.isFinite(collectedAtCandidate.getTime()) ? collectedAtCandidate : undefined;
     }
     if (!collectedAtRaw) {
-      collectedAtRaw = getUTCNow();
+      // Collection belongs to the task's completion month. This keeps direct
+      // DONE -> COLLECTED transitions consistent with monthly close.
+      collectedAtRaw = outputsTask.doneAt
+        ? endOfMonthUTC(outputsTask.doneAt instanceof Date ? outputsTask.doneAt : new Date(outputsTask.doneAt as string))
+        : getUTCNow();
       await upsertTask(
         { ...outputsTask,  collectedAt: collectedAtRaw, status: TaskStatus.COLLECTED },
         { skipWorkflowEffects: true }

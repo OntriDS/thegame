@@ -113,8 +113,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     revenueString: '0',
     jungleCoins: 0,
     jungleCoinsString: '0',
-    isNotPaid: false,        // Payment status
-    isNotCharged: false,     // Payment status
     status: FinancialStatus.DONE as FinancialStatus,  // Status field with default
     site: '',
     targetSite: '',
@@ -236,7 +234,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     if (record && record.id) {
       const productionPlan = record.context?.productionPlan;
       const jungleCoins = record.context?.jungleCoins ?? 0;
-      const recordStatus = record.status;
       setFormData({
         name: record.name,
         description: record.description || '',
@@ -247,12 +244,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         revenueString: extractMoneyValue(record.revenue).toString(),
         jungleCoins,
         jungleCoinsString: jungleCoins.toString(),
-        isNotPaid: record.context?.paymentObservation
-          ? !record.context.paymentObservation.paid
-          : recordStatus === FinancialStatus.PENDING,
-        isNotCharged: record.context?.paymentObservation
-          ? !record.context.paymentObservation.charged
-          : recordStatus === FinancialStatus.PENDING,
         status:
           String(record.status) === 'Collected'
             ? FinancialStatus.DONE
@@ -337,8 +328,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         revenueString: '0',
         jungleCoins: 0,
         jungleCoinsString: '0',
-        isNotPaid: false,
-        isNotCharged: false,
         status: FinancialStatus.DONE,  // Default status for new records
         site: '',
         targetSite: '',
@@ -380,24 +369,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       }));
     }
   }, [year, month, record]);
-
-  // Auto-logic: Set status to PENDING when isNotPaid or isNotCharged is true
-  useEffect(() => {
-    if (formData.isNotPaid || formData.isNotCharged) {
-      setFormData(prev => ({
-        ...prev,
-        status: FinancialStatus.PENDING
-      }));
-    } else if (
-      (formData as any).status === "PENDING" ||
-      String(formData.status) === 'Collected'
-    ) {
-      setFormData(prev => ({
-        ...prev,
-        status: FinancialStatus.DONE
-      }));
-    }
-  }, [formData.isNotPaid, formData.isNotCharged, formData.status]);
 
   const handleStationChange = (newStation: Station) => {
 
@@ -588,14 +559,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
             : {}
         ),
         ...(formData.jungleCoins !== 0 ? { jungleCoins: formData.jungleCoins } : {}),
-        ...(formData.isNotPaid || formData.isNotCharged
-          ? {
-              paymentObservation: {
-                paid: !formData.isNotPaid,
-                charged: !formData.isNotCharged,
-              },
-            }
-          : {}),
         newCustomerName: formData.isNewCustomer ? formData.newCustomerName : undefined,
         productionPlan: formData.outputItemType || formData.outputItemName
           ? {
@@ -790,26 +753,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant={formData.isNotPaid ? "outline" : "outline"}
-                    size="sm"
-                    onClick={() => setFormData({ ...formData, isNotPaid: !formData.isNotPaid })}
-                    className={`h-8 text-xs ${formData.isNotPaid ? 'border-orange-500 text-orange-600' : ''}`}
-                  >
-                    {formData.isNotPaid ? "⚠ Not Paid" : "✓ Paid"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={formData.isNotCharged ? "outline" : "outline"}
-                    size="sm"
-                    onClick={() => setFormData({ ...formData, isNotCharged: !formData.isNotCharged })}
-                    className={`h-8 text-xs ${formData.isNotCharged ? 'border-orange-500 text-orange-600' : ''}`}
-                  >
-                    {formData.isNotCharged ? "⚠ Not Charged" : "✓ Charged"}
-                  </Button>
-                </div>
               </div>
 
               {/* Column 3: AMBASSADORS */}
