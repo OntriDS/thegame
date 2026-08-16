@@ -163,6 +163,15 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   let effectiveSale = sale;
   const isNewSale = !previousSale;
 
+  // A charged/collected sale moving back to pending must reverse its charged
+  // side effects (sold clones, links, logs, and rewards). Keep this derived
+  // entirely from the canonical status field.
+  const chargeStateWasRolledBack = Boolean(
+    previousSale &&
+      (previousSale.status === SaleStatus.CHARGED || previousSale.status === SaleStatus.COLLECTED) &&
+      sale.status === SaleStatus.PENDING
+  );
+
   // --- Sale Settlement Process Manager (Shadow Hook) ---
   const IS_SALE_SETTLEMENT_PILOT_ENABLED = true;
   let handledByCoordinator = false;
