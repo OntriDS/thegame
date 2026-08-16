@@ -435,6 +435,10 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     (sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED);
   const hasItemLines = sale.lines?.some(l => l.kind === 'item');
   if (isCharged && hasItemLines) {
+    // Decrement live inventory from the original sale lines before the next
+    // step rewrites those lines to sold-clone IDs. The effect claim inside
+    // processItemSaleLine makes this safe on retries and resaves.
+    await processChargedSaleLines(sale);
     await ensureSoldItemEntities(sale, previousSale);
     // Lines may now point at sold-item rows in KV; use reloaded sale so SOLD logs attach to those ids, not the first-persist snapshot.
     const saleForItemLogs = await getSaleById(sale.id);
