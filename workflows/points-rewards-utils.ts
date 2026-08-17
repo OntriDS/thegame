@@ -461,12 +461,18 @@ export async function revokePointsFromPlayer(
 
   const delta = asPointAmount(points);
   const current = getPlayerRewards(player);
+  const reversible = {
+    hp: Math.min(delta.hp, current.points.current.hp),
+    fp: Math.min(delta.fp, current.points.current.fp),
+    rp: Math.min(delta.rp, current.points.current.rp),
+    xp: Math.min(delta.xp, current.points.current.xp),
+  };
   const nextPoints = wasCollected
     ? {
         ...current.points,
-        vested: subtractPoints(current.points.vested, delta),
-        current: subtractPoints(current.points.current, delta),
-        historic: subtractPoints(current.points.historic, delta),
+        vested: subtractPoints(current.points.vested, reversible),
+        current: subtractPoints(current.points.current, reversible),
+        historic: subtractPoints(current.points.historic, reversible),
       }
     : {
         ...current.points,

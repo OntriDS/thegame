@@ -14,7 +14,7 @@ import { v4 as uuid } from 'uuid';
 import { appendEntityLog } from '@/workflows/entities-logging';
 import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution';
 import { getItemCharacterId } from '@/lib/item-character-id';
-import { getFinancialCounterpartyId } from '@/lib/financial-record-counterparty-id';
+import { getFinancialCounterpartyId, getFinancialCounterpartyRole } from '@/lib/financial-record-counterparty-id';
 import { getSaleCharacterId } from '@/lib/sale-character-id';
 import { getAllSites } from '@/data-store/repositories/site.repo';
 
