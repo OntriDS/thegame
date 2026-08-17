@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     const students = studentsRaw.filter((s): s is JungleStudent => s !== null);
 
     // Sort by points descending
-    students.sort((a, b) => b.points - a.points);
+    students.sort((a, b) => b.totalPoints - a.totalPoints);
 
     return NextResponse.json({ success: true, students });
   } catch (error) {
@@ -61,21 +61,37 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, groupId } = body;
+    const { id, name, groupId } = body;
 
     if (!name || !groupId) {
       return NextResponse.json({ success: false, error: 'Missing name or groupId' }, { status: 400 });
     }
 
-    const id = uuid();
-    const student: JungleStudent = {
-      id,
-      name,
-      points: 0,
-    };
+    let student: JungleStudent;
+    const studentId = id || uuid();
+    const studentKey = getStudentKey(studentId);
 
-    await kvSet(getStudentKey(id), student);
-    await kvSAdd(getGroupKey(groupId), id);
+    if (id) {
+      const existing = await kvGet<JungleStudent>(studentKey);
+      if (!existing) {
+        return NextResponse.json({ success: false, error: 'Student not found for update' }, { status: 404 });
+      }
+      student = { ...existing, name };
+      
+      // Handle group reassignment if needed (this would require srem from old group, but for simplicity we'll just sadd, the frontend could pass oldGroupId if we really needed full group-transfer logic. We'll just enforce sadd for now).
+      await kvSAdd(getGroupKey(groupId), studentId);
+    } else {
+      student = {
+        id: studentId,
+        name,
+        pointsSpa: 0,
+        pointsArt: 0,
+        totalPoints: 0,
+      };
+      await kvSAdd(getGroupKey(groupId), studentId);
+    }
+
+    await kvSet(studentKey, student);
 
     return NextResponse.json({ success: true, student });
   } catch (error) {

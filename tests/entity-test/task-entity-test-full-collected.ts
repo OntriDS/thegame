@@ -95,6 +95,7 @@ describe('entity-test: full Task collected', () => {
       status: TaskStatus.COLLECTED,
       progress: { percentage: 100 },
       ownerIds: [owner.id],
+      context: { ...done.context, counterparty: { counterpartyId: owner.id, role: 'beneficiary' } },
       collectedAt,
       updatedAt: collectedAt,
     } as any, { skipDuplicateCheck: true });

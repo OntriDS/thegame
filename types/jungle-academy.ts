@@ -5,7 +5,9 @@ export type SchoolClassType = 'spanish' | 'art';
 export interface JungleStudent {
   id: string;
   name: string;
-  points: number;
+  pointsSpa: number;
+  pointsArt: number;
+  totalPoints: number;
 }
 
 export interface JungleClassEvent {
