@@ -1,0 +1,16 @@
+{
+  "id": "23c4f630-6bf8-437e-afdf-c7f40b8e9de0",
+  "name": "testing-task",
+  "status": "created",
+  "priority": "normal",
+  "type": "mission",
+  "station": "strategy",
+  "progress": {
+    "percentage": 0
+  },
+  "order": 1000,
+  "createdAt": "2026-08-17T00:52:49.862Z",
+  "updatedAt": "2026-08-17T00:52:49.862Z",
+  "schemaVersion": 1,
+  "version": 0
+}

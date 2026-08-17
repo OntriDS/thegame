@@ -342,7 +342,7 @@ export async function updateItemsCreatedByTask(
           await appendEntityLog(EntityType.ITEM, item.id, LogEventType.UPDATED, {
             name: updatedItem.name,
             itemType: updatedItem.type,
-            subItemType: updatedItem.context?.subItemType,
+            subItemType: updatedItem.subItemType,
             quantity: updatedItem.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0
           }, task.updatedAt || getUTCNow());
 
@@ -514,7 +514,7 @@ export async function updateItemsCreatedByRecord(
         await appendEntityLog(EntityType.ITEM, item.id, LogEventType.UPDATED, {
           name: updatedItem.name,
           itemType: updatedItem.type,
-          subItemType: updatedItem.context?.subItemType,
+          subItemType: updatedItem.subItemType,
           quantity: updatedItem.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0
         }, record.updatedAt || new Date(record.year, record.month - 1, 1));
 

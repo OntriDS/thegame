@@ -378,7 +378,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           setType(loadedType);
           setSubItemType(loadedSub);
           setItemTypeSubType(`${loadedType}:${loadedSub}`);
-          setCollection(formData.collection || Collection.NO_COLLECTION);
+          setCollection(formData.context?.collection || Collection.NO_COLLECTION);
           setStatus(formData.status || ItemStatus.FOR_SALE);
           setQuantity(formData.quantity || 0);
       setUnitCost(formData.pricing?.unitCost
@@ -500,8 +500,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         chargedAt: now,
       },
       context: {
-        kind: 'sale-context',
-        schemaVersion: 1,
       },
     };
     await ClientAPI.upsertSale(sale);
@@ -598,7 +596,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setStatus(refreshed.status || ItemStatus.FOR_SALE);
         setPrice(extractMoneyValue(refreshed.pricing?.targetPrice));
         setUnitCost(extractMoneyValue(refreshed.pricing?.unitCost));
-        setCollection(refreshed.collection || Collection.NO_COLLECTION);
+        setCollection(refreshed.context?.collection || Collection.NO_COLLECTION);
         setKeepInInventoryAfterSold(
           typeof refreshed.context?.keepInInventoryAfterSold === 'boolean'
             ? refreshed.context.keepInInventoryAfterSold
@@ -741,12 +739,12 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setName(item.name || '');
       setDescription(item.description || '');
       const itemType = item.type || defaultItemType || ItemType.STICKER;
-      const itemSubType = item.context?.subItemType || '';
+      const itemSubType = item.subItemType || '';
       setType(itemType);
       setSubItemType(itemSubType);
       setItemTypeSubType(`${itemType}:${itemSubType}`);
 
-      setCollection(item.collection || Collection.NO_COLLECTION);
+      setCollection(item.context?.collection || Collection.NO_COLLECTION);
       setStatus(item.status || ItemStatus.FOR_SALE);
       const itemSiteId = initialSiteId || item.stock?.[0]?.siteId || '';
       setSite(itemSiteId);
@@ -883,8 +881,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setName(selectedItem.name);
         setDescription(selectedItem.description || '');
         setType(selectedItem.type);
-        setSubItemType(selectedItem.context?.subItemType || '');
-        setCollection(selectedItem.collection || Collection.NO_COLLECTION);
+        setSubItemType(selectedItem.subItemType || '');
+        setCollection(selectedItem.context?.collection || Collection.NO_COLLECTION);
         setStatus(selectedItem.status || ItemStatus.FOR_SALE);
         // Calculate quantity: use site-specific if initialSiteId is set, otherwise total
         if (initialSiteId) {
@@ -1040,7 +1038,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         name,
         description,
         type,
-        collection: collection as Collection,
+        subItemType: subItemType as SubItemType,
         status,
         // Live inventory rows never carry sold quantity. Sold quantities belong
         // exclusively to archive clones created by the sale workflow.
@@ -1052,9 +1050,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         },
         stock: updatedStock,
         context: {
-          kind: 'item-context',
-          schemaVersion: 1,
-          subItemType: subItemType || undefined,
+          collection: collection as Collection,
           dimensions,
           size: parsedSize,
           year,

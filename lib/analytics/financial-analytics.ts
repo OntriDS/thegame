@@ -314,7 +314,7 @@ export async function getCostsByProductStation(
       const item = await getItemById(link.target.id);
       if (!item) continue;
 
-      const productType = `${item.type}:${item.context?.subItemType || 'none'}`;
+      const productType = `${item.type}:${item.subItemType || 'none'}`;
       if (!stationMap[productType]) {
         stationMap[productType] = { cost: 0, recordCount: 0 };
       }
@@ -354,7 +354,7 @@ export async function getRevenuesByProductStation(
       const item = await getItemById(link.target.id);
       if (!item) continue;
 
-      const productType = `${item.type}:${item.context?.subItemType || 'none'}`;
+      const productType = `${item.type}:${item.subItemType || 'none'}`;
       if (!stationMap[productType]) {
         stationMap[productType] = { revenue: 0, transactionCount: 0 };
       }

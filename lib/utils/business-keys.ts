@@ -44,7 +44,7 @@ export function getBusinessKey(entityType: EntityType, record: any): string {
 function getItemBusinessKey(item: Item): string {
   const type = (item.type || '').trim().toLowerCase();
   const name = (item.name || '').trim().toLowerCase();
-  const collection = (item.collection || Collection.NO_COLLECTION).toString().trim().toLowerCase();
+  const collection = (item.context?.collection || Collection.NO_COLLECTION).toString().trim().toLowerCase();
   
   return `${type}|${name}|${collection}`;
 }

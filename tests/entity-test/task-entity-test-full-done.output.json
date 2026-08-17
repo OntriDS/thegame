@@ -1,0 +1,250 @@
+{
+  "task": {
+    "id": "entity-test-task-full-done",
+    "name": "testing-task-full-done",
+    "status": "done",
+    "priority": "normal",
+    "type": "goal",
+    "station": "strategy",
+    "progress": {
+      "percentage": 100
+    },
+    "schedule": {
+      "dueDate": "2026-08-24T00:03:04.823Z"
+    },
+    "order": 1000,
+    "siteId": "hq",
+    "parentId": "4b7eb833-cad8-4660-bb18-d1a1c5f46e5e",
+    "context": {
+      "financialIntent": {
+        "costIntent": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        },
+        "revenueIntent": {
+          "minorUnits": "10000",
+          "currency": "USD"
+        }
+      },
+      "rewardIntent": {
+        "kind": "point-reward",
+        "points": {
+          "xp": 5,
+          "rp": 2,
+          "fp": 1,
+          "hp": 0
+        }
+      },
+      "productionPlan": {
+        "outputItemType": "bundle",
+        "outputItemSubType": "sticker",
+        "outputQuantity": 5,
+        "outputUnitCost": {
+          "minorUnits": "1000",
+          "currency": "USD"
+        },
+        "outputItemName": "testing-full-done-output",
+        "outputItemPrice": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        },
+        "outputItemStatus": "for-sale",
+        "isNewItem": true,
+        "isSold": false
+      }
+    },
+    "createdAt": "2026-08-17T00:03:04.823Z",
+    "updatedAt": "2026-08-17T00:03:18.494Z",
+    "schemaVersion": 1,
+    "version": 1,
+    "doneAt": "2026-08-17T00:03:18.494Z"
+  },
+  "links": [
+    {
+      "id": "fb3bee19-dcbc-46ea-997a-dd428e50267b",
+      "linkType": "TASK_SITE",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-done"
+      },
+      "target": {
+        "type": "site",
+        "id": "hq"
+      },
+      "createdAt": "2026-08-17T00:03:05.824Z"
+    },
+    {
+      "id": "69be338c-77d6-47bb-aa3a-fa2ba0e034f7",
+      "linkType": "TASK_CHARACTER",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-done"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1775889257983-6pkhdapnl"
+      },
+      "relationship": "beneficiary",
+      "createdAt": "2026-08-17T00:03:55.516Z"
+    },
+    {
+      "id": "29cbcf7e-354b-469e-b0d1-6fcf11a19957",
+      "linkType": "TASK_CHARACTER",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-done"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1775889257983-6pkhdapnl"
+      },
+      "relationship": "owner",
+      "createdAt": "2026-08-17T00:03:57.197Z"
+    },
+    {
+      "id": "91dfb805-d682-497f-9a4e-0b362ba29567",
+      "linkType": "TASK_PLAYER",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-done"
+      },
+      "target": {
+        "type": "player",
+        "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
+      },
+      "relationship": "points-earned",
+      "createdAt": "2026-08-17T00:03:35.644Z"
+    },
+    {
+      "id": "5b4dfe2f-ed1b-4f5c-8d3d-509896676d74",
+      "linkType": "TASK_FINREC",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-done"
+      },
+      "target": {
+        "type": "financial",
+        "id": "finrec-entity-test-task-full-done"
+      },
+      "createdAt": "2026-08-17T00:03:42.355Z"
+    },
+    {
+      "id": "ada588bf-e5f7-4448-9a68-aa0230d64428",
+      "linkType": "TASK_ITEM",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-done"
+      },
+      "target": {
+        "type": "item",
+        "id": "item-entity-test-task-full-done-1786925024821"
+      },
+      "createdAt": "2026-08-17T00:03:58.689Z"
+    }
+  ],
+  "items": [
+    {
+      "id": "item-entity-test-task-full-done-1786925024821",
+      "schemaVersion": 1,
+      "version": 0,
+      "name": "testing-full-done-output",
+      "description": "Created from task: testing-task-full-done",
+      "type": "bundle",
+      "status": "for-sale",
+      "pricing": {
+        "unitCost": {
+          "minorUnits": "1000",
+          "currency": "USD"
+        },
+        "targetPrice": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        }
+      },
+      "sourceTaskId": "entity-test-task-full-done",
+      "createdAt": "2026-08-17T00:03:44.821Z",
+      "updatedAt": "2026-08-17T00:03:44.821Z",
+      "context": {
+        "kind": "item-context",
+        "schemaVersion": 1,
+        "subItemType": "sticker",
+        "year": 2026
+      },
+      "stock": [
+        {
+          "siteId": "hq",
+          "quantity": 5
+        }
+      ]
+    }
+  ],
+  "financials": [
+    {
+      "id": "finrec-entity-test-task-full-done",
+      "schemaVersion": 1,
+      "version": 0,
+      "name": "testing-task-full-done",
+      "year": 2026,
+      "month": 8,
+      "station": "strategy",
+      "type": "company",
+      "cost": {
+        "minorUnits": "5000",
+        "currency": "USD"
+      },
+      "revenue": {
+        "minorUnits": "10000",
+        "currency": "USD"
+      },
+      "status": "done",
+      "lifecycle": {
+        "doneAt": "2026-08-17T00:03:18.494Z"
+      },
+      "context": {
+        "kind": "financial-record-context",
+        "productionPlan": {
+          "outputItemType": "bundle",
+          "outputItemSubType": "sticker",
+          "outputQuantity": 5,
+          "outputUnitCost": {
+            "minorUnits": "1000",
+            "currency": "USD"
+          },
+          "outputItemName": "testing-full-done-output",
+          "outputItemPrice": {
+            "minorUnits": "5000",
+            "currency": "USD"
+          },
+          "outputItemStatus": "for-sale",
+          "isNewItem": true,
+          "isSold": false
+        }
+      },
+      "createdAt": "2026-08-17T00:03:37.468Z",
+      "updatedAt": "2026-08-17T00:03:37.468Z",
+      "netCashflow": {
+        "minorUnits": "5000",
+        "currency": "USD"
+      },
+      "description": "Financial record from task: testing-task-full-done",
+      "siteId": "hq",
+      "sourceTaskId": "entity-test-task-full-done"
+    }
+  ],
+  "pointEvidence": [
+    {
+      "id": "91dfb805-d682-497f-9a4e-0b362ba29567",
+      "linkType": "TASK_PLAYER",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-done"
+      },
+      "target": {
+        "type": "player",
+        "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
+      },
+      "relationship": "points-earned",
+      "createdAt": "2026-08-17T00:03:35.644Z"
+    }
+  ]
+}

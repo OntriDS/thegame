@@ -302,8 +302,8 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         if (item.status && !Object.values(ItemStatus).includes(item.status)) {
           validationErrors.push(`Row ${index + 1}: Invalid status "${item.status}". Valid statuses are: ${Object.values(ItemStatus).join(', ')}`);
         }
-        if (item.collection && !Object.values(Collection).includes(item.collection)) {
-          validationErrors.push(`Row ${index + 1}: Invalid collection "${item.collection}"`);
+        if (item.context?.collection && !Object.values(Collection).includes(item.context.collection)) {
+          validationErrors.push(`Row ${index + 1}: Invalid collection "${item.context.collection}"`);
         }
         if ((item as any).subItemType && !isValidSubItemType(item.type, (item as any).subItemType)) {
           const validSubtypes = getSubTypesForItemType(item.type);

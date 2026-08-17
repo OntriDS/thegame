@@ -1,11 +1,12 @@
 // lib/item-taxonomy-normalize.ts
 // Coerce item type / subtype strings to canonical enum values on write (exact or case-insensitive match).
 
-import { ItemType } from '@/types/enums';
+import { Collection, ItemType } from '@/types/enums';
 import type { SubItemType } from '@/types/type-aliases';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type {
   FinancialRecord,
+  ItemContextV1,
   Item,
   Sale,
   SaleLine,
@@ -53,22 +54,37 @@ export function normalizeSubItemTypeForItemType(
 }
 
 export function normalizeItemTaxonomyFields(entity: Item): Item {
+  const legacyEntity = entity as Item & { collection?: Collection };
   const nextType = normalizeItemTypeString(entity.type as string) ?? entity.type;
   const typed = nextType as ItemType;
-  const rawSub = entity.context?.subItemType != null ? String(entity.context.subItemType).trim() : '';
+  const legacyContext = entity.context as ItemContextV1 & { subItemType?: SubItemType };
+  const rawSub = entity.subItemType != null
+    ? String(entity.subItemType).trim()
+    : legacyContext.subItemType != null
+      ? String(legacyContext.subItemType).trim()
+      : '';
   const nextSub =
     rawSub !== '' ? normalizeSubItemTypeForItemType(typed, rawSub) : undefined;
+  const {
+    schemaVersion: _contextSchemaVersion,
+    subItemType: _legacySubItemType,
+    ...contextWithoutSchemaVersion
+  } = (entity.context ?? {}) as ItemContextV1 & { schemaVersion?: number; subItemType?: SubItemType };
   return {
     ...entity,
     type: nextType as ItemType,
+    subItemType: (nextSub ?? entity.subItemType ?? legacyContext.subItemType) as SubItemType,
+    context: {
+      ...contextWithoutSchemaVersion,
+      ...(entity.context?.collection || legacyEntity.collection
+        ? { collection: entity.context?.collection ?? legacyEntity.collection }
+        : {}),
+    },
     stock: (entity.stock ?? []).map((point) => ({
       ...point,
       siteId: normalizeItemSiteId(point.siteId),
     })),
-    context: {
-      ...entity.context,
-      subItemType: (nextSub ?? entity.context?.subItemType) as SubItemType,
-    }
+
   };
 }
 
@@ -230,6 +246,9 @@ export function normalizeFinancialRecordFields(record: FinancialRecord): Financi
       }
     : undefined;
   const normalizedContext = { ...(raw.context || {}) } as Record<string, unknown>;
+  // Entity schema versions belong to the FinancialRecord envelope, never in
+  // the optional context facets. Remove the nested marker from legacy input.
+  delete normalizedContext.schemaVersion;
   if (normalizedContext.jungleCoins === 0) delete normalizedContext.jungleCoins;
   if (!normalizedContext.newCustomerName) delete normalizedContext.newCustomerName;
   if (!productionPlan) delete normalizedContext.productionPlan;
@@ -238,6 +257,23 @@ export function normalizeFinancialRecordFields(record: FinancialRecord): Financi
     delete normalizedContext.paymentObservation;
   }
   delete normalizedContext.counterparty;
+
+  const context = {
+    ...normalizedContext,
+    ...(counterparty ? { counterparty } : {}),
+    ...((raw.context?.jungleCoins ?? jungleCoins) !== undefined &&
+      (raw.context?.jungleCoins ?? jungleCoins) !== 0
+      ? { jungleCoins: raw.context?.jungleCoins ?? jungleCoins }
+      : {}),
+    ...(paymentObservation &&
+      (!paymentObservation.paid || !paymentObservation.charged || Boolean(isNotPaid) || Boolean(isNotCharged))
+      ? { paymentObservation }
+      : {}),
+    ...((raw.context?.newCustomerName ?? newCustomerName)
+      ? { newCustomerName: raw.context?.newCustomerName ?? newCustomerName }
+      : {}),
+    ...(productionPlan ? { productionPlan } : {}),
+  };
 
   return {
     ...canonicalBase,
@@ -266,24 +302,7 @@ export function normalizeFinancialRecordFields(record: FinancialRecord): Financi
           }
         : {}
     ),
-    context: {
-      ...normalizedContext,
-      kind: 'financial-record-context',
-      schemaVersion: 1,
-      ...(counterparty ? { counterparty } : {}),
-      ...((raw.context?.jungleCoins ?? jungleCoins) !== undefined &&
-        (raw.context?.jungleCoins ?? jungleCoins) !== 0
-        ? { jungleCoins: raw.context?.jungleCoins ?? jungleCoins }
-        : {}),
-      ...(paymentObservation &&
-        (!paymentObservation.paid || !paymentObservation.charged || Boolean(isNotPaid) || Boolean(isNotCharged))
-        ? { paymentObservation }
-        : {}),
-      ...((raw.context?.newCustomerName ?? newCustomerName)
-        ? { newCustomerName: raw.context?.newCustomerName ?? newCustomerName }
-        : {}),
-      ...(productionPlan ? { productionPlan } : {}),
-    },
+    ...(Object.keys(context).length > 0 ? { context } : {}),
   } as FinancialRecord;
 }
 
@@ -307,8 +326,6 @@ export function normalizeServiceLineOutputTaxonomy(line: ServiceLine): ServiceLi
     ...line,
     context: {
       ...line.context,
-      kind: 'service-line-context',
-      schemaVersion: 1,
       productionPlan: {
         ...plan,
         outputItemType: nextType as ProductionPlanFacetV1['outputItemType'],

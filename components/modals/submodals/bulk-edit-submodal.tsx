@@ -134,10 +134,10 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
   // Get filtered items based on selected filters
   const getFilteredItems = useCallback(() => {
     return items.filter(item => {
-      const itemCollection = item.collection || Collection.NO_COLLECTION;
+      const itemCollection = item.context?.collection || Collection.NO_COLLECTION;
       if (collectionFilter !== 'all' && itemCollection !== collectionFilter) return false;
       if (siteFilter !== 'all' && !item.stock.some(stockPoint => stockPoint.siteId === siteFilter)) return false;
-      if (subItemFilter !== 'all' && item.context?.subItemType !== subItemFilter) return false;
+      if (subItemFilter !== 'all' && item.subItemType !== subItemFilter) return false;
       if (statusFilter !== 'all' && item.status !== statusFilter) return false;
       return true;
     });
@@ -217,7 +217,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
           updatedItem = { ...item, status: newValue };
       } else if (field === 'collection') {
           newValue = value === Collection.NO_COLLECTION ? Collection.NO_COLLECTION : value as Collection;
-          updatedItem = { ...item, collection: newValue };
+          updatedItem = { ...item, context: { ...item.context, collection: newValue } };
         } else if (field === EntityType.SITE) {
           updatedItem = { ...item, stock: moveStockToSite(item, value) };
         } else {
@@ -491,8 +491,8 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
                     <div className="flex justify-between items-center">
                       <span className="font-medium">{item.name}</span>
                       <span className="text-sm text-muted-foreground">
-                        {item.context?.subItemType && `${item.context.subItemType} • `}
-                        {item.collection && `${getCollectionLabel(item.collection)} • `}
+                        {item.subItemType && `${item.subItemType} • `}
+                        {item.context?.collection && `${getCollectionLabel(item.context.collection)} • `}
                         {item.stock?.[0]?.siteId && (
                           <>
                             <MapPin className="inline h-3 w-3" /> {getSiteNameFromId(item.stock[0].siteId, sites)} •{' '}

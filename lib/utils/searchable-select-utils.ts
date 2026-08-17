@@ -78,7 +78,7 @@ export function createItemOptions(
     }> = {};
 
     items.forEach(item => {
-        const key = `${item.name}|${item.type}|${(item as any).subItemType || ''}|${item.collection || ''}`;
+        const key = `${item.name}|${item.type}|${item.subItemType || ''}|${item.context?.collection || ''}`;
         const qty = item.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0;
 
         if (!models[key]) {
@@ -212,7 +212,7 @@ export function createItemOptionsForSite(
     }> = {};
 
     items.forEach(item => {
-        const modelKey = `${item.name}|${item.type}|${(item as any).subItemType || ''}|${item.collection || ''}`;
+        const modelKey = `${item.name}|${item.type}|${item.subItemType || ''}|${item.context?.collection || ''}`;
         
         if (item.stock && item.stock.length > 0) {
             item.stock.forEach(sp => {
@@ -246,12 +246,12 @@ export function createItemOptionsForSite(
         });
 
     // 3. Add entries for models with NO stock (at least one entry per unique model)
-    const uniqueModelKeys = new Set(items.map(i => `${i.name}|${i.type}|${i.context?.subItemType || ''}|${i.collection || ''}`));
+    const uniqueModelKeys = new Set(items.map(i => `${i.name}|${i.type}|${i.subItemType || ''}|${i.context?.collection || ''}`));
     const modelsWithStockKeys = new Set(Object.keys(modelSiteMap).map(k => k.substring(0, k.lastIndexOf('|'))));
 
     uniqueModelKeys.forEach(modelKey => {
         if (!modelsWithStockKeys.has(modelKey)) {
-            const item = items.find(i => `${i.name}|${i.type}|${i.context?.subItemType || ''}|${i.collection || ''}` === modelKey)!;
+            const item = items.find(i => `${i.name}|${i.type}|${i.subItemType || ''}|${i.context?.collection || ''}` === modelKey)!;
             const category = getCategoryForItemType(item.type);
             options.push({
                 value: `${item.id}:none`,

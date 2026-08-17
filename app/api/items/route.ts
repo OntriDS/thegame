@@ -164,7 +164,7 @@ export async function GET(req: NextRequest) {
         case 'type-asc':
           return (a.type || '').localeCompare(b.type || '');
         case 'subtype-asc':
-           return (a.context?.subItemType || '').localeCompare(b.context?.subItemType || '');
+           return (a.subItemType || '').localeCompare(b.subItemType || '');
         case 'site-asc':
           return ((a.stock?.[0]?.siteId || '')).localeCompare((b.stock?.[0]?.siteId || ''));
         case 'price-asc':
@@ -235,7 +235,7 @@ export async function POST(req: NextRequest) {
         createdAt: rawItem.createdAt ? new Date(rawItem.createdAt) : now,
         updatedAt: now,
         type: rawItem.type,
-        collection: rawItem.collection || undefined,
+        subItemType: rawItem.subItemType || rawItem.context?.subItemType,
         status: rawItem.status || ItemStatus.CREATED,
         stock: Array.isArray(rawItem.stock) ? rawItem.stock : [],
         ...(Number(rawItem.quantitySold) > 0 ? { quantitySold: Number(rawItem.quantitySold) } : {}),
@@ -266,13 +266,11 @@ export async function POST(req: NextRequest) {
           ? { sourceRecordId: rawItem.sourceRecordId.trim() }
           : {}),
         context: {
-          kind: 'item-context',
-          schemaVersion: 1,
           ...existingContext,
           dimensions: existingContext.dimensions || rawItem.dimensions,
           size: existingContext.size || rawItem.size,
           year: existingContext.year ?? rawItem.year,
-          subItemType: existingContext.subItemType || rawItem.subItemType,
+          collection: existingContext.collection || rawItem.collection || 'no-collection',
           sourceFileUrl: existingContext.sourceFileUrl || rawItem.sourceFileUrl,
           keepInInventoryAfterSold: existingContext.keepInInventoryAfterSold ?? rawItem.keepInInventoryAfterSold,
           restockToTarget: existingContext.restockToTarget ?? rawItem.restockToTarget,

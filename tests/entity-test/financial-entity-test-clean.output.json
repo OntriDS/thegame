@@ -1,0 +1,25 @@
+{
+  "id": "entity-test-financial-clean",
+  "schemaVersion": 1,
+  "version": 0,
+  "name": "testing-financial",
+  "year": 2026,
+  "month": 8,
+  "station": "strategy",
+  "type": "company",
+  "cost": {
+    "minorUnits": "1000",
+    "currency": "USD"
+  },
+  "revenue": {
+    "minorUnits": "0",
+    "currency": "USD"
+  },
+  "status": "done",
+  "createdAt": "2026-08-17T00:16:34.307Z",
+  "updatedAt": "2026-08-17T00:16:34.307Z",
+  "netCashflow": {
+    "minorUnits": "-1000",
+    "currency": "USD"
+  }
+}

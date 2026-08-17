@@ -151,7 +151,7 @@ export default function ItemEmissarySubModal({
         setOutputItemSubType(''); // Items don't have subType property
       setOutputUnitCost(extractMoneyValue(selectedItem.pricing?.unitCost) || (selectedItem as any).unitCost || 0);
       setOutputItemPrice(extractMoneyValue(selectedItem.pricing?.targetPrice) || (selectedItem as any).price || 0);
-        setOutputItemCollection(selectedItem.collection || '');
+        setOutputItemCollection(selectedItem.context?.collection || '');
         setOutputItemTypeSubType(`${selectedItem.type}:`);
       }
     } else {

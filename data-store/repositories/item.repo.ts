@@ -314,15 +314,15 @@ export async function upsertItem(item: Item): Promise<Item> {
   }
 
   // Maintain subItemType index
-  if (toSave.context?.subItemType) {
-    const subItemTypeIndexKey = buildEntityIndexKey(ENTITY, 'subItemType', toSave.context.subItemType);
+  if (toSave.subItemType) {
+    const subItemTypeIndexKey = buildEntityIndexKey(ENTITY, 'subItemType', toSave.subItemType);
     await kvSAdd(subItemTypeIndexKey, item.id);
   }
 
   // Clean up old subItemType index if it changed or was removed
-  if (previousItem?.context?.subItemType !== toSave.context?.subItemType) {
-    if (previousItem?.context?.subItemType) {
-      const oldSubItemTypeIndexKey = buildEntityIndexKey(ENTITY, 'subItemType', previousItem.context.subItemType);
+  if (previousItem?.subItemType !== toSave.subItemType) {
+    if (previousItem?.subItemType) {
+      const oldSubItemTypeIndexKey = buildEntityIndexKey(ENTITY, 'subItemType', previousItem.subItemType);
       await kvSRem(oldSubItemTypeIndexKey, item.id);
     }
   }

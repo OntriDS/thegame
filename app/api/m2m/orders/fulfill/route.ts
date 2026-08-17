@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
         totalCost: toMoney(extractMoneyValue(sale.totals?.totalCost) + commission),
       },
       context: {
-        ...(sale.context || { kind: 'sale-context', schemaVersion: 1 }),
+        ...(sale.context || {}),
         m2m: {
           ...(sale.context?.m2m || {}),
           tokenTrans: normalizeString(body.tokenTrans) || null,

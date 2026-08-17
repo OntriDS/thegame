@@ -193,8 +193,6 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
       status: task.status === 'PENDING' ? FinancialStatus.PENDING : FinancialStatus.DONE,
       lifecycle: { doneAt: dateToUse },
       context: {
-        kind: 'financial-record-context',
-        schemaVersion: 1,
         counterparty: {
           counterpartyId: getTaskCounterpartyId(task),
           role: task.context?.counterparty?.role || task.customerCharacterRole || CharacterRole.CUSTOMER,

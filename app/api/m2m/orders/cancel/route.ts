@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       ...sale,
       status: SaleStatus.CANCELLED,
       context: {
-        ...(sale.context || { kind: 'sale-context', schemaVersion: 1 }),
+        ...(sale.context || {}),
         cancelReason: body.reason || 'Checkout abandoned or failed in ecosystem',
         cancelledAt: new Date().toISOString(),
       }

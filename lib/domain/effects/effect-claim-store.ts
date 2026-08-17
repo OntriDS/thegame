@@ -8,13 +8,17 @@
 // Lease expiration permits reclamation ONLY from failed-retryable.
 // It NEVER permits automatic replay of an external operation with unknown outcome.
 
-import { kvEval, kvGet, kvSet } from '@/lib/utils/kv';
+import { kvDel, kvEval, kvGet, kvSet } from '@/lib/utils/kv';
 import type { EffectClaimV1 } from '@/types/entities';
 import { EffectClaimStatus } from '@/types/enums';
 import { v4 as uuid } from 'uuid';
 
 const EFFECT_PREFIX = 'thegame:effect:';
 const DEFAULT_LEASE_SECONDS = 60;
+
+export async function deleteEffectClaim(idempotencyKey: string): Promise<void> {
+  await kvDel(`${EFFECT_PREFIX}${idempotencyKey}`);
+}
 
 // ─── Claim Acquisition ──────────────────────────────────────────────────────
 
@@ -114,6 +118,7 @@ export async function acquireEffectClaim(params: {
 
   if (!result) return null;
 
+  if (typeof result === 'object') return result as EffectClaimV1;
   try {
     return JSON.parse(result) as EffectClaimV1;
   } catch {
@@ -193,6 +198,39 @@ export async function resolveEffectClaim(params: {
 export async function getEffectClaim(idempotencyKey: string): Promise<EffectClaimV1 | null> {
   const key = `${EFFECT_PREFIX}${idempotencyKey}`;
   return await kvGet<EffectClaimV1>(key);
+}
+
+/**
+ * Reopen the narrow class of claims that say "completed" but have no result
+ * evidence. This is recovery for an interrupted/buggy old writer; completed
+ * claims with a result remain permanently terminal.
+ */
+export async function reopenCompletedClaimWithoutResult(idempotencyKey: string): Promise<boolean> {
+  const key = `${EFFECT_PREFIX}${idempotencyKey}`;
+  const now = new Date().toISOString();
+  const expiredAt = new Date(0).toISOString();
+
+  const luaScript = `
+    local key = KEYS[1]
+    local now = ARGV[1]
+    local expiredAt = ARGV[2]
+    local current = redis.call('GET', key)
+    if current == false then return 0 end
+
+    local parsed = cjson.decode(current)
+    if parsed.status ~= 'completed' then return 0 end
+    if parsed.resultRef ~= nil and parsed.resultRef ~= cjson.null then return 0 end
+
+    parsed.status = 'failed-retryable'
+    parsed.leaseExpiresAt = expiredAt
+    parsed.updatedAt = now
+    parsed.errorCode = 'MISSING_RESULT_EVIDENCE'
+    redis.call('SET', key, cjson.encode(parsed), 'EX', 60)
+    return 1
+  `;
+
+  const result = await kvEval<number>(luaScript, [key], [now, expiredAt]);
+  return result === 1;
 }
 
 /**

@@ -1,9 +1,11 @@
 // @ts-nocheck
 import { NextResponse, NextRequest } from 'next/server';
 import { iamService } from '@/lib/iam-service';
-import { TaskStatus, TaskType } from '@/types/enums';
+import { TaskStatus, TaskType, EntityType, LinkType } from '@/types/enums';
 import { getActiveTasks, getAllTasks, getTaskById, upsertTask } from '@/data-store/datastore';
-import type { Task } from '@/types/entities';
+import { getLinksFor, createLink, removeLink } from '@/links/link-registry';
+import { randomUUID } from 'crypto';
+import type { Task, Link } from '@/types/entities';
 import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
 import { parseDateToUTC } from '@/lib/utils/date-parsers';
 
@@ -57,6 +59,15 @@ export async function GET(request: NextRequest) {
 
     // Optional done count for current month
     let doneThisMonth = 0;
+    
+    // Query Link Registry to find all Tasks owned by this character
+    const ownerLinks = await getLinksFor({ type: EntityType.CHARACTER, id: ownerId });
+    const ownedTaskIds = new Set(
+      ownerLinks
+        .filter(l => l.linkType === LinkType.TASK_CHARACTER && l.relationship === 'owner' && l.source.type === EntityType.TASK)
+        .map(l => l.source.id)
+    );
+
     if (includeDoneThisMonth) {
       const now = getUTCNow();
       const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
@@ -64,10 +75,15 @@ export async function GET(request: NextRequest) {
       const allTasks = await getAllTasks();
       const doneTaskIds = new Set<string>();
       allTasks.forEach((task) => {
-        const isOwner = Array.isArray(task.ownerId) ? task.ownerId.includes(ownerId) : task.ownerId === ownerId;
+        // Support legacy owner fields for unmigrated tasks, but prioritize link registry
+        const legacyOwnerIds = task.ownerIds || (task.ownerId ? [task.ownerId] : []);
+        const isOwner = ownedTaskIds.has(task.id) || legacyOwnerIds.includes(ownerId);
+        
         if (!isOwner) return;
         if (task.status !== TaskStatus.DONE) return;
-        if (typeof task.progress === 'number' && task.progress < 100) return;
+
+        const progressVal = typeof task.progress === 'object' ? task.progress?.percentage : task.progress;
+        if (progressVal !== undefined && Number(progressVal) < 100) return;
 
         if (!task.doneAt) return;
         const doneDate = new Date(task.doneAt);
@@ -85,20 +101,46 @@ export async function GET(request: NextRequest) {
 
     const activeTasks = await getActiveTasks();
     const assignedTasks = activeTasks.filter(t => {
-      const isOwner = Array.isArray(t.ownerId) ? t.ownerId.includes(ownerId) : t.ownerId === ownerId;
+      const legacyOwnerIds = t.ownerIds || (t.ownerId ? [t.ownerId] : []);
+      const isOwner = ownedTaskIds.has(t.id) || legacyOwnerIds.includes(ownerId);
       return isOwner && t.status !== TaskStatus.COLLECTED;
     });
 
-    // Enrich assigned tasks with parent names if they exist
-    const tasksWithParentNames = assignedTasks.map(task => {
+    // Enrich assigned tasks with parent names and counterparty links
+    const tasksWithParentNames = await Promise.all(assignedTasks.map(async task => {
+      let result = task;
+
+      // Hydrate parent name
       if (task.parentId) {
         const parent = activeTasks.find(t => t.id === task.parentId);
         if (parent) {
-          return { ...task, parentName: parent.name };
+          result = { ...result, parentName: parent.name };
         }
       }
-      return task;
-    });
+
+      // Hydrate characterId from Link Registry
+      try {
+        const links = await getLinksFor({ type: EntityType.TASK, id: task.id });
+        const charLink = links.find(l => l.linkType === LinkType.TASK_CHARACTER && l.target.type === EntityType.CHARACTER);
+        if (charLink) {
+          result = {
+            ...result,
+            context: {
+              ...(result.context || {}),
+              counterparty: {
+                ...result.context?.counterparty,
+                counterpartyId: charLink.target.id,
+                role: charLink.relationship || 'beneficiary'
+              }
+            }
+          };
+        }
+      } catch (e) {
+        console.error('[M2M Tasks GET] Failed to hydrate links for task:', task.id, e);
+      }
+
+      return result;
+    }));
 
     return NextResponse.json({
       success: true,
@@ -132,6 +174,7 @@ export async function PATCH(request: NextRequest) {
       cost,
       revenue,
       ownerId,
+      customerCharacterRole,
       doneAt: rawDoneAt,
       collectedAt: rawCollectedAt,
     } = body;
@@ -252,26 +295,119 @@ export async function PATCH(request: NextRequest) {
 
     const nextDoneAt = rawDoneAt !== undefined ? incomingDoneAt : preserveDoneAt;
     const nextCollectedAt = rawCollectedAt !== undefined ? incomingCollectedAt : preserveCollectedAt;
-    const nextProgress = progress !== undefined ? Number(progress) : isRevertingFromTerminal ? 0 : task.progress;
+    const currentProgressPercent = typeof task.progress === 'object' ? task.progress?.percentage || 0 : Number(task.progress) || 0;
+    const incomingProgressPercent = typeof progress === 'object' ? progress?.percentage : progress;
+    const nextProgressPercent = incomingProgressPercent !== undefined ? Number(incomingProgressPercent) : isRevertingFromTerminal ? 0 : currentProgressPercent;
+
+    const updatedContext = { ...(task.context || {}) };
+    if (cost !== undefined || revenue !== undefined) {
+      updatedContext.financialIntent = {
+        ...updatedContext.financialIntent,
+        ...(cost !== undefined ? { costIntent: { minorUnits: Math.round(Number(cost) * 100).toString(), currency: 'USD' } } : {}),
+        ...(revenue !== undefined ? { revenueIntent: { minorUnits: Math.round(Number(revenue) * 100).toString(), currency: 'USD' } } : {}),
+      };
+    }
 
     const updatedTask: Task = {
       ...task,
       ...(status ? { status: nextStatus } : {}),
-      ...(nextProgress !== undefined ? { progress: nextProgress } : {}),
+      progress: { percentage: nextProgressPercent, lastUpdated: new Date().toISOString() },
       ...(name !== undefined ? { name: name.trim() } : {}),
       ...(description !== undefined ? { description } : {}),
-      ...(characterId !== undefined ? { characterId } : {}),
       ...(siteId !== undefined ? { siteId } : {}),
       ...(priority !== undefined ? { priority } : {}),
-      ...(cost !== undefined ? { cost: Number(cost) } : {}),
-      ...(revenue !== undefined ? { revenue: Number(revenue) } : {}),
-      ...(ownerId !== undefined ? { ownerId } : {}),
+      context: updatedContext,
       ...(rawDoneAt !== undefined || status ? { doneAt: nextDoneAt } : {}),
       ...(rawCollectedAt !== undefined || status ? { collectedAt: nextCollectedAt } : {}),
       updatedAt: new Date(),
     };
 
+    // Clean up legacy fields to conform to V1 schema
+    delete (updatedTask as any).cost;
+    delete (updatedTask as any).revenue;
+    delete (updatedTask as any).characterId;
+    delete (updatedTask as any).ownerId;
+    delete (updatedTask as any).customerCharacterRole;
+
     const saved = await upsertTask(updatedTask);
+
+    // Reconcile TASK_CHARACTER link if characterId was provided
+    if (characterId !== undefined) {
+      try {
+        const links = await getLinksFor({ type: EntityType.TASK, id: task.id });
+        const existingCharLink = links.find(
+          l => l.linkType === LinkType.TASK_CHARACTER && l.target.type === EntityType.CHARACTER
+        );
+
+        if (characterId === '' || characterId === null) {
+          if (existingCharLink) {
+            await removeLink(existingCharLink.id);
+          }
+        } else {
+          const desiredRole = customerCharacterRole || 'beneficiary';
+          let needUpdate = true;
+
+          if (existingCharLink) {
+            if (existingCharLink.target.id === characterId && existingCharLink.relationship === desiredRole) {
+              needUpdate = false;
+            } else {
+              await removeLink(existingCharLink.id);
+            }
+          }
+
+          if (needUpdate) {
+            const newLink: Link = {
+              id: randomUUID(),
+              linkType: LinkType.TASK_CHARACTER,
+              source: { type: EntityType.TASK, id: task.id },
+              target: { type: EntityType.CHARACTER, id: characterId },
+              relationship: desiredRole,
+              metadata: {},
+              createdAt: new Date(),
+              updatedAt: new Date()
+            };
+            await createLink(newLink, { skipValidation: true });
+          }
+        }
+      } catch (e) {
+        console.error('[M2M Tasks PATCH] Failed to reconcile TASK_CHARACTER link:', e);
+      }
+    }
+
+    // Reconcile TASK_CHARACTER owner link if ownerId was provided
+    if (ownerId !== undefined) {
+      try {
+        const links = await getLinksFor({ type: EntityType.TASK, id: task.id });
+        const existingOwnerLinks = links.filter(
+          l => l.linkType === LinkType.TASK_CHARACTER && l.relationship === 'owner'
+        );
+
+        for (const existingLink of existingOwnerLinks) {
+          if (existingLink.target.id !== ownerId || ownerId === '' || ownerId === null) {
+            await removeLink(existingLink.id);
+          }
+        }
+
+        if (ownerId !== '' && ownerId !== null) {
+          const alreadyExists = existingOwnerLinks.some(l => l.target.id === ownerId);
+          if (!alreadyExists) {
+            const newLink: Link = {
+              id: randomUUID(),
+              linkType: LinkType.TASK_CHARACTER,
+              source: { type: EntityType.TASK, id: task.id },
+              target: { type: EntityType.CHARACTER, id: ownerId },
+              relationship: 'owner',
+              metadata: {},
+              createdAt: new Date(),
+              updatedAt: new Date()
+            };
+            await createLink(newLink, { skipValidation: true });
+          }
+        }
+      } catch (e) {
+        console.error('[M2M Tasks PATCH] Failed to reconcile TASK_CHARACTER owner link:', e);
+      }
+    }
 
     return NextResponse.json({
       success: true,

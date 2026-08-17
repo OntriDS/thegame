@@ -429,7 +429,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
           outputItemSubType: (selectedItem as any).subItemType ?? undefined,
           outputUnitCost: (selectedItem as any).unitCost,
           outputItemPrice: (selectedItem as any).price,
-          outputItemCollection: selectedItem.collection || undefined,
+          outputItemCollection: selectedItem.context?.collection || undefined,
         }));
       }
     } else {
@@ -546,8 +546,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
           (String(formData.status) !== String(FinancialStatus.PENDING) ? new Date() : undefined),
       },
       context: {
-        kind: 'financial-record-context',
-        schemaVersion: 1,
         ...(
           (formData.isNewCustomer ? formData.newCustomerName : formData.characterId)
             ? {

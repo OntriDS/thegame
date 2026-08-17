@@ -130,13 +130,11 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       name: outputItemName || `${outputItemType} from ${task.name}`,
       description: `Created from task: ${task.name}`,
       type: outputItemType as ItemType,
-      collection: plan?.outputItemCollection ?? task.outputItemCollection ?? undefined,
+      subItemType: outputItemSubType as any,
       status: getDefaultItemStatus(
         outputItemType || '',
         isSold || false,
-        task.status === TaskStatus.IN_PROGRESS || task.status === TaskStatus.FINISHING
-          ? (plan?.outputItemStatus ?? task.outputItemStatus)
-          : undefined,
+        plan?.outputItemStatus ?? task.outputItemStatus,
         task.status
       ),
       pricing: {
@@ -147,9 +145,9 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       createdAt: now,
       updatedAt: now,
       context: {
-        kind: 'item-context',
-        schemaVersion: 1,
-        subItemType: outputItemSubType || undefined,
+        ...(plan?.outputItemCollection ?? task.outputItemCollection
+          ? { collection: plan?.outputItemCollection ?? task.outputItemCollection }
+          : {}),
         year: new Date(task.collectedAt || task.doneAt || now).getUTCFullYear(),
         sourceFileUrl: undefined,
       },
@@ -272,7 +270,7 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       name: outputItemName || `${outputItemType} from ${record.name}`,
       description: `Created from record: ${record.name}`,
       type: outputItemType as ItemType,
-      collection: plan?.outputItemCollection ?? (record as any).outputItemCollection ?? undefined,
+      subItemType: outputItemSubType as any,
       status: getDefaultItemStatus(outputItemType || '', plan?.isSold || (record as any).isSold || false, plan?.outputItemStatus ?? (record as any).outputItemStatus),
       pricing: {
         unitCost: toMoney(outputUnitCost),
@@ -282,9 +280,9 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       createdAt: now,
       updatedAt: now,
       context: {
-        kind: 'item-context',
-        schemaVersion: 1,
-        subItemType: outputItemSubType || undefined,
+        ...(plan?.outputItemCollection ?? (record as any).outputItemCollection
+          ? { collection: plan?.outputItemCollection ?? (record as any).outputItemCollection }
+          : {}),
         year: record.year,
       },
       stock: [

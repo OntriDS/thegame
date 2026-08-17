@@ -17,7 +17,7 @@ export function getStationValue(station: Station): string {
 export function formatItemTypeSubtypeLabel(itemId: string, catalog: Item[]): string {
   const it = catalog.find((item) => item.id === itemId);
   if (!it) return '—';
-  const sub = it.context?.subItemType != null && String(it.context.subItemType).trim() !== '' ? String(it.context.subItemType) : '';
+  const sub = it.subItemType != null && String(it.subItemType).trim() !== '' ? String(it.subItemType) : '';
   return sub ? `${it.type} / ${sub}` : String(it.type);
 }
 

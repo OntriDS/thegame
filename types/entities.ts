@@ -493,12 +493,10 @@ export interface ItemMediaV1 {
 }
 
 export interface ItemContextV1 {
-  kind: 'item-context';
-  schemaVersion: 1;
+  collection?: Collection;
   dimensions?: { width: number; height: number; area: number };
   size?: string;
   year?: number;
-  subItemType?: SubItemType;
   sourceFileUrl?: string;
   keepInInventoryAfterSold?: boolean;
   restockToTarget?: boolean;
@@ -511,7 +509,8 @@ export interface ItemContextV1 {
 
 export interface Item extends EntityEnvelope {
   type: ItemType;
-  collection?: Collection;
+  /** Required classification used by inventory tabs and subtype selectors. */
+  subItemType: SubItemType;
   status: ItemStatus;
   
   // UNIFIED STOCK SYSTEM: Absolute source of truth for quantity
@@ -698,8 +697,6 @@ export interface FinancialJournalTransactionV1 extends EntityEnvelope {
 }
 
 export interface FinancialRecordContextV1 {
-  kind: 'financial-record-context';
-  schemaVersion: 1;
   counterparty?: TaskCounterpartyFacetV1;
   jungleCoins?: number; // J$ internal currency value
   /** Operational payment state replacing legacy root payment booleans. */
@@ -754,7 +751,7 @@ export interface FinancialRecord extends EntityEnvelope {
   status: FinancialStatus; // Strictly defined lifecycle
   lifecycle?: FinancialRecordLifecycleV1;
 
-  context: FinancialRecordContextV1;
+  context?: FinancialRecordContextV1;
 }
 
 /** Company financial summary for a month */
@@ -914,8 +911,6 @@ export interface ItemSaleLine extends SaleLineBase {
 }
 
 export interface ServiceLineContextV1 {
-  kind: 'service-line-context';
-  schemaVersion: 1;
   createTask?: boolean;
   taskId?: EntityId; // Existing task link
   taskType?: TaskType;
@@ -939,8 +934,6 @@ export interface ServiceLine extends SaleLineBase {
 export type SaleLine = ItemSaleLine | ServiceLine;
 
 export interface SaleContextV1 {
-  kind: 'sale-context';
-  schemaVersion: 1;
   overallDiscount?: Discount;
   boothFee?: Money;
   paymentBreakdown?: {

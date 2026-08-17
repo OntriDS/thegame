@@ -1,0 +1,31 @@
+{
+  "id": "entity-test-item-clean",
+  "schemaVersion": 1,
+  "version": 0,
+  "name": "testing-item",
+  "type": "bundle",
+  "collection": "no-collection",
+  "status": "for-sale",
+  "stock": [
+    {
+      "siteId": "none",
+      "quantity": 0
+    }
+  ],
+  "pricing": {
+    "unitCost": {
+      "minorUnits": "0",
+      "currency": "USD"
+    },
+    "targetPrice": {
+      "minorUnits": "0",
+      "currency": "USD"
+    }
+  },
+  "context": {
+    "subItemType": "print",
+    "year": 2026
+  },
+  "createdAt": "2026-08-17T00:20:48.028Z",
+  "updatedAt": "2026-08-17T00:20:48.028Z"
+}

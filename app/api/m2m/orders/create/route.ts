@@ -118,8 +118,6 @@ export async function POST(request: NextRequest) {
       updatedAt: now,
       description: `Order created by M2M from Akiles Ecosystem`,
       context: {
-        kind: 'sale-context',
-        schemaVersion: 1,
         source: 'akiles-ecosystem',
       },
       saleDate: startOfDayUTC(now),

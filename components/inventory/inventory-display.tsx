@@ -65,7 +65,7 @@ const getItemSize = (item: Item) => item.context?.size;
 const getItemSourceFileUrl = (item: Item) => item.context?.sourceFileUrl;
 const getItemKeepInInventory = (item: Item) => item.context?.keepInInventoryAfterSold;
 const getItemTargetAmount = (item: Item) => item.context?.targetAmount;
-const getItemSubtype = (item: Item) => item.context?.subItemType || '';
+const getItemSubtype = (item: Item) => item.subItemType || '';
 const getItemClassification = (item: Item) => `${item.type}${getItemSubtype(item) ? ` / ${getItemSubtype(item)}` : ''}`;
 const getItemYear = (item: Item) => item.context?.year;
 const getItemPrice = (item: Item) => extractMoneyValue(item.pricing?.targetPrice);
@@ -661,8 +661,8 @@ export function InventoryDisplay({
   };
 
   const getCollectionSortLabel = (item: Item): string => {
-    if (!item.collection) return '';
-    return getCollectionLabel(item.collection).toLowerCase();
+    if (!item.context?.collection) return '';
+    return getCollectionLabel(item.context.collection).toLowerCase();
   };
 
   const compareNameTiebreak = (a: Item, b: Item) =>
@@ -672,12 +672,12 @@ export function InventoryDisplay({
     const q = query.trim().toLowerCase();
     const filtered = q
       ? list.filter(i => {
-        const collLabel = i.collection ? getCollectionLabel(i.collection).toLowerCase() : '';
+        const collLabel = i.context?.collection ? getCollectionLabel(i.context.collection).toLowerCase() : '';
         const siteLabel = getPrimarySiteName(i).toLowerCase();
         return (
           i.name.toLowerCase().includes(q) ||
           collLabel.includes(q) ||
-          String(i.collection ?? '').toLowerCase().includes(q) ||
+          String(i.context?.collection ?? '').toLowerCase().includes(q) ||
           siteLabel.includes(q) ||
           getItemClassification(i).toLowerCase().includes(q) ||
           getItemSubtype(i).toLowerCase().includes(q) ||
@@ -710,8 +710,8 @@ export function InventoryDisplay({
         }
         case 'collection-asc':
         case 'collection-desc': {
-          const emptyA = !a.collection;
-          const emptyB = !b.collection;
+          const emptyA = !a.context?.collection;
+          const emptyB = !b.context?.collection;
           if (emptyA && emptyB) cmp = 0;
           else if (emptyA) cmp = 1;
           else if (emptyB) cmp = -1;
@@ -1279,7 +1279,7 @@ export function InventoryDisplay({
         });
       } else { // collection
         stickerItems.forEach(item => {
-          allKeys.add(item.collection || Collection.NO_COLLECTION);
+          allKeys.add(item.context?.collection || Collection.NO_COLLECTION);
         });
       }
     }
@@ -1579,12 +1579,12 @@ export function InventoryDisplay({
     const qSearch = stickersSearchQuery.trim().toLowerCase();
     const stickerItemsForGrouping = qSearch
       ? stickerItems.filter(i => {
-          const collLabel = i.collection ? getCollectionLabel(i.collection).toLowerCase() : '';
+          const collLabel = i.context?.collection ? getCollectionLabel(i.context.collection).toLowerCase() : '';
           const siteLabel = getPrimarySiteName(i).toLowerCase();
           return (
             i.name.toLowerCase().includes(qSearch) ||
             collLabel.includes(qSearch) ||
-            String(i.collection ?? '').toLowerCase().includes(qSearch) ||
+            String(i.context?.collection ?? '').toLowerCase().includes(qSearch) ||
             siteLabel.includes(qSearch) ||
             getItemClassification(i).toLowerCase().includes(qSearch) ||
             getItemSubtype(i).toLowerCase().includes(qSearch) ||
@@ -1608,7 +1608,7 @@ export function InventoryDisplay({
           key = ClientAPI.getItemModelKey(sticker);
           break;
         default: // collection
-          key = sticker.collection || Collection.NO_COLLECTION;
+          key = sticker.context?.collection || Collection.NO_COLLECTION;
       }
 
       if (!acc[key]) acc[key] = [];
@@ -1864,8 +1864,8 @@ export function InventoryDisplay({
                           <div className="min-w-0 flex-1 truncate font-medium" title={sticker.name}>
                             {sticker.name}
                           </div>
-                          <div className="w-28 shrink-0 truncate text-[0.8125rem] font-semibold " title={getCollectionLabel(sticker.collection || Collection.NO_COLLECTION)}>
-                            {getCollectionLabel(sticker.collection || Collection.NO_COLLECTION)}
+                          <div className="w-28 shrink-0 truncate text-[0.8125rem] font-semibold " title={getCollectionLabel(sticker.context?.collection || Collection.NO_COLLECTION)}>
+                            {getCollectionLabel(sticker.context?.collection || Collection.NO_COLLECTION)}
                           </div>
                           <div className="w-24 shrink-0 truncate text-[0.85rem] " title={getStickerSubtypeLabel(getItemSubtype(sticker))}>
                             {getStickerSubtypeLabel(getItemSubtype(sticker))}
@@ -2619,7 +2619,7 @@ export function InventoryDisplay({
               subtypeLabel = getPrintSubtypeLabel(getItemSubtype(item));
             }
 
-            const collectionLabel = item.collection ? getCollectionLabel(item.collection) : null;
+            const collectionLabel = item.context?.collection ? getCollectionLabel(item.context.collection) : null;
             const dimensions = getItemDimensions(item);
             const dimsLabel = (dimensions && (dimensions.width > 0 || dimensions.height > 0))
               ? `${dimensions.width}×${dimensions.height} cm`
@@ -2857,7 +2857,7 @@ export function InventoryDisplay({
                   <div className="min-w-0 flex-1 flex items-baseline gap-2">
                     <span className="text-base font-semibold leading-tight truncate">{item.name}</span>
                     <span className="text-sm shrink-0 truncate max-w-[min(40%,7rem)] text-muted-foreground">
-                      {item.collection ? getCollectionLabel(item.collection) : 'No collection'}
+                      {item.context?.collection ? getCollectionLabel(item.context.collection) : 'No collection'}
                     </span>
                   </div>
 
@@ -2987,7 +2987,7 @@ export function InventoryDisplay({
                       </span>
                       <span className="text-muted-foreground/35">·</span>
                       <span className="truncate">
-                        {artwork.collection ? getCollectionLabel(artwork.collection) : 'No collection'}
+                      {artwork.context?.collection ? getCollectionLabel(artwork.context.collection) : 'No collection'}
                       </span>
                     </div>
 
@@ -3030,7 +3030,7 @@ export function InventoryDisplay({
                       key = getItemSubtype(item) || 'Other';
           break;
         default: // collection
-          key = item.collection || 'Uncategorized';
+                    key = item.context?.collection || 'Uncategorized';
       }
 
       if (!acc[key]) acc[key] = [];
@@ -3063,7 +3063,7 @@ export function InventoryDisplay({
                 <div key={item.id} className="flex items-center justify-between p-3 hover:bg-accent/50 cursor-pointer">
                   <div className="flex-1">
                     <div className="font-medium text-sm">{item.name}</div>
-                    <div className="text-xs text-muted-foreground">{item.collection}</div>
+                            <div className="text-xs text-muted-foreground">{item.context?.collection}</div>
                     <div className="text-xs text-muted-foreground">
                   {getItemClassification(item)}
                     </div>
@@ -3103,7 +3103,7 @@ export function InventoryDisplay({
                       key = getItemSubtype(item) || 'Other';
           break;
         default: // collection
-          key = item.collection || 'Uncategorized';
+                    key = item.context?.collection || 'Uncategorized';
       }
 
       if (!acc[key]) acc[key] = [];
@@ -3248,7 +3248,7 @@ export function InventoryDisplay({
                     <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 text-sm leading-snug text-muted-foreground">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                         <span className="text-muted-foreground">
-                          {print.collection ? getCollectionLabel(print.collection) : 'No collection'}
+                          {print.context?.collection ? getCollectionLabel(print.context.collection) : 'No collection'}
                         </span>
                         <span className="text-muted-foreground/35">·</span>
                         <span className={getItemYear(print) != null ? '' : 'text-rose-500/80'}>{getItemYear(print) ?? 'missing'}</span>

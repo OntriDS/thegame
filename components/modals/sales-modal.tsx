@@ -827,8 +827,6 @@ export default function SalesModal({
         description: taskName || 'Service',
         taxAmount: toMoney(0),
         context: {
-          kind: 'service-line-context',
-          schemaVersion: 1,
           createTask: true,
           taskId: selectedTaskId || undefined,
           taskType,
@@ -1026,8 +1024,6 @@ export default function SalesModal({
       version: sale?.version ?? 0,
       context: {
         ...sale?.context,
-        kind: 'sale-context',
-        schemaVersion: 1,
         newCustomerName: isNewCustomer ? (newCustomerName.trim() || undefined) : undefined,
         rewardIntent: hasEmissarySalePoints
           ? {
@@ -1181,8 +1177,6 @@ export default function SalesModal({
       description: '',
       taxAmount: toMoney(0),
       context: {
-        kind: 'service-line-context',
-        schemaVersion: 1,
         createTask: false,
       },
     };

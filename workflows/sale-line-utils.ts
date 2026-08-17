@@ -509,7 +509,7 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
       await appendEntityLog(EntityType.ITEM, resolvedCloneId, LogEventType.SOLD, {
         name: soldCloneForLog.name || 'Unknown Item',
         itemType: soldCloneForLog.type,
-        subItemType: soldCloneForLog.context?.subItemType,
+        subItemType: soldCloneForLog.subItemType,
         soldQuantity: working.quantity || 0,
       }, logTimestamp);
 

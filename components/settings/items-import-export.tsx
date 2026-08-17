@@ -239,7 +239,7 @@ function convertItemsToCSV(items: any[]): string {
       escapeCSVField(totalQuantity),
       escapeCSVField(site),
       escapeCSVField(item.status),
-      escapeCSVField(getCollectionLabel(item.collection || Collection.NO_COLLECTION)),
+      escapeCSVField(getCollectionLabel(item.context?.collection || Collection.NO_COLLECTION)),
       escapeCSVField(extractMoneyValue(item.pricing?.unitCost)),
       escapeCSVField(extractMoneyValue(item.pricing?.additionalCost)),
       escapeCSVField(extractMoneyValue(item.pricing?.targetPrice)),

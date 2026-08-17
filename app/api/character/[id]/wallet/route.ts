@@ -60,7 +60,7 @@ export async function GET(
             uniqueFinRecIds.map(id => getFinancialById(id))
         );
 
-        const validRecords = records.filter((r): r is FinancialRecord => r != null && (r.context.jungleCoins ?? 0) !== 0);
+        const validRecords = records.filter((r): r is FinancialRecord => r != null && (r.context?.jungleCoins ?? 0) !== 0);
 
         validRecords.sort((a, b) => {
             const dateA = new Date(a.createdAt).getTime();
@@ -69,7 +69,7 @@ export async function GET(
         });
 
         // Compute cached balance strictly from the V1 ledger
-        const cachedBalance = validRecords.reduce((sum, r) => sum + (r.context.jungleCoins ?? 0), 0);
+        const cachedBalance = validRecords.reduce((sum, r) => sum + (r.context?.jungleCoins ?? 0), 0);
 
         return NextResponse.json({
             characterId: character.id,

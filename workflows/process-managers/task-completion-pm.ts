@@ -6,9 +6,18 @@
 import type { WorkflowExecutionV1, Task, StepOutcomeV1 } from '@/types/entities';
 import { WorkflowStatus, EffectClaimStatus, EntityType } from '@/types/enums';
 import { saveWorkflowExecution } from '@/data-store/workflow-store';
-import { getTaskById } from '@/data-store/datastore';
+import {
+  getTaskById,
+  getFinancialsBySourceTaskId,
+  getItemsBySourceTaskId,
+} from '@/data-store/datastore';
+import { getLinksFor } from '@/links/link-registry';
 import { getUTCNow } from '@/lib/utils/utc-utils';
-import { acquireEffectClaim, resolveEffectClaim } from '@/lib/domain/effects/effect-claim-store';
+import {
+  acquireEffectClaim,
+  reopenCompletedClaimWithoutResult,
+  resolveEffectClaim,
+} from '@/lib/domain/effects/effect-claim-store';
 
 // Business logic imports
 import { createFinancialRecordFromTask } from '../financial-record-utils';
@@ -91,6 +100,27 @@ export class TaskCompletionProcessManager {
     }
 
     const effectKey = EffectKeys.sideEffect('task', task.id, 'pointsStaged');
+
+    const ownerPlayerId = await resolveTaskOwnerPlayerId(task);
+    if (!ownerPlayerId) throw new Error(`Cannot stage Task points: owner has no Player (${task.id})`);
+
+    const existingPointLink = (await getLinksFor({ type: EntityType.TASK, id: task.id }))
+      .find(link =>
+        link.linkType === 'TASK_PLAYER' &&
+        link.relationship === 'points-earned' &&
+        link.target.type === EntityType.PLAYER &&
+        link.target.id === ownerPlayerId
+      );
+    if (existingPointLink) {
+      execution.stepOutcomes[stepName] = {
+        step: stepName,
+        state: 'completed',
+        effectClaimKey: effectKey,
+        completedAt: getUTCNow(),
+      };
+      return;
+    }
+    await reopenCompletedClaimWithoutResult(effectKey);
     
     // Acquire effect claim with lease token
     const claim = await acquireEffectClaim({
@@ -108,9 +138,7 @@ export class TaskCompletionProcessManager {
 
     try {
       console.log(`[TaskCompletionPM] Staging points for task ${task.id}`);
-      const playerId = await resolveTaskOwnerPlayerId(task);
-      if (!playerId) throw new Error(`Cannot stage Task points: owner has no Player (${task.id})`);
-      await stagePointsForPlayer(playerId, task.context.rewardIntent.points, task.id, EntityType.TASK);
+      await stagePointsForPlayer(ownerPlayerId, task.context.rewardIntent.points, task.id, EntityType.TASK);
       
       // Resolve claim with lease token
       const resolved = await resolveEffectClaim({
@@ -175,6 +203,18 @@ export class TaskCompletionProcessManager {
     }
 
     const effectKey = EffectKeys.sideEffect('task', task.id, 'financialCreated');
+
+    const existingFinancials = await getFinancialsBySourceTaskId(task.id);
+    if (existingFinancials.length > 0) {
+      execution.stepOutcomes[stepName] = {
+        step: stepName,
+        state: 'completed',
+        effectClaimKey: effectKey,
+        completedAt: getUTCNow(),
+      };
+      return;
+    }
+    await reopenCompletedClaimWithoutResult(effectKey);
     
     const claim = await acquireEffectClaim({
       idempotencyKey: effectKey,
@@ -190,12 +230,16 @@ export class TaskCompletionProcessManager {
 
     try {
       console.log(`[TaskCompletionPM] Creating financial record for task ${task.id}`);
-      await createFinancialRecordFromTask(task);
+      const createdFinancial = await createFinancialRecordFromTask(task);
+      if (!createdFinancial) {
+        throw new Error(`Financial creation returned no FinancialRecord for task ${task.id}`);
+      }
       
       const resolved = await resolveEffectClaim({
         idempotencyKey: effectKey,
         leaseToken: claim.leaseToken,
         status: EffectClaimStatus.COMPLETED,
+        resultRef: { type: EntityType.FINANCIAL, id: createdFinancial.id },
       });
 
       if (resolved) {
@@ -249,6 +293,20 @@ export class TaskCompletionProcessManager {
     }
 
     const effectKey = EffectKeys.sideEffect('task', task.id, 'itemCreated');
+
+    // Evidence wins over the claim registry. This also repairs old claims
+    // that were marked completed even though their Item write returned null.
+    const existingItems = await getItemsBySourceTaskId(task.id);
+    if (existingItems.length > 0) {
+      execution.stepOutcomes[stepName] = {
+        step: stepName,
+        state: 'completed',
+        effectClaimKey: effectKey,
+        completedAt: getUTCNow(),
+      };
+      return;
+    }
+    await reopenCompletedClaimWithoutResult(effectKey);
     
     const claim = await acquireEffectClaim({
       idempotencyKey: effectKey,
@@ -264,12 +322,16 @@ export class TaskCompletionProcessManager {
 
     try {
       console.log(`[TaskCompletionPM] Creating items for task ${task.id}`);
-      await createItemFromTask(task);
+      const createdItem = await createItemFromTask(task);
+      if (!createdItem) {
+        throw new Error(`Item creation returned no Item for task ${task.id}`);
+      }
       
       const resolved = await resolveEffectClaim({
         idempotencyKey: effectKey,
         leaseToken: claim.leaseToken,
         status: EffectClaimStatus.COMPLETED,
+        resultRef: { type: EntityType.ITEM, id: createdItem.id },
       });
 
       if (resolved) {

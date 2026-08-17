@@ -28,6 +28,7 @@ import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
 import { kvSRem } from '@/lib/utils/kv';
 import { getTaskPlayerCharacterId } from '@/lib/compatibility/task-selectors';
 import { resolveTaskOwnerPlayerId } from '../task-player-resolution';
+import { deleteEffectClaim } from '@/lib/domain/effects/effect-claim-store';
 
 // UTC: archive Redis keys use formatArchiveMonthKeyUTC only (see utc-utils.ts + utc-time-system.md).
 import { getUTCNow, formatArchiveMonthKeyUTC, endOfMonthUTC } from '@/lib/utils/utc-utils';
@@ -619,6 +620,9 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
     await clearEffect(EffectKeys.sideEffect('task', task.id, 'itemCreated'));
     await clearEffect(EffectKeys.sideEffect('task', task.id, 'financialCreated'));
     await clearEffect(EffectKeys.sideEffect('task', task.id, 'pointsAwarded'));
+    await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'pointsStaged'));
+    await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'financialCreated'));
+    await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'itemCreated'));
     await clearEffectsByPrefix(EntityType.TASK, task.id, 'pointsLogged:');
     await clearEffectsByPrefix(EntityType.TASK, task.id, 'financialLogged:');
 
