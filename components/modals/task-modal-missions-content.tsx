@@ -491,7 +491,6 @@ export default function MissionTreeModalContent({
           : undefined,
         rewardIntent: hasRewards
           ? {
-              kind: 'point-reward',
               points: rewards.points,
             }
           : undefined,

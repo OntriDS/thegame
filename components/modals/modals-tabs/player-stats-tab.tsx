@@ -89,10 +89,10 @@ export function PlayerStatsContent({
         <CardContent>
           <div className="grid grid-cols-4 gap-4">
             {[
-              { key: 'XP', label: 'Total XP', value: playerData?.totalPoints?.xp || 0 },
-              { key: 'RP', label: 'Total RP', value: playerData?.totalPoints?.rp || 0 },
-              { key: 'FP', label: 'Total FP', value: playerData?.totalPoints?.fp || 0 },
-              { key: 'HP', label: 'Total HP', value: playerData?.totalPoints?.hp || 0 }
+              { key: 'XP', label: 'Historic XP', value: playerData?.rewards?.points.historic.xp || 0 },
+              { key: 'RP', label: 'Historic RP', value: playerData?.rewards?.points.historic.rp || 0 },
+              { key: 'FP', label: 'Historic FP', value: playerData?.rewards?.points.historic.fp || 0 },
+              { key: 'HP', label: 'Historic HP', value: playerData?.rewards?.points.historic.hp || 0 }
             ].map((point) => (
               <div key={point.key} className="text-center">
                 <div className="mx-auto mb-2">
@@ -109,7 +109,7 @@ export function PlayerStatsContent({
           <div className="mt-4 text-center">
             <div className="text-sm text-muted-foreground">Lifetime Points Earned:</div>
             <div className="text-3xl font-bold text-primary">
-              {((playerData?.totalPoints?.xp || 0) + (playerData?.totalPoints?.rp || 0) + (playerData?.totalPoints?.fp || 0) + (playerData?.totalPoints?.hp || 0))}
+              {((playerData?.rewards?.points.historic.xp || 0) + (playerData?.rewards?.points.historic.rp || 0) + (playerData?.rewards?.points.historic.fp || 0) + (playerData?.rewards?.points.historic.hp || 0))}
             </div>
           </div>
         </CardContent>
@@ -288,10 +288,10 @@ export default function PlayerStatsTab({
             <CardContent>
               <div className="grid grid-cols-4 gap-4">
                 {[
-                  { key: 'xp', label: 'Total XP', value: playerData?.totalPoints?.xp || 0, color: 'bg-blue-500' },
-                  { key: 'rp', label: 'Total RP', value: playerData?.totalPoints?.rp || 0, color: 'bg-green-500' },
-                  { key: 'fp', label: 'Total FP', value: playerData?.totalPoints?.fp || 0, color: 'bg-yellow-500' },
-                  { key: 'hp', label: 'Total HP', value: playerData?.totalPoints?.hp || 0, color: 'bg-red-500' }
+                  { key: 'xp', label: 'Historic XP', value: playerData?.rewards?.points.historic.xp || 0, color: 'bg-blue-500' },
+                  { key: 'rp', label: 'Historic RP', value: playerData?.rewards?.points.historic.rp || 0, color: 'bg-green-500' },
+                  { key: 'fp', label: 'Historic FP', value: playerData?.rewards?.points.historic.fp || 0, color: 'bg-yellow-500' },
+                  { key: 'hp', label: 'Historic HP', value: playerData?.rewards?.points.historic.hp || 0, color: 'bg-red-500' }
                 ].map((point) => (
                   <div key={point.key} className="text-center">
                     <div className={`w-16 h-16 rounded-full ${point.color} mx-auto mb-2 flex items-center justify-center text-white font-bold text-xl`}>
@@ -304,7 +304,7 @@ export default function PlayerStatsTab({
               <div className="mt-4 text-center">
                 <div className="text-sm text-muted-foreground">Lifetime Points Earned:</div>
                 <div className="text-3xl font-bold text-primary">
-                  {((playerData?.totalPoints?.xp || 0) + (playerData?.totalPoints?.rp || 0) + (playerData?.totalPoints?.fp || 0) + (playerData?.totalPoints?.hp || 0))}
+                  {((playerData?.rewards?.points.historic.xp || 0) + (playerData?.rewards?.points.historic.rp || 0) + (playerData?.rewards?.points.historic.fp || 0) + (playerData?.rewards?.points.historic.hp || 0))}
                 </div>
               </div>
               

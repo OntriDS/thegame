@@ -3,7 +3,7 @@
  * IAM Service
  * Manages Accounts (identity/credentials) and authentication.
  * Characters are NOT stored in IAM — they live in the Game Data-Store.
- * ACCOUNT_CHARACTER + CHARACTER_PLAYER / PLAYER_CHARACTER links bridge identity.
+ * ACCOUNT_CHARACTER + canonical CHARACTER_PLAYER links bridge identity.
  * Players live only in the Game Data-Store (`thegame:data:player:*`), not `iam:player:*`.
  */
 
@@ -632,7 +632,7 @@ export class IAMService {
 
   // ═══════════════════════════════════════════════════════════════
   // PLAYER — Game Data-Store only (`thegame:data:player:*`)
-  // Resolve via character.playerId and/or CHARACTER_PLAYER / PLAYER_CHARACTER links.
+  // Resolve via character.playerId and/or canonical CHARACTER_PLAYER links.
   // ═══════════════════════════════════════════════════════════════
 
   async getPlayerById(id: string): Promise<Player | null> {
@@ -653,8 +653,19 @@ export class IAMService {
         if (p) return p;
       }
       if (
+        l.linkType === LinkType.CHARACTER_PLAYER &&
+        l.source.type === EntityType.CHARACTER &&
+        l.source.id === characterId &&
+        l.target.type === EntityType.PLAYER
+      ) {
+        const p = await dsGetPlayerById(l.target.id);
+        if (p) return p;
+      }
+      // Read-only compatibility for legacy reverse links during migration.
+      if (
         l.linkType === LinkType.PLAYER_CHARACTER &&
         l.source.type === EntityType.PLAYER &&
+        l.target.type === EntityType.CHARACTER &&
         l.target.id === characterId
       ) {
         const p = await dsGetPlayerById(l.source.id);

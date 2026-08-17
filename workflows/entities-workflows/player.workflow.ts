@@ -1,7 +1,7 @@
 // workflows/entities-workflows/player.workflow.ts
 // Player-specific workflow with LEVEL_UP, POINTS_CHANGED events
 
-import { EntityType, LogEventType } from '@/types/enums';
+import { EntityType, LogEventType, TaskStatus } from '@/types/enums';
 import type { Player } from '@/types/entities';
 import { appendEntityLog, updateEntityLeanFields, appendPlayerPointsChangedLog, upsertPlayerPointsChangedLog } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -12,10 +12,10 @@ import { appendPlayerPointsUpdateLog } from '../entities-logging';
 import type { Task } from '@/types/entities';
 // UTC STANDARDIZATION: Using new UTC utilities
 import { getUTCNow, toUTCISOString } from '@/lib/utils/utc-utils';
-import { resolveToPlayerIdMaybeCharacter } from '../points-rewards-utils';
+import { getPlayerRewards, resolveToPlayerIdMaybeCharacter } from '../points-rewards-utils';
 import { resolveTaskOwnerPlayerId } from '../task-player-resolution';
 
-const STATE_FIELDS = ['level', 'totalPoints', 'points', 'isActive'];
+const STATE_FIELDS = ['level', 'rewards', 'isActive'];
 
 export async function onPlayerUpsert(player: Player, previousPlayer?: Player): Promise<void> {
   
@@ -47,13 +47,13 @@ export async function onPlayerUpsert(player: Player, previousPlayer?: Player): P
   }
   
   // Points changes - POINTS_CHANGED event (shows total after changes)
-  const totalPointsChanged = JSON.stringify(previousPlayer.totalPoints) !== JSON.stringify(player.totalPoints);
-  const pointsChanged = JSON.stringify(previousPlayer.points) !== JSON.stringify(player.points);
-  const pointsChangedOverall = totalPointsChanged || pointsChanged;
+  const rewardsChanged = JSON.stringify(getPlayerRewards(previousPlayer)) !== JSON.stringify(getPlayerRewards(player));
+  const pointsChangedOverall = rewardsChanged;
   
   if (pointsChangedOverall) {
     // Append new POINTS_CHANGED entry for each change (do not upsert/update existing ones)
-    await appendPlayerPointsChangedLog(player.id, player.totalPoints, player.points);
+    const rewards = getPlayerRewards(player);
+    await appendPlayerPointsChangedLog(player.id, rewards.points.historic, rewards.points.current);
   }
   
   // General updates - UPDATED event
@@ -192,20 +192,29 @@ export async function updatePlayerPointsFromTask(task: Task, oldTask: Task): Pro
       return;
     }
     
-    // Apply delta to player points
+    const rewards = getPlayerRewards(mainPlayer);
+    const targetBucket = task.status === TaskStatus.COLLECTED ? 'vested' : 'pending';
+    const addDelta = (bucket: keyof typeof rewards.points) => ({
+      hp: Math.max(0, rewards.points[bucket].hp + delta.hp),
+      fp: Math.max(0, rewards.points[bucket].fp + delta.fp),
+      rp: Math.max(0, rewards.points[bucket].rp + delta.rp),
+      xp: Math.max(0, rewards.points[bucket].xp + delta.xp),
+    });
     const updatedPlayer: Player = {
       ...mainPlayer,
-      points: {
-        xp: Math.max(0, (mainPlayer.points?.xp || 0) + delta.xp),
-        rp: Math.max(0, (mainPlayer.points?.rp || 0) + delta.rp),
-        fp: Math.max(0, (mainPlayer.points?.fp || 0) + delta.fp),
-        hp: Math.max(0, (mainPlayer.points?.hp || 0) + delta.hp)
-      },
-      totalPoints: {
-        xp: Math.max(0, (mainPlayer.totalPoints?.xp || 0) + delta.xp),
-        rp: Math.max(0, (mainPlayer.totalPoints?.rp || 0) + delta.rp),
-        fp: Math.max(0, (mainPlayer.totalPoints?.fp || 0) + delta.fp),
-        hp: Math.max(0, (mainPlayer.totalPoints?.hp || 0) + delta.hp)
+      rewards: {
+        ...rewards,
+        points: {
+          ...rewards.points,
+          [targetBucket]: addDelta(targetBucket),
+          ...(task.status === TaskStatus.COLLECTED ? { current: addDelta('current') } : {}),
+          historic: {
+            hp: Math.max(0, rewards.points.historic.hp + delta.hp),
+            fp: Math.max(0, rewards.points.historic.fp + delta.fp),
+            rp: Math.max(0, rewards.points.historic.rp + delta.rp),
+            xp: Math.max(0, rewards.points.historic.xp + delta.xp),
+          },
+        },
       },
       updatedAt: getUTCNow()
     };

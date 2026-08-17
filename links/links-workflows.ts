@@ -18,7 +18,7 @@ import { getFinancialCounterpartyId } from '@/lib/financial-record-counterparty-
 import { getSaleCharacterId } from '@/lib/sale-character-id';
 import { getAllSites } from '@/data-store/repositories/site.repo';
 
-export function makeLink(linkType: LinkType, source: { type: EntityType; id: string }, target: { type: EntityType; id: string }, relationship?: Link['relationship']): Link {
+export function makeLink(linkType: LinkType, source: { type: EntityType; id: string }, target: { type: EntityType; id: string }, relationship?: string): Link {
   return {
     id: uuid(),
     linkType,
@@ -77,7 +77,10 @@ export async function syncTaskCharacterCounterpartyLinks(task: Task): Promise<vo
     }
   }
 
-  const desiredRelationships: Array<{ id: string; relationship: NonNullable<Link['relationship']> }> = [];
+  const desiredRelationships: Array<{
+    id: string;
+    relationship: 'owner' | 'customer' | 'beneficiary' | 'creator';
+  }> = [];
   if (desiredId) {
     desiredRelationships.push({
       id: desiredId,
@@ -125,7 +128,12 @@ export async function processTaskEffects(task: Task): Promise<void> {
     await createLink(l);
   }
   if (task.outputItemId) {
-    const l = makeLink(LinkType.TASK_ITEM, { type: EntityType.TASK, id: task.id }, { type: EntityType.ITEM, id: task.outputItemId });
+    const l = makeLink(
+      LinkType.TASK_ITEM,
+      { type: EntityType.TASK, id: task.id },
+      { type: EntityType.ITEM, id: task.outputItemId },
+      'requested'
+    );
     await createLink(l);
   }
   
@@ -157,7 +165,8 @@ export async function processTaskEffects(task: Task): Promise<void> {
       const l = makeLink(
         LinkType.TASK_ITEM,
         { type: EntityType.TASK, id: task.id },
-        { type: EntityType.ITEM, id: createdItem.id }
+        { type: EntityType.ITEM, id: createdItem.id },
+        'produced'
       );
       await createLink(l);
     }
@@ -465,7 +474,15 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
 }
 
 export async function processCharacterEffects(character: Character): Promise<void> {
-  // CHARACTER_PLAYER link
+  // CHARACTER_PLAYER is canonical: every Character may exist without a Player,
+  // but only some Characters point to a Player.
+  const existingPlayerLinks = (await getLinksFor({ type: EntityType.CHARACTER, id: character.id }))
+    .filter((link) =>
+      (link.linkType === LinkType.CHARACTER_PLAYER) ||
+      (link.linkType === LinkType.PLAYER_CHARACTER && link.target.type === EntityType.CHARACTER)
+    );
+  for (const link of existingPlayerLinks) await removeLink(link.id);
+
   if (character.playerId) {
     const link = makeLink(
       LinkType.CHARACTER_PLAYER,
@@ -487,20 +504,21 @@ export async function processCharacterEffects(character: Character): Promise<voi
 }
 
 export async function processPlayerEffects(player: Player): Promise<void> {
-  // PLAYER_CHARACTER is the canonical relationship. Reconcile it on every
-  // save so changing the primary character cannot leave stale links behind.
-  const existingLinks = await getLinksFor({ type: EntityType.PLAYER, id: player.id });
-  const existingCharacterLinks = existingLinks.filter((link) => link.linkType === LinkType.PLAYER_CHARACTER);
-  for (const link of existingCharacterLinks) {
-    await removeLink(link.id);
-  }
-
+  // Player.characterId is compatibility input; persist the canonical
+  // Character -> Player relationship so the sparse Character side owns it.
   const characterId = typeof player.characterId === 'string' ? player.characterId.trim() : '';
   if (characterId) {
+    const existingLinks = await getLinksFor({ type: EntityType.CHARACTER, id: characterId });
+    for (const link of existingLinks) {
+      if (
+        (link.linkType === LinkType.CHARACTER_PLAYER && link.target.id === player.id) ||
+        (link.linkType === LinkType.PLAYER_CHARACTER && link.source.id === player.id)
+      ) await removeLink(link.id);
+    }
     const link = makeLink(
-      LinkType.PLAYER_CHARACTER,
-      { type: EntityType.PLAYER, id: player.id },
-      { type: EntityType.CHARACTER, id: characterId }
+      LinkType.CHARACTER_PLAYER,
+      { type: EntityType.CHARACTER, id: characterId },
+      { type: EntityType.PLAYER, id: player.id }
     );
     await createLink(link);
   }

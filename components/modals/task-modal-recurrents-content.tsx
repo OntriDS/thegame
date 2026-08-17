@@ -491,7 +491,6 @@ export default function RecurrentTreeModalContent({
           : undefined,
         rewardIntent: hasRewards
           ? {
-              kind: 'point-reward',
               points: rewards.points,
             }
           : undefined,

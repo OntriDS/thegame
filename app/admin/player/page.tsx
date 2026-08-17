@@ -131,17 +131,17 @@ function PlayerPageContent() {
         return;
       }
 
-      // Use pendingPoints directly if available (Source of Truth for Earned Points)
-      if (player?.pendingPoints) {
+      // Use the canonical pending reward bucket when available.
+      if (player?.rewards?.points.pending) {
         setUnexchangedPoints({
-          xp: player.pendingPoints.xp || 0,
-          rp: player.pendingPoints.rp || 0,
-          fp: player.pendingPoints.fp || 0,
-          hp: player.pendingPoints.hp || 0
+          xp: player.rewards.points.pending.xp || 0,
+          rp: player.rewards.points.pending.rp || 0,
+          fp: player.rewards.points.pending.fp || 0,
+          hp: player.rewards.points.pending.hp || 0
         });
         return;
       }
-      // Fallback to legacy calculation if pendingPoints key is missing (should generally use the above)
+      // Read-only fallback for players written before PlayerRewardsV1.
       const unexchanged = calculateUnexchangedPoints(entries, monthStart);
       setUnexchangedPoints(unexchanged);
     },

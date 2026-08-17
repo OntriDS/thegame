@@ -58,7 +58,6 @@ describe('entity-test: full Task at created status', () => {
           revenueIntent: { minorUnits: '10000', currency: 'USD' },
         },
         rewardIntent: {
-          kind: 'point-reward',
           points: { xp: 5, rp: 2, fp: 1, hp: 0 },
         },
         productionPlan: {
@@ -108,7 +107,6 @@ describe('entity-test: full Task at created status', () => {
           revenueIntent: { minorUnits: '10000', currency: 'USD' },
         },
         rewardIntent: {
-          kind: 'point-reward',
           points: { xp: 5, rp: 2, fp: 1, hp: 0 },
         },
         productionPlan: {

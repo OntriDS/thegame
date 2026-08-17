@@ -82,10 +82,10 @@ export default function ExchangePointsModal({ player, open, onOpenChange, onExch
   const canExchange =
     !!activeRates &&
     j$Preview > 0 &&
-    hpToExchange <= (player.points?.hp || 0) &&
-    fpToExchange <= (player.points?.fp || 0) &&
-    rpToExchange <= (player.points?.rp || 0) &&
-    xpToExchange <= (player.points?.xp || 0);
+    hpToExchange <= (player.rewards?.points.current.hp || 0) &&
+    fpToExchange <= (player.rewards?.points.current.fp || 0) &&
+    rpToExchange <= (player.rewards?.points.current.rp || 0) &&
+    xpToExchange <= (player.rewards?.points.current.xp || 0);
 
   const handleExchange = async () => {
     if (!canExchange || !activeRates) return;
@@ -133,10 +133,10 @@ export default function ExchangePointsModal({ player, open, onOpenChange, onExch
               <CardContent>
                 <div className="grid grid-cols-4 gap-3 text-center">
                   {[
-                    { key: 'XP', value: player.points?.xp || 0, color: 'bg-blue-500' },
-                    { key: 'RP', value: player.points?.rp || 0, color: 'bg-green-500' },
-                    { key: 'FP', value: player.points?.fp || 0, color: 'bg-yellow-500' },
-                    { key: 'HP', value: player.points?.hp || 0, color: 'bg-red-500' },
+                    { key: 'XP', value: player.rewards?.points.current.xp || 0, color: 'bg-blue-500' },
+                    { key: 'RP', value: player.rewards?.points.current.rp || 0, color: 'bg-green-500' },
+                    { key: 'FP', value: player.rewards?.points.current.fp || 0, color: 'bg-yellow-500' },
+                    { key: 'HP', value: player.rewards?.points.current.hp || 0, color: 'bg-red-500' },
                   ].map((point) => (
                     <div key={point.key}>
                       <div className="text-xs text-muted-foreground">{point.key}</div>
@@ -153,10 +153,10 @@ export default function ExchangePointsModal({ player, open, onOpenChange, onExch
               </CardHeader>
               <CardContent className="space-y-3">
                 {[
-                  { key: 'xp', label: 'XP', value: xpToExchange, setValue: setXpToExchange, max: player.points?.xp || 0, rate: activeRates.xpToJ$ },
-                  { key: 'rp', label: 'RP', value: rpToExchange, setValue: setRpToExchange, max: player.points?.rp || 0, rate: activeRates.rpToJ$ },
-                  { key: 'fp', label: 'FP', value: fpToExchange, setValue: setFpToExchange, max: player.points?.fp || 0, rate: activeRates.fpToJ$ },
-                  { key: 'hp', label: 'HP', value: hpToExchange, setValue: setHpToExchange, max: player.points?.hp || 0, rate: activeRates.hpToJ$ },
+                  { key: 'xp', label: 'XP', value: xpToExchange, setValue: setXpToExchange, max: player.rewards?.points.current.xp || 0, rate: activeRates.xpToJ$ },
+                  { key: 'rp', label: 'RP', value: rpToExchange, setValue: setRpToExchange, max: player.rewards?.points.current.rp || 0, rate: activeRates.rpToJ$ },
+                  { key: 'fp', label: 'FP', value: fpToExchange, setValue: setFpToExchange, max: player.rewards?.points.current.fp || 0, rate: activeRates.fpToJ$ },
+                  { key: 'hp', label: 'HP', value: hpToExchange, setValue: setHpToExchange, max: player.rewards?.points.current.hp || 0, rate: activeRates.hpToJ$ },
                 ].map((point) => (
                   <div key={point.key} className="flex items-center gap-3">
                     <div className="w-16 text-sm font-medium">{point.label}</div>

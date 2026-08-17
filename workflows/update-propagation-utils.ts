@@ -11,7 +11,7 @@ import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById, upsertIt
 import { getTaskById, upsertTask } from '@/data-store/datastore';
 import { getPlayerById, upsertPlayer } from '@/data-store/datastore';
 import { getAllCharacters, upsertCharacter } from '@/data-store/datastore';
-import { resolveToPlayerIdMaybeCharacter } from './points-rewards-utils';
+import { getPlayerRewards, resolveToPlayerIdMaybeCharacter } from './points-rewards-utils';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { getLinksFor } from '@/links/link-registry';
 import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution';
@@ -748,9 +748,16 @@ export async function updatePlayerPointsFromSource(
       return;
     }
 
-    // Update player points and totalPoints
-    // Determine if we should update Rewarded (Available) or Pending/Staged points
+    // Update the canonical PlayerRewardsV1 projection.
     const isCollected = newSource.status === TaskStatus.COLLECTED;
+
+    const rewards = getPlayerRewards(player);
+    const delta = (bucket: keyof typeof rewards.points) => ({
+      xp: Math.max(0, (rewards.points[bucket]?.xp || 0) + pointsDelta.xp),
+      rp: Math.max(0, (rewards.points[bucket]?.rp || 0) + pointsDelta.rp),
+      fp: Math.max(0, (rewards.points[bucket]?.fp || 0) + pointsDelta.fp),
+      hp: Math.max(0, (rewards.points[bucket]?.hp || 0) + pointsDelta.hp),
+    });
 
     let updatedPlayer: any;
 
@@ -759,18 +766,15 @@ export async function updatePlayerPointsFromSource(
       console.log(`[updatePlayerPointsFromSource] Updating REWARDED points (Source Collected)`);
       updatedPlayer = {
         ...player,
-        points: {
-          xp: Math.round((player.points?.xp || 0) + pointsDelta.xp),
-          rp: Math.round((player.points?.rp || 0) + pointsDelta.rp),
-          fp: Math.round((player.points?.fp || 0) + pointsDelta.fp),
-          hp: Math.round((player.points?.hp || 0) + pointsDelta.hp)
-        },
-        totalPoints: {
-          xp: Math.round((player.totalPoints?.xp || 0) + pointsDelta.xp),
-          rp: Math.round((player.totalPoints?.rp || 0) + pointsDelta.rp),
-          fp: Math.round((player.totalPoints?.fp || 0) + pointsDelta.fp),
-          hp: Math.round((player.totalPoints?.hp || 0) + pointsDelta.hp)
-        },
+        rewards: {
+          ...rewards,
+          points: {
+            ...rewards.points,
+            vested: delta('vested'),
+            current: delta('current'),
+            historic: delta('historic'),
+          },
+          },
         updatedAt: getUTCNow()
       };
     } else {
@@ -778,11 +782,13 @@ export async function updatePlayerPointsFromSource(
       console.log(`[updatePlayerPointsFromSource] Updating PENDING points (Source Not Collected)`);
       updatedPlayer = {
         ...player,
-        pendingPoints: {
-          xp: Math.round((player.pendingPoints?.xp || 0) + pointsDelta.xp),
-          rp: Math.round((player.pendingPoints?.rp || 0) + pointsDelta.rp),
-          fp: Math.round((player.pendingPoints?.fp || 0) + pointsDelta.fp),
-          hp: Math.round((player.pendingPoints?.hp || 0) + pointsDelta.hp)
+        rewards: {
+          ...rewards,
+          points: {
+            ...rewards.points,
+            pending: delta('pending'),
+            historic: delta('historic'),
+          },
         },
         updatedAt: getUTCNow()
       };

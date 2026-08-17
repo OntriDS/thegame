@@ -20,7 +20,7 @@ import {
 import { upsertTask as repoUpsertTask } from '@/data-store/repositories/task.repo';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { createItemFromTask, removeItemsCreatedByTask } from '../item-creation-utils';
-import { awardPointsToPlayer, removePointsFromPlayer, stagePointsForPlayer, rewardPointsToPlayer, withdrawStagedPointsFromPlayer, unrewardPointsForPlayer } from '../points-rewards-utils';
+import { awardPointsToPlayer, revokePointsFromPlayer, stagePointsForPlayer, rewardPointsToPlayer, withdrawStagedPointsFromPlayer, unrewardPointsForPlayer } from '../points-rewards-utils';
 import { createFinancialRecordFromTask, removeFinancialRecordsCreatedByTask } from '../financial-record-utils';
 import { createCharacterFromTask } from '../character-creation-utils';
 import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync-server';
@@ -678,7 +678,7 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
  * Remove player points that were awarded by a specific task
  * This is used when rolling back a task that incorrectly awarded points
  */
-async function removePlayerPointsFromTask(task: Task): Promise<void> {
+async function removePlayerPointsFromTask(task: Task, wasCollectedOverride?: boolean): Promise<void> {
   try {
     if (!task.context?.rewardIntent?.points) return;
 
@@ -702,7 +702,15 @@ async function removePlayerPointsFromTask(task: Task): Promise<void> {
     // - If points were exchanged, that created a FinancialRecord with exchangeType 'POINTS_TO_J$'
     // - Those FinancialRecords are the source of truth for J$, not personalAssets
     // - If we need to reverse a points exchange, we should reverse the FinancialRecord, not modify personalAssets
-    await removePointsFromPlayer(playerId, pointsToRemove);
+    const reversalKey = EffectKeys.sideEffect('task', task.id, 'pointsReversed');
+    if (await hasEffect(reversalKey)) return;
+
+    await revokePointsFromPlayer(
+      playerId,
+      pointsToRemove,
+      wasCollectedOverride ?? task.status === TaskStatus.COLLECTED,
+    );
+    await markEffect(reversalKey);
   } catch (error) {
     console.error(`[removePlayerPointsFromTask] ❌ FAILED to remove player points/J$ for task ${task.id}:`, error);
     throw error; // Re-throw to see the error in console
@@ -774,7 +782,10 @@ export async function uncompleteTask(taskId: string, previousTerminalTask?: Task
     // 1. Remove items created by this task
     await removeItemsCreatedByTask(taskId);
     // 2. Remove points awarded by this task
-    await removePlayerPointsFromTask(task);
+    await removePlayerPointsFromTask(
+      task,
+      previousTerminalTask?.status === TaskStatus.COLLECTED,
+    );
     // 2.5 Tear down task-created financial records + FINANCIAL logs (mirrors delete cleanup)
     await removeFinancialRecordsCreatedByTask(taskId);
     await removeLogEntriesAcrossMonths(EntityType.FINANCIAL, (entry: { sourceTaskId?: string }) => entry.sourceTaskId === taskId);
@@ -784,6 +795,7 @@ export async function uncompleteTask(taskId: string, previousTerminalTask?: Task
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsAwarded'));
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsRewarded')); // Clear the new effect key
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsStaged'));
+    await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsReversed'));
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'failedLogged'));
     // 3.5 Remove from archive index & clear snapshot effect
     try {

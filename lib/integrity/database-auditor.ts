@@ -9,7 +9,7 @@ const EMPTY_POINTS = { hp: 0, rp: 0, fp: 0, xp: 0 };
 const POINT_KEYS: ReadonlyArray<keyof typeof EMPTY_POINTS> = ['hp', 'rp', 'fp', 'xp'];
 const MAX_ENTITY_IDS_PER_MGET = 100;
 const MAX_ISSUES = 500;
-const PLAYER_FIELDS = ['id', 'name', 'createdAt', 'updatedAt', 'lastActiveAt', 'level', 'totalPoints', 'points', 'badges', 'achievements', 'isActive', 'characterId'] as const;
+const PLAYER_FIELDS = ['id', 'name', 'createdAt', 'updatedAt', 'lastActiveAt', 'level', 'rewards', 'badges', 'isActive', 'characterId'] as const;
 
 export type AuditSeverity = 'error' | 'warning' | 'info';
 
@@ -216,15 +216,16 @@ async function runPlayerAudit(): Promise<PlayerAuditResult> {
       );
     }
 
-    const points = normalizePoints(player.points);
-    const totalPoints = normalizePoints(player.totalPoints);
-    if (!points || !totalPoints) {
+    const points = normalizePoints(player.rewards?.points?.current);
+    const historic = normalizePoints(player.rewards?.points?.historic);
+    const pending = normalizePoints(player.rewards?.points?.pending);
+    if (!points || !historic || !pending) {
       pushIssue(
         issues,
         issueStats,
         {
           code: 'PLAYER_INVALID_POINTS',
-          detail: `Player ${id} has malformed points or totalPoints buckets.`,
+          detail: `Player ${id} has malformed PlayerRewardsV1 point buckets.`,
           entityType: EntityType.PLAYER,
           entityId: id,
           severity: 'error',
@@ -232,7 +233,7 @@ async function runPlayerAudit(): Promise<PlayerAuditResult> {
       );
       invalidPointsCount += 1;
     } else {
-      const isTotalLower = ['hp', 'rp', 'fp', 'xp'].some((key) => totalPoints[key as keyof typeof totalPoints] < points[key as keyof typeof points]);
+      const isTotalLower = ['hp', 'rp', 'fp', 'xp'].some((key) => historic[key as keyof typeof historic] < points[key as keyof typeof points]);
       if (isTotalLower) {
         invalidPointsCount += 1;
         totalLessThanAvailableCount += 1;
@@ -241,7 +242,7 @@ async function runPlayerAudit(): Promise<PlayerAuditResult> {
           issueStats,
           {
             code: 'PLAYER_POINTS_TOTAL_INVARIANT',
-            detail: `Player ${id} has totalPoints lower than points for one or more buckets.`,
+            detail: `Player ${id} has historic points lower than current points for one or more buckets.`,
             entityType: EntityType.PLAYER,
             entityId: id,
             severity: 'warning',
@@ -251,7 +252,12 @@ async function runPlayerAudit(): Promise<PlayerAuditResult> {
     }
 
     const links = await getLinksFor({ type: EntityType.PLAYER, id });
-    const characterLinks = links.filter((link) => link.linkType === LinkType.PLAYER_CHARACTER);
+    const characterLinks = links.filter((link) =>
+      link.linkType === LinkType.CHARACTER_PLAYER &&
+      link.source.type === EntityType.CHARACTER &&
+      link.target.type === EntityType.PLAYER &&
+      link.target.id === id
+    );
     const finrecLinks = links.filter((link) => link.linkType === LinkType.PLAYER_FINREC);
     playerFinrecRecordCount += finrecLinks.length;
 
@@ -272,15 +278,15 @@ async function runPlayerAudit(): Promise<PlayerAuditResult> {
           },
         );
       }
-      const hasCanonicalCharacterLink = characterLinks.some((link) => link.target.type === EntityType.CHARACTER && link.target.id === characterId);
+      const hasCanonicalCharacterLink = characterLinks.some((link) => link.source.id === characterId);
       if (!hasCanonicalCharacterLink) {
         missingCharacterLinkCount += 1;
         pushIssue(
           issues,
           issueStats,
           {
-            code: 'PLAYER_CHARACTER_LINK_MISSING',
-            detail: `Player ${id} has characterId ${characterId} but no PLAYER_CHARACTER link was found.`,
+            code: 'CHARACTER_PLAYER_LINK_MISSING',
+            detail: `Player ${id} has characterId ${characterId} but no canonical CHARACTER_PLAYER link was found.`,
             entityType: EntityType.PLAYER,
             entityId: id,
             severity: 'warning',
@@ -288,14 +294,14 @@ async function runPlayerAudit(): Promise<PlayerAuditResult> {
         );
       }
     } else if (characterLinks.length > 0) {
-      const linkTargets = characterLinks.map((link) => link.target.id);
+      const linkTargets = characterLinks.map((link) => link.source.id);
       missingTargetCount += linkTargets.length;
       pushIssue(
         issues,
         issueStats,
         {
-          code: 'PLAYER_CHARACTER_LINK_EXTRA',
-          detail: `Player ${id} has PLAYER_CHARACTER links (${linkTargets.join(', ')}) but no characterId in the entity.`,
+          code: 'CHARACTER_PLAYER_LINK_EXTRA',
+          detail: `Player ${id} has canonical CHARACTER_PLAYER links (${linkTargets.join(', ')}) but no characterId in the entity.`,
           entityType: EntityType.PLAYER,
           entityId: id,
           severity: 'warning',

@@ -1,11 +1,71 @@
 // thegame/workflows/points-rewards-utils.ts
-import type { Player, Rewards } from '@/types/entities';
+import type { Player, PlayerRewardsV1, PointAmountV1, Rewards } from '@/types/entities';
 import { getPlayerById, getCharacterById, upsertPlayer } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { LinkType, EntityType, FOUNDER_PLAYER_ID } from '@/types/enums';
 import { appendPlayerPointsLog } from './entities-logging';
 import { getUTCNow } from '@/lib/utils/utc-utils';
+
+const zeroPoints = (): PointAmountV1 => ({ hp: 0, fp: 0, rp: 0, xp: 0 });
+
+function addPoints(left: PointAmountV1, right: PointAmountV1): PointAmountV1 {
+  return {
+    hp: Math.round(left.hp + right.hp),
+    fp: Math.round(left.fp + right.fp),
+    rp: Math.round(left.rp + right.rp),
+    xp: Math.round(left.xp + right.xp),
+  };
+}
+
+function subtractPoints(left: PointAmountV1, right: PointAmountV1): PointAmountV1 {
+  return {
+    hp: Math.max(0, Math.round(left.hp - right.hp)),
+    fp: Math.max(0, Math.round(left.fp - right.fp)),
+    rp: Math.max(0, Math.round(left.rp - right.rp)),
+    xp: Math.max(0, Math.round(left.xp - right.xp)),
+  };
+}
+
+/** Read the canonical projection, with a one-way fallback for pre-rewards Players. */
+export function getPlayerRewards(player: Player): PlayerRewardsV1 {
+  if (player.rewards) return player.rewards;
+
+  const current = player.points ?? zeroPoints();
+  const pending = player.pendingPoints ?? zeroPoints();
+  const historic = player.totalPoints ?? addPoints(current, pending);
+  return {
+    points: {
+      pending,
+      vested: historic,
+      current,
+      exchanged: zeroPoints(),
+      historic: addPoints(historic, pending),
+    },
+    achievements: [],
+    badges: player.badges ?? [],
+  };
+}
+
+/** Persist only the canonical reward projection; legacy point fields are not written. */
+function playerWithRewards(player: Player, rewards: PlayerRewardsV1): Player {
+  const {
+    points: _legacyPoints,
+    pendingPoints: _legacyPendingPoints,
+    totalPoints: _legacyTotalPoints,
+    ...identity
+  } = player;
+  return { ...identity, rewards, updatedAt: getUTCNow() };
+}
+
+function asPointAmount(points: Rewards['points'] | undefined | null): PointAmountV1 {
+  return {
+    hp: Math.round(points?.hp || 0),
+    fp: Math.round(points?.fp || 0),
+    rp: Math.round(points?.rp || 0),
+    xp: Math.round(points?.xp || 0),
+  };
+}
 
 /**
  * Resolve a candidate id (playerId or characterId) to a valid playerId.
@@ -61,23 +121,17 @@ export async function awardPointsToPlayer(
       return;
     }
 
-    // Update player points
-    const updatedPlayer: Player = {
-      ...player,
+    const delta = asPointAmount(points);
+    const current = getPlayerRewards(player);
+    const updatedPlayer = playerWithRewards(player, {
+      ...current,
       points: {
-        xp: Math.round((player.points?.xp || 0) + (points.xp || 0)),
-        rp: Math.round((player.points?.rp || 0) + (points.rp || 0)),
-        fp: Math.round((player.points?.fp || 0) + (points.fp || 0)),
-        hp: Math.round((player.points?.hp || 0) + (points.hp || 0))
+        ...current.points,
+        vested: addPoints(current.points.vested, delta),
+        current: addPoints(current.points.current, delta),
+        historic: addPoints(current.points.historic, delta),
       },
-      totalPoints: {
-        xp: Math.round((player.totalPoints?.xp || 0) + (points.xp || 0)),
-        rp: Math.round((player.totalPoints?.rp || 0) + (points.rp || 0)),
-        fp: Math.round((player.totalPoints?.fp || 0) + (points.fp || 0)),
-        hp: Math.round((player.totalPoints?.hp || 0) + (points.hp || 0))
-      },
-      updatedAt: getUTCNow()
-    };
+    });
 
     // Save updated player
     await upsertPlayer(updatedPlayer);
@@ -150,17 +204,16 @@ export async function stagePointsForPlayer(
 
     if (!hasPoints) return false;
 
-    // Add to pendingPoints
-    const updatedPlayer: Player = {
-      ...player,
-      pendingPoints: {
-        xp: Math.round((player.pendingPoints?.xp || 0) + (points.xp || 0)),
-        rp: Math.round((player.pendingPoints?.rp || 0) + (points.rp || 0)),
-        fp: Math.round((player.pendingPoints?.fp || 0) + (points.fp || 0)),
-        hp: Math.round((player.pendingPoints?.hp || 0) + (points.hp || 0))
+    const delta = asPointAmount(points);
+    const current = getPlayerRewards(player);
+    const updatedPlayer = playerWithRewards(player, {
+      ...current,
+      points: {
+        ...current.points,
+        pending: addPoints(current.points.pending, delta),
+        historic: addPoints(current.points.historic, delta),
       },
-      updatedAt: getUTCNow()
-    };
+    });
 
     await upsertPlayer(updatedPlayer);
 
@@ -206,17 +259,16 @@ export async function withdrawStagedPointsFromPlayer(
 
     if (!hasPoints) return;
 
-    // Remove from pendingPoints (clamp to 0)
-    const updatedPlayer: Player = {
-      ...player,
-      pendingPoints: {
-        xp: Math.max(0, (player.pendingPoints?.xp || 0) - (points.xp || 0)),
-        rp: Math.max(0, (player.pendingPoints?.rp || 0) - (points.rp || 0)),
-        fp: Math.max(0, (player.pendingPoints?.fp || 0) - (points.fp || 0)),
-        hp: Math.max(0, (player.pendingPoints?.hp || 0) - (points.hp || 0))
+    const delta = asPointAmount(points);
+    const current = getPlayerRewards(player);
+    const updatedPlayer = playerWithRewards(player, {
+      ...current,
+      points: {
+        ...current.points,
+        pending: subtractPoints(current.points.pending, delta),
+        historic: subtractPoints(current.points.historic, delta),
       },
-      updatedAt: getUTCNow()
-    };
+    });
 
     await upsertPlayer(updatedPlayer);
 
@@ -251,25 +303,17 @@ export async function unrewardPointsForPlayer(
 
     if (!hasPoints) return;
 
-    // 1. Remove from points (Available)
-    // 2. Add back to pendingPoints (Staged)
-    const updatedPlayer: Player = {
-      ...player,
+    const delta = asPointAmount(points);
+    const current = getPlayerRewards(player);
+    const updatedPlayer = playerWithRewards(player, {
+      ...current,
       points: {
-        xp: Math.max(0, Math.round((player.points?.xp || 0) - (points.xp || 0))),
-        rp: Math.max(0, Math.round((player.points?.rp || 0) - (points.rp || 0))),
-        fp: Math.max(0, Math.round((player.points?.fp || 0) - (points.fp || 0))),
-        hp: Math.max(0, Math.round((player.points?.hp || 0) - (points.hp || 0)))
+        ...current.points,
+        pending: addPoints(current.points.pending, delta),
+        vested: subtractPoints(current.points.vested, delta),
+        current: subtractPoints(current.points.current, delta),
       },
-      pendingPoints: {
-        xp: Math.round((player.pendingPoints?.xp || 0) + (points.xp || 0)),
-        rp: Math.round((player.pendingPoints?.rp || 0) + (points.rp || 0)),
-        fp: Math.round((player.pendingPoints?.fp || 0) + (points.fp || 0)),
-        hp: Math.round((player.pendingPoints?.hp || 0) + (points.hp || 0))
-      },
-      // Note: totalPoints are NOT reduced (they track lifetime earnings)
-      updatedAt: getUTCNow()
-    };
+    });
 
     await upsertPlayer(updatedPlayer);
 
@@ -311,31 +355,17 @@ export async function rewardPointsToPlayer(
 
     if (!hasPoints) return;
 
-    // 1. Remove from pendingPoints (clamp to 0)
-    // 2. Add to points (Available)
-    // 3. Add to totalPoints (Lifetime)
-    const updatedPlayer: Player = {
-      ...player,
-      pendingPoints: {
-        xp: Math.max(0, (player.pendingPoints?.xp || 0) - (points.xp || 0)),
-        rp: Math.max(0, (player.pendingPoints?.rp || 0) - (points.rp || 0)),
-        fp: Math.max(0, (player.pendingPoints?.fp || 0) - (points.fp || 0)),
-        hp: Math.max(0, (player.pendingPoints?.hp || 0) - (points.hp || 0))
-      },
+    const delta = asPointAmount(points);
+    const current = getPlayerRewards(player);
+    const updatedPlayer = playerWithRewards(player, {
+      ...current,
       points: {
-        xp: Math.round((player.points?.xp || 0) + (points.xp || 0)),
-        rp: Math.round((player.points?.rp || 0) + (points.rp || 0)),
-        fp: Math.round((player.points?.fp || 0) + (points.fp || 0)),
-        hp: Math.round((player.points?.hp || 0) + (points.hp || 0))
+        ...current.points,
+        pending: subtractPoints(current.points.pending, delta),
+        vested: addPoints(current.points.vested, delta),
+        current: addPoints(current.points.current, delta),
       },
-      totalPoints: {
-        xp: Math.round((player.totalPoints?.xp || 0) + (points.xp || 0)),
-        rp: Math.round((player.totalPoints?.rp || 0) + (points.rp || 0)),
-        fp: Math.round((player.totalPoints?.fp || 0) + (points.fp || 0)),
-        hp: Math.round((player.totalPoints?.hp || 0) + (points.hp || 0))
-      },
-      updatedAt: getUTCNow()
-    };
+    });
 
     await upsertPlayer(updatedPlayer);
 
@@ -355,7 +385,8 @@ export async function rewardPointsToPlayer(
     const link = makeLink(
       linkType,
       { type: resolvedSourceEntityType, id: sourceEntityId },
-      { type: EntityType.PLAYER, id: resolvedPlayerId }
+      { type: EntityType.PLAYER, id: resolvedPlayerId },
+      sourceEntityType === 'task' ? 'points-earned' : undefined
     );
 
     await createLink(link);
@@ -390,18 +421,15 @@ export async function removePointsFromPlayer(
 
     if (!hasPoints) return;
 
-    // Update player points (ensure they don't go negative)
-    const updatedPlayer: Player = {
-      ...player,
+    const delta = asPointAmount(points);
+    const current = getPlayerRewards(player);
+    const updatedPlayer = playerWithRewards(player, {
+      ...current,
       points: {
-        xp: Math.max(0, (player.points?.xp || 0) - (points.xp || 0)),
-        rp: Math.max(0, (player.points?.rp || 0) - (points.rp || 0)),
-        fp: Math.max(0, (player.points?.fp || 0) - (points.fp || 0)),
-        hp: Math.max(0, (player.points?.hp || 0) - (points.hp || 0))
+        ...current.points,
+        current: subtractPoints(current.points.current, delta),
       },
-      // Note: totalPoints are NOT reduced (they track lifetime earnings)
-      updatedAt: getUTCNow()
-    };
+    });
 
     // Save updated player
     await upsertPlayer(updatedPlayer);
@@ -417,6 +445,60 @@ export async function removePointsFromPlayer(
  */
 export function getMainPlayerId(): string {
   return FOUNDER_PLAYER_ID;
+}
+
+/** Reverse a task reward exactly according to its lifecycle state. */
+export async function revokePointsFromPlayer(
+  playerId: string,
+  points: Rewards['points'] | undefined | null,
+  wasCollected: boolean,
+): Promise<void> {
+  if (!points) return;
+  const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(playerId);
+  if (!resolvedPlayerId) return;
+  const player = await getPlayerById(resolvedPlayerId);
+  if (!player) return;
+
+  const delta = asPointAmount(points);
+  const current = getPlayerRewards(player);
+  const nextPoints = wasCollected
+    ? {
+        ...current.points,
+        vested: subtractPoints(current.points.vested, delta),
+        current: subtractPoints(current.points.current, delta),
+        historic: subtractPoints(current.points.historic, delta),
+      }
+    : {
+        ...current.points,
+        pending: subtractPoints(current.points.pending, delta),
+        historic: subtractPoints(current.points.historic, delta),
+      };
+
+  await upsertPlayer(playerWithRewards(player, { ...current, points: nextPoints }));
+}
+
+/** Consume currently available points during an explicit points → J$ exchange. */
+export async function exchangePointsForPlayer(
+  playerId: string,
+  points: Rewards['points'] | undefined | null,
+): Promise<void> {
+  if (!points) return;
+  const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(playerId);
+  if (!resolvedPlayerId) return;
+  const player = await getPlayerById(resolvedPlayerId);
+  if (!player) return;
+
+  const delta = asPointAmount(points);
+  const current = getPlayerRewards(player);
+  const updatedPlayer = playerWithRewards(player, {
+    ...current,
+    points: {
+      ...current.points,
+      current: subtractPoints(current.points.current, delta),
+      exchanged: addPoints(current.points.exchanged, delta),
+    },
+  });
+  await upsertPlayer(updatedPlayer);
 }
 
 

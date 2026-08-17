@@ -97,13 +97,18 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
               const ordered: Character[] = [];
               const playerLinks = await ClientAPI.getLinksFor({ type: EntityType.PLAYER, id: p.id });
               for (const link of playerLinks) {
-                if (
-                  link.linkType !== LinkType.PLAYER_CHARACTER ||
-                  link.source?.type !== EntityType.PLAYER ||
-                  link.source?.id !== p.id ||
-                  link.target?.type !== EntityType.CHARACTER
-                ) continue;
-                const linkedCharacter = byId.get(link.target.id);
+                const isCanonical =
+                  link.linkType === LinkType.CHARACTER_PLAYER &&
+                  link.source?.type === EntityType.CHARACTER &&
+                  link.target?.type === EntityType.PLAYER &&
+                  link.target?.id === p.id;
+                const isLegacyReverse =
+                  link.linkType === LinkType.PLAYER_CHARACTER &&
+                  link.source?.type === EntityType.PLAYER &&
+                  link.source?.id === p.id &&
+                  link.target?.type === EntityType.CHARACTER;
+                if (!isCanonical && !isLegacyReverse) continue;
+                const linkedCharacter = byId.get(isCanonical ? link.source.id : link.target.id);
                 if (linkedCharacter && !ordered.some((character) => character.id === linkedCharacter.id)) {
                   ordered.push(linkedCharacter);
                 }

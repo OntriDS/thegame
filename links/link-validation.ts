@@ -366,13 +366,14 @@ export async function validateBusinessRules(
     }
 
     switch (linkType) {
-      case 'PLAYER_CHARACTER':
-        // Validate that character has valid playerId
-        const character = await getCharacterById(source.id);
-        if (character && character.playerId !== target.id) {
-          warnings.push(`Character playerId (${character.playerId}) does not match target player ID (${target.id})`);
+      case 'PLAYER_CHARACTER': {
+        // Legacy reverse direction: Player -> Character.
+        const player = await getPlayerById(source.id);
+        if (player && player.characterId !== target.id) {
+          warnings.push(`Player characterId (${player.characterId}) does not match target character ID (${target.id})`);
         }
         break;
+      }
 
       case 'TASK_SITE':
         // Validate that task has valid siteId
@@ -405,6 +406,7 @@ export async function validateBusinessRules(
         break;
 
       case 'CHARACTER_PLAYER': {
+        // Canonical direction: Character -> Player.
         const char = await getCharacterById(source.id);
         if (
           char &&

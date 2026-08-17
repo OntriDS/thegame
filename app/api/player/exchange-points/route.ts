@@ -4,7 +4,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { createFinancialRecordFromPointsExchange } from '@/workflows/financial-record-utils';
-import { upsertPlayer } from '@/data-store/datastore';
+import { exchangePointsForPlayer } from '@/workflows/points-rewards-utils';
 
 // Force dynamic rendering - this route accesses cookies
 export const dynamic = 'force-dynamic';
@@ -37,6 +37,10 @@ export async function POST(req: NextRequest) {
       pointsToExchange,
       j$Received
     );
+
+    // The ledger records the J$ transaction; the Player projection records
+    // that these points are no longer available and are now exchanged.
+    await exchangePointsForPlayer(playerId, pointsToExchange);
     
     // Return the created FinancialRecord
     return NextResponse.json({

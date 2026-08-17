@@ -4,7 +4,6 @@
 // Replaces bulk collection and whole-database scans with a durable Process Manager.
 // Uses cursor-based pagination to page through indexed eligible sources.
 // Issues idempotent collect commands for each entity.
-// Vests matching Task/Sale grants.
 // Persists close summary with cursors, counts, and failure state.
 //
 // Monthly close workflow:
@@ -22,10 +21,7 @@ import { WorkflowStatus, EffectClaimStatus, TaskStatus, SaleStatus, EntityType }
 import { saveWorkflowExecution } from '@/data-store/workflow-store';
 import { getTasksForMonth, getSalesForMonth, upsertTask, upsertSale } from '@/data-store/datastore';
 import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
-import { getTaskPlayerCharacterId } from '@/lib/compatibility/task-selectors';
-import { resolveTaskOwnerPlayerId } from '../task-player-resolution';
 import { acquireEffectClaim, resolveEffectClaim } from '@/lib/domain/effects/effect-claim-store';
-import { vestPointGrant, getGrantBySource } from '@/lib/domain/progression/point-grant-store';
 import { EffectKeys } from '@/data-store/keys';
 
 // ─── Monthly Close State ────────────────────────────────────────────────────
@@ -168,7 +164,6 @@ export class MonthlyCloseProcessManager {
           state.tasksCollected++;
 
           // Vest task point grant
-          await this.vestTaskGrant(execution, state, task);
         } else {
           state.tasksFailed++;
         }
@@ -254,7 +249,6 @@ export class MonthlyCloseProcessManager {
           state.salesCollected++;
 
           // Vest sale point grant
-          await this.vestSaleGrant(execution, state, sale);
         } else {
           state.salesFailed++;
         }
@@ -277,85 +271,6 @@ export class MonthlyCloseProcessManager {
       state: state.salesFailed > 0 ? 'failed-retryable' : 'completed',
       completedAt: getUTCNow(),
     };
-  }
-
-  // ─── Grant Vesting ──────────────────────────────────────────────────────
-
-  private static async vestTaskGrant(
-    execution: WorkflowExecutionV1,
-    state: MonthlyCloseState,
-    task: Task
-  ): Promise<void> {
-    // Check if task has a point grant
-    const ownerPlayerId = await resolveTaskOwnerPlayerId(task);
-    if (!ownerPlayerId) {
-      console.warn(`[MonthlyClosePM] Cannot vest Task ${task.id}: owner has no Player`);
-      return;
-    }
-    const grant = await getGrantBySource({ type: EntityType.TASK, id: task.id }, ownerPlayerId);
-
-    if (!grant) {
-      console.log(`[MonthlyClosePM] No grant found for task ${task.id}`);
-      return;
-    }
-
-    if (grant.state !== 'pending') {
-      console.log(`[MonthlyClosePM] Grant ${grant.grantId} is not pending (state: ${grant.state})`);
-      return;
-    }
-
-    try {
-      const vested = await vestPointGrant({
-        grantId: grant.grantId,
-        commandId: execution.rootCommandId,
-      });
-
-      if (vested) {
-        state.grantsVested++;
-        console.log(`[MonthlyClosePM] Vested grant ${grant.grantId} for task ${task.id}`);
-      }
-    } catch (error: any) {
-      console.error(`[MonthlyClosePM] Failed to vest grant ${grant.grantId}`, error);
-      // Don't fail the entire workflow for grant vesting errors
-    }
-  }
-
-  private static async vestSaleGrant(
-    execution: WorkflowExecutionV1,
-    state: MonthlyCloseState,
-    sale: Sale
-  ): Promise<void> {
-    // Check if sale has a point grant
-    if (!sale.playerCharacterId) {
-      console.log(`[MonthlyClosePM] Sale ${sale.id} has no explicit Player recipient; skipping point grant lookup`);
-      return;
-    }
-    const grant = await getGrantBySource({ type: EntityType.SALE, id: sale.id }, sale.playerCharacterId);
-
-    if (!grant) {
-      console.log(`[MonthlyClosePM] No grant found for sale ${sale.id}`);
-      return;
-    }
-
-    if (grant.state !== 'pending') {
-      console.log(`[MonthlyClosePM] Grant ${grant.grantId} is not pending (state: ${grant.state})`);
-      return;
-    }
-
-    try {
-      const vested = await vestPointGrant({
-        grantId: grant.grantId,
-        commandId: execution.rootCommandId,
-      });
-
-      if (vested) {
-        state.grantsVested++;
-        console.log(`[MonthlyClosePM] Vested grant ${grant.grantId} for sale ${sale.id}`);
-      }
-    } catch (error: any) {
-      console.error(`[MonthlyClosePM] Failed to vest grant ${grant.grantId}`, error);
-      // Don't fail the entire workflow for grant vesting errors
-    }
   }
 
   // ─── State Management ───────────────────────────────────────────────────

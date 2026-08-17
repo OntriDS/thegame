@@ -30,18 +30,26 @@ export default function PersonalDataModal({ player, open, onOpenChange, onSave }
         setIsLoadingAccount(true);
         
         // Authentication belongs to Account ↔ Character. Resolve the account
-        // through the canonical PLAYER_CHARACTER link first; old Player rows
+        // through the canonical CHARACTER_PLAYER link first; old Player rows
         // may still carry accountId, which is read-only compatibility only.
         let accountId = (player as Player & { accountId?: string | null }).accountId || null;
         try {
           const playerLinks = await ClientAPI.getLinksFor({ type: 'player', id: player.id });
           const characterLink = playerLinks.find((link: any) =>
-            link.linkType === 'PLAYER_CHARACTER' &&
-            link.source?.type === 'player' &&
-            link.target?.type === 'character'
+            (link.linkType === 'CHARACTER_PLAYER' &&
+              link.source?.type === 'character' &&
+              link.target?.type === 'player' &&
+              link.target?.id === player.id) ||
+            (link.linkType === 'PLAYER_CHARACTER' &&
+              link.source?.type === 'player' &&
+              link.source?.id === player.id &&
+              link.target?.type === 'character')
           );
-          if (characterLink?.target?.id) {
-            const character = await ClientAPI.getCharacterById(characterLink.target.id);
+          const characterId = characterLink?.linkType === 'CHARACTER_PLAYER'
+            ? characterLink.source?.id
+            : characterLink?.target?.id;
+          if (characterId) {
+            const character = await ClientAPI.getCharacterById(characterId);
             accountId = character?.accountId || null;
           }
         } catch (error) {

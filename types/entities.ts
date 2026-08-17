@@ -128,19 +128,19 @@ export type WorkflowId = string;
 export type IdempotencyKey = string;
 export type EntityRef = { type: EntityType; id: string };
 
-export type CharacterRelationship = 'owner' | 'customer' | 'beneficiary' | 'creator';
-export type LinkRelationship = CharacterRelationship | 'points-earned';
-
-/** Runtime link shape. Relationship is present only for role-bearing links. */
-export interface Link {
+/** Shared persisted link envelope. It contains no relationship-specific data. */
+export interface LinkCore {
   id: string;
   linkType: LinkType | CanonicalLinkType;
   source: EntityRef;
   target: EntityRef;
-  relationship?: LinkRelationship;
   createdAt: UtcIsoString;
   endedAt?: UtcIsoString;
 }
+/** Runtime storage envelope. Concrete link types define valid relationships. */
+export type Link = LinkCore & {
+  relationship?: string;
+};
 
 /**
  * VALUE OBJECTS (Strict domain primitives)
@@ -181,22 +181,15 @@ export interface EntityEnvelope {
 
 /**
  * THE ROSETTA STONE: Links System
- * Canonical unidirectional relationship edge with typed context.
+ * Canonical unidirectional relationship edge with a typed relationship.
  */
-export interface LinkEnvelopeV1<TType extends CanonicalLinkType, TContext> {
-  id: string;
+export type LinkEnvelopeV1<
+  TType extends CanonicalLinkType,
+  TRelationship extends { relationship: string }
+> = LinkCore & {
   linkType: TType;
-  source: EntityRef;
-  target: EntityRef;
-  status: LinkStatus;
-  createdAt: UtcIsoString;
-  endedAt?: UtcIsoString;
-  createdBy: ActorId;
-  causationId: CommandId;
-  workflowId?: WorkflowId;
-  schemaVersion: 1;
-  context: TContext;
-}
+  relationship: TRelationship['relationship'];
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CANONICAL LINK DEFINITIONS
@@ -204,109 +197,68 @@ export interface LinkEnvelopeV1<TType extends CanonicalLinkType, TContext> {
 
 export type TaskItemLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.TASK_ITEM,
-  {
-    kind: 'task-item';
-    relationship: 'requested' | 'produced' | 'repaired'; 
-    quantity?: number;
-  }
+  { relationship: 'requested' | 'produced' | 'repaired' }
 >;
 
 export type ItemSiteLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.ITEM_SITE,
-  {
-    kind: 'item-site';
-    relationship: 'stored' | 'displayed' | 'in-transit';
-  }
+  { relationship: 'stored' | 'displayed' | 'in-transit' }
 >;
 
 export type AccountCharacterLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.ACCOUNT_CHARACTER,
-  {
-    kind: 'account-character';
-    ownershipLevel: 'primary'; // Enforcing 1:1 relationship for now. No multi-character accounts.
-  }
+  { relationship: 'primary' }
 >;
 
 export type AccountPlayerLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.ACCOUNT_PLAYER,
-  {
-    kind: 'account-player';
-    ownershipLevel: 'primary';
-  }
+  { relationship: 'primary' }
 >;
 
-export type PlayerCharacterLinkV1 = LinkEnvelopeV1<
-  CanonicalLinkType.PLAYER_CHARACTER,
-  {
-    kind: 'player-character';
-    // Links the Player's identity to their primary or managed Character record
-  }
+export type CharacterPlayerLinkV1 = LinkEnvelopeV1<
+  CanonicalLinkType.CHARACTER_PLAYER,
+  { relationship: 'primary' }
 >;
 
 export type TaskParentLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.TASK_PARENT,
-  {
-    kind: 'task-parent';
-    relationship: 'subtask' | 'recurrent-instance';
-  }
+  { relationship: 'subtask' | 'recurrent-instance' }
 >;
 
 export type TaskSiteLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.TASK_SITE,
-  {
-    kind: 'task-site';
-    relationship: 'performed-at'; // "Task is performed at a Site"
-  }
+  { relationship: 'performed-at' }
 >;
 
 export type TaskCharacterLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.TASK_CHARACTER,
-  never
-> & {
-  relationship: CharacterRelationship;
-};
+  { relationship: 'owner' | 'customer' | 'beneficiary' | 'creator' }
+>;
 
 export type TaskPlayerLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.TASK_PLAYER,
-  {
-    kind: 'task-player';
-    relationship: 'points-earned'; // "Task earned Player points"
-    points?: PointAmountV1;
-  }
+  { relationship: 'points-earned' }
 >;
 
 export type TaskFinRecLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.TASK_FINREC,
-  {
-    kind: 'task-finrec';
-    relationship: 'generated' | 'settled';
-  }
+  { relationship: 'generated' | 'settled' }
 >;
-
-
 
 export type ItemCharacterLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.ITEM_CHARACTER,
-  {
-    kind: 'item-character';
-    relationship: 'owned-by'; // "Item owned by Character"
-  }
+  { relationship: 'owned-by' }
 >;
 
 export type ItemSaleLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.ITEM_SALE,
-  {
-    kind: 'item-sale';
-    relationship: 'sold-in'; // "Item was sold in Sale"
-  }
+  { relationship: 'sold-in' }
 >;
 
 export type FinrecCharacterLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.FINREC_CHARACTER,
-  never
-> & {
-  relationship: 'customer' | 'beneficiary';
-};
+  { relationship: 'customer' | 'beneficiary' }
+>;
 
 /**
  * The Strict Master Union for all Relationships
@@ -316,7 +268,7 @@ export type CanonicalLink =
   | ItemSiteLinkV1
   | AccountCharacterLinkV1
   | AccountPlayerLinkV1
-  | PlayerCharacterLinkV1
+  | CharacterPlayerLinkV1
   | TaskParentLinkV1
   | TaskSiteLinkV1
   | TaskCharacterLinkV1
@@ -589,7 +541,6 @@ export interface FinancialIntentFacetV1 {
 }
 
 export interface RewardIntentFacetV1 {
-  kind: 'point-reward';
   points: PointAmountV1;
 }
 
@@ -1106,18 +1057,46 @@ export interface PointAmountV1 {
   xp: number;
 }
 
+/**
+ * Player reward projection.
+ *
+ * `pending` is earned by completed but uncollected work.
+ * `vested` is the lifetime amount released by collection.
+ * `current` is the amount currently available to exchange.
+ * `exchanged` is the lifetime amount consumed by an exchange.
+ * `historic` is the lifetime amount earned, including pending and vested
+ * rewards and amounts already exchanged.
+ */
+export interface PlayerRewardsV1 {
+  points: {
+    pending: PointAmountV1;
+    vested: PointAmountV1;
+    current: PointAmountV1;
+    exchanged: PointAmountV1;
+    historic: PointAmountV1;
+  };
+  achievements: string[];
+  badges: PlayerBadge[];
+}
+
 export interface Player extends EntityEnvelope {
   // 1. PROGRESSION & REWARDS - Earned from business activities
   level: number;                 // Player level (starts at 0)
-  totalPoints: PointAmountV1;    // Aggregate of all earned points
-  points: PointAmountV1;         // Current available (vested) points
-  pendingPoints?: PointAmountV1; // Earned but not vested (staged) points
+  rewards: PlayerRewardsV1;
+
+  /** @deprecated Read-only migration aliases. New writes use `rewards`. */
+  totalPoints?: PointAmountV1;
+  /** @deprecated Read-only migration alias for `rewards.points.current`. */
+  points?: PointAmountV1;
+  /** @deprecated Read-only migration alias for `rewards.points.pending`. */
+  pendingPoints?: PointAmountV1;
 
   // 2. CHARACTER MANAGEMENT
   characterId?: EntityId | null;   // 🏛️ Main character managed by this player
 
   // 3. BADGES
-  badges: PlayerBadge[];           // Role-based recognition badges
+  /** @deprecated Read-only migration alias; badges now live in rewards. */
+  badges?: PlayerBadge[];
 
   // 4. LIFECYCLE & METRICS
   lastActiveAt: UtcIsoString;
@@ -1258,7 +1237,7 @@ export interface Agent extends EntityEnvelope {
 // - BOTH can receive Points & Jungle Coins (Player earns them, Character receives from Player)
 // - Main currency is USD ($), Jungle Coins (J$) are crypto-like in-game asset ($10 each)
 // - Points can be exchanged for Jungle Coins, which can be exchanged for USD
-// - Links System handles all relationships (PLAYER_CHARACTER, CHARACTER_PLAYER)
+// - Links System handles all relationships (canonical CHARACTER_PLAYER)
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECTION 7B: ACCOUNT ENTITY (Authentication & Identity Layer)
@@ -1385,4 +1364,3 @@ export interface AISession extends EntityEnvelope {
   pixelbrainTargetAgent?: string;
 }
 
-export * from './player-point-grant';

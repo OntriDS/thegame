@@ -27,7 +27,7 @@ function BadgesSection({
   const [badgeDescription, setBadgeDescription] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<CharacterRole[]>([]);
 
-  const badges = playerData.badges || [];
+  const badges = playerData.rewards?.badges || [];
 
   const toggleRole = (role: CharacterRole) => {
     setSelectedRoles(prev =>
@@ -48,7 +48,10 @@ function BadgesSection({
 
     const updatedPlayer: Player = {
       ...playerData,
-      badges: [...badges, newBadge],
+      rewards: {
+        ...playerData.rewards,
+        badges: [...badges, newBadge],
+      },
       updatedAt: new Date(),
     };
 
@@ -63,7 +66,10 @@ function BadgesSection({
     if (!onSave) return;
     const updatedPlayer: Player = {
       ...playerData,
-      badges: badges.filter(b => b.id !== badgeId),
+      rewards: {
+        ...playerData.rewards,
+        badges: badges.filter(b => b.id !== badgeId),
+      },
       updatedAt: new Date(),
     };
     await onSave(updatedPlayer);

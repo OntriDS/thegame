@@ -234,7 +234,6 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
       financialIntent: taskCost > 0 ? { costIntent: toMoney(taskCost) } : undefined,
       rewardIntent: Object.values(taskPoints).some((value) => Number(value) > 0)
         ? {
-            kind: 'point-reward',
             points: taskPoints,
           }
         : undefined,

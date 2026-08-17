@@ -10,11 +10,11 @@
       "percentage": 100
     },
     "schedule": {
-      "dueDate": "2026-08-24T01:37:03.604Z"
+      "dueDate": "2026-08-24T21:42:51.274Z"
     },
     "order": 1000,
     "siteId": "hq",
-    "parentId": "60da07a4-54e7-4171-9ba3-676fde793a4f",
+    "parentId": "6df37397-b957-4226-b218-5dc0cb18a00c",
     "context": {
       "financialIntent": {
         "costIntent": {
@@ -27,7 +27,6 @@
         }
       },
       "rewardIntent": {
-        "kind": "point-reward",
         "points": {
           "xp": 5,
           "rp": 2,
@@ -53,16 +52,84 @@
         "isSold": false
       }
     },
-    "createdAt": "2026-08-17T01:37:03.604Z",
-    "updatedAt": "2026-08-17T01:37:54.673Z",
+    "createdAt": "2026-08-17T21:42:51.274Z",
+    "updatedAt": "2026-08-17T21:44:01.168Z",
     "schemaVersion": 1,
     "version": 2,
-    "doneAt": "2026-08-17T01:37:16.221Z",
-    "collectedAt": "2026-08-17T01:37:54.673Z"
+    "doneAt": "2026-08-17T21:43:04.354Z",
+    "collectedAt": "2026-08-17T21:44:01.168Z"
   },
   "links": [
     {
-      "id": "65da06dc-d322-4436-b9a5-49b1fae7b5c9",
+      "id": "f0d889c4-ed9d-4261-b6ae-3a9c38adfa53",
+      "linkType": "TASK_FINREC",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-collected"
+      },
+      "target": {
+        "type": "financial",
+        "id": "finrec-entity-test-task-full-collected"
+      },
+      "createdAt": "2026-08-17T21:43:30.630Z"
+    },
+    {
+      "id": "4b000b1b-50a0-4267-add7-4e8ce6c8422d",
+      "linkType": "TASK_ITEM",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-collected"
+      },
+      "target": {
+        "type": "item",
+        "id": "item-entity-test-task-full-collected-1787003014405"
+      },
+      "relationship": "produced",
+      "createdAt": "2026-08-17T21:43:58.925Z"
+    },
+    {
+      "id": "a48ec672-24b3-4156-ba47-e0add9cd06f6",
+      "linkType": "TASK_CHARACTER",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-collected"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1766452268320-fzg64q5np"
+      },
+      "relationship": "beneficiary",
+      "createdAt": "2026-08-17T21:44:22.530Z"
+    },
+    {
+      "id": "c06122ee-007b-4527-bb80-03b3789c5c49",
+      "linkType": "TASK_SITE",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-collected"
+      },
+      "target": {
+        "type": "site",
+        "id": "hq"
+      },
+      "createdAt": "2026-08-17T21:42:52.415Z"
+    },
+    {
+      "id": "9870b0c1-22c1-433c-8062-4b6cfafcf703",
+      "linkType": "TASK_CHARACTER",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-collected"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1766452268320-fzg64q5np"
+      },
+      "relationship": "owner",
+      "createdAt": "2026-08-17T21:44:25.049Z"
+    },
+    {
+      "id": "e081f8cd-dfea-41a9-ba1f-f5d23e8d8321",
       "linkType": "TASK_PLAYER",
       "source": {
         "type": "task",
@@ -73,79 +140,12 @@
         "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
       },
       "relationship": "points-earned",
-      "createdAt": "2026-08-17T01:37:31.734Z"
-    },
-    {
-      "id": "e502ef1c-4079-4dcf-bcce-2c69a3b00cea",
-      "linkType": "TASK_FINREC",
-      "source": {
-        "type": "task",
-        "id": "entity-test-task-full-collected"
-      },
-      "target": {
-        "type": "financial",
-        "id": "finrec-entity-test-task-full-collected"
-      },
-      "createdAt": "2026-08-17T01:37:38.070Z"
-    },
-    {
-      "id": "3c4e820b-1f7c-4f43-92a6-09a87461a25f",
-      "linkType": "TASK_ITEM",
-      "source": {
-        "type": "task",
-        "id": "entity-test-task-full-collected"
-      },
-      "target": {
-        "type": "item",
-        "id": "item-entity-test-task-full-collected-1786930660561"
-      },
-      "createdAt": "2026-08-17T01:37:53.512Z"
-    },
-    {
-      "id": "55ee22d2-4a00-4cb2-a038-5cc5a988eccd",
-      "linkType": "TASK_SITE",
-      "source": {
-        "type": "task",
-        "id": "entity-test-task-full-collected"
-      },
-      "target": {
-        "type": "site",
-        "id": "hq"
-      },
-      "createdAt": "2026-08-17T01:37:04.598Z"
-    },
-    {
-      "id": "d2a0a6fc-5334-4b38-a2ba-1f64e0074ff5",
-      "linkType": "TASK_CHARACTER",
-      "source": {
-        "type": "task",
-        "id": "entity-test-task-full-collected"
-      },
-      "target": {
-        "type": "character",
-        "id": "character-1775764725059-ojocp4ua1"
-      },
-      "relationship": "beneficiary",
-      "createdAt": "2026-08-17T01:38:07.080Z"
-    },
-    {
-      "id": "99c0dedb-61e2-4752-9f62-1ae3d1ad8964",
-      "linkType": "TASK_CHARACTER",
-      "source": {
-        "type": "task",
-        "id": "entity-test-task-full-collected"
-      },
-      "target": {
-        "type": "character",
-        "id": "character-1775764725059-ojocp4ua1"
-      },
-      "relationship": "owner",
-      "createdAt": "2026-08-17T01:38:08.787Z"
+      "createdAt": "2026-08-17T21:43:22.257Z"
     }
   ],
   "items": [
     {
-      "id": "item-entity-test-task-full-collected-1786930660561",
+      "id": "item-entity-test-task-full-collected-1787003014405",
       "schemaVersion": 1,
       "version": 0,
       "name": "testing-full-collected-output",
@@ -164,8 +164,8 @@
         }
       },
       "sourceTaskId": "entity-test-task-full-collected",
-      "createdAt": "2026-08-17T01:37:40.561Z",
-      "updatedAt": "2026-08-17T01:37:40.561Z",
+      "createdAt": "2026-08-17T21:43:34.405Z",
+      "updatedAt": "2026-08-17T21:43:34.405Z",
       "context": {
         "year": 2026
       },
@@ -197,7 +197,7 @@
       },
       "status": "done",
       "lifecycle": {
-        "doneAt": "2026-08-17T01:37:16.221Z"
+        "doneAt": "2026-08-17T21:43:04.354Z"
       },
       "context": {
         "productionPlan": {
@@ -218,8 +218,8 @@
           "isSold": false
         }
       },
-      "createdAt": "2026-08-17T01:37:33.578Z",
-      "updatedAt": "2026-08-17T01:37:33.578Z",
+      "createdAt": "2026-08-17T21:43:24.270Z",
+      "updatedAt": "2026-08-17T21:43:24.270Z",
       "netCashflow": {
         "minorUnits": "5000",
         "currency": "USD"
@@ -231,7 +231,7 @@
   ],
   "pointEvidence": [
     {
-      "id": "65da06dc-d322-4436-b9a5-49b1fae7b5c9",
+      "id": "e081f8cd-dfea-41a9-ba1f-f5d23e8d8321",
       "linkType": "TASK_PLAYER",
       "source": {
         "type": "task",
@@ -242,7 +242,7 @@
         "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
       },
       "relationship": "points-earned",
-      "createdAt": "2026-08-17T01:37:31.734Z"
+      "createdAt": "2026-08-17T21:43:22.257Z"
     }
   ]
 }

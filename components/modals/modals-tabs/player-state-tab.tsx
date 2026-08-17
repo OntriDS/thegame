@@ -83,8 +83,8 @@ export function PlayerStateContent({
           </div>
 
           {/* Pending Points Section */}
-          {(playerData?.pendingPoints?.xp || 0) + (playerData?.pendingPoints?.rp || 0) +
-            (playerData?.pendingPoints?.fp || 0) + (playerData?.pendingPoints?.hp || 0) > 0 && (
+          {(playerData?.rewards?.points.pending.xp || 0) + (playerData?.rewards?.points.pending.rp || 0) +
+            (playerData?.rewards?.points.pending.fp || 0) + (playerData?.rewards?.points.pending.hp || 0) > 0 && (
               <div className="mt-6 pt-4 border-t">
                 <div className="text-center mb-4">
                   <div className="text-sm font-medium text-amber-600 flex items-center justify-center gap-2">
@@ -92,16 +92,16 @@ export function PlayerStateContent({
                     <span className="text-xs font-normal text-muted-foreground">(Pending Collection)</span>
                   </div>
                   <div className="text-2xl font-bold text-muted-foreground/80 mt-1">
-                    {((playerData?.pendingPoints?.xp || 0) + (playerData?.pendingPoints?.rp || 0) +
-                      (playerData?.pendingPoints?.fp || 0) + (playerData?.pendingPoints?.hp || 0))}
+                    {((playerData?.rewards?.points.pending.xp || 0) + (playerData?.rewards?.points.pending.rp || 0) +
+                      (playerData?.rewards?.points.pending.fp || 0) + (playerData?.rewards?.points.pending.hp || 0))}
                   </div>
                 </div>
                 <div className="grid grid-cols-4 gap-4 opacity-75">
                   {[
-                    { key: 'xp', label: 'XP', value: playerData?.pendingPoints?.xp || 0 },
-                    { key: 'rp', label: 'RP', value: playerData?.pendingPoints?.rp || 0 },
-                    { key: 'fp', label: 'FP', value: playerData?.pendingPoints?.fp || 0 },
-                    { key: 'hp', label: 'HP', value: playerData?.pendingPoints?.hp || 0 }
+                    { key: 'xp', label: 'XP', value: playerData?.rewards?.points.pending.xp || 0 },
+                    { key: 'rp', label: 'RP', value: playerData?.rewards?.points.pending.rp || 0 },
+                    { key: 'fp', label: 'FP', value: playerData?.rewards?.points.pending.fp || 0 },
+                    { key: 'hp', label: 'HP', value: playerData?.rewards?.points.pending.hp || 0 }
                   ].map((point) => (
                     <div key={`pending-${point.key}`} className="p-3 rounded-lg border border-dashed bg-muted/10">
                       <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{point.label}</div>

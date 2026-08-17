@@ -57,7 +57,7 @@ describe('entity-test: full Task collected', () => {
           costIntent: { minorUnits: '5000', currency: 'USD' },
           revenueIntent: { minorUnits: '10000', currency: 'USD' },
         },
-        rewardIntent: { kind: 'point-reward', points: { xp: 5, rp: 2, fp: 1, hp: 0 } },
+        rewardIntent: { points: { xp: 5, rp: 2, fp: 1, hp: 0 } },
         productionPlan: {
           outputItemType: 'bundle',
           outputItemSubType: 'sticker',

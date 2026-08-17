@@ -72,7 +72,6 @@ describe('entity-test: full Task completed', () => {
           revenueIntent: { minorUnits: '10000', currency: 'USD' },
         },
         rewardIntent: {
-          kind: 'point-reward',
           points: { xp: 5, rp: 2, fp: 1, hp: 0 },
         },
         productionPlan: {
@@ -135,7 +134,7 @@ describe('entity-test: full Task completed', () => {
       expect.objectContaining({ linkType: 'TASK_SITE' }),
       expect.objectContaining({ linkType: 'TASK_CHARACTER', relationship: 'owner' }),
       expect.objectContaining({ linkType: 'TASK_CHARACTER', relationship: 'beneficiary' }),
-      expect.objectContaining({ linkType: 'TASK_ITEM' }),
+      expect.objectContaining({ linkType: 'TASK_ITEM', relationship: 'produced' }),
       expect.objectContaining({ linkType: 'TASK_FINREC' }),
       expect.objectContaining({ linkType: 'TASK_PLAYER', relationship: 'points-earned' }),
     ]));

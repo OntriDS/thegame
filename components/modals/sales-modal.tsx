@@ -1027,7 +1027,6 @@ export default function SalesModal({
         newCustomerName: isNewCustomer ? (newCustomerName.trim() || undefined) : undefined,
         rewardIntent: hasEmissarySalePoints
           ? {
-              kind: 'point-reward',
               points: { ...playerPoints },
             }
           : undefined,

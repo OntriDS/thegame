@@ -102,10 +102,11 @@ export async function POST(req: NextRequest) {
     if (!hasProductionIntent) delete normalizedContext.productionPlan;
     if (!hasRewardIntent) delete normalizedContext.rewardIntent;
     else if (normalizedContext.rewardIntent) {
-      // Task points belong to the owner's Player relationship. The old
-      // These fields belonged to retired reward-recipient experiments. The
-      // canonical Task reward facet contains only its kind and point amounts.
+      // Task points belong to the owner's Player relationship. These fields
+      // belonged to retired reward-recipient experiments. The
+      // canonical Task reward facet contains only point amounts.
       const {
+        kind: _legacyRewardKind,
         beneficiaryCharacterId: _legacyBeneficiary,
         policyVersion: _legacyPolicyVersion,
         ...canonicalRewardIntent
@@ -263,6 +264,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
-
-

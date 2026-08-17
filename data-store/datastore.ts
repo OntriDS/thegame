@@ -1395,9 +1395,31 @@ export async function upsertPlayer(player: Player, options?: { skipWorkflowEffec
   const {
     accountId: _legacyAccountId,
     links: _embeddedLinks,
+    points: legacyPoints,
+    pendingPoints: legacyPendingPoints,
+    totalPoints: legacyTotalPoints,
     ...canonicalPlayer
   } = player as Player & { accountId?: string | null; links?: unknown };
-  const saved = await repoUpsertPlayer(canonicalPlayer as Player);
+  const zeroPoints = { hp: 0, fp: 0, rp: 0, xp: 0 };
+  const current = player.rewards?.points.current ?? legacyPoints ?? zeroPoints;
+  const pending = player.rewards?.points.pending ?? legacyPendingPoints ?? zeroPoints;
+  const vested = player.rewards?.points.vested ?? legacyTotalPoints ?? current;
+  const exchanged = player.rewards?.points.exchanged ?? zeroPoints;
+  const historic = player.rewards?.points.historic ?? {
+    hp: vested.hp + pending.hp,
+    fp: vested.fp + pending.fp,
+    rp: vested.rp + pending.rp,
+    xp: vested.xp + pending.xp,
+  };
+  const canonicalWithRewards = {
+    ...canonicalPlayer,
+    rewards: player.rewards ?? {
+      points: { pending, vested, current, exchanged, historic },
+      achievements: [],
+      badges: player.badges ?? [],
+    },
+  };
+  const saved = await repoUpsertPlayer(canonicalWithRewards as Player);
 
   if (!options?.skipWorkflowEffects) {
     const { onPlayerUpsert } = await import('@/workflows/entities-workflows/player.workflow');
