@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 vi.mock('server-only', () => ({}));
 
@@ -82,6 +84,8 @@ describe('entity-test: full Task at created status', () => {
     const items = await getItemsBySourceTaskId(taskId);
     const financials = await getFinancialsBySourceTaskId(taskId);
     const output = { task, links, items, financials };
+    const outputFile = resolve(__dirname, 'task-entity-test-full.output.json');
+    writeFileSync(outputFile, `${JSON.stringify(output, null, 2)}\n`, 'utf8');
     process.stderr.write(
       `[entity-test] FULL_ENTITY_OUTPUT_BEGIN\n${JSON.stringify(output, null, 2)}\n[entity-test] FULL_ENTITY_OUTPUT_END\n`
     );

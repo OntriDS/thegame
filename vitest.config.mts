@@ -21,6 +21,7 @@ export default defineConfig({
       'tests/entity-test/financial-entity-test-clean.ts',
       'tests/entity-test/item-entity-test-clean.ts',
       'tests/entity-test/financial-entity-test-full.ts',
+      'tests/entity-test/task-entity-test-full-collected.ts',
     ],
     testTimeout: 60000,
     hookTimeout: 120000,

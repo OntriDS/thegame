@@ -1,0 +1,106 @@
+{
+  "task": {
+    "id": "78710c6d-81c1-4b10-922b-09bc4c30da2b",
+    "name": "testing-task-full",
+    "status": "created",
+    "priority": "normal",
+    "type": "goal",
+    "station": "strategy",
+    "progress": {
+      "percentage": 0
+    },
+    "schedule": {
+      "dueDate": "2026-08-24T00:56:34.529Z"
+    },
+    "order": 1000,
+    "siteId": "hq",
+    "parentId": "692742a3-90a0-4ecf-9215-face1f08dc53",
+    "context": {
+      "financialIntent": {
+        "costIntent": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        },
+        "revenueIntent": {
+          "minorUnits": "10000",
+          "currency": "USD"
+        }
+      },
+      "rewardIntent": {
+        "kind": "point-reward",
+        "points": {
+          "xp": 5,
+          "rp": 2,
+          "fp": 1,
+          "hp": 0
+        }
+      },
+      "productionPlan": {
+        "outputItemType": "bundle",
+        "outputItemSubType": "sticker",
+        "outputQuantity": 5,
+        "outputUnitCost": {
+          "minorUnits": "1000",
+          "currency": "USD"
+        },
+        "outputItemName": "testing-full-output",
+        "outputItemPrice": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        },
+        "outputItemStatus": "for-sale",
+        "isNewItem": true,
+        "isSold": false
+      }
+    },
+    "createdAt": "2026-08-17T00:56:34.529Z",
+    "updatedAt": "2026-08-17T00:56:34.529Z",
+    "schemaVersion": 1,
+    "version": 0
+  },
+  "links": [
+    {
+      "id": "9b6937a5-9499-43ec-9c6a-79d0ba5af54e",
+      "linkType": "TASK_SITE",
+      "source": {
+        "type": "task",
+        "id": "78710c6d-81c1-4b10-922b-09bc4c30da2b"
+      },
+      "target": {
+        "type": "site",
+        "id": "hq"
+      },
+      "createdAt": "2026-08-17T00:56:35.516Z"
+    },
+    {
+      "id": "5695e8ac-ddab-4343-977b-56ca5586e59f",
+      "linkType": "TASK_CHARACTER",
+      "source": {
+        "type": "task",
+        "id": "78710c6d-81c1-4b10-922b-09bc4c30da2b"
+      },
+      "target": {
+        "type": "character",
+        "id": "045911e4-2c26-428a-9757-5cea3032ceb3"
+      },
+      "relationship": "beneficiary",
+      "createdAt": "2026-08-17T00:56:45.441Z"
+    },
+    {
+      "id": "6880a7ad-c250-40b6-ba7b-71df65ba1a81",
+      "linkType": "TASK_CHARACTER",
+      "source": {
+        "type": "task",
+        "id": "78710c6d-81c1-4b10-922b-09bc4c30da2b"
+      },
+      "target": {
+        "type": "character",
+        "id": "045911e4-2c26-428a-9757-5cea3032ceb3"
+      },
+      "relationship": "owner",
+      "createdAt": "2026-08-17T00:56:47.152Z"
+    }
+  ],
+  "items": [],
+  "financials": []
+}

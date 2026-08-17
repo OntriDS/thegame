@@ -1,8 +1,8 @@
 {
   "task": {
-    "id": "entity-test-task-full-done",
-    "name": "testing-task-full-done",
-    "status": "done",
+    "id": "entity-test-task-full-collected",
+    "name": "testing-task-full-collected",
+    "status": "collected",
     "priority": "normal",
     "type": "goal",
     "station": "strategy",
@@ -10,11 +10,11 @@
       "percentage": 100
     },
     "schedule": {
-      "dueDate": "2026-08-24T01:19:57.392Z"
+      "dueDate": "2026-08-24T01:32:14.763Z"
     },
     "order": 1000,
     "siteId": "hq",
-    "parentId": "58704aa5-191e-4ce0-aec6-f46e472d0431",
+    "parentId": "704e470d-421c-47f6-bc1a-1fa63d358473",
     "context": {
       "financialIntent": {
         "costIntent": {
@@ -43,7 +43,7 @@
           "minorUnits": "1000",
           "currency": "USD"
         },
-        "outputItemName": "testing-full-done-output",
+        "outputItemName": "testing-full-collected-output",
         "outputItemPrice": {
           "minorUnits": "5000",
           "currency": "USD"
@@ -53,102 +53,102 @@
         "isSold": false
       }
     },
-    "createdAt": "2026-08-17T01:19:57.392Z",
-    "updatedAt": "2026-08-17T01:20:10.577Z",
+    "createdAt": "2026-08-17T01:32:14.763Z",
+    "updatedAt": "2026-08-17T01:33:27.908Z",
     "schemaVersion": 1,
-    "version": 1,
-    "doneAt": "2026-08-17T01:20:10.577Z"
+    "version": 2,
+    "doneAt": "2026-08-17T01:32:30.057Z",
+    "collectedAt": "2026-08-17T01:33:27.908Z"
   },
   "links": [
     {
-      "id": "af8b9d96-7d25-4a5f-9e2a-3d435c280a4a",
-      "linkType": "TASK_FINREC",
-      "source": {
-        "type": "task",
-        "id": "entity-test-task-full-done"
-      },
-      "target": {
-        "type": "financial",
-        "id": "finrec-entity-test-task-full-done"
-      },
-      "createdAt": "2026-08-17T01:20:32.246Z"
-    },
-    {
-      "id": "2b4f7d91-e471-4c31-b11b-32ca14e53fec",
-      "linkType": "TASK_ITEM",
-      "source": {
-        "type": "task",
-        "id": "entity-test-task-full-done"
-      },
-      "target": {
-        "type": "item",
-        "id": "item-entity-test-task-full-done-1786929634734"
-      },
-      "createdAt": "2026-08-17T01:20:47.831Z"
-    },
-    {
-      "id": "e7b68588-b37a-4bc3-a60b-89e6fc84600d",
-      "linkType": "TASK_SITE",
-      "source": {
-        "type": "task",
-        "id": "entity-test-task-full-done"
-      },
-      "target": {
-        "type": "site",
-        "id": "hq"
-      },
-      "createdAt": "2026-08-17T01:19:58.400Z"
-    },
-    {
-      "id": "627aa38e-5d5a-4ce3-b590-2950ba579c8f",
-      "linkType": "TASK_CHARACTER",
-      "source": {
-        "type": "task",
-        "id": "entity-test-task-full-done"
-      },
-      "target": {
-        "type": "character",
-        "id": "character-1762706537139-1ewtmjczv"
-      },
-      "relationship": "beneficiary",
-      "createdAt": "2026-08-17T01:20:44.617Z"
-    },
-    {
-      "id": "3fca88e3-6caa-448b-a3c9-c97bf25948a2",
-      "linkType": "TASK_CHARACTER",
-      "source": {
-        "type": "task",
-        "id": "entity-test-task-full-done"
-      },
-      "target": {
-        "type": "character",
-        "id": "character-1762706537139-1ewtmjczv"
-      },
-      "relationship": "owner",
-      "createdAt": "2026-08-17T01:20:46.305Z"
-    },
-    {
-      "id": "2ce5d86b-507e-4d42-83fb-47b9dbff55a7",
+      "id": "36a9bded-efdf-4ed1-8251-d81d71eab8df",
       "linkType": "TASK_PLAYER",
       "source": {
         "type": "task",
-        "id": "entity-test-task-full-done"
+        "id": "entity-test-task-full-collected"
       },
       "target": {
         "type": "player",
         "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
       },
       "relationship": "points-earned",
-      "createdAt": "2026-08-17T01:20:25.905Z"
+      "createdAt": "2026-08-17T01:32:48.647Z"
+    },
+    {
+      "id": "92ecd042-fc7e-4c11-a9a1-3f73fe0625a5",
+      "linkType": "TASK_FINREC",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-collected"
+      },
+      "target": {
+        "type": "financial",
+        "id": "finrec-entity-test-task-full-collected"
+      },
+      "createdAt": "2026-08-17T01:33:08.687Z"
+    },
+    {
+      "id": "f58e3e99-62c5-468a-8ce3-070cb6012faf",
+      "linkType": "TASK_ITEM",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-collected"
+      },
+      "target": {
+        "type": "item",
+        "id": "item-entity-test-task-full-collected-1786930392617"
+      },
+      "createdAt": "2026-08-17T01:33:26.684Z"
+    },
+    {
+      "id": "1932c48e-7741-4bf3-b026-efee08db9cd7",
+      "linkType": "TASK_SITE",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-collected"
+      },
+      "target": {
+        "type": "site",
+        "id": "hq"
+      },
+      "createdAt": "2026-08-17T01:32:15.772Z"
+    },
+    {
+      "id": "a081039f-7e04-4130-873f-ae69f1aa9671",
+      "linkType": "TASK_CHARACTER",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-collected"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1762743456933-6aaj82hwn"
+      },
+      "relationship": "owner",
+      "createdAt": "2026-08-17T01:33:48.353Z"
+    },
+    {
+      "id": "ca33072f-eccd-4382-b9ab-eecab2c76bd3",
+      "linkType": "TASK_PLAYER",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-collected"
+      },
+      "target": {
+        "type": "player",
+        "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
+      },
+      "createdAt": "2026-08-17T01:33:40.695Z"
     }
   ],
   "items": [
     {
-      "id": "item-entity-test-task-full-done-1786929634734",
+      "id": "item-entity-test-task-full-collected-1786930392617",
       "schemaVersion": 1,
       "version": 0,
-      "name": "testing-full-done-output",
-      "description": "Created from task: testing-task-full-done",
+      "name": "testing-full-collected-output",
+      "description": "Created from task: testing-task-full-collected",
       "type": "bundle",
       "subItemType": "sticker",
       "status": "for-sale",
@@ -162,9 +162,9 @@
           "currency": "USD"
         }
       },
-      "sourceTaskId": "entity-test-task-full-done",
-      "createdAt": "2026-08-17T01:20:34.734Z",
-      "updatedAt": "2026-08-17T01:20:34.734Z",
+      "sourceTaskId": "entity-test-task-full-collected",
+      "createdAt": "2026-08-17T01:33:12.617Z",
+      "updatedAt": "2026-08-17T01:33:12.617Z",
       "context": {
         "year": 2026
       },
@@ -178,10 +178,10 @@
   ],
   "financials": [
     {
-      "id": "finrec-entity-test-task-full-done",
+      "id": "finrec-entity-test-task-full-collected",
       "schemaVersion": 1,
       "version": 0,
-      "name": "testing-task-full-done",
+      "name": "testing-task-full-collected",
       "year": 2026,
       "month": 8,
       "station": "strategy",
@@ -196,7 +196,7 @@
       },
       "status": "done",
       "lifecycle": {
-        "doneAt": "2026-08-17T01:20:10.577Z"
+        "doneAt": "2026-08-17T01:32:30.057Z"
       },
       "context": {
         "productionPlan": {
@@ -207,7 +207,7 @@
             "minorUnits": "1000",
             "currency": "USD"
           },
-          "outputItemName": "testing-full-done-output",
+          "outputItemName": "testing-full-collected-output",
           "outputItemPrice": {
             "minorUnits": "5000",
             "currency": "USD"
@@ -217,31 +217,31 @@
           "isSold": false
         }
       },
-      "createdAt": "2026-08-17T01:20:27.727Z",
-      "updatedAt": "2026-08-17T01:20:27.727Z",
+      "createdAt": "2026-08-17T01:32:50.509Z",
+      "updatedAt": "2026-08-17T01:32:50.509Z",
       "netCashflow": {
         "minorUnits": "5000",
         "currency": "USD"
       },
-      "description": "Financial record from task: testing-task-full-done",
+      "description": "Financial record from task: testing-task-full-collected",
       "siteId": "hq",
-      "sourceTaskId": "entity-test-task-full-done"
+      "sourceTaskId": "entity-test-task-full-collected"
     }
   ],
   "pointEvidence": [
     {
-      "id": "2ce5d86b-507e-4d42-83fb-47b9dbff55a7",
+      "id": "36a9bded-efdf-4ed1-8251-d81d71eab8df",
       "linkType": "TASK_PLAYER",
       "source": {
         "type": "task",
-        "id": "entity-test-task-full-done"
+        "id": "entity-test-task-full-collected"
       },
       "target": {
         "type": "player",
         "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
       },
       "relationship": "points-earned",
-      "createdAt": "2026-08-17T01:20:25.905Z"
+      "createdAt": "2026-08-17T01:32:48.647Z"
     }
   ]
 }

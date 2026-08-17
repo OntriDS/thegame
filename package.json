@@ -13,7 +13,8 @@
     "test:entity:full-done": "vitest run tests/entity-test/task-entity-test-full-done.ts",
     "test:entity:financial-clean": "vitest run tests/entity-test/financial-entity-test-clean.ts",
     "test:entity:item-clean": "vitest run tests/entity-test/item-entity-test-clean.ts",
-    "test:entity:financial-full": "vitest run tests/entity-test/financial-entity-test-full.ts"
+    "test:entity:financial-full": "vitest run tests/entity-test/financial-entity-test-full.ts",
+    "test:entity:full-collected": "vitest run tests/entity-test/task-entity-test-full-collected.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.758.0",
