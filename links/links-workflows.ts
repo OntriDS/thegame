@@ -286,9 +286,8 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     if (l.linkType !== LinkType.SALE_FINREC || l.target.type !== EntityType.FINANCIAL) continue;
     const fin = await getFinancialById(l.target.id);
     if (!fin) { await removeLink(l.id); continue; }
-    if (fin.sourceSaleId != null && fin.sourceSaleId !== sale.id) {
-      await removeLink(l.id);
-    }
+    // The SALE_FINREC link itself is now the source-of-truth relationship;
+    // FinancialRecord no longer persists sourceSaleId.
   }
 
   // --- SALE_BUSINESS legacy cleanup (always purge — migrated to SALE_CHARACTER) ---
@@ -384,22 +383,34 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
 
 export async function processFinancialEffects(fin: FinancialRecord): Promise<void> {
   const financialCounterpartyId = getFinancialCounterpartyId(fin);
+  const relations = (fin as any).__financialRelations || {};
+  const relationsProvided = Boolean((fin as any).__financialRelationsProvided);
   // Get existing links for cleanup
   const existingLinks = await getLinksFor({ type: EntityType.FINANCIAL, id: fin.id });
 
   // Replace old role-less FINREC_CHARACTER links with the canonical
   // relationship-bearing form.
-  for (const link of existingLinks.filter((l) => l.linkType === LinkType.FINREC_CHARACTER)) {
-    await removeLink(link.id);
+  if (relationsProvided) {
+    for (const link of existingLinks.filter((l) => l.linkType === LinkType.FINREC_CHARACTER)) {
+      await removeLink(link.id);
+    }
+
+    for (const link of existingLinks.filter((l) => l.linkType === LinkType.FINREC_SITE)) {
+      await removeLink(link.id);
+    }
   }
 
-  if (fin.siteId) {
-    const l = makeLink(LinkType.FINREC_SITE, { type: EntityType.FINANCIAL, id: fin.id }, { type: EntityType.SITE, id: fin.siteId });
+  if (relationsProvided && relations.siteId) {
+    const l = makeLink(LinkType.FINREC_SITE, { type: EntityType.FINANCIAL, id: fin.id }, { type: EntityType.SITE, id: relations.siteId }, 'source');
+    await createLink(l);
+  }
+  if (relationsProvided && relations.targetSiteId && relations.targetSiteId !== relations.siteId) {
+    const l = makeLink(LinkType.FINREC_SITE, { type: EntityType.FINANCIAL, id: fin.id }, { type: EntityType.SITE, id: relations.targetSiteId }, 'target');
     await createLink(l);
   }
 
   // FINREC_CHARACTER link
-  if (financialCounterpartyId) {
+  if (relationsProvided && financialCounterpartyId) {
     const l = makeLink(
       LinkType.FINREC_CHARACTER,
       { type: EntityType.FINANCIAL, id: fin.id },
@@ -458,8 +469,9 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
   // after upsertFinancial succeeded) can end up synced-but-unlinked. Running
   // this on every financial upsert makes the next resave the repair trigger.
   // createLink is idempotent, so this is a no-op when the link already exists.
-  if (fin.sourceTaskId) {
-    const sourceTask = await getTaskById(fin.sourceTaskId);
+  const sourceTaskId = relations.sourceTaskId;
+  if (sourceTaskId) {
+    const sourceTask = await getTaskById(sourceTaskId);
     if (sourceTask) {
       const l = makeLink(
         LinkType.TASK_FINREC,

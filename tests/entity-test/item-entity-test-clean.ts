@@ -21,8 +21,6 @@ describe('entity-test: clean minimal Item', () => {
 
     await upsertItem({
       id: itemId,
-      schemaVersion: 1,
-      version: 0,
       name: 'testing-item',
       type: ItemType.BUNDLE,
       subItemType: 'print' as any,

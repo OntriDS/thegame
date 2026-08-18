@@ -1,0 +1,298 @@
+{
+  "task": {
+    "id": "entity-test-task-failed-negative",
+    "name": "testing-task-failed-negative",
+    "status": "failed",
+    "priority": "normal",
+    "type": "goal",
+    "station": "strategy",
+    "progress": {
+      "percentage": 0
+    },
+    "siteId": "hq",
+    "order": 1000,
+    "context": {
+      "rewardIntent": {
+        "points": {
+          "xp": -2,
+          "rp": -1,
+          "fp": 0,
+          "hp": 0
+        }
+      }
+    },
+    "createdAt": "2026-08-18T02:24:06.661Z",
+    "updatedAt": "2026-08-18T02:24:06.661Z",
+    "schemaVersion": 1,
+    "version": 1,
+    "doneAt": "2026-08-18T02:24:12.603Z"
+  },
+  "links": [
+    {
+      "id": "87105934-6db7-46cf-8ffe-559734a9f6e9",
+      "linkType": "TASK_SITE",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-failed-negative"
+      },
+      "target": {
+        "type": "site",
+        "id": "hq"
+      },
+      "createdAt": "2026-08-18T02:24:07.622Z"
+    },
+    {
+      "id": "ced341df-80e7-435e-a8ed-d409cacf13a2",
+      "linkType": "TASK_CHARACTER",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-failed-negative"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1775889257983-6pkhdapnl"
+      },
+      "relationship": "owner",
+      "createdAt": "2026-08-18T02:24:27.678Z"
+    },
+    {
+      "id": "6e72a7de-dba1-46cf-aa6b-578182b625d0",
+      "linkType": "TASK_PLAYER",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-failed-negative"
+      },
+      "target": {
+        "type": "player",
+        "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
+      },
+      "relationship": "points-earned",
+      "createdAt": "2026-08-18T02:24:17.344Z"
+    }
+  ],
+  "items": [],
+  "financials": [],
+  "playerBefore": {
+    "id": "c83b2249-60a1-4b09-9874-5612f95c5da2",
+    "schemaVersion": 1,
+    "name": "Akiles",
+    "description": "Player One",
+    "createdAt": "2025-11-03T01:14:48.514Z",
+    "updatedAt": "2026-08-18T02:23:27.349Z",
+    "version": 1,
+    "level": 0,
+    "characterId": "cc4ba319-8788-436e-ab46-56a7a92b2564",
+    "badges": [
+      {
+        "id": "badge-1772997678939",
+        "name": "Bug Buster",
+        "description": "Solved 1000 Bugs",
+        "requiredRoles": [
+          "developer"
+        ],
+        "createdAt": "2026-03-08T19:21:18.939Z"
+      }
+    ],
+    "lastActiveAt": "2025-11-03T01:14:48.514Z",
+    "totalTasksCompleted": 0,
+    "totalSalesCompleted": 0,
+    "totalItemsSold": 0,
+    "isActive": true,
+    "rewards": {
+      "points": {
+        "pending": {
+          "hp": 1,
+          "fp": 65,
+          "rp": 223,
+          "xp": 173
+        },
+        "vested": {
+          "hp": 1,
+          "fp": 49,
+          "rp": 225,
+          "xp": 70
+        },
+        "current": {
+          "hp": 0,
+          "fp": 25,
+          "rp": 80,
+          "xp": 0
+        },
+        "exchanged": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 0
+        },
+        "historic": {
+          "hp": 2,
+          "fp": 114,
+          "rp": 448,
+          "xp": 243
+        }
+      },
+      "achievements": [],
+      "badges": [
+        {
+          "id": "badge-1772997678939",
+          "name": "Bug Buster",
+          "description": "Solved 1000 Bugs",
+          "requiredRoles": [
+            "developer"
+          ],
+          "createdAt": "2026-03-08T19:21:18.939Z"
+        }
+      ]
+    }
+  },
+  "playerAfterFailed": {
+    "id": "c83b2249-60a1-4b09-9874-5612f95c5da2",
+    "schemaVersion": 1,
+    "name": "Akiles",
+    "description": "Player One",
+    "createdAt": "2025-11-03T01:14:48.514Z",
+    "updatedAt": "2026-08-18T02:24:13.999Z",
+    "version": 1,
+    "level": 0,
+    "characterId": "cc4ba319-8788-436e-ab46-56a7a92b2564",
+    "badges": [
+      {
+        "id": "badge-1772997678939",
+        "name": "Bug Buster",
+        "description": "Solved 1000 Bugs",
+        "requiredRoles": [
+          "developer"
+        ],
+        "createdAt": "2026-03-08T19:21:18.939Z"
+      }
+    ],
+    "lastActiveAt": "2025-11-03T01:14:48.514Z",
+    "totalTasksCompleted": 0,
+    "totalSalesCompleted": 0,
+    "totalItemsSold": 0,
+    "isActive": true,
+    "rewards": {
+      "points": {
+        "pending": {
+          "hp": 1,
+          "fp": 65,
+          "rp": 223,
+          "xp": 173
+        },
+        "vested": {
+          "hp": 1,
+          "fp": 49,
+          "rp": 225,
+          "xp": 70
+        },
+        "current": {
+          "hp": 0,
+          "fp": 25,
+          "rp": 79,
+          "xp": -2
+        },
+        "exchanged": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 0
+        },
+        "historic": {
+          "hp": 2,
+          "fp": 114,
+          "rp": 447,
+          "xp": 241
+        }
+      },
+      "achievements": [],
+      "badges": [
+        {
+          "id": "badge-1772997678939",
+          "name": "Bug Buster",
+          "description": "Solved 1000 Bugs",
+          "requiredRoles": [
+            "developer"
+          ],
+          "createdAt": "2026-03-08T19:21:18.939Z"
+        }
+      ]
+    }
+  },
+  "playerAfterDelete": {
+    "id": "c83b2249-60a1-4b09-9874-5612f95c5da2",
+    "schemaVersion": 1,
+    "name": "Akiles",
+    "description": "Player One",
+    "createdAt": "2025-11-03T01:14:48.514Z",
+    "updatedAt": "2026-08-18T02:24:32.996Z",
+    "version": 1,
+    "level": 0,
+    "characterId": "cc4ba319-8788-436e-ab46-56a7a92b2564",
+    "badges": [
+      {
+        "id": "badge-1772997678939",
+        "name": "Bug Buster",
+        "description": "Solved 1000 Bugs",
+        "requiredRoles": [
+          "developer"
+        ],
+        "createdAt": "2026-03-08T19:21:18.939Z"
+      }
+    ],
+    "lastActiveAt": "2025-11-03T01:14:48.514Z",
+    "totalTasksCompleted": 0,
+    "totalSalesCompleted": 0,
+    "totalItemsSold": 0,
+    "isActive": true,
+    "rewards": {
+      "points": {
+        "pending": {
+          "hp": 1,
+          "fp": 65,
+          "rp": 223,
+          "xp": 173
+        },
+        "vested": {
+          "hp": 1,
+          "fp": 49,
+          "rp": 225,
+          "xp": 70
+        },
+        "current": {
+          "hp": 0,
+          "fp": 25,
+          "rp": 80,
+          "xp": 0
+        },
+        "exchanged": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 0
+        },
+        "historic": {
+          "hp": 2,
+          "fp": 114,
+          "rp": 448,
+          "xp": 243
+        }
+      },
+      "achievements": [],
+      "badges": [
+        {
+          "id": "badge-1772997678939",
+          "name": "Bug Buster",
+          "description": "Solved 1000 Bugs",
+          "requiredRoles": [
+            "developer"
+          ],
+          "createdAt": "2026-03-08T19:21:18.939Z"
+        }
+      ]
+    }
+  },
+  "deletion": {
+    "taskExists": false,
+    "playerRestored": true
+  }
+}

@@ -3,8 +3,10 @@
 import {
     getTasksForMonth,
     getSalesForMonth,
+    getFinancialsForMonth,
     upsertTask,
     upsertSale,
+    upsertFinancial,
 } from '@/data-store/datastore';
 import { TaskStatus, SaleStatus, EntityType } from '@/types/enums';
 import { getUTCNow, endOfMonthUTC, formatArchiveMonthKeyUTCFromParts } from '@/lib/utils/utc-utils';
@@ -57,6 +59,25 @@ export const CollectionService = {
         }
 
         await this.updateArchiveIndex(EntityType.SALE, month, year);
+        return { collectedCount: count };
+    },
+
+    async collectFinancials(month: number, year: number) {
+        const financials = await getFinancialsForMonth(year, month);
+        const toCollect = financials.filter(f => f.status === 'done');
+        let count = 0;
+        for (const financial of toCollect) {
+            const doneAt = financial.lifecycle?.doneAt || financial.updatedAt || getUTCNow();
+            const collectedAt = endOfMonthUTC(doneAt instanceof Date ? doneAt : new Date(doneAt));
+            await upsertFinancial({
+                ...financial,
+                status: 'collected' as any,
+                lifecycle: { ...(financial.lifecycle || {}), collectedAt },
+                updatedAt: getUTCNow(),
+            });
+            count++;
+        }
+        await this.updateArchiveIndex(EntityType.FINANCIAL, month, year);
         return { collectedCount: count };
     },
 

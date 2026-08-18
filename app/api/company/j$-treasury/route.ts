@@ -57,7 +57,6 @@ export async function GET(req: NextRequest) {
           zapsCost: !isUsd && Number.isFinite(counterAmount) ? counterAmount : 0,
           cashOutType: isUsd ? 'USD' as const : 'ZAPS' as const,
           station: 'Team' as const,
-          playerCharacterId: record.playerCharacterId ?? null,
         };
       })
       .sort((a, b) => b.date.localeCompare(a.date));

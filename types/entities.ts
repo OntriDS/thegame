@@ -684,12 +684,19 @@ export interface FinancialRecord extends EntityEnvelope {
   station: Station;
   type: 'company' | 'personal';
 
-  // Ambassador Fields (Links System)
+  // Read-only/transient command compatibility. The persistence boundary strips
+  // these values; canonical relationships live in the Link Registry.
+  /** @deprecated transient relation input; use FINREC_SITE Links. */
   siteId?: EntityId | null;
+  /** @deprecated transient relation input; use FINREC_SITE Links. */
   targetSiteId?: EntityId | null;
+  /** @deprecated transient relation input; use FINREC_CHARACTER Links. */
   characterId?: EntityId | null;
+  /** @deprecated transient creator input; never persisted. */
   playerCharacterId?: EntityId | null;
+  /** @deprecated transient relation input; use FINREC_TASK Links. */
   sourceTaskId?: EntityId | null;
+  /** @deprecated transient relation input; use FINREC_SALE Links. */
   sourceSaleId?: EntityId | null;
   salesChannel?: Station | null;
 
@@ -704,6 +711,25 @@ export interface FinancialRecord extends EntityEnvelope {
 
   context?: FinancialRecordContextV1;
 }
+
+/**
+ * Transient relationship input accepted by financial commands. These values
+ * may be used to reconcile canonical Links, but are never persisted on the
+ * FinancialRecord entity.
+ */
+export interface FinancialRecordRelationInput {
+  siteId?: EntityId | null;
+  targetSiteId?: EntityId | null;
+  characterId?: EntityId | null;
+  playerCharacterId?: EntityId | null;
+  sourceTaskId?: EntityId | null;
+  sourceSaleId?: EntityId | null;
+  characterRelationship?: CustomerCounterpartyRole | null;
+}
+
+export type FinancialRecordRuntime = FinancialRecord & {
+  __financialRelations?: FinancialRecordRelationInput;
+};
 
 /** Company financial summary for a month */
 export interface CompanyMonthlySummary {

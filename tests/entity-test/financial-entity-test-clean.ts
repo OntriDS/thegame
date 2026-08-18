@@ -20,8 +20,6 @@ describe('entity-test: clean minimal FinancialRecord', () => {
 
     await upsertFinancial({
       id: financialId,
-      schemaVersion: 1,
-      version: 0,
       name: 'testing-financial',
       year: now.getUTCFullYear(),
       month: now.getUTCMonth() + 1,
@@ -33,7 +31,7 @@ describe('entity-test: clean minimal FinancialRecord', () => {
       status: FinancialStatus.DONE,
       createdAt: now,
       updatedAt: now,
-    } as any, { skipWorkflowEffects: true, skipLinkEffects: true });
+    } as any);
 
     const saved = await getFinancialById(financialId);
     if (!saved) throw new Error(`Entity-test FinancialRecord ${financialId} was not found after creation.`);

@@ -115,11 +115,15 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     const soldItemClone: Item = {
       ...item,
       id: cloneId,
+      version: 0,
       status: ItemStatus.SOLD,
       stock: [{ siteId: primarySite, quantity: 0 }],
       quantitySold: quantityToSell,
-      soldAt: soldAt,
       sourceRecordId: 'manual', 
+      context: {
+        ...item.context,
+        soldAt,
+      },
       updatedAt: getUTCNow()
     };
     
@@ -141,10 +145,19 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     const shouldRestockToTarget = item.context?.restockToTarget ?? false;
     const targetAmount = item.context?.targetAmount || 0;
 
+    // quantitySold belongs only to the sold archive clone, never the
+    // remaining inventory shell.
+    const {
+      quantitySold: _quantitySold,
+      sourceRecordId: _sourceRecordId,
+      soldAt: _soldAt,
+      ...inventoryItemShape
+    } = item as any;
+
     if (shouldRestockToTarget && targetAmount > 0) {
       // Restock to target quantity (consignment behavior)
       updatedBaseItem = {
-        ...item,
+        ...inventoryItemShape,
         status: ItemStatus.FOR_SALE,
         stock: [{ siteId: primarySite, quantity: targetAmount }],
         updatedAt: getUTCNow()
@@ -154,7 +167,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     } else if (shouldKeepInInventory || remainingStock > 0) {
       // Keep item in inventory - either because toggle is ON or there's still stock
       updatedBaseItem = {
-        ...item,
+        ...inventoryItemShape,
         status: ItemStatus.FOR_SALE, // Keep item active
         stock: [{ siteId: primarySite, quantity: remainingStock }],
         updatedAt: getUTCNow()

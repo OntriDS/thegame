@@ -27,11 +27,11 @@ export async function GET(request: NextRequest) {
   try {
     let studentIds: string[] = [];
 
-    if (groupId) {
+    if (groupId && groupId !== 'all') {
       studentIds = await kvSMembers(getGroupKey(groupId));
     } else {
-      // Get all from all groups
-      const groups: JungleGroupId[] = ['eep', 'group-a', 'group-b', 'group-c'];
+      // Get all from all groups (including 'all' to catch any orphans from before dropdown fix)
+      const groups: string[] = ['all', 'eep', 'group-a', 'group-b', 'group-c'];
       const allMembers = await Promise.all(groups.map(g => kvSMembers(getGroupKey(g))));
       studentIds = Array.from(new Set(allMembers.flat()));
     }

@@ -161,13 +161,17 @@ async function syncSaleFinancialsForSiteNameChange(siteId: string): Promise<void
   for (const financialId of financialIds) {
     try {
       const financial = await getFinancialById(financialId) as FinancialRecord | null;
-      if (!financial || !financial.sourceSaleId) {
-        continue;
-      }
+      if (!financial) continue;
+      const financialLinks = await getLinksFor({ type: EntityType.FINANCIAL, id: financialId });
+      const saleLink = financialLinks.find((link: any) =>
+        (link.linkType === LinkType.SALE_FINREC && link.source?.type === EntityType.SALE) ||
+        (link.linkType === LinkType.FINREC_SALE && link.target?.type === EntityType.SALE)
+      ) as any;
+      const sourceSaleId = saleLink?.source?.type === EntityType.SALE ? saleLink.source.id :
+        saleLink?.target?.type === EntityType.SALE ? saleLink.target.id : null;
+      if (!sourceSaleId || saleIds.has(sourceSaleId)) continue;
 
-      if (saleIds.has(financial.sourceSaleId)) continue;
-
-      const sourceSale = await getSaleById(financial.sourceSaleId);
+      const sourceSale = await getSaleById(sourceSaleId);
       if (!sourceSale || !sourceSale.siteId || sourceSale.siteId !== siteId) continue;
 
       await updateFinancialRecordsFromSale(sourceSale, sourceSale);

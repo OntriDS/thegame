@@ -14,7 +14,10 @@
     "test:entity:financial-clean": "vitest run tests/entity-test/financial-entity-test-clean.ts",
     "test:entity:item-clean": "vitest run tests/entity-test/item-entity-test-clean.ts",
     "test:entity:financial-full": "vitest run tests/entity-test/financial-entity-test-full.ts",
-    "test:entity:full-collected": "vitest run tests/entity-test/task-entity-test-full-collected.ts"
+    "test:entity:full-collected": "vitest run tests/entity-test/task-entity-test-full-collected.ts",
+    "test:entity:failed-negative": "vitest run tests/entity-test/task-entity-test-failed-negative.ts",
+    "test:entity:item-manual-sold": "vitest run tests/entity-test/item-entity-test-manual-sold.ts",
+    "test:entity:character-clean": "vitest run tests/entity-test/character-entity-test-clean.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.758.0",

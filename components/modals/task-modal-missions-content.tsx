@@ -48,6 +48,7 @@ import { TaskModalFooter } from './task-modal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { ensureCounterpartyRole } from '@/lib/utils/character-role-sync';
 import { ClientAPI } from '@/lib/client-api';
+import { hasNonZeroTaskPoints, hasPositiveTaskPoints } from '@/lib/task-reward-validation';
 
 const normalizeTaskCounterpartyRole = (role: unknown): CharacterRole =>
   typeof role === 'string' && role.trim().toLowerCase() === CharacterRole.BENEFICIARY
@@ -157,6 +158,7 @@ export default function MissionTreeModalContent({
   const [showScheduler, setShowScheduler] = useState(false);
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
+  const [showFailedPointsModal, setShowFailedPointsModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDatesModal, setShowDatesModal] = useState(false);
@@ -377,7 +379,7 @@ export default function MissionTreeModalContent({
   }, [customerCharacterId, allCharacters]);
 
   // Helper function to build task from form state
-  const buildTaskFromForm = () => {
+  const buildTaskFromForm = (pointsOverride = rewards.points) => {
     const editingExisting = !!task;
 
     // Scheduled start/end logic - create UTC dates from local date + time
@@ -454,7 +456,7 @@ export default function MissionTreeModalContent({
     const finalStatus = determineFinalStatus();
     const hasCounterparty = Boolean((!isNewCustomer && customerCharacterId) || (isNewCustomer && newCustomerName.trim()));
     const hasProductionIntent = Boolean(outputItemType || outputItemName.trim() || selectedItemId);
-    const hasRewards = Object.values(rewards.points).some((value) => Number(value) > 0);
+    const hasRewards = hasNonZeroTaskPoints(pointsOverride);
     const effectiveOwnerIds = Array.isArray(ownerId)
       ? ownerId
       : (ownerId ? [ownerId] : (authUser?.characterId ? [authUser.characterId] : []));
@@ -491,7 +493,7 @@ export default function MissionTreeModalContent({
           : undefined,
         rewardIntent: hasRewards
           ? {
-              points: rewards.points,
+              points: pointsOverride,
             }
           : undefined,
         productionPlan: hasProductionIntent
@@ -530,16 +532,38 @@ export default function MissionTreeModalContent({
       setShowValidationModal(true);
       return;
     }
-    const hasPointReward = Object.values(rewards.points).some((value) => Number(value) > 0);
+    const hasPointReward = hasPositiveTaskPoints(rewards.points);
     const hasOwner = (Array.isArray(ownerId) ? ownerId.length > 0 : Boolean(ownerId)) || Boolean(authUser?.characterId);
     if (hasPointReward && !hasOwner) {
       setValidationMessage('Assign an owner before adding point rewards');
       setShowValidationModal(true);
       return;
     }
+    const candidate = buildTaskFromForm();
+    if (candidate.status === TaskStatus.FAILED && hasPositiveTaskPoints(candidate.context?.rewardIntent?.points)) {
+      setShowFailedPointsModal(true);
+      return;
+    }
     setIsSaving(true);
     try {
-      const newTask = buildTaskFromForm();
+      await onSave(candidate);
+      await ensureCounterpartyRole((candidate as any).characterId, (candidate as any).customerCharacterRole);
+      dispatchEntityUpdated(entityTypeToKind(EntityType.TASK));
+      onOpenChange(false);
+    } catch (error) {
+      console.error('[MissionTaskModal] Save failed:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveFailedWithZeroPoints = async () => {
+    const zeroPoints = { xp: 0, rp: 0, fp: 0, hp: 0 };
+    setShowFailedPointsModal(false);
+    setRewards({ points: zeroPoints });
+    setIsSaving(true);
+    try {
+      const newTask = buildTaskFromForm(zeroPoints);
       await onSave(newTask);
       await ensureCounterpartyRole((newTask as any).characterId, (newTask as any).customerCharacterRole);
       dispatchEntityUpdated(entityTypeToKind(EntityType.TASK));
@@ -1288,6 +1312,20 @@ export default function MissionTreeModalContent({
           </DialogHeader>
           <DialogFooter>
             <Button onClick={() => setShowValidationModal(false)}>Okay</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showFailedPointsModal} onOpenChange={setShowFailedPointsModal}>
+        <DialogContent zIndexLayer="MODALS">
+          <DialogHeader>
+            <DialogTitle>Failed task points</DialogTitle>
+            <DialogDescription>
+              A failed task cannot award positive points. Set the points to zero, or close this message and enter a negative value as a penalty.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowFailedPointsModal(false)}>Edit points</Button>
+            <Button onClick={handleSaveFailedWithZeroPoints}>Set to zero and save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

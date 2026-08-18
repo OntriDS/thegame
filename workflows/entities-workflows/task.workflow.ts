@@ -22,6 +22,7 @@ import { getLinksFor, removeLink } from '@/links/link-registry';
 import { createItemFromTask, removeItemsCreatedByTask } from '../item-creation-utils';
 import { awardPointsToPlayer, revokePointsFromPlayer, stagePointsForPlayer, rewardPointsToPlayer, withdrawStagedPointsFromPlayer, unrewardPointsForPlayer } from '../points-rewards-utils';
 import { createFinancialRecordFromTask, removeFinancialRecordsCreatedByTask } from '../financial-record-utils';
+import { applyPenaltyToPlayer, reversePenaltyFromPlayer } from '../points-rewards-utils';
 import { createCharacterFromTask } from '../character-creation-utils';
 import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync-server';
 import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
@@ -190,21 +191,31 @@ async function normalizeTaskFailedState(task: Task, previousTask?: Task): Promis
     const pointsRewardedKey = EffectKeys.sideEffect('task', task.id, 'pointsRewarded');
     const playerRef = await resolveTaskOwnerPlayerId(task);
 
-    if (wasCollected && task.context?.rewardIntent?.points) {
+    const previousPoints = previousTask.context?.rewardIntent?.points || task.context?.rewardIntent?.points;
+    if (wasCollected && previousPoints) {
       if (await hasEffect(pointsRewardedKey)) {
-        if (playerRef) await unrewardPointsForPlayer(playerRef, task.context?.rewardIntent?.points, task.id, EntityType.TASK);
+        if (playerRef) await unrewardPointsForPlayer(playerRef, previousPoints, task.id, EntityType.TASK);
         await clearEffect(pointsRewardedKey);
       } else if (await hasEffect(stagingKey)) {
-        if (playerRef) await withdrawStagedPointsFromPlayer(playerRef, task.context?.rewardIntent?.points, task.id, EntityType.TASK);
+        if (playerRef) await withdrawStagedPointsFromPlayer(playerRef, previousPoints, task.id, EntityType.TASK);
         await clearEffect(stagingKey);
       }
       await removeLogEntriesAcrossMonths(
         EntityType.TASK,
         e => e.entityId === task.id && e.event === LogEventType.COLLECTED
       );
-    } else if (previousTask.status === TaskStatus.DONE && task.context?.rewardIntent?.points && (await hasEffect(stagingKey))) {
-      if (playerRef) await withdrawStagedPointsFromPlayer(playerRef, task.context?.rewardIntent?.points, task.id, EntityType.TASK);
+    } else if (previousTask.status === TaskStatus.DONE && previousPoints && (await hasEffect(stagingKey))) {
+      if (playerRef) await withdrawStagedPointsFromPlayer(playerRef, previousPoints, task.id, EntityType.TASK);
       await clearEffect(stagingKey);
+    }
+  }
+
+  const penaltyPoints = task.context?.rewardIntent?.points;
+  const penaltyKey = EffectKeys.sideEffect('task', task.id, 'pointsPenalized');
+  if (penaltyPoints && !(await hasEffect(penaltyKey))) {
+    const playerRef = await resolveTaskOwnerPlayerId(task);
+    if (playerRef && await applyPenaltyToPlayer(playerRef, penaltyPoints, task.id, EntityType.TASK, doneAt)) {
+      await markEffect(penaltyKey);
     }
   }
 
@@ -620,7 +631,13 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
     await clearEffect(EffectKeys.sideEffect('task', task.id, 'itemCreated'));
     await clearEffect(EffectKeys.sideEffect('task', task.id, 'financialCreated'));
     await clearEffect(EffectKeys.sideEffect('task', task.id, 'pointsAwarded'));
+    await clearEffect(EffectKeys.sideEffect('task', task.id, 'pointsRewarded'));
+    await clearEffect(EffectKeys.sideEffect('task', task.id, 'pointsPenalized'));
+    await clearEffect(EffectKeys.sideEffect('task', task.id, 'pointsReversed'));
     await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'pointsStaged'));
+    await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'pointsRewarded'));
+    await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'pointsPenalized'));
+    await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'pointsReversed'));
     await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'financialCreated'));
     await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'itemCreated'));
     await clearEffectsByPrefix(EntityType.TASK, task.id, 'pointsLogged:');
@@ -691,10 +708,25 @@ async function removePlayerPointsFromTask(task: Task, wasCollectedOverride?: boo
 
     // Check if any points were actually awarded
     const pointsToRemove = task.context?.rewardIntent?.points;
-    const hasPoints = (pointsToRemove.xp || 0) > 0 || (pointsToRemove.rp || 0) > 0 ||
-      (pointsToRemove.fp || 0) > 0 || (pointsToRemove.hp || 0) > 0;
+    const hasPoints = (pointsToRemove.xp || 0) !== 0 || (pointsToRemove.rp || 0) !== 0 ||
+      (pointsToRemove.fp || 0) !== 0 || (pointsToRemove.hp || 0) !== 0;
 
     if (!hasPoints) return;
+
+    const penaltyKey = EffectKeys.sideEffect('task', task.id, 'pointsPenalized');
+    if (await hasEffect(penaltyKey)) {
+      await reversePenaltyFromPlayer(playerId, pointsToRemove);
+      await clearEffect(penaltyKey);
+      await markEffect(EffectKeys.sideEffect('task', task.id, 'pointsReversed'));
+      return;
+    }
+
+    // A failed task may carry a negative penalty intent without ever entering
+    // the pending/vested reward lifecycle. Do not reverse a value that was
+    // never applied to the Player projection.
+    const pointsWereStaged = await hasEffect(EffectKeys.sideEffect('task', task.id, 'pointsStaged'));
+    const pointsWereRewarded = await hasEffect(EffectKeys.sideEffect('task', task.id, 'pointsRewarded'));
+    if (!pointsWereStaged && !pointsWereRewarded) return;
 
     // NOTE: We do NOT remove J$ here because:
     // - J$ is only created when points are EXPLICITLY exchanged for J$ (via exchange flow)
@@ -794,6 +826,7 @@ export async function uncompleteTask(taskId: string, previousTerminalTask?: Task
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'financialCreated'));
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsAwarded'));
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsRewarded')); // Clear the new effect key
+    await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsPenalized'));
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsStaged'));
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsReversed'));
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'failedLogged'));

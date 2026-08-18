@@ -23,10 +23,8 @@ import {
   Calendar,
   Network,
   CalendarIcon,
-  User,
   Pencil,
 } from 'lucide-react';
-import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 import { CustomerCounterpartyRole, FinancialRecord, Item, Site } from '@/types/entities';
 import {
   BUSINESS_STRUCTURE,
@@ -42,7 +40,6 @@ import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils'
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
-import { useAuth } from '@/lib/hooks/use-auth';
 import { getCollectionLabel } from '@/lib/constants/collection-labels';
 // Side effects handled by parent component via API calls
 import { v4 as uuid } from 'uuid';
@@ -79,7 +76,6 @@ interface FinancialsModalProps {
 
 export default function FinancialsModal({ record, year, month, open, onOpenChange, onSave, onDelete }: FinancialsModalProps) {
   const { getPreference, setPreference } = useUserPreferences();
-  const { user: authUser } = useAuth();
 
   // User preference functions - memoized to prevent dependency changes
   const getLastUsedStation = useCallback((): Station => {
@@ -148,8 +144,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
-  const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(null);
-  const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
 
   // Dates Submodal State
   const [showDatesModal, setShowDatesModal] = useState(false);
@@ -248,8 +242,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
           String(record.status) === 'Collected'
             ? FinancialStatus.DONE
             : record.status || FinancialStatus.DONE,
-        site: record.siteId || '',
-        targetSite: record.targetSiteId || '',
+        site: '',
+        targetSite: '',
         characterId: getFinancialCounterpartyId(record),
         customerCharacterRole: toCustomerCounterpartyRole(getFinancialCounterpartyRole(record) || undefined),
         isNewCustomer: !getFinancialCounterpartyId(record), // Toggle based on whether customer exists
@@ -273,7 +267,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       });
 
       // Initialize player character
-      setPlayerCharacterId(record.playerCharacterId || authUser?.characterId || null);
       setSelectedItemId('');
       setLocalDoneAt(record.lifecycle?.doneAt ? new Date(record.lifecycle.doneAt) : undefined);
 
@@ -282,6 +275,32 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       // Link Registry when editing an existing record.
       void ClientAPI.getLinksFor({ type: EntityType.FINANCIAL, id: record.id })
         .then((links) => {
+          const sourceSiteLink = links.find((link: any) =>
+            link.linkType === LinkType.FINREC_SITE &&
+            String(link.relationship || '').toLowerCase() === 'source' &&
+            link.target?.type === EntityType.SITE
+          );
+          const targetSiteLink = links.find((link: any) =>
+            link.linkType === LinkType.FINREC_SITE &&
+            String(link.relationship || '').toLowerCase() === 'target' &&
+            link.target?.type === EntityType.SITE
+          );
+          const characterLink = links.find((link: any) =>
+            link.linkType === LinkType.FINREC_CHARACTER &&
+            link.target?.type === EntityType.CHARACTER
+          );
+          setFormData((previous) => ({
+            ...previous,
+            site: sourceSiteLink?.target?.id || '',
+            targetSite: targetSiteLink?.target?.id || '',
+            characterId: characterLink?.target?.id || previous.characterId,
+            customerCharacterRole: toCustomerCounterpartyRole(
+              String(characterLink?.relationship || '').toLowerCase() === 'beneficiary'
+                ? CharacterRole.BENEFICIARY
+                : CharacterRole.CUSTOMER
+            ),
+            isNewCustomer: characterLink ? false : previous.isNewCustomer,
+          }));
           const itemLink = links.find((link) =>
             link.linkType === LinkType.FINREC_ITEM &&
             link.source?.type === EntityType.FINANCIAL &&
@@ -351,13 +370,12 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         year: year,
         month: month
       });
-      setPlayerCharacterId(authUser?.characterId || null);
       setSelectedItemId('');
       setOutputItemTypeSubType('none:');
       setOutputItemStatus(ItemStatus.FOR_SALE);
       setLocalDoneAt(undefined);
     }
-  }, [record, authUser?.characterId, getLastUsedStation, open, year, month]);
+  }, [record, getLastUsedStation, open, year, month]);
 
   // Sync year/month for new records when context changes (fixes stale date if filter changes while modal hidden)
   useEffect(() => {
@@ -528,9 +546,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       siteId: formData.site || null,
       targetSiteId: formData.targetSite || null,
       characterId: formData.isNewCustomer ? null : formData.characterId,  // Ambassador: Existing customer
-      playerCharacterId: playerCharacterId,
-      sourceTaskId: record?.sourceTaskId ?? null,
-      sourceSaleId: record?.sourceSaleId ?? null,
       salesChannel: record?.salesChannel ?? null,
       cost: toMoney(formData.cost),
       revenue: toMoney(formData.revenue),
@@ -546,16 +561,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
           (String(formData.status) !== String(FinancialStatus.PENDING) ? new Date() : undefined),
       },
       context: {
-        ...(
-          (formData.isNewCustomer ? formData.newCustomerName : formData.characterId)
-            ? {
-                counterparty: {
-                  counterpartyId: formData.isNewCustomer ? null : formData.characterId,
-                  role: formData.customerCharacterRole,
-                },
-              }
-            : {}
-        ),
         ...(formData.jungleCoins !== 0 ? { jungleCoins: formData.jungleCoins } : {}),
         newCustomerName: formData.isNewCustomer ? formData.newCustomerName : undefined,
         productionPlan: formData.outputItemType || formData.outputItemName
@@ -574,14 +579,25 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
           : undefined,
       },
     };
+    const financialCommand = {
+      ...recordData,
+      __financialRelations: {
+        siteId: formData.site || null,
+        targetSiteId: formData.targetSite || null,
+        characterId: formData.isNewCustomer ? null : formData.characterId,
+        sourceTaskId: (record as any)?.sourceTaskId ?? null,
+        sourceSaleId: (record as any)?.sourceSaleId ?? null,
+        characterRelationship: formData.isNewCustomer ? null : formData.customerCharacterRole,
+      },
+    } as FinancialRecord;
 
     // Save user preferences
     setPreference('finrec-modal-last-station', recordData.station as any);
 
     try {
       // Emit pure record entity - Links System handles all relationships automatically
-      await onSave(recordData);
-      await ensureCounterpartyRole(recordData.characterId, formData.customerCharacterRole);
+      await onSave(financialCommand);
+      await ensureCounterpartyRole(formData.isNewCustomer ? null : formData.characterId, formData.customerCharacterRole);
 
       // Dispatch UI update events AFTER successful save
       dispatchEntityUpdated(entityTypeToKind(EntityType.FINANCIAL));
@@ -1003,14 +1019,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                 </>
               )}
 
-              <Button
-                variant="outline"
-                onClick={() => setShowPlayerCharacterSelector(true)}
-                className="h-8 text-xs"
-              >
-                <User className="w-3 h-3 mr-1" />
-                Player
-              </Button>
               {/* Status Selector */}
               <div className="flex items-center gap-2">
                 <Label htmlFor="financial-status" className="text-xs">Status:</Label>
@@ -1110,14 +1118,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
           onClose={() => setShowRelationshipsModal(false)}
         />
       )}
-
-      {/* Player Character Selector Modal */}
-      <PlayerCharacterSelectorModal
-        open={showPlayerCharacterSelector}
-        onOpenChange={setShowPlayerCharacterSelector}
-        onSelect={setPlayerCharacterId}
-        currentPlayerCharacterId={playerCharacterId}
-      />
 
       {/* --- Dates & Activity Submodal --- */}
       <DatesSubmodal

@@ -1,10 +1,8 @@
 {
   "id": "entity-test-item-clean",
-  "schemaVersion": 1,
-  "version": 0,
   "name": "testing-item",
   "type": "bundle",
-  "collection": "no-collection",
+  "subItemType": "print",
   "status": "for-sale",
   "stock": [
     {
@@ -23,9 +21,11 @@
     }
   },
   "context": {
-    "subItemType": "print",
+    "collection": "no-collection",
     "year": 2026
   },
-  "createdAt": "2026-08-17T00:20:48.028Z",
-  "updatedAt": "2026-08-17T00:20:48.028Z"
+  "createdAt": "2026-08-18T02:11:41.974Z",
+  "updatedAt": "2026-08-18T02:11:41.974Z",
+  "schemaVersion": 1,
+  "version": 0
 }

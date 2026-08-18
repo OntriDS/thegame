@@ -132,7 +132,12 @@ export const ClientAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...task, skipDuplicateCheck: options?.skipDuplicateCheck })
     });
-    if (!res.ok) throw new Error('Failed to save task');
+    if (!res.ok) {
+      const details = await res.json().catch(() => null) as { code?: string; message?: string; error?: string } | null;
+      const error = new Error(details?.message || details?.error || 'Failed to save task') as Error & { code?: string };
+      error.code = details?.code;
+      throw error;
+    }
     return await res.json();
   },
 

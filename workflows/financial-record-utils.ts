@@ -3,7 +3,7 @@
 // Financial record creation and management utilities
 
 import type { Task, FinancialRecord, Sale, ItemSaleLine, Character, Contract, ServiceLine } from '@/types/entities';
-import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, SaleType, SaleStatus, ContractClauseType, ContractStatus, FinancialStatus, CharacterRole, EntitySchemaVersion } from '@/types/enums';
+import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, SaleType, SaleStatus, TaskStatus, ContractClauseType, ContractStatus, FinancialStatus, CharacterRole, EntitySchemaVersion } from '@/types/enums';
 import {
   upsertFinancial,
   getAllFinancials,
@@ -190,8 +190,15 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
       cost: toMoney(cost),
       revenue: toMoney(revenue),
       netCashflow: toMoney(revenue - cost),
-      status: task.status === 'PENDING' ? FinancialStatus.PENDING : FinancialStatus.DONE,
-      lifecycle: { doneAt: dateToUse },
+      status: task.status === TaskStatus.COLLECTED
+        ? FinancialStatus.COLLECTED
+        : task.status === TaskStatus.DONE
+          ? FinancialStatus.DONE
+          : FinancialStatus.PENDING,
+      lifecycle: {
+        ...(task.status !== TaskStatus.PENDING ? { doneAt: task.doneAt || dateToUse } : {}),
+        ...(task.status === TaskStatus.COLLECTED && task.collectedAt ? { collectedAt: task.collectedAt } : {}),
+      },
       context: {
         counterparty: {
           counterpartyId: getTaskCounterpartyId(task),

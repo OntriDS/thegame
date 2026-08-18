@@ -128,7 +128,7 @@ describe('entity-test: full Task completed', () => {
     expect(items.length).toBe(1);
     expect(items[0]).toMatchObject({ sourceTaskId: taskId });
     expect(financials.length).toBeGreaterThanOrEqual(1);
-    expect(financials.every(record => record.sourceTaskId === taskId)).toBe(true);
+    expect(financials.every(record => !record.sourceTaskId)).toBe(true);
     expect(pointEvidence).toHaveLength(1);
     expect(links).toEqual(expect.arrayContaining([
       expect.objectContaining({ linkType: 'TASK_SITE' }),

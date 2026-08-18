@@ -9,12 +9,20 @@ const normalizeId = (value: unknown): string | null => {
 
 export function getFinancialCounterpartyId(record?: FinancialRecord | null): string | null {
   if (!record) return null;
-  return normalizeId(record.characterId);
+  return normalizeId(record.context?.counterparty?.counterpartyId) ||
+    // Read-only compatibility for pre-cleanup records and transient command input.
+    normalizeId((record as any).characterId);
 }
 
-/** Canonical role is stored in FinancialRecord.context.counterparty. */
+/** Canonical role is carried by the FINREC_CHARACTER Link; context/root values
+ * are transient or read-only compatibility inputs. */
 export function getFinancialCounterpartyRole(record?: FinancialRecord | null): CustomerCounterpartyRole | null {
   if (!record) return null;
+  const runtimeRole = (record as any).__financialRelations?.characterRelationship;
+  if (typeof runtimeRole === 'string') {
+    const normalized = runtimeRole.trim().toLowerCase();
+    if (normalized === CharacterRole.CUSTOMER || normalized === CharacterRole.BENEFICIARY) return normalized;
+  }
   const canonical = record.context?.counterparty?.role;
   if (typeof canonical === 'string') {
     const normalized = canonical.trim().toLowerCase();

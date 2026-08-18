@@ -2,7 +2,7 @@
 // data-store/datastore.ts
 // Orchestration layer: repositories → workflows → links → logging
 
-import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Region, Account, Business, Contract, Agent } from '@/types/entities';
+import type { Task, Item, FinancialRecord, FinancialRecordRelationInput, Sale, Character, Player, Site, Settlement, Region, Account, Business, Contract, Agent } from '@/types/entities';
 import { roundSaleTotals } from '@/lib/utils/financial-utils';
 import { ensureItemSaleLineIds, normalizeSale } from '@/lib/utils/sale-lines-normalize';
 import type { TaskSnapshot, ItemSnapshot, SaleSnapshot, FinancialSnapshot } from '@/types/archive';
@@ -863,6 +863,11 @@ export async function removeTask(id: string, options?: RemoveTaskOptions): Promi
 export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; skipSummaryUpdate?: boolean }): Promise<Item> {
   const itemNorm = normalizeItemTaxonomyFields(item);
   const previous = await repoGetItemById(itemNorm.id);
+  const persistedItem = {
+    ...itemNorm,
+    schemaVersion: itemNorm.schemaVersion ?? EntitySchemaVersion.V1,
+    version: previous ? ((previous.version ?? 0) + 1) : (itemNorm.version ?? 0),
+  } as Item;
 
   // Identity Shield: Time-Window Deduplication (2 minutes)
   // Only apply to NEW items (no previous record found) to allow legitimate updates
@@ -870,9 +875,7 @@ export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: b
     // ... duplication logic remains ... (already skipped if previous exists)
   }
 
-  const saved = await repoUpsertItem({
-    ...itemNorm
-  });  // ✅ Item persisted here
+  const saved = await repoUpsertItem(persistedItem);  // ✅ Item persisted here
 
   // Phase 2: Rolling Summary Update
   // OPTIMIZATION: Skip individual updates during bulk operations
@@ -1040,6 +1043,48 @@ export async function countItems(types?: string | string[], subTypes?: string | 
 
 export async function removeItem(id: string): Promise<void> {
   const existing = await repoGetItemById(id);
+  if (existing?.status === ItemStatus.SOLD && existing.sourceRecordId === 'manual') {
+    const marker = '-manualsold-';
+    const markerIndex = existing.id.indexOf(marker);
+    const baseId = markerIndex >= 0 ? existing.id.slice(0, markerIndex) : null;
+    const quantityToRestore = Number(existing.quantitySold || 0);
+    if (baseId && quantityToRestore > 0) {
+      const base = await repoGetItemById(baseId);
+      const siteId = existing.stock?.[0]?.siteId || 'none';
+      if (base) {
+        const stock = (base.stock || []).map(point => ({ ...point }));
+        const sitePoint = stock.find(point => point.siteId === siteId);
+        if (sitePoint) sitePoint.quantity += quantityToRestore;
+        else stock.push({ siteId, quantity: quantityToRestore });
+        const {
+          quantitySold: _quantitySold,
+          sourceRecordId: _sourceRecordId,
+          soldAt: _soldAt,
+          ...baseShape
+        } = base as any;
+        await upsertItem(
+          { ...baseShape, status: ItemStatus.FOR_SALE, stock, updatedAt: getUTCNow() },
+          { skipWorkflowEffects: true }
+        );
+      } else {
+        const { quantitySold: _quantitySold, sourceRecordId: _sourceRecordId, soldAt: _soldAt, ...cloneShape } = existing as any;
+        const { soldAt: _contextSoldAt, ...context } = cloneShape.context || {};
+        const { actualSaleValue: _actualSaleValue, ...pricing } = cloneShape.pricing || {};
+        await upsertItem(
+          {
+            ...cloneShape,
+            id: baseId,
+            status: ItemStatus.FOR_SALE,
+            stock: [{ siteId, quantity: quantityToRestore }],
+            pricing,
+            context,
+            updatedAt: getUTCNow(),
+          },
+          { skipWorkflowEffects: true }
+        );
+      }
+    }
+  }
   await repoDeleteItem(id);
   if (existing) {
     // Phase 2: Rolling Summary Update
@@ -1055,6 +1100,20 @@ export async function removeItem(id: string): Promise<void> {
 export async function upsertFinancial(financial: FinancialRecord, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean }): Promise<FinancialRecord> {
   const financialNorm = normalizeFinancialRecordFields(normalizeFinancialOutputTaxonomy(financial));
   const previous = await repoGetFinancialById(financialNorm.id);
+  const rawFinancial = financial as any;
+  const suppliedRelations = rawFinancial.__financialRelations || {};
+  const relationKeys = ['siteId', 'targetSiteId', 'characterId', 'playerCharacterId', 'sourceTaskId', 'sourceSaleId', 'characterRelationship'];
+  const relationsProvided = Boolean(rawFinancial.__financialRelations) ||
+    relationKeys.some((key) => Object.prototype.hasOwnProperty.call(rawFinancial, key));
+  const relations: FinancialRecordRelationInput = {
+    siteId: suppliedRelations.siteId ?? rawFinancial.siteId ?? null,
+    targetSiteId: suppliedRelations.targetSiteId ?? rawFinancial.targetSiteId ?? null,
+    characterId: suppliedRelations.characterId ?? rawFinancial.characterId ?? rawFinancial.context?.counterparty?.counterpartyId ?? null,
+    playerCharacterId: suppliedRelations.playerCharacterId ?? rawFinancial.playerCharacterId ?? null,
+    sourceTaskId: suppliedRelations.sourceTaskId ?? rawFinancial.sourceTaskId ?? null,
+    sourceSaleId: suppliedRelations.sourceSaleId ?? rawFinancial.sourceSaleId ?? null,
+    characterRelationship: suppliedRelations.characterRelationship ?? rawFinancial.context?.counterparty?.role ?? null,
+  };
 
   // Identity Shield: Time-Window Deduplication (2 minutes)
   // Only apply to NEW financials (no previous record found) to allow legitimate updates
@@ -1086,18 +1145,26 @@ export async function upsertFinancial(financial: FinancialRecord, options?: { sk
     }
   }
 
-  const saved = await repoUpsertFinancial(financialNorm);
+  const saved = await repoUpsertFinancial(financialNorm, relations);
+  // Relationship values are runtime command metadata only. They are passed
+  // to link/effect workflows after the clean entity has been persisted.
+  const runtimeFinancial = {
+    ...saved,
+    ...relations,
+    __financialRelations: relations,
+    __financialRelationsProvided: relationsProvided,
+  } as any as FinancialRecord;
 
   // Phase 2: Rolling Summary Update (Delta Approach)
   await SummaryService.updateFinancialCounters(saved, previous || undefined);
 
   if (!options?.skipWorkflowEffects) {
     const { onFinancialUpsert } = await import('@/workflows/entities-workflows/financial.workflow');
-    await onFinancialUpsert(saved, previous || undefined);
+    await onFinancialUpsert(runtimeFinancial, previous || undefined);
   }
 
   if (!options?.skipLinkEffects) {
-    await processLinkEntity(saved, EntityType.FINANCIAL);
+    await processLinkEntity(runtimeFinancial, EntityType.FINANCIAL);
   }
 
   return saved;
@@ -1147,12 +1214,24 @@ export async function getFinancialById(id: string): Promise<FinancialRecord | nu
 
 // OPTIMIZED: Indexed queries - only load financials created by specific tasks
 export async function getFinancialsBySourceTaskId(taskId: string): Promise<FinancialRecord[]> {
-  return await repoGetFinancialsBySourceTaskId(taskId);
+  const { getLinksFor } = await import('@/links/link-registry');
+  const links = await getLinksFor({ type: EntityType.TASK, id: taskId });
+  const ids = links
+    .filter((link: any) => link.linkType === 'TASK_FINREC' && link.target?.type === EntityType.FINANCIAL)
+    .map((link: any) => link.target.id);
+  const records = await Promise.all(Array.from(new Set(ids)).map(id => repoGetFinancialById(id as string)));
+  return records.filter((record): record is FinancialRecord => Boolean(record));
 }
 
 // OPTIMIZED: Indexed queries - only load financials created by specific sales
 export async function getFinancialsBySourceSaleId(saleId: string): Promise<FinancialRecord[]> {
-  return await repoGetFinancialsBySourceSaleId(saleId);
+  const { getLinksFor } = await import('@/links/link-registry');
+  const links = await getLinksFor({ type: EntityType.SALE, id: saleId });
+  const ids = links
+    .filter((link: any) => link.linkType === 'SALE_FINREC' && link.target?.type === EntityType.FINANCIAL)
+    .map((link: any) => link.target.id);
+  const records = await Promise.all(Array.from(new Set(ids)).map(id => repoGetFinancialById(id as string)));
+  return records.filter((record): record is FinancialRecord => Boolean(record));
 }
 
 export async function removeFinancial(id: string): Promise<void> {

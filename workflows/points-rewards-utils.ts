@@ -27,6 +27,15 @@ function subtractPoints(left: PointAmountV1, right: PointAmountV1): PointAmountV
   };
 }
 
+function subtractPointsAllowNegative(left: PointAmountV1, right: PointAmountV1): PointAmountV1 {
+  return {
+    hp: Math.round(left.hp - right.hp),
+    fp: Math.round(left.fp - right.fp),
+    rp: Math.round(left.rp - right.rp),
+    xp: Math.round(left.xp - right.xp),
+  };
+}
+
 /** Read the canonical projection, with a one-way fallback for pre-rewards Players. */
 export function getPlayerRewards(player: Player): PlayerRewardsV1 {
   if (player.rewards) return player.rewards;
@@ -114,8 +123,8 @@ export async function awardPointsToPlayer(
     }
 
     // Check if any points to award
-    const hasPoints = (points.xp || 0) > 0 || (points.rp || 0) > 0 ||
-      (points.fp || 0) > 0 || (points.hp || 0) > 0;
+    const hasPoints = (points.xp || 0) !== 0 || (points.rp || 0) !== 0 ||
+      (points.fp || 0) !== 0 || (points.hp || 0) !== 0;
 
     if (!hasPoints) {
       return;
@@ -199,8 +208,8 @@ export async function stagePointsForPlayer(
     if (!player) return false;
 
     // Check if any points to stage
-    const hasPoints = (points.xp || 0) > 0 || (points.rp || 0) > 0 ||
-      (points.fp || 0) > 0 || (points.hp || 0) > 0;
+    const hasPoints = (points.xp || 0) !== 0 || (points.rp || 0) !== 0 ||
+      (points.fp || 0) !== 0 || (points.hp || 0) !== 0;
 
     if (!hasPoints) return false;
 
@@ -254,8 +263,8 @@ export async function withdrawStagedPointsFromPlayer(
     const player = await getPlayerById(resolvedPlayerId);
     if (!player) return;
 
-    const hasPoints = (points.xp || 0) > 0 || (points.rp || 0) > 0 ||
-      (points.fp || 0) > 0 || (points.hp || 0) > 0;
+    const hasPoints = (points.xp || 0) !== 0 || (points.rp || 0) !== 0 ||
+      (points.fp || 0) !== 0 || (points.hp || 0) !== 0;
 
     if (!hasPoints) return;
 
@@ -298,8 +307,8 @@ export async function unrewardPointsForPlayer(
     const player = await getPlayerById(resolvedPlayerId);
     if (!player) return;
 
-    const hasPoints = (points.xp || 0) > 0 || (points.rp || 0) > 0 ||
-      (points.fp || 0) > 0 || (points.hp || 0) > 0;
+    const hasPoints = (points.xp || 0) !== 0 || (points.rp || 0) !== 0 ||
+      (points.fp || 0) !== 0 || (points.hp || 0) !== 0;
 
     if (!hasPoints) return;
 
@@ -350,8 +359,8 @@ export async function rewardPointsToPlayer(
     const player = await getPlayerById(resolvedPlayerId);
     if (!player) return;
 
-    const hasPoints = (points.xp || 0) > 0 || (points.rp || 0) > 0 ||
-      (points.fp || 0) > 0 || (points.hp || 0) > 0;
+    const hasPoints = (points.xp || 0) !== 0 || (points.rp || 0) !== 0 ||
+      (points.fp || 0) !== 0 || (points.hp || 0) !== 0;
 
     if (!hasPoints) return;
 
@@ -447,6 +456,70 @@ export function getMainPlayerId(): string {
   return FOUNDER_PLAYER_ID;
 }
 
+/** Apply an explicit negative task penalty immediately to the Player wallet. */
+export async function applyPenaltyToPlayer(
+  playerId: string,
+  points: Rewards['points'] | undefined | null,
+  sourceId: string,
+  sourceType: string,
+  customTimestamp?: string | Date,
+): Promise<boolean> {
+  if (!points) return false;
+  const delta = asPointAmount(points);
+  const hasNegativePoints = Object.values(delta).some(value => value < 0);
+  if (!hasNegativePoints) return false;
+
+  const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(playerId);
+  if (!resolvedPlayerId) return false;
+  const player = await getPlayerById(resolvedPlayerId);
+  if (!player) return false;
+
+  const current = getPlayerRewards(player);
+  await upsertPlayer(playerWithRewards(player, {
+    ...current,
+    points: {
+      ...current.points,
+      current: addPoints(current.points.current, delta),
+      historic: addPoints(current.points.historic, delta),
+    },
+  }));
+
+  if (sourceType === 'task') {
+    await createLink(makeLink(
+      LinkType.TASK_PLAYER,
+      { type: EntityType.TASK, id: sourceId },
+      { type: EntityType.PLAYER, id: resolvedPlayerId },
+      'points-earned'
+    ));
+  }
+  await appendPlayerPointsLog(resolvedPlayerId, points, sourceId, sourceType, customTimestamp);
+  return true;
+}
+
+/** Reverse an explicit negative task penalty from the Player wallet. */
+export async function reversePenaltyFromPlayer(
+  playerId: string,
+  points: Rewards['points'] | undefined | null,
+): Promise<void> {
+  if (!points) return;
+  const delta = asPointAmount(points);
+  const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(playerId);
+  if (!resolvedPlayerId) return;
+  const player = await getPlayerById(resolvedPlayerId);
+  if (!player) return;
+
+  const current = getPlayerRewards(player);
+  const inverse = { xp: -delta.xp, rp: -delta.rp, fp: -delta.fp, hp: -delta.hp };
+  await upsertPlayer(playerWithRewards(player, {
+    ...current,
+    points: {
+      ...current.points,
+      current: addPoints(current.points.current, inverse),
+      historic: addPoints(current.points.historic, inverse),
+    },
+  }));
+}
+
 /** Reverse a task reward exactly according to its lifecycle state. */
 export async function revokePointsFromPlayer(
   playerId: string,
@@ -461,18 +534,12 @@ export async function revokePointsFromPlayer(
 
   const delta = asPointAmount(points);
   const current = getPlayerRewards(player);
-  const reversible = {
-    hp: Math.min(delta.hp, current.points.current.hp),
-    fp: Math.min(delta.fp, current.points.current.fp),
-    rp: Math.min(delta.rp, current.points.current.rp),
-    xp: Math.min(delta.xp, current.points.current.xp),
-  };
   const nextPoints = wasCollected
     ? {
         ...current.points,
-        vested: subtractPoints(current.points.vested, reversible),
-        current: subtractPoints(current.points.current, reversible),
-        historic: subtractPoints(current.points.historic, reversible),
+        vested: subtractPoints(current.points.vested, delta),
+        current: subtractPointsAllowNegative(current.points.current, delta),
+        historic: subtractPoints(current.points.historic, delta),
       }
     : {
         ...current.points,

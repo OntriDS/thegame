@@ -11,6 +11,7 @@ import {
   getAllTasks,
   getFinancialsBySourceTaskId,
   getItemsBySourceTaskId,
+  getPlayerById,
   getTaskById,
   removeTask,
   upsertTask,
@@ -35,6 +36,16 @@ describe('entity-test: full Task collected', () => {
     if (!site) throw new Error('Cannot run collected entity-test: no Site exists.');
     const parent = (await getAllTasks()).find(task => task.status !== TaskStatus.COLLECTED);
     if (!parent) throw new Error('Cannot run collected entity-test: no existing parent Task exists.');
+
+    const playerBefore = await getPlayerById(owner.playerId);
+    if (!playerBefore) throw new Error(`Cannot run collected entity-test: Player ${owner.playerId} was not found.`);
+    const pointDelta = { xp: 5, rp: 2, fp: 1, hp: 0 };
+    const addPoints = (base: any, delta: typeof pointDelta) => ({
+      xp: base.xp + delta.xp,
+      rp: base.rp + delta.rp,
+      fp: base.fp + delta.fp,
+      hp: base.hp + delta.hp,
+    });
 
     const now = getUTCNow();
     const dueDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -87,26 +98,78 @@ describe('entity-test: full Task collected', () => {
       updatedAt: doneAt,
     } as any, { skipDuplicateCheck: true });
 
+    const taskAfterDone = await getTaskById(TEST_TASK_ID);
+    if (!taskAfterDone || taskAfterDone.status !== TaskStatus.DONE) {
+      throw new Error('Collected entity-test Task did not persist DONE before collection.');
+    }
+    const playerAfterDone = await getPlayerById(owner.playerId);
+    if (!playerAfterDone) throw new Error('Collected entity-test Player disappeared after completion.');
+    expect(playerAfterDone.rewards.points.pending).toEqual(
+      addPoints(playerBefore.rewards.points.pending, pointDelta)
+    );
+    expect(playerAfterDone.rewards.points.vested).toEqual(playerBefore.rewards.points.vested);
+    expect(playerAfterDone.rewards.points.current).toEqual(playerBefore.rewards.points.current);
+    expect(playerAfterDone.rewards.points.historic).toEqual(
+      addPoints(playerBefore.rewards.points.historic, pointDelta)
+    );
+
     const collectedAt = getUTCNow();
-    const done = await getTaskById(TEST_TASK_ID);
-    if (!done) throw new Error('Collected entity-test Task disappeared after completion.');
     await upsertTask({
-      ...done,
+      ...taskAfterDone,
       status: TaskStatus.COLLECTED,
       progress: { percentage: 100 },
       ownerIds: [owner.id],
-      context: { ...done.context, counterparty: { counterpartyId: owner.id, role: 'beneficiary' } },
+      context: { ...taskAfterDone.context, counterparty: { counterpartyId: owner.id, role: 'beneficiary' } },
       collectedAt,
       updatedAt: collectedAt,
     } as any, { skipDuplicateCheck: true });
 
     const task = await getTaskById(TEST_TASK_ID);
     if (!task) throw new Error('Collected entity-test Task disappeared after collection.');
+    expect(task.status).toBe(TaskStatus.COLLECTED);
     const links = await getLinksFor({ type: EntityType.TASK, id: TEST_TASK_ID });
     const items = await getItemsBySourceTaskId(TEST_TASK_ID);
     const financials = await getFinancialsBySourceTaskId(TEST_TASK_ID);
     const pointEvidence = links.filter(link => link.linkType === 'TASK_PLAYER' && link.relationship === 'points-earned');
-    const output = { task, links, items, financials, pointEvidence };
+    const playerAfterCollected = await getPlayerById(owner.playerId);
+    if (!playerAfterCollected) throw new Error('Collected entity-test Player disappeared after collection.');
+    expect(playerAfterCollected.rewards.points.pending).toEqual(playerBefore.rewards.points.pending);
+    expect(playerAfterCollected.rewards.points.vested).toEqual(
+      addPoints(playerBefore.rewards.points.vested, pointDelta)
+    );
+    expect(playerAfterCollected.rewards.points.current).toEqual(
+      addPoints(playerBefore.rewards.points.current, pointDelta)
+    );
+    expect(playerAfterCollected.rewards.points.historic).toEqual(
+      addPoints(playerBefore.rewards.points.historic, pointDelta)
+    );
+
+    await removeTask(TEST_TASK_ID);
+    const deletedTask = await getTaskById(TEST_TASK_ID);
+    const playerAfterDelete = await getPlayerById(owner.playerId);
+    if (!playerAfterDelete) throw new Error('Collected entity-test Player disappeared after deletion.');
+    expect(deletedTask).toBeNull();
+    expect(playerAfterDelete.rewards.points.pending).toEqual(playerBefore.rewards.points.pending);
+    expect(playerAfterDelete.rewards.points.vested).toEqual(playerBefore.rewards.points.vested);
+    expect(playerAfterDelete.rewards.points.current).toEqual(playerBefore.rewards.points.current);
+    expect(playerAfterDelete.rewards.points.exchanged).toEqual(playerBefore.rewards.points.exchanged);
+    expect(playerAfterDelete.rewards.points.historic).toEqual(playerBefore.rewards.points.historic);
+
+    const output = {
+      task,
+      links,
+      items,
+      financials,
+      pointEvidence,
+      playerBefore,
+      playerAfterDone,
+      playerAfterCollected,
+      playerAfterDelete,
+      deletion: {
+        taskExists: Boolean(deletedTask),
+        pointsRestored: true,
+      },
+    };
     writeFileSync(outputPath, `${JSON.stringify(output, null, 2)}\n`, 'utf8');
     process.stderr.write(`[entity-test] FULL_COLLECTED_ENTITY_OUTPUT_FILE: ${outputPath}\n${JSON.stringify(output, null, 2)}\n`);
 
@@ -121,5 +184,5 @@ describe('entity-test: full Task collected', () => {
       expect.objectContaining({ linkType: 'TASK_FINREC' }),
       expect.objectContaining({ linkType: 'TASK_PLAYER', relationship: 'points-earned' }),
     ]));
-  }, 120000);
+  }, 300000);
 });

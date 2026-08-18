@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllFinancials, getAllPlayers, getCharacterById, getFinancialById } from '@/data-store/datastore';
+import { getAllPlayers, getCharacterById, getFinancialById } from '@/data-store/datastore';
 import { getLinksFor } from '@/links/link-registry';
 import { EntityType, CanonicalLinkType, LinkType } from '@/types/enums';
 import { FinancialRecord } from '@/types/entities';
@@ -36,14 +36,6 @@ export async function GET(
             return null;
         }).filter(id => id !== null) as string[];
 
-        // Player-attributed financials are part of the character's wallet even
-        // when they correctly have no FINREC_CHARACTER counterparty link.
-        // `playerCharacterId` is the operational player association; it is not
-        // a customer/beneficiary relationship.
-        const playerFinancialIds = (await getAllFinancials())
-            .filter((record) => record.playerCharacterId === characterId)
-            .map((record) => record.id);
-
         const playerIds = (await getAllPlayers())
             .filter((player) => player.characterId === characterId)
             .map((player) => player.id);
@@ -54,7 +46,7 @@ export async function GET(
             .filter((link) => link.linkType === LinkType.PLAYER_FINREC && link.target.type === EntityType.FINANCIAL)
             .map((link) => link.target.id);
 
-        const uniqueFinRecIds = Array.from(new Set([...finRecIds, ...canonicalPlayerFinancialIds, ...playerFinancialIds]));
+        const uniqueFinRecIds = Array.from(new Set([...finRecIds, ...canonicalPlayerFinancialIds]));
 
         const records = await Promise.all(
             uniqueFinRecIds.map(id => getFinancialById(id))

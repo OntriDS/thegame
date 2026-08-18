@@ -47,7 +47,7 @@ export function AdminSettingsTab() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Financial counterparty field is <code className="text-xs">FinancialRecord.characterId</code>. Sales use{' '}
+                Financial counterparties are represented by <code className="text-xs">FINREC_CHARACTER</code> Links. Sales use{' '}
                 <code className="text-xs">Sale.characterId</code> for the customer / counterparty character. No KV field migrations in use.
               </p>
             </CardContent>

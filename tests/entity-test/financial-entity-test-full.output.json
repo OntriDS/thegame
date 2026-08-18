@@ -1,69 +1,149 @@
 {
-  "id": "entity-test-financial-full",
-  "schemaVersion": 1,
-  "version": 0,
-  "name": "testing-financial-full",
-  "year": 2026,
-  "month": 8,
-  "station": "strategy",
-  "type": "personal",
-  "cost": {
-    "minorUnits": "2500",
-    "currency": "USD"
-  },
-  "revenue": {
-    "minorUnits": "10000",
-    "currency": "USD"
-  },
-  "status": "pending",
-  "lifecycle": {
-    "doneAt": "2026-08-17T00:43:52.703Z",
-    "collectedAt": "2026-08-17T00:44:52.703Z"
-  },
-  "context": {
-    "jungleCoins": 1,
-    "paymentObservation": {
-      "paid": false,
-      "charged": false
+  "financial": {
+    "id": "entity-test-financial-full",
+    "schemaVersion": 1,
+    "version": 0,
+    "name": "testing-financial-full",
+    "year": 2026,
+    "month": 8,
+    "station": "strategy",
+    "type": "personal",
+    "cost": {
+      "minorUnits": "2500",
+      "currency": "USD"
     },
-    "productionPlan": {
-      "outputItemType": "bundle",
-      "outputItemSubType": "print",
-      "outputQuantity": 2,
-      "outputUnitCost": {
-        "minorUnits": "1000",
-        "currency": "USD"
-      },
-      "outputItemName": "testing-financial-output",
-      "outputItemPrice": {
-        "minorUnits": "5000",
-        "currency": "USD"
-      },
-      "outputItemStatus": "for-sale",
-      "isNewItem": true,
-      "isSold": false
+    "revenue": {
+      "minorUnits": "10000",
+      "currency": "USD"
     },
-    "exchangeType": "POINTS_TO_J$",
-    "exchangeCounterAmount": 10,
-    "newCustomerName": "Testing Customer",
-    "notes": "Full context facet coverage",
-    "counterparty": {
-      "counterpartyId": "cc4ba319-8788-436e-ab46-56a7a92b2564",
-      "role": "beneficiary"
+    "status": "collected",
+    "lifecycle": {
+      "doneAt": "2026-08-18T01:54:37.749Z",
+      "collectedAt": "2026-08-18T01:55:37.749Z"
+    },
+    "context": {
+      "jungleCoins": 1,
+      "productionPlan": {
+        "outputItemType": "bundle",
+        "outputItemSubType": "print",
+        "outputQuantity": 2,
+        "outputUnitCost": {
+          "minorUnits": "1000",
+          "currency": "USD"
+        },
+        "outputItemName": "testing-financial-output",
+        "outputItemPrice": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        },
+        "outputItemStatus": "for-sale",
+        "isNewItem": true,
+        "isSold": false
+      },
+      "exchangeType": "POINTS_TO_J$",
+      "exchangeCounterAmount": 10,
+      "newCustomerName": "Testing Customer",
+      "notes": "Full context facet coverage"
+    },
+    "createdAt": "2026-08-18T01:54:37.749Z",
+    "updatedAt": "2026-08-18T01:55:37.749Z",
+    "netCashflow": {
+      "minorUnits": "7500",
+      "currency": "USD"
+    },
+    "description": "Full FinancialRecord entity test",
+    "salesChannel": "direct-sales"
+  },
+  "links": [
+    {
+      "id": "a4ada099-3fc0-45d1-beb4-dcc73e36715a",
+      "linkType": "FINREC_CHARACTER",
+      "source": {
+        "type": "financial",
+        "id": "entity-test-financial-full"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1775889257983-6pkhdapnl"
+      },
+      "relationship": "beneficiary",
+      "createdAt": "2026-08-18T01:55:51.981Z"
+    },
+    {
+      "id": "08c64c9c-08fb-4753-b52b-0bfd887d240b",
+      "linkType": "FINREC_ITEM",
+      "source": {
+        "type": "financial",
+        "id": "entity-test-financial-full"
+      },
+      "target": {
+        "type": "item",
+        "id": "item-entity-test-financial-full-1787018141320"
+      },
+      "createdAt": "2026-08-18T01:55:54.849Z"
+    },
+    {
+      "id": "e691ddf0-f6c8-4abd-8ee0-5d996e51a83b",
+      "linkType": "FINREC_SITE",
+      "source": {
+        "type": "financial",
+        "id": "entity-test-financial-full"
+      },
+      "target": {
+        "type": "site",
+        "id": "hq"
+      },
+      "relationship": "source",
+      "createdAt": "2026-08-18T01:55:49.317Z"
+    },
+    {
+      "id": "0f477a63-5bb0-4abd-9203-40f350ce818a",
+      "linkType": "FINREC_SITE",
+      "source": {
+        "type": "financial",
+        "id": "entity-test-financial-full"
+      },
+      "target": {
+        "type": "site",
+        "id": "site-world"
+      },
+      "relationship": "target",
+      "createdAt": "2026-08-18T01:55:50.496Z"
     }
-  },
-  "createdAt": "2026-08-17T00:43:52.703Z",
-  "updatedAt": "2026-08-17T00:44:52.703Z",
-  "netCashflow": {
-    "minorUnits": "7500",
-    "currency": "USD"
-  },
-  "description": "Full FinancialRecord entity test",
-  "siteId": "hq",
-  "targetSiteId": "site-world",
-  "characterId": "cc4ba319-8788-436e-ab46-56a7a92b2564",
-  "playerCharacterId": "cc4ba319-8788-436e-ab46-56a7a92b2564",
-  "sourceTaskId": "entity-test-source-task",
-  "sourceSaleId": "entity-test-source-sale",
-  "salesChannel": "direct-sales"
+  ],
+  "items": [
+    {
+      "id": "item-entity-test-financial-full-1787018141320",
+      "schemaVersion": 1,
+      "version": 0,
+      "name": "testing-financial-output",
+      "description": "Created from record: testing-financial-full",
+      "type": "bundle",
+      "subItemType": "print",
+      "status": "for-sale",
+      "pricing": {
+        "unitCost": {
+          "minorUnits": "1000",
+          "currency": "USD"
+        },
+        "targetPrice": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        }
+      },
+      "sourceRecordId": "entity-test-financial-full",
+      "createdAt": "2026-08-18T01:55:41.320Z",
+      "updatedAt": "2026-08-18T01:55:41.320Z",
+      "context": {
+        "year": 2026
+      },
+      "stock": [
+        {
+          "siteId": "site-world",
+          "quantity": 2
+        }
+      ]
+    }
+  ],
+  "characters": []
 }

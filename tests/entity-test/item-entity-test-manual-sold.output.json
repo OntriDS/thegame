@@ -1,0 +1,133 @@
+{
+  "original": {
+    "id": "entity-test-item-manual-sold",
+    "name": "testing-manual-sold-item",
+    "type": "bundle",
+    "subItemType": "sticker",
+    "status": "for-sale",
+    "stock": [
+      {
+        "siteId": "hq",
+        "quantity": 2
+      }
+    ],
+    "pricing": {
+      "unitCost": {
+        "minorUnits": "100",
+        "currency": "USD"
+      },
+      "targetPrice": {
+        "minorUnits": "250",
+        "currency": "USD"
+      }
+    },
+    "context": {
+      "collection": "no-collection",
+      "year": 2026
+    },
+    "createdAt": "2026-08-18T02:25:26.003Z",
+    "updatedAt": "2026-08-18T02:25:26.003Z",
+    "schemaVersion": 1,
+    "version": 0
+  },
+  "inventoryAfterManualSale": {
+    "id": "entity-test-item-manual-sold",
+    "name": "testing-manual-sold-item",
+    "type": "bundle",
+    "subItemType": "sticker",
+    "status": "for-sale",
+    "stock": [
+      {
+        "siteId": "hq",
+        "quantity": 1
+      }
+    ],
+    "pricing": {
+      "unitCost": {
+        "minorUnits": "100",
+        "currency": "USD"
+      },
+      "targetPrice": {
+        "minorUnits": "250",
+        "currency": "USD"
+      }
+    },
+    "context": {
+      "collection": "no-collection",
+      "year": 2026
+    },
+    "createdAt": "2026-08-18T02:25:26.003Z",
+    "updatedAt": "2026-08-18T02:25:38.634Z",
+    "schemaVersion": 1,
+    "version": 2
+  },
+  "soldClone": {
+    "id": "entity-test-item-manual-sold-manualsold-1787019114969",
+    "name": "testing-manual-sold-item",
+    "type": "bundle",
+    "subItemType": "sticker",
+    "status": "sold",
+    "stock": [
+      {
+        "siteId": "hq",
+        "quantity": 0
+      }
+    ],
+    "pricing": {
+      "unitCost": {
+        "minorUnits": "100",
+        "currency": "USD"
+      },
+      "targetPrice": {
+        "minorUnits": "250",
+        "currency": "USD"
+      }
+    },
+    "context": {
+      "collection": "no-collection",
+      "year": 2026,
+      "soldAt": "2026-08-18T02:11:54.969Z"
+    },
+    "createdAt": "2026-08-18T02:11:45.169Z",
+    "updatedAt": "2026-08-18T02:11:54.969Z",
+    "schemaVersion": 1,
+    "version": 0,
+    "quantitySold": 1,
+    "sourceRecordId": "manual"
+  },
+  "restoredInventory": {
+    "id": "entity-test-item-manual-sold",
+    "name": "testing-manual-sold-item",
+    "type": "bundle",
+    "subItemType": "sticker",
+    "status": "for-sale",
+    "stock": [
+      {
+        "siteId": "hq",
+        "quantity": 2
+      }
+    ],
+    "pricing": {
+      "unitCost": {
+        "minorUnits": "100",
+        "currency": "USD"
+      },
+      "targetPrice": {
+        "minorUnits": "250",
+        "currency": "USD"
+      }
+    },
+    "context": {
+      "collection": "no-collection",
+      "year": 2026
+    },
+    "createdAt": "2026-08-18T02:25:26.003Z",
+    "updatedAt": "2026-08-18T02:25:48.479Z",
+    "schemaVersion": 1,
+    "version": 3
+  },
+  "deletion": {
+    "cloneExists": false,
+    "inventoryRestored": true
+  }
+}

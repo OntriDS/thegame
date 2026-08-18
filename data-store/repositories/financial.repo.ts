@@ -2,7 +2,7 @@
 import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey, buildMonthIndexKey, buildEntityIndexKey } from '../keys';
 import { EntityType } from '@/types/enums';
-import type { FinancialRecord, Contract } from '@/types/entities';
+import type { FinancialRecord, FinancialRecordRelationInput, Contract } from '@/types/entities';
 import { formatArchiveMonthKeyUTC, formatArchiveMonthKeyUTCFromParts } from '@/lib/utils/utc-utils';
 
 const ENTITY = EntityType.FINANCIAL;
@@ -56,7 +56,7 @@ export async function getFinancialsBySourceSaleId(sourceSaleId: string): Promise
   return financials.filter((financial): financial is FinancialRecord => financial !== null && financial !== undefined);
 }
 
-export async function upsertFinancial(financial: FinancialRecord): Promise<FinancialRecord> {
+export async function upsertFinancial(financial: FinancialRecord, relations?: FinancialRecordRelationInput): Promise<FinancialRecord> {
   const key = buildDataKey(ENTITY, financial.id);
   const indexKey = buildIndexKey(ENTITY);
 
@@ -76,25 +76,27 @@ export async function upsertFinancial(financial: FinancialRecord): Promise<Finan
   }
 
   // Maintain sourceTaskId index
-  if (financial.sourceTaskId) {
-    const sourceTaskIndexKey = buildEntityIndexKey(ENTITY, 'sourceTaskId', financial.sourceTaskId);
+  const sourceTaskId = relations?.sourceTaskId ?? (financial as any).sourceTaskId;
+  const sourceSaleId = relations?.sourceSaleId ?? (financial as any).sourceSaleId;
+  if (sourceTaskId) {
+    const sourceTaskIndexKey = buildEntityIndexKey(ENTITY, 'sourceTaskId', sourceTaskId);
     await kvSAdd(sourceTaskIndexKey, financial.id);
   }
 
   // Clean up old sourceTaskId index if it changed or was removed
-  if (previousFinancial?.sourceTaskId && previousFinancial.sourceTaskId !== financial.sourceTaskId) {
+  if (previousFinancial?.sourceTaskId && previousFinancial.sourceTaskId !== sourceTaskId) {
     const oldSourceTaskIndexKey = buildEntityIndexKey(ENTITY, 'sourceTaskId', previousFinancial.sourceTaskId);
     await kvSRem(oldSourceTaskIndexKey, financial.id);
   }
 
   // Maintain sourceSaleId index
-  if (financial.sourceSaleId) {
-    const sourceSaleIndexKey = buildEntityIndexKey(ENTITY, 'sourceSaleId', financial.sourceSaleId);
+  if (sourceSaleId) {
+    const sourceSaleIndexKey = buildEntityIndexKey(ENTITY, 'sourceSaleId', sourceSaleId);
     await kvSAdd(sourceSaleIndexKey, financial.id);
   }
 
   // Clean up old sourceSaleId index if it changed or was removed
-  if (previousFinancial?.sourceSaleId && previousFinancial.sourceSaleId !== financial.sourceSaleId) {
+  if (previousFinancial?.sourceSaleId && previousFinancial.sourceSaleId !== sourceSaleId) {
     const oldSourceSaleIndexKey = buildEntityIndexKey(ENTITY, 'sourceSaleId', previousFinancial.sourceSaleId);
     await kvSRem(oldSourceSaleIndexKey, financial.id);
   }

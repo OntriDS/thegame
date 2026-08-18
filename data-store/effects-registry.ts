@@ -1,7 +1,7 @@
 // data-store/effects-registry.ts
 // Idempotency registry stored in KV. Avoids global flags and server HTTP loops.
 
-import { kvGet, kvSet, kvScan, kvDelMany, kvMGet } from './kv';
+import { kvGet, kvSet, kvScan, kvDel, kvDelMany, kvMGet } from './kv';
 import { buildEffectKey } from './keys';
 import { getClaim } from './workflow-store';
 import { EffectClaimStatus } from '@/types/enums';
@@ -57,6 +57,10 @@ export async function markEffect(effectKey: string, ttl?: number): Promise<void>
 export async function clearEffect(effectKey: string): Promise<void> {
   const key = buildEffectKey(effectKey);
   await kvSet(key, false);
+  // Remove the claim read by hasEffect as well as the boolean compatibility key.
+  await kvDel(`effect:${effectKey}`);
+  // Also clear the canonical claim namespace used by newer coordinators.
+  await kvDel(`thegame:effect:${effectKey}`);
 }
 
 export async function clearEffectsByPrefix(entityType: string, entityId: string, prefix: string): Promise<void> {

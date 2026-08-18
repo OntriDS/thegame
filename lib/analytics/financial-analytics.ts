@@ -10,12 +10,25 @@ import { getSaleById, getAllSales } from '@/data-store/datastore';
 import type { Station } from '@/types/type-aliases';
 import { extractMoneyValue } from '@/lib/utils/financial-utils';
 
+async function getLinkedSaleId(record: FinancialRecord): Promise<string | null> {
+  const legacy = (record as any).sourceSaleId;
+  if (legacy) return legacy;
+  const links = await getLinksFor({ type: EntityType.FINANCIAL, id: record.id });
+  const link = links.find((candidate: any) =>
+    (candidate.linkType === LinkType.FINREC_SALE && candidate.target?.type === EntityType.SALE) ||
+    (candidate.linkType === LinkType.SALE_FINREC && candidate.source?.type === EntityType.SALE)
+  ) as any;
+  return link?.target?.type === EntityType.SALE ? link.target.id :
+    link?.source?.type === EntityType.SALE ? link.source.id : null;
+}
+
 async function metricsForFinrecItemLink(
   record: FinancialRecord,
   itemId: string
 ): Promise<{ quantity: number; unitPrice: number; revenue: number }> {
-  if (record.sourceSaleId) {
-    const sale = await getSaleById(record.sourceSaleId);
+  const linkedSaleId = await getLinkedSaleId(record);
+  if (linkedSaleId) {
+    const sale = await getSaleById(linkedSaleId);
     if (sale?.lines) {
       const line = sale.lines.find(
         (l): l is ItemSaleLine => l.kind === 'item' && 'itemId' in l && l.itemId === itemId
@@ -218,10 +231,12 @@ export async function getProductChannelMatrix(
   const matrix: ProductChannelMatrix = {};
 
   for (const record of records) {
-    if (!record.salesChannel || !record.sourceSaleId) continue;
+    if (!record.salesChannel) continue;
+    const linkedSaleId = await getLinkedSaleId(record);
+    if (!linkedSaleId) continue;
 
     // Get the sale to find items
-    const sale = await getSaleById(record.sourceSaleId);
+    const sale = await getSaleById(linkedSaleId);
     if (!sale) continue;
 
     // Get items from sale via SALE_ITEM links
@@ -340,10 +355,12 @@ export async function getRevenuesByProductStation(
   const stationMap: Record<string, { revenue: number; transactionCount: number }> = {};
 
   for (const record of records) {
-    if (extractMoneyValue(record.revenue) <= 0 || !record.sourceSaleId) continue;
+    if (extractMoneyValue(record.revenue) <= 0) continue;
+    const linkedSaleId = await getLinkedSaleId(record);
+    if (!linkedSaleId) continue;
 
     // Get the sale
-    const sale = await getSaleById(record.sourceSaleId);
+    const sale = await getSaleById(linkedSaleId);
     if (!sale) continue;
 
     // Get items from sale via SALE_ITEM links

@@ -4,14 +4,20 @@ import { resolve } from 'node:path';
 
 vi.mock('server-only', () => ({}));
 
-import { getAllCharacters, getFinancialById, removeFinancial, upsertFinancial } from '@/data-store/datastore';
-import { FinancialStatus } from '@/types/enums';
+import { getAllCharacters, getAllItems, getFinancialById, removeCharacter, removeFinancial, removeItem, upsertFinancial } from '@/data-store/datastore';
+import { getLinksFor } from '@/links/link-registry';
+import { EntityType, FinancialStatus, LinkType } from '@/types/enums';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 
 describe('entity-test: full FinancialRecord', () => {
   const financialId = 'entity-test-financial-full';
+  let generatedCharacterId: string | null = null;
 
   afterEach(async () => {
+    const generatedItems = (await getAllItems()).filter(item => item.sourceRecordId === financialId);
+    for (const item of generatedItems) await removeItem(item.id);
+    if (generatedCharacterId) await removeCharacter(generatedCharacterId);
+    generatedCharacterId = null;
     await removeFinancial(financialId);
   });
 
@@ -37,13 +43,11 @@ describe('entity-test: full FinancialRecord', () => {
       targetSiteId: 'site-world',
       characterId: owner.id,
       playerCharacterId: owner.id,
-      sourceTaskId: 'entity-test-source-task',
-      sourceSaleId: 'entity-test-source-sale',
       salesChannel: 'direct-sales' as any,
       cost: { minorUnits: '2500', currency: 'USD' },
       revenue: { minorUnits: '10000', currency: 'USD' },
       netCashflow: { minorUnits: '7500', currency: 'USD' },
-      status: FinancialStatus.PENDING,
+      status: FinancialStatus.COLLECTED,
       lifecycle: { doneAt, collectedAt },
       context: {
         counterparty: { counterpartyId: owner.id, role: 'beneficiary' },
@@ -67,15 +71,20 @@ describe('entity-test: full FinancialRecord', () => {
       },
       createdAt: doneAt,
       updatedAt: now,
-    } as any, { skipWorkflowEffects: true, skipLinkEffects: true, forceSave: true });
+    } as any, { forceSave: true });
 
     const saved = await getFinancialById(financialId);
     if (!saved) throw new Error(`Entity-test FinancialRecord ${financialId} was not found after creation.`);
 
     const persisted = JSON.parse(JSON.stringify(saved));
+    const links = await getLinksFor({ type: EntityType.FINANCIAL, id: financialId });
+    const generatedItems = (await getAllItems()).filter(item => item.sourceRecordId === financialId);
+    const generatedCharacters = (await getAllCharacters()).filter(character => character.name === 'Testing Customer');
+    generatedCharacterId = generatedCharacters.at(-1)?.id || null;
+    const output = { financial: persisted, links, items: generatedItems, characters: generatedCharacters };
     const outputFile = resolve(__dirname, 'financial-entity-test-full.output.json');
-    writeFileSync(outputFile, `${JSON.stringify(persisted, null, 2)}\n`, 'utf8');
-    process.stderr.write(`[entity-test] persisted full FinancialRecord entity:\n${JSON.stringify(persisted, null, 2)}\n`);
+    writeFileSync(outputFile, `${JSON.stringify(output, null, 2)}\n`, 'utf8');
+    process.stderr.write(`[entity-test] persisted full FinancialRecord workflow output:\n${JSON.stringify(output, null, 2)}\n`);
 
     expect(persisted).toMatchObject({
       id: financialId,
@@ -83,17 +92,8 @@ describe('entity-test: full FinancialRecord', () => {
       version: 0,
       name: 'testing-financial-full',
       description: 'Full FinancialRecord entity test',
-      siteId: 'hq',
-      targetSiteId: 'site-world',
-      characterId: owner.id,
-      playerCharacterId: owner.id,
-      sourceTaskId: 'entity-test-source-task',
-      sourceSaleId: 'entity-test-source-sale',
-      salesChannel: 'direct-sales',
       context: {
-        counterparty: { counterpartyId: owner.id, role: 'beneficiary' },
         jungleCoins: 1,
-        paymentObservation: { paid: false, charged: false },
         exchangeType: 'POINTS_TO_J$',
         exchangeCounterAmount: 10,
         newCustomerName: 'Testing Customer',
@@ -102,5 +102,24 @@ describe('entity-test: full FinancialRecord', () => {
     });
     expect(persisted.context).not.toHaveProperty('kind');
     expect(persisted.context).not.toHaveProperty('schemaVersion');
+    expect(persisted).not.toHaveProperty('characterId');
+    expect(persisted).not.toHaveProperty('playerCharacterId');
+    expect(persisted).not.toHaveProperty('sourceTaskId');
+    expect(persisted).not.toHaveProperty('sourceSaleId');
+    expect(persisted).not.toHaveProperty('siteId');
+    expect(persisted).not.toHaveProperty('targetSiteId');
+    expect(persisted.context).not.toHaveProperty('counterparty');
+    expect(persisted.context).not.toHaveProperty('paymentObservation');
+    expect(generatedItems).toHaveLength(1);
+    expect(generatedItems[0]).toMatchObject({ sourceRecordId: financialId, status: 'for-sale' });
+    expect(links).toEqual(expect.arrayContaining([
+      expect.objectContaining({ linkType: LinkType.FINREC_CHARACTER, relationship: 'beneficiary' }),
+    ]));
+    expect(links).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        linkType: LinkType.FINREC_ITEM,
+        target: { type: EntityType.ITEM, id: generatedItems[0].id },
+      }),
+    ]));
   });
 });

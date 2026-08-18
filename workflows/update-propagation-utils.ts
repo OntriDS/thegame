@@ -176,6 +176,31 @@ export async function updateFinancialRecordsFromTask(
 // FINANCIAL RECORD → TASK PROPAGATION
 // ============================================================================
 
+async function getFinancialSourceTaskId(record: FinancialRecord): Promise<string | null> {
+  const legacy = (record as any).sourceTaskId;
+  if (legacy) return legacy;
+  const links = await getLinksFor({ type: EntityType.FINANCIAL, id: record.id });
+  const link = links.find((candidate: any) =>
+    candidate.linkType === LinkType.TASK_FINREC && candidate.source?.type === EntityType.TASK
+  ) as any;
+  return link?.source?.id || null;
+}
+
+async function getFinancialSiteId(record: FinancialRecord): Promise<string | null> {
+  const legacy = (record as any).targetSiteId || (record as any).siteId;
+  if (legacy) return legacy;
+  const links = await getLinksFor({ type: EntityType.FINANCIAL, id: record.id });
+  const target = links.find((candidate: any) =>
+    candidate.linkType === LinkType.FINREC_SITE &&
+    String(candidate.relationship || '').toLowerCase() === 'target' &&
+    candidate.target?.type === EntityType.SITE
+  );
+  const source = links.find((candidate: any) =>
+    candidate.linkType === LinkType.FINREC_SITE && candidate.target?.type === EntityType.SITE
+  );
+  return target?.target?.id || source?.target?.id || null;
+}
+
 export async function updateTasksFromFinancialRecord(
   record: FinancialRecord,
   previousRecord: FinancialRecord
@@ -184,14 +209,15 @@ export async function updateTasksFromFinancialRecord(
     console.log(`[updateTasksFromFinancialRecord] Updating tasks for financial record: ${record.name}`);
 
     // Find task that created this financial record
-    if (!record.sourceTaskId) {
+    const sourceTaskId = await getFinancialSourceTaskId(record);
+    if (!sourceTaskId) {
       console.log(`[updateTasksFromFinancialRecord] No sourceTaskId, skipping`);
       return;
     }
 
-    const task = await getTaskById(record.sourceTaskId);
+    const task = await getTaskById(sourceTaskId);
     if (!task) {
-      console.log(`[updateTasksFromFinancialRecord] Task ${record.sourceTaskId} not found, skipping`);
+      console.log(`[updateTasksFromFinancialRecord] Task ${sourceTaskId} not found, skipping`);
       return;
     }
 
@@ -498,7 +524,7 @@ export async function updateItemsCreatedByRecord(
               updatedItem.stock[0].quantity += quantityDiff;
             } else {
               updatedItem.stock = [{
-                siteId: record.siteId || '',
+                siteId: (await getFinancialSiteId(record)) || '',
                 quantity: quantityDiff
               }];
             }

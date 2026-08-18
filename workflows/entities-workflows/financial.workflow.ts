@@ -1,5 +1,5 @@
 // workflows/entities-workflows/financial.workflow.ts
-// Financial-specific workflow: PENDING vs DONE (paid+charged); no COLLECTED / finrec points
+// Financial-specific workflow: PENDING → DONE → COLLECTED; financials do not vest points.
 import { isValid } from 'date-fns';
 
 import { EntityType, LogEventType, FinancialStatus } from '@/types/enums';
@@ -16,9 +16,8 @@ import {
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { createLink, getLinksFor, removeLink } from '@/links/link-registry';
-import { getPlayerById, getFinancialById } from '@/data-store/datastore';
+import { getFinancialById } from '@/data-store/datastore';
 import { createItemFromRecord, removeItemsCreatedByRecord } from '../item-creation-utils';
-import { removePointsFromPlayer } from '../points-rewards-utils';
 import {
   updateTasksFromFinancialRecord,
   updateItemsCreatedByRecord,
@@ -74,7 +73,15 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         const createdCharacter = await createCharacterFromFinancial(financial);
         if (createdCharacter) {
           // Update financial record with the created character ID
-          const updatedFinancial = { ...financial, characterId: createdCharacter.id };
+          const updatedFinancial = {
+            ...financial,
+            characterId: createdCharacter.id,
+            __financialRelations: {
+              ...((financial as any).__financialRelations || {}),
+              characterId: createdCharacter.id,
+            },
+            __financialRelationsProvided: true,
+          };
           await upsertFinancial(updatedFinancial, { skipWorkflowEffects: true });
           await markEffect(characterEffectKey);
         }
@@ -110,13 +117,8 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
           if (financialCounterpartyId) {
             await recalculateCharacterWallet(financialCounterpartyId);
           }
-          // 2. Explicit Player
-          if (financial.playerCharacterId) {
-            await recalculateCharacterWallet(financial.playerCharacterId);
-          }
-          // 3. Check for Links? (Async, might be overkill for creation if we trust fields)
-          // If fields are missing but links exist, we might miss it here.
-          // But usually creator ensures fields for ID.
+          // FinancialRecords do not award Player points or persist a creator
+          // pointer. The canonical FINREC_CHARACTER link is the wallet input.
         })()
       );
     }
@@ -182,9 +184,10 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     }
 
     const latestNewFinancial = (await getFinancialById(financial.id)) || financial;
-    if (latestNewFinancial.characterId && getFinancialCounterpartyRole(latestNewFinancial)) {
+    const latestCounterpartyId = getFinancialCounterpartyId(latestNewFinancial);
+    if (latestCounterpartyId && getFinancialCounterpartyRole(latestNewFinancial)) {
       await ensureCounterpartyRoleDatastore(
-        latestNewFinancial.characterId,
+        latestCounterpartyId,
         getFinancialCounterpartyRole(latestNewFinancial)
       );
     }
@@ -261,6 +264,23 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     }, getFinancialDate(financial));
   }
 
+  if (
+    financial.status === FinancialStatus.COLLECTED &&
+    previousFinancial?.status !== FinancialStatus.COLLECTED
+  ) {
+    const collectedLoggedKey = EffectKeys.sideEffect('financial', financial.id, 'collectedLogged');
+    if (!(await hasEffect(collectedLoggedKey))) {
+      await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.COLLECTED, {
+        name: financial.name,
+        type: financial.type,
+        station: financial.station,
+        cost: financial.cost,
+        revenue: financial.revenue,
+      }, financial.lifecycle?.collectedAt || getFinancialDate(financial));
+      await markEffect(collectedLoggedKey);
+    }
+  }
+
   // COMPREHENSIVE UPDATE PROPAGATION - when financial record properties change
   if (previousFinancial) {
     // Propagate to Tasks
@@ -276,14 +296,9 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     // Propagate J$ changes to Character Wallet Cache
     if ((financial.context?.jungleCoins ?? 0) !== (previousFinancial.context?.jungleCoins ?? 0)) {
       if (financialCounterpartyId) await recalculateCharacterWallet(financialCounterpartyId);
-      if (financial.playerCharacterId) await recalculateCharacterWallet(financial.playerCharacterId);
-
       // Also check previous record's owner if it changed!
       if (previousFinancialCounterpartyId && previousFinancialCounterpartyId !== financialCounterpartyId) {
         await recalculateCharacterWallet(previousFinancialCounterpartyId);
-      }
-      if (previousFinancial.playerCharacterId && previousFinancial.playerCharacterId !== financial.playerCharacterId) {
-        await recalculateCharacterWallet(previousFinancial.playerCharacterId);
       }
     }
 
@@ -473,9 +488,8 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     // 1. Remove items created by this record
     await removeItemsCreatedByRecord(recordId);
 
-    // 2. Remove player points that were awarded by this record (if points were badly given)
-    await removePlayerPointsFromRecord(recordId);
-    // 3. Remove all Links related to this record
+    // FinancialRecords never award Player points. Remove all Links related
+    // to this record, then recalculate affected character wallets.
     const recordLinks = await getLinksFor({ type: EntityType.FINANCIAL, id: recordId });
 
     // Extract character IDs from links before deleting them
@@ -537,50 +551,5 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
 
   } catch (error) {
     console.error('Error removing record effects:', error);
-  }
-}
-
-/**
- * Remove player points that were awarded by a specific financial record
- * This is used when rolling back a record that incorrectly awarded points
- */
-async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
-  try {
-
-    // Get the record to find what points were awarded
-    const record = await getFinancialById(recordId);
-
-    if (!record || !(record as any).jungleCoins) {
-      return;
-    }
-
-    // Get the player from the record (same logic as creation)
-    const playerId = record.playerCharacterId;
-    if (!playerId) return;
-    const player = await getPlayerById(playerId);
-
-    if (!player) {
-      return;
-    }
-
-    // Check if any points were actually awarded
-    const pointsToRemove = (record as any).jungleCoins;
-    const hasPoints = (pointsToRemove.xp || 0) > 0 || (pointsToRemove.rp || 0) > 0 ||
-      (pointsToRemove.fp || 0) > 0 || (pointsToRemove.hp || 0) > 0;
-
-    if (!hasPoints) {
-      return;
-    }
-
-    // Remove the points from the player
-    await removePointsFromPlayer(playerId, {
-      xp: pointsToRemove.xp || 0,
-      rp: pointsToRemove.rp || 0,
-      fp: pointsToRemove.fp || 0,
-      hp: pointsToRemove.hp || 0
-    });
-
-  } catch (error) {
-    console.error(`[removePlayerPointsFromRecord] ❌ Failed to remove player points for record ${recordId}:`, error);
   }
 }

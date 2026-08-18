@@ -18,6 +18,9 @@ const DEFAULT_LEASE_SECONDS = 60;
 
 export async function deleteEffectClaim(idempotencyKey: string): Promise<void> {
   await kvDel(`${EFFECT_PREFIX}${idempotencyKey}`);
+  // Older workflow readers use this claim namespace. Delete both during
+  // cleanup so stale claims cannot block a recreated entity's effects.
+  await kvDel(`effect:${idempotencyKey}`);
 }
 
 // ─── Claim Acquisition ──────────────────────────────────────────────────────

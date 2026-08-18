@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
 
             results.tasks = await CollectionService.collectTasks(targetMonth, targetYear);
             results.sales = await CollectionService.collectSales(targetMonth, targetYear);
+            results.financials = await CollectionService.collectFinancials(targetMonth, targetYear);
         }
 
         // --- JOB: Pixelbrain Autonomous Pulse (Piggyback Strategy) ---

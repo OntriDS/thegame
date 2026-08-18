@@ -251,6 +251,7 @@ export function normalizeFinancialRecordFields(record: FinancialRecord): Financi
   delete normalizedContext.schemaVersion;
   if (normalizedContext.jungleCoins === 0) delete normalizedContext.jungleCoins;
   if (!normalizedContext.newCustomerName) delete normalizedContext.newCustomerName;
+  delete normalizedContext.paymentObservation;
   if (!productionPlan) delete normalizedContext.productionPlan;
   if (!paymentObservation ||
       (raw.status === 'done' && paymentObservation.paid && paymentObservation.charged)) {
@@ -260,14 +261,11 @@ export function normalizeFinancialRecordFields(record: FinancialRecord): Financi
 
   const context = {
     ...normalizedContext,
-    ...(counterparty ? { counterparty } : {}),
+    // Counterparty identity/role is command input for FINREC_CHARACTER
+    // reconciliation and is not persisted as a second relationship authority.
     ...((raw.context?.jungleCoins ?? jungleCoins) !== undefined &&
       (raw.context?.jungleCoins ?? jungleCoins) !== 0
       ? { jungleCoins: raw.context?.jungleCoins ?? jungleCoins }
-      : {}),
-    ...(paymentObservation &&
-      (!paymentObservation.paid || !paymentObservation.charged || Boolean(isNotPaid) || Boolean(isNotCharged))
-      ? { paymentObservation }
       : {}),
     ...((raw.context?.newCustomerName ?? newCustomerName)
       ? { newCustomerName: raw.context?.newCustomerName ?? newCustomerName }
@@ -284,12 +282,6 @@ export function normalizeFinancialRecordFields(record: FinancialRecord): Financi
     netCashflow: toMoneyValue(raw.netCashflow ?? numericRevenue - numericCost),
     status: raw.status ?? (isNotPaid ? 'pending' : 'done'),
     ...(description ? { description } : {}),
-    ...(siteId != null ? { siteId } : {}),
-    ...(targetSiteId != null ? { targetSiteId } : {}),
-    ...(characterId != null ? { characterId } : {}),
-    ...(playerCharacterId != null ? { playerCharacterId } : {}),
-    ...(sourceTaskId != null ? { sourceTaskId } : {}),
-    ...(sourceSaleId != null ? { sourceSaleId } : {}),
     ...(salesChannel != null ? { salesChannel } : {}),
     ...(
       raw.lifecycle?.doneAt || raw.lifecycle?.collectedAt || doneAt || collectedAt
