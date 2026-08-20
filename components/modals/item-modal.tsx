@@ -482,9 +482,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       ],
       payments: subtotal > 0 ? [{
         method: PaymentMethod.FIAT_USD,
-        amount: subtotal,
-        currency: Currency.USD,
-        receivedAt: now
+        amount: toMoney(subtotal, Currency.USD),
       }] : undefined,
       totals: {
         subtotal: toMoney(subtotal),

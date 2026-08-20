@@ -26,7 +26,8 @@ export async function GET(request: NextRequest) {
       sites: sites.map(s => ({
         id: s.id,
         name: s.name,
-        type: s.metadata.type
+        type: s.type,
+        subtype: s.subtype
       })),
     });
   } catch (error) {

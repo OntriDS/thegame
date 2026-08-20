@@ -76,6 +76,24 @@ function asPointAmount(points: Rewards['points'] | undefined | null): PointAmoun
   };
 }
 
+function assertNonNegativeDelta(delta: PointAmountV1, operation: string): void {
+  if (Object.values(delta).some((value) => value < 0)) {
+    throw new Error(`${operation}: point deltas must be non-negative.`);
+  }
+}
+
+function assertCanConsumePoints(
+  available: PointAmountV1,
+  delta: PointAmountV1,
+  bucket: string,
+  operation: string,
+): void {
+  const insufficient = (['hp', 'fp', 'rp', 'xp'] as const).find((key) => delta[key] > available[key]);
+  if (insufficient) {
+    throw new Error(`${operation}: insufficient ${bucket} points for ${insufficient}.`);
+  }
+}
+
 /**
  * Resolve a candidate id (playerId or characterId) to a valid playerId.
  * - If it's already a player id, return as-is.
@@ -159,9 +177,10 @@ export async function awardPointsToPlayer(
         sourceEntityType = EntityType.FINANCIAL;
         break;
       case 'sale':
-        linkType = LinkType.SALE_PLAYER;
-        sourceEntityType = EntityType.SALE;
-        break;
+        // Sale rewards are attributed through SALE_CHARACTER(owner) -> CHARACTER_PLAYER.
+        // No direct SALE_PLAYER link is created.
+        await appendPlayerPointsLog(resolvedPlayerId, points, sourceId, sourceType, customTimestamp);
+        return;
       case 'item':
         linkType = LinkType.ITEM_PLAYER;
         sourceEntityType = EntityType.ITEM;
@@ -366,6 +385,8 @@ export async function rewardPointsToPlayer(
 
     const delta = asPointAmount(points);
     const current = getPlayerRewards(player);
+    assertNonNegativeDelta(delta, 'rewardPointsToPlayer');
+    assertCanConsumePoints(current.points.pending, delta, 'pending', 'rewardPointsToPlayer');
     const updatedPlayer = playerWithRewards(player, {
       ...current,
       points: {
@@ -386,7 +407,11 @@ export async function rewardPointsToPlayer(
     switch (sourceEntityType) {
       case 'task': linkType = LinkType.TASK_PLAYER; resolvedSourceEntityType = EntityType.TASK; break;
       case 'financial': linkType = LinkType.FINREC_PLAYER; resolvedSourceEntityType = EntityType.FINANCIAL; break;
-      case 'sale': linkType = LinkType.SALE_PLAYER; resolvedSourceEntityType = EntityType.SALE; break;
+      case 'sale':
+        // Sale rewards are attributed through SALE_CHARACTER(owner) -> CHARACTER_PLAYER.
+        // No direct SALE_PLAYER link is created.
+        await appendPlayerPointsLog(resolvedPlayerId, points, sourceEntityId, sourceEntityType, customTimestamp);
+        return;
       case 'item': linkType = LinkType.ITEM_PLAYER; resolvedSourceEntityType = EntityType.ITEM; break;
       default: linkType = LinkType.TASK_PLAYER; resolvedSourceEntityType = EntityType.TASK; break;
     }
@@ -563,6 +588,8 @@ export async function exchangePointsForPlayer(
 
   const delta = asPointAmount(points);
   const current = getPlayerRewards(player);
+  assertNonNegativeDelta(delta, 'exchangePointsForPlayer');
+  assertCanConsumePoints(current.points.current, delta, 'current', 'exchangePointsForPlayer');
   const updatedPlayer = playerWithRewards(player, {
     ...current,
     points: {

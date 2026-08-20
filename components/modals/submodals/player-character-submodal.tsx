@@ -70,14 +70,6 @@ export default function PlayerCharacterModal({ character, open, onOpenChange }: 
               </div>
             </div>
             
-            <div className="pt-2 border-t">
-              <div>
-                <div className="text-xs text-muted-foreground">Purchased Amount</div>
-                <div className="mt-1 text-lg font-bold">
-                  ${character.purchasedAmount.toFixed(2)}
-                </div>
-              </div>
-            </div>
           </div>
         </div>
         

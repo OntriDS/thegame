@@ -1,4 +1,4 @@
-export const PREDEFINED_ACHIEVEMENTS = [
+export const PREDEFINED_QUALIFICATIONS = [
   "Financial Controller - Close month financials.",
   "Library Contributor - Create a research doc for the library.",
   "Content Creator - Create or fix an ebook or lesson in the library.",

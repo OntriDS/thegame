@@ -61,7 +61,6 @@ export async function POST(req: NextRequest) {
       createdAt: body.createdAt ? parseDateToUTC(body.createdAt) : getUTCNow(),
       updatedAt: getUTCNow(),
       saleDate: body.saleDate ? parseDateToUTC(body.saleDate) : startOfDayUTC(getUTCNow()),
-      postedAt: body.postedAt ? parseDateToUTC(body.postedAt) : undefined,
       doneAt: body.doneAt ? parseDateToUTC(body.doneAt) : undefined,
       cancelledAt: body.cancelledAt ? parseDateToUTC(body.cancelledAt) : undefined
     };

@@ -1,0 +1,47 @@
+{
+  "id": "entity-test-player-clean",
+  "schemaVersion": 1,
+  "version": 0,
+  "name": "testing-player",
+  "level": 0,
+  "rewards": {
+    "points": {
+      "pending": {
+        "hp": 0,
+        "fp": 0,
+        "rp": 0,
+        "xp": 0
+      },
+      "vested": {
+        "hp": 0,
+        "fp": 0,
+        "rp": 0,
+        "xp": 0
+      },
+      "current": {
+        "hp": 0,
+        "fp": 0,
+        "rp": 0,
+        "xp": 0
+      },
+      "exchanged": {
+        "hp": 0,
+        "fp": 0,
+        "rp": 0,
+        "xp": 0
+      },
+      "historic": {
+        "hp": 0,
+        "fp": 0,
+        "rp": 0,
+        "xp": 0
+      }
+    },
+    "achievements": [],
+    "badges": []
+  },
+  "lastActiveAt": "2026-08-19T00:50:41.023Z",
+  "isActive": true,
+  "createdAt": "2026-08-19T00:50:41.023Z",
+  "updatedAt": "2026-08-19T00:50:41.023Z"
+}

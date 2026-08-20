@@ -535,7 +535,8 @@
       "roles": [
         "orchestrator",
         "king",
-        "mechanic"
+        "mechanic",
+        "analyst"
       ],
       "parameters": {
         "type": "object",

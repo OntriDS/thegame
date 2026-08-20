@@ -21,7 +21,7 @@ import { getSaleStatusLabel } from '@/lib/constants/status-display-labels';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
-import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
+import { useAuth } from '@/lib/hooks/use-auth';
 // Side effects handled by parent component via API calls
 import { v4 as uuid } from 'uuid';
 import { X, Pencil, CalendarIcon, Network, Wallet, Gift, User } from 'lucide-react';
@@ -132,6 +132,7 @@ export default function SalesModal({
   exchangeRates,
 }: SalesModalProps) {
   const { getPreference, setPreference } = useUserPreferences();
+  const { user: authUser } = useAuth();
 
   // Form state
   const [name, setName] = useState('');
@@ -146,9 +147,16 @@ export default function SalesModal({
   const [payments, setPayments] = useState<any[]>([]);
 
   const [characterId, setCharacterId] = useState<string | null>('');
+  const [ownerId, setOwnerId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || sale || ownerId || !authUser?.characterId) return;
+    setOwnerId(authUser.characterId);
+  }, [open, sale, ownerId, authUser?.characterId]);
   const [isNewCustomer, setIsNewCustomer] = useState(true);
   const [newCustomerName, setNewCustomerName] = useState('');
   const [playerPoints, setPlayerPoints] = useState({ xp: 0, rp: 0, fp: 0, hp: 0 });
+  const hasSaleRewardPoints = Object.values(playerPoints).some(value => Number(value) > 0);
   const [cost, setCost] = useState<number>(0);
   const [revenue, setRevenue] = useState<number>(0);
 
@@ -167,8 +175,6 @@ export default function SalesModal({
   const isServiceMode = type === SaleType.DIRECT && directWhatKind === 'service';
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
-  const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(null);
-  const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
   const [showArchiveCollectionModal, setShowArchiveCollectionModal] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{
     status: SaleStatus;
@@ -412,7 +418,7 @@ export default function SalesModal({
         },
         new Date()
       );
-      const defaultName = buildAutoSaleName(sale.type, sale.siteId, timelineAt, sites);
+      const defaultName = buildAutoSaleName(sale.type, sale.siteId || 'none', timelineAt, sites);
       setName(sale.name);
       setIsNameCustom(Boolean(sale.name?.trim()) && sale.name.trim() !== defaultName);
       setDescription(sale.description || '');
@@ -430,7 +436,11 @@ export default function SalesModal({
       setLocalCollectedAt(sale.lifecycle?.collectedAt ? new Date(sale.lifecycle.collectedAt) : undefined);
       setOverallDiscount(sale.context?.overallDiscount || (sale as any).overallDiscount || {});
       setLines(sale.lines || []);
-      setPayments(sale.payments || []);
+      setPayments((sale.payments || []).map(payment => ({
+        ...payment,
+        amount: extractMoneyValue(payment.amount),
+        currency: payment.amount.currency,
+      }))); 
       setQuickRows([]);
 
       if (sale.type === SaleType.BOOTH) {
@@ -490,8 +500,8 @@ export default function SalesModal({
         }
       }
 
-      // Initialize player character
-      setPlayerCharacterId(sale.playerCharacterId || null);
+      // Initialize sale owner Character
+      setOwnerId(sale.ownerId || null);
 
       const emissaryPts = sale.context?.rewardIntent?.points || (sale as any).rewards?.points;
       setPlayerPoints({
@@ -511,7 +521,6 @@ export default function SalesModal({
       // New sale - always reset form when sale is null/undefined
       resetForm();
       // Initialize player character for new sale
-      setPlayerCharacterId(null);
       // Mark as initialized
       didInitRef.current = true;
       // Generate new ID for new sale session
@@ -698,6 +707,7 @@ export default function SalesModal({
       points: { xp: 0, rp: 0, fp: 0, hp: 0 },
     });
     setPlayerPoints({ xp: 0, rp: 0, fp: 0, hp: 0 });
+    setOwnerId(null);
     setSelectedItems([]);
     setRecordedPayments([]);
     setManualLines(false);
@@ -733,7 +743,7 @@ export default function SalesModal({
       { doneAt: sale.lifecycle?.doneAt, saleDate: sale.saleDate, createdAt: sale.createdAt },
       new Date()
     );
-    const defaultName = buildAutoSaleName(sale.type, sale.siteId, at, sites);
+    const defaultName = buildAutoSaleName(sale.type, sale.siteId || 'none', at, sites);
     setIsNameCustom(Boolean(sale.name?.trim()) && sale.name.trim() !== defaultName);
   }, [open, sale?.id, sale?.name, sale?.type, sale?.siteId, sale?.saleDate, sale?.lifecycle?.doneAt, sale?.createdAt, sites]);
 
@@ -949,14 +959,16 @@ export default function SalesModal({
     const effectivePayments = recordedPayments.length > 0
       ? recordedPayments.map(p => ({
         method: p.method,
-        amount: p.amount,
-        currency: p.currency,
-        receivedAt: p.date,
+        amount: toMoney(p.amount, p.currency),
         notes: p.notes,
         exchangeDescription: p.exchangeDescription,
         exchangeCategory: p.exchangeCategory
       }))
-      : payments.length > 0 ? payments : undefined;
+      : payments.length > 0 ? payments.map(({ receivedAt: _legacyReceivedAt, ...payment }) => ({
+        ...payment,
+        amount: toMoney(payment.amount, payment.currency),
+        currency: undefined,
+      })) : undefined;
 
     const hasEmissarySalePoints =
       (playerPoints.xp || 0) > 0 ||
@@ -991,6 +1003,10 @@ export default function SalesModal({
       status === SaleStatus.COLLECTED
         ? (localCollectedAt ?? sale?.lifecycle?.collectedAt ?? new Date())
         : localCollectedAt;
+    const chargedAtForSave =
+      status === SaleStatus.CHARGED || status === SaleStatus.COLLECTED
+        ? (sale?.lifecycle?.chargedAt ?? new Date())
+        : sale?.lifecycle?.chargedAt;
 
     const saleData: any = {
       id: draftId.current,
@@ -1002,7 +1018,7 @@ export default function SalesModal({
       siteId: effectiveSiteId,
       counterpartyName: counterpartyName.trim() || undefined,
       ...(isNewCustomer || !characterId ? {} : { characterId }), // Existing customer only when selected
-      playerCharacterId: playerCharacterId,
+      ...(ownerId ? { ownerId } : {}),
       lines: effectiveLines,
       payments: effectivePayments,
       totals: {
@@ -1014,6 +1030,7 @@ export default function SalesModal({
       },
       lifecycle: {
         ...sale?.lifecycle,
+        ...(chargedAtForSave ? { chargedAt: chargedAtForSave } : {}),
         ...(doneAtForSave ? { doneAt: doneAtForSave } : {}),
         ...(collectedAtForSave ? { collectedAt: collectedAtForSave } : {}),
       },
@@ -1159,7 +1176,7 @@ export default function SalesModal({
       : quickRows.reduce((acc, r) => acc + (r.quantity * r.unitPrice), 0);
     const method = getDefaultMethodForType(type);
     const currency = method === PaymentMethod.FIAT_CRC || method === PaymentMethod.SINPE ? Currency.CRC : Currency.USD;
-    setPayments([{ method: method as string, amount: total, currency: currency as string, receivedAt: new Date() }]);
+    setPayments([{ method: method as string, amount: total, currency: currency as string }]);
   };
 
   const addServiceLine = () => {
@@ -1209,7 +1226,6 @@ export default function SalesModal({
       method: PaymentMethod.FIAT_USD as string,
       amount: 0,
       currency: Currency.USD as string,
-      receivedAt: new Date(),
     };
     setPayments([...payments, newPayment]);
   };
@@ -1539,19 +1555,19 @@ export default function SalesModal({
             )}
             <Button
               variant="outline"
-              onClick={() => setShowPlayerCharacterSelector(true)}
+              onClick={() => authUser?.characterId && setOwnerId(authUser.characterId)}
               className="h-8 text-xs"
             >
               <User className="w-3 h-3 mr-1" />
-              Player
+              Owner
             </Button>
-            {/* Emissaries toggle - show for all modes */}
+            {/* Rewards toggle - show for all modes */}
             <Button
               variant="outline"
               onClick={toggleEmissary}
               className={`h-8 text-xs ${emissaryColumnExpanded ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
             >
-              Emissaries
+              Rewards
             </Button>
 
             {/* Payments button */}
@@ -1633,14 +1649,6 @@ export default function SalesModal({
             onClose={() => setShowRelationshipsModal(false)}
           />
         )}
-
-        {/* Player Character Selector Modal */}
-        <PlayerCharacterSelectorModal
-          open={showPlayerCharacterSelector}
-          onOpenChange={setShowPlayerCharacterSelector}
-          onSelect={setPlayerCharacterId}
-          currentPlayerCharacterId={playerCharacterId}
-        />
 
         {/* Items SubModal */}
         <SaleItemsSubModal

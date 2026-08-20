@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ClientAPI } from '@/lib/client-api';
+import { ClientAPI, type CharacterDirectoryItem } from '@/lib/client-api';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import CharacterModal from '@/components/modals/character-modal';
@@ -59,7 +59,7 @@ const formatUSD = (value: number): string => `$${value.toFixed(2)}`;
 function CharactersPageContent() {
   const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
-  const [characters, setCharacters] = useState<Character[]>([]);
+  const [characters, setCharacters] = useState<CharacterDirectoryItem[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [roleFilter, setRoleFilter] = useState<CharacterRole | 'ALL'>('ALL');

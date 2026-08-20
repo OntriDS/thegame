@@ -16,7 +16,7 @@ export const createSiteOptions = (sites: Site[]): Array<{ value: string; label: 
   return sites.map(site => ({
     value: site.id,
     label: site.name,
-    group: site.metadata.type ? getSiteTypeLabel(site.metadata.type) : getSiteTypeLabel(SiteType.PHYSICAL)
+    group: site.type ? getSiteTypeLabel(site.type) : getSiteTypeLabel(SiteType.PHYSICAL)
   }));
 };
 
@@ -48,7 +48,7 @@ export const createSiteOptionsWithCategories = (sites: Site[]): Array<{ value: s
   });
 
   return sortedSites.map(site => {
-    const siteType = site.metadata?.type || SiteType.PHYSICAL;
+    const siteType = site.type || SiteType.PHYSICAL;
     const category = getSiteTypeLabel(siteType);
 
     return {
@@ -100,7 +100,7 @@ export const getAllSiteNames = (sites: Site[]): string[] => {
  * @returns Filtered array of Site entities
  */
 export const getSitesByType = (sites: Site[], type: string): Site[] => {
-  return sites.filter(site => site.metadata.type === type);
+  return sites.filter(site => site.type === type);
 };
 
 /**

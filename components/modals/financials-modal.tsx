@@ -1042,7 +1042,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                 onClick={toggleEmissaryColumn}
                 className={`h-8 text-xs ${emissaryColumnExpanded ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
               >
-                Emissaries
+                More
               </Button>
             </div>
 

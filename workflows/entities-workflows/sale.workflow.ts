@@ -24,7 +24,7 @@ import {
   removeItem,
   upsertSale,
 } from '@/data-store/datastore';
-import { stagePointsForPlayer, removePointsFromPlayer, rewardPointsToPlayer } from '../points-rewards-utils';
+import { stagePointsForPlayer, removePointsFromPlayer, rewardPointsToPlayer, resolveToPlayerIdMaybeCharacter } from '../points-rewards-utils';
 import { processSaleLines, ensureSoldItemEntities } from '../sale-line-utils';
 import { executeWorkflow } from '../coordinator';
 import { resyncFinrecItemLinksAfterSoldItemClones } from '../financial-record-utils';
@@ -36,6 +36,7 @@ import { buildMonthIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { getSaleLogDetails } from '@/lib/utils/sale-log-details';
 import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
 import { getSaleCharacterId } from '@/lib/sale-character-id';
+import { resolveSaleCharacterId, resolveSaleOwnerId } from '@/lib/sale-relationship-selectors';
 
 function saleHasRewardPoints(sale: Sale): boolean {
   const p = sale.context?.rewardIntent?.points;
@@ -59,17 +60,17 @@ export async function ensureSaleLifecycleLogsForState(sale: Sale): Promise<void>
   const needsCharged = chargedOk || isCollectedState;
 
   if (needsCharged && !(await saleHasChargedLog(sale.id))) {
-    const chargedAt = sale.chargedAt ? new Date(sale.chargedAt as Date) : undefined;
-    const ts = sale.lifecycle?.doneAt || chargedAt || sale.saleDate || sale.updatedAt || getUTCNow();
+    const chargedAt = sale.lifecycle?.chargedAt ? new Date(sale.lifecycle.chargedAt) : undefined;
+    const ts = sale.lifecycle?.doneAt || chargedAt || sale.createdAt || sale.saleDate || sale.updatedAt || getUTCNow();
     await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CHARGED, getSaleLogDetails(sale), ts);
   }
 
   if (isCollectedState && !(await entityHasLogEvent(EntityType.SALE, sale.id, 'collected'))) {
     let defaultCollectedAt: Date;
-    if (sale.saleDate) {
-      defaultCollectedAt = endOfMonthUTC(sale.saleDate);
-    } else if (sale.createdAt) {
+    if (sale.createdAt) {
       defaultCollectedAt = endOfMonthUTC(sale.createdAt);
+    } else if (sale.saleDate) {
+      defaultCollectedAt = endOfMonthUTC(sale.saleDate);
     } else {
       defaultCollectedAt = endOfMonthUTC(getUTCNow());
     }
@@ -111,8 +112,8 @@ export async function ensureSaleChargedLog(saleId: string): Promise<{
   if (await saleHasChargedLog(saleId)) {
     return { success: true, noop: true };
   }
-  const chargedAt = sale.chargedAt ? new Date(sale.chargedAt as Date) : undefined;
-  const ts = sale.lifecycle?.doneAt || chargedAt || sale.saleDate || sale.updatedAt || getUTCNow();
+  const chargedAt = sale.lifecycle?.chargedAt ? new Date(sale.lifecycle.chargedAt) : undefined;
+  const ts = sale.lifecycle?.doneAt || chargedAt || sale.createdAt || sale.saleDate || sale.updatedAt || getUTCNow();
   await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CHARGED, getSaleLogDetails(sale), ts);
   return { success: true };
 }
@@ -133,10 +134,10 @@ export async function ensureSaleCollectedLog(saleId: string): Promise<{
     return { success: true, noop: true };
   }
   let defaultCollectedAt: Date;
-  if (sale.saleDate) {
-    defaultCollectedAt = endOfMonthUTC(sale.saleDate);
-  } else if (sale.createdAt) {
+  if (sale.createdAt) {
     defaultCollectedAt = endOfMonthUTC(sale.createdAt);
+  } else if (sale.saleDate) {
+    defaultCollectedAt = endOfMonthUTC(sale.saleDate);
   } else {
     defaultCollectedAt = endOfMonthUTC(getUTCNow());
   }
@@ -160,6 +161,8 @@ export const ensureSaleCollectedLifecycleLog = ensureSaleCollectedLog;
 export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<void> {
   let effectiveSale = sale;
   const isNewSale = !previousSale;
+  const saleCharacterId = await resolveSaleCharacterId(sale);
+  const previousSaleCharacterId = previousSale ? await resolveSaleCharacterId(previousSale) : null;
 
   // A charged/collected sale moving back to pending must reverse its charged
   // side effects (sold clones, links, logs, and rewards). Keep this derived
@@ -178,7 +181,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   const isChargedForCoordinator = sale.status !== SaleStatus.CANCELLED && (sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED) && !nowPending;
   const isCollectedForCoordinator = sale.status === SaleStatus.COLLECTED ;
 
-  if (isChargedForCoordinator || isCollectedForCoordinator || (effectiveSale.context?.newCustomerName && !getSaleCharacterId(effectiveSale))) {
+  if (isChargedForCoordinator || isCollectedForCoordinator || (effectiveSale.context?.newCustomerName && !(await resolveSaleCharacterId(effectiveSale)))) {
     const execution: WorkflowExecutionV1 = {
       workflowId: `sale-settlement-${sale.id}-${Date.now()}`,
       workflowType: 'sale-settlement',
@@ -247,7 +250,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     if (chargeStateWasRolledBack) {
       await rollbackChargedSaleToPending(sale, previousSale);
       if (!(await entityHasLogEvent(EntityType.SALE, sale.id, 'pending'))) {
-        await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, getSaleLogDetails(sale), sale.saleDate || getUTCNow());
+        await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, getSaleLogDetails(sale), sale.saleDate || sale.createdAt || getUTCNow());
       }
     } else if (previousSale.status !== sale.status && sale.status === SaleStatus.CANCELLED) {
       await appendEntityLog(
@@ -255,11 +258,11 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         sale.id,
         LogEventType.CANCELLED,
         getSaleLogDetails(sale),
-        sale.lifecycle?.cancelledAt || sale.saleDate || getUTCNow()
+        sale.lifecycle?.cancelledAt || sale.createdAt || getUTCNow()
       );
     } else if ((previousSale.status === SaleStatus.CHARGED || previousSale.status === SaleStatus.CHARGED || previousSale.status === SaleStatus.COLLECTED) && ((sale.status === SaleStatus.PENDING))) {
       // Reverted to Pending
-      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, getSaleLogDetails(sale), sale.saleDate || getUTCNow());
+      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, getSaleLogDetails(sale), sale.saleDate || sale.createdAt || getUTCNow());
     }
   }
 
@@ -280,11 +283,11 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       (sale.context?.boothSaleContext?.boothCost ?? null) !==
         (previousSale.context?.boothSaleContext?.boothCost ?? null) ||
       sale.partnerId !== previousSale.partnerId ||
-      getSaleCharacterId(sale) !== getSaleCharacterId(previousSale) ||
+      saleCharacterId !== previousSaleCharacterId ||
       sale.name !== previousSale.name ||
       sale.siteId !== previousSale.siteId ||
       saleFinrecTimeKey(sale.lifecycle?.doneAt) !== saleFinrecTimeKey(previousSale.doneAt) ||
-      saleFinrecTimeKey(sale.saleDate) !== saleFinrecTimeKey(previousSale.saleDate) ||
+      saleFinrecTimeKey(sale.createdAt) !== saleFinrecTimeKey(previousSale.createdAt) ||
       saleFinrecTimeKey(sale.lifecycle?.collectedAt) !== saleFinrecTimeKey(previousSale.collectedAt) ||
       !(sale.status === SaleStatus.PENDING) !== !(previousSale.status === SaleStatus.PENDING) ||
       sale.status !== previousSale.status;
@@ -359,7 +362,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         return k || null;
       }
     }
-    const sDate = s.saleDate ? new Date(s.saleDate) : (s.createdAt ? new Date(s.createdAt) : getUTCNow());
+    const sDate = s.createdAt ? new Date(s.createdAt) : getUTCNow();
     if (!Number.isFinite(sDate.getTime())) return null;
     const k = formatArchiveMonthKeyUTC(endOfMonthUTC(sDate));
     return k || null;
@@ -396,12 +399,12 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         return ev === 'collected' || ev === 'charged';
       });
 
-      const collectedAt = sale.lifecycle?.collectedAt || endOfMonthUTC(sale.saleDate || getUTCNow());
+      const collectedAt = sale.lifecycle?.collectedAt || endOfMonthUTC(sale.createdAt || getUTCNow());
 
       const chargedOk =
         sale.status !== SaleStatus.CANCELLED && (sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED);
       if (chargedOk) {
-        const ts = sale.lifecycle?.doneAt || (sale as { chargedAt?: Date }).chargedAt || sale.saleDate || getUTCNow();
+        const ts = sale.lifecycle?.doneAt || sale.lifecycle?.chargedAt || sale.createdAt || getUTCNow();
         const chargedLoggedKey = EffectKeys.sideEffect('sale', sale.id, 'saleDoneLogged');
         if (!(await hasEffect(chargedLoggedKey))) {
           await appendEntityLog(
@@ -546,9 +549,10 @@ async function removePlayerPointsFromSale(saleId: string, sale?: Sale | null): P
       return;
     }
 
-    const playerId = resolved.playerCharacterId;
+    const ownerCharacterId = await resolveSaleOwnerId(resolved);
+    const playerId = ownerCharacterId ? await resolveToPlayerIdMaybeCharacter(ownerCharacterId) : null;
     if (!playerId) {
-      console.warn(`[removePlayerPointsFromSale] Sale ${saleId} has no explicit Player recipient; skipping point rollback.`);
+      console.warn(`[removePlayerPointsFromSale] Sale ${saleId} owner has no Player; skipping point rollback.`);
       return;
     }
     const player = await getPlayerById(playerId);

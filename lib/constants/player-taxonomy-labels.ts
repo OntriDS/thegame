@@ -3,7 +3,7 @@ import {
   PointType,
   CognitiveSkill,
   EmotionalSkill,
-  PracticalSkill,
+  TechnicalSkill,
   CommColor,
 } from '@/types/enums';
 
@@ -23,6 +23,7 @@ export const POINT_TYPE_LABEL: Record<PointType, string> = {
 };
 
 export const COGNITIVE_SKILL_LABEL: Record<CognitiveSkill, string> = {
+  [CognitiveSkill.DISCIPLINE]: 'Discipline',
   [CognitiveSkill.LOGIC]: 'Logic',
   [CognitiveSkill.PERCEPTION]: 'Perception',
   [CognitiveSkill.VISION]: 'Vision',
@@ -49,19 +50,21 @@ export const EMOTIONAL_SKILL_LABEL: Record<EmotionalSkill, string> = {
   [EmotionalSkill.CHARISMA]: 'Charisma',
   [EmotionalSkill.LEADERSHIP]: 'Leadership',
   [EmotionalSkill.COMMUNICATION]: 'Communication',
+  [EmotionalSkill.AUTO_CRITIC]: 'Auto Criticism',
 };
 
-export const PRACTICAL_SKILL_LABEL: Record<PracticalSkill, string> = {
-  [PracticalSkill.FITNESS]: 'Fitness',
-  [PracticalSkill.DESIGN_THINKING]: 'Design Thinking',
-  [PracticalSkill.PROJECT_MANAGEMENT]: 'Project Management',
-  [PracticalSkill.TEACHING]: 'Teaching',
-  [PracticalSkill.NEGOTIATION]: 'Negotiation',
-  [PracticalSkill.NARRATIVE]: 'Narrative',
-  [PracticalSkill.DEVELOPING]: 'Developing',
-  [PracticalSkill.HANDCRAFTING]: 'Handcrafting',
-  [PracticalSkill.PAINTING]: 'Painting',
-  [PracticalSkill.ILLUSTRATION]: 'Illustration',
+export const TECHNICAL_SKILL_LABEL: Record<TechnicalSkill, string> = {
+  [TechnicalSkill.EFFICIENCY]: 'Efficiency',
+  [TechnicalSkill.FITNESS]: 'Fitness',
+  [TechnicalSkill.DESIGN_THINKING]: 'Design Thinking',
+  [TechnicalSkill.PROJECT_MANAGEMENT]: 'Project Management',
+  [TechnicalSkill.TEACHING]: 'Teaching',
+  [TechnicalSkill.NEGOTIATION]: 'Negotiation',
+  [TechnicalSkill.NARRATIVE]: 'Narrative',
+  [TechnicalSkill.DEVELOPING]: 'Developing',
+  [TechnicalSkill.HANDCRAFTING]: 'Handcrafting',
+  [TechnicalSkill.PAINTING]: 'Painting',
+  [TechnicalSkill.ILLUSTRATION]: 'Illustration',
 };
 
 export const COMM_COLOR_LABEL: Record<CommColor, string> = {
@@ -101,10 +104,10 @@ export function getEmotionalSkillLabel(value: EmotionalSkill | string | undefine
   return toTitle(String(value));
 }
 
-export function getPracticalSkillLabel(value: PracticalSkill | string | undefined | null): string {
+export function getTechnicalSkillLabel(value: TechnicalSkill | string | undefined | null): string {
   if (!value) return '';
-  if (value in PRACTICAL_SKILL_LABEL) {
-    return PRACTICAL_SKILL_LABEL[value as PracticalSkill];
+  if (value in TECHNICAL_SKILL_LABEL) {
+    return TECHNICAL_SKILL_LABEL[value as TechnicalSkill];
   }
   return toTitle(String(value));
 }

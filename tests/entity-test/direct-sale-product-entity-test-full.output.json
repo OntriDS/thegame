@@ -1,0 +1,186 @@
+{
+  "sale": {
+    "id": "entity-test-sale-direct-product-full",
+    "schemaVersion": 1,
+    "version": 0,
+    "name": "testing-direct-product-sale-full",
+    "description": "Full direct product Sale workflow test",
+    "type": "direct",
+    "status": "charged",
+    "lines": [
+      {
+        "lineId": "product-line-full",
+        "kind": "item",
+        "itemId": "entity-test-item-direct-sale-full-sold-product-line-full",
+        "quantity": 1,
+        "unitPrice": {
+          "minorUnits": "1000",
+          "currency": "USD"
+        },
+        "taxAmount": {
+          "minorUnits": "130",
+          "currency": "USD"
+        }
+      }
+    ],
+    "payments": [
+      {
+        "method": "fiat-usd",
+        "amount": {
+          "minorUnits": "1080",
+          "currency": "USD"
+        }
+      }
+    ],
+    "totals": {
+      "subtotal": {
+        "minorUnits": "1000",
+        "currency": "USD"
+      },
+      "totalRevenue": {
+        "minorUnits": "1080",
+        "currency": "USD"
+      },
+      "discountTotal": {
+        "minorUnits": "50",
+        "currency": "USD"
+      },
+      "taxTotal": {
+        "minorUnits": "130",
+        "currency": "USD"
+      }
+    },
+    "lifecycle": {
+      "chargedAt": "2026-08-20T16:48:50.847Z",
+      "doneAt": "2026-08-20T16:48:50.847Z"
+    },
+    "context": {
+      "paymentBreakdown": {
+        "cashUSD": {
+          "minorUnits": "1080",
+          "currency": "USD"
+        }
+      },
+      "rewardIntent": {
+        "points": {
+          "xp": 5,
+          "rp": 2,
+          "fp": 1,
+          "hp": 0
+        }
+      }
+    },
+    "createdAt": "2026-08-20T16:48:50.847Z",
+    "updatedAt": "2026-08-20T16:48:50.847Z"
+  },
+  "links": [
+    {
+      "id": "821724dc-b85c-4749-8eff-2329625603c4",
+      "linkType": "SALE_SITE",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-direct-product-full"
+      },
+      "target": {
+        "type": "site",
+        "id": "hq"
+      },
+      "createdAt": "2026-08-20T16:48:57.129Z"
+    },
+    {
+      "id": "5b3b4086-c24c-465f-ba3d-68588ba415a8",
+      "linkType": "SALE_CHARACTER",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-direct-product-full"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1775889257983-6pkhdapnl"
+      },
+      "relationship": "customer",
+      "createdAt": "2026-08-20T16:48:58.487Z"
+    },
+    {
+      "id": "282e3fac-8b60-477c-b466-58b8ded71c1e",
+      "linkType": "SALE_CHARACTER",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-direct-product-full"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1775889257983-6pkhdapnl"
+      },
+      "relationship": "owner",
+      "createdAt": "2026-08-20T16:49:00.119Z"
+    },
+    {
+      "id": "cdf48e37-6fd1-429d-9aa5-f8efd76c547e",
+      "linkType": "SALE_ITEM",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-direct-product-full"
+      },
+      "target": {
+        "type": "item",
+        "id": "entity-test-item-direct-sale-full-sold-product-line-full"
+      },
+      "createdAt": "2026-08-20T16:49:17.642Z"
+    },
+    {
+      "id": "8bf1ea00-902b-430e-b357-7efbc4869ec6",
+      "linkType": "SALE_FINREC",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-direct-product-full"
+      },
+      "target": {
+        "type": "financial",
+        "id": "finrec-entity-test-sale-direct-product-full"
+      },
+      "createdAt": "2026-08-20T16:49:19.787Z"
+    }
+  ],
+  "soldItems": [
+    {
+      "id": "entity-test-item-direct-sale-full-sold-product-line-full",
+      "name": "testing-direct-sale-product",
+      "type": "bundle",
+      "subItemType": "print",
+      "status": "sold",
+      "stock": [
+        {
+          "siteId": "hq",
+          "quantity": 0
+        }
+      ],
+      "pricing": {
+        "unitCost": {
+          "minorUnits": "300",
+          "currency": "USD"
+        },
+        "targetPrice": {
+          "minorUnits": "1000",
+          "currency": "USD"
+        },
+        "actualSaleValue": {
+          "minorUnits": "1000",
+          "currency": "USD"
+        }
+      },
+      "context": {
+        "collection": "no-collection",
+        "year": 2026,
+        "soldAt": "2026-08-20T16:48:50.847Z"
+      },
+      "createdAt": "2026-08-20T16:48:50.847Z",
+      "updatedAt": "2026-08-20T16:49:07.127Z",
+      "schemaVersion": 1,
+      "version": 0,
+      "quantitySold": 1,
+      "sourceRecordId": "entity-test-sale-direct-product-full",
+      "description": "Sold in Existing test Character (20-08-2026)"
+    }
+  ]
+}

@@ -1,0 +1,178 @@
+{
+  "initial": {
+    "id": "entity-test-player-full",
+    "schemaVersion": 1,
+    "version": 0,
+    "name": "testing-player-full",
+    "level": 7,
+    "rewards": {
+      "points": {
+        "pending": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 0
+        },
+        "vested": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 0
+        },
+        "current": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 0
+        },
+        "exchanged": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 0
+        },
+        "historic": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 0
+        }
+      },
+      "achievements": [
+        {
+          "id": "player-achievement-full",
+          "name": "Completed Player Full Test",
+          "description": "Canonical Player achievement coverage.",
+          "createdAt": "2026-08-18T00:50:57.832Z"
+        }
+      ],
+      "badges": [
+        {
+          "id": "player-badge-full",
+          "name": "Full Player Test Badge",
+          "description": "Canonical Player badge coverage.",
+          "requiredRoles": [
+            "gamer"
+          ],
+          "createdAt": "2026-08-18T00:50:57.832Z"
+        }
+      ]
+    },
+    "lastActiveAt": "2026-08-19T00:50:57.832Z",
+    "isActive": true,
+    "createdAt": "2026-08-19T00:50:57.832Z",
+    "updatedAt": "2026-08-19T00:50:57.832Z"
+  },
+  "afterStage": {
+    "pending": {
+      "hp": 4,
+      "fp": 3,
+      "rp": 2,
+      "xp": 5
+    },
+    "vested": {
+      "hp": 0,
+      "fp": 0,
+      "rp": 0,
+      "xp": 0
+    },
+    "current": {
+      "hp": 0,
+      "fp": 0,
+      "rp": 0,
+      "xp": 0
+    },
+    "exchanged": {
+      "hp": 0,
+      "fp": 0,
+      "rp": 0,
+      "xp": 0
+    },
+    "historic": {
+      "hp": 4,
+      "fp": 3,
+      "rp": 2,
+      "xp": 5
+    }
+  },
+  "afterReward": {
+    "pending": {
+      "hp": 0,
+      "fp": 0,
+      "rp": 0,
+      "xp": 0
+    },
+    "vested": {
+      "hp": 4,
+      "fp": 3,
+      "rp": 2,
+      "xp": 5
+    },
+    "current": {
+      "hp": 4,
+      "fp": 3,
+      "rp": 2,
+      "xp": 5
+    },
+    "exchanged": {
+      "hp": 0,
+      "fp": 0,
+      "rp": 0,
+      "xp": 0
+    },
+    "historic": {
+      "hp": 4,
+      "fp": 3,
+      "rp": 2,
+      "xp": 5
+    }
+  },
+  "afterExchange": {
+    "pending": {
+      "hp": 0,
+      "fp": 0,
+      "rp": 0,
+      "xp": 0
+    },
+    "vested": {
+      "hp": 4,
+      "fp": 3,
+      "rp": 2,
+      "xp": 5
+    },
+    "current": {
+      "hp": 3,
+      "fp": 2,
+      "rp": 1,
+      "xp": 3
+    },
+    "exchanged": {
+      "hp": 1,
+      "fp": 1,
+      "rp": 1,
+      "xp": 2
+    },
+    "historic": {
+      "hp": 4,
+      "fp": 3,
+      "rp": 2,
+      "xp": 5
+    }
+  },
+  "playerLinks": [
+    {
+      "id": "814a7eb5-c98f-48e9-87ab-d39349b5aa23",
+      "linkType": "TASK_PLAYER",
+      "source": {
+        "type": "task",
+        "id": "6a8bfa88-eea7-46b2-9459-a614fef3e54e"
+      },
+      "target": {
+        "type": "player",
+        "id": "entity-test-player-full"
+      },
+      "relationship": "points-earned",
+      "createdAt": "2026-08-19T00:51:05.025Z"
+    }
+  ]
+}

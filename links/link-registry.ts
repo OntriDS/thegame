@@ -43,7 +43,7 @@ async function mgetLinksByKeys(linkKeys: string[]): Promise<Link[]> {
 
 export async function createLink(link: Link, options?: { skipValidation?: boolean }): Promise<boolean> {
   if (!options?.skipValidation) {
-    const validation = await validateLink(link.linkType, link.source, link.target);
+    const validation = await validateLink(link.linkType, link.source, link.target, link.relationship);
     if (!validation.isValid) {
       console.error('🔥 [createLink] ❌ Validation failed:', validation.reason);
       throw new Error(`Link validation failed: ${validation.reason}`);

@@ -191,7 +191,7 @@ export default function DeleteModal({
       } else if (entityType === EntityType.SITE) {
         for (const site of entities as Site[]) {
           // Block deletion of "None" site - it's a protected system site
-          const isNoneSite = site.metadata.type === SiteType.SYSTEM && (site.name === 'None' || site.id === 'none');
+          const isNoneSite = site.type === SiteType.SYSTEM && (site.name === 'None' || site.id === 'none');
           if (isNoneSite) {
             console.warn('Cannot delete "None" site - it is a protected system site');
             alert('Cannot delete "None" site. It is a protected system site used as the default location.');
@@ -280,7 +280,7 @@ export default function DeleteModal({
         return `${(entity as Sale).type} • ${(entity as Sale).siteId}`;
       case EntityType.SITE:
         const site = entity as Site;
-        return `${site.metadata.type} • ${site.status}`;
+        return `${site.type} • ${site.status}`;
       case EntityType.CHARACTER:
         const character = entity as Character;
         return `${character.roles?.join(', ') || 'No roles'}`;

@@ -44,7 +44,7 @@ import {
   RecurrentFrequency,
   CognitiveSkill,
   EmotionalSkill,
-  PracticalSkill,
+  TechnicalSkill,
   CommColor,
   SaleType,
   SaleStatus,
@@ -191,9 +191,9 @@ export type LinkEnvelopeV1<
   relationship: TRelationship['relationship'];
 };
 
-// ═══════════════════════════════════════════════════════════════════════════
-// CANONICAL LINK DEFINITIONS
-// ═══════════════════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CANONICAL LINK DEFINITIONS
+  // ═══════════════════════════════════════════════════════════════════════════
 
 export type TaskItemLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.TASK_ITEM,
@@ -218,6 +218,11 @@ export type AccountPlayerLinkV1 = LinkEnvelopeV1<
 export type CharacterPlayerLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.CHARACTER_PLAYER,
   { relationship: 'primary' }
+>;
+
+export type CharacterSiteLinkV1 = LinkEnvelopeV1<
+  CanonicalLinkType.CHARACTER_SITE,
+  { relationship: 'owns' }
 >;
 
 export type TaskParentLinkV1 = LinkEnvelopeV1<
@@ -255,6 +260,11 @@ export type ItemSaleLinkV1 = LinkEnvelopeV1<
   { relationship: 'sold-in' }
 >;
 
+export type SaleCharacterLinkV1 = LinkEnvelopeV1<
+  CanonicalLinkType.SALE_CHARACTER,
+  { relationship: 'customer' | 'owner' }
+>;
+
 export type FinrecCharacterLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.FINREC_CHARACTER,
   { relationship: 'customer' | 'beneficiary' }
@@ -269,6 +279,7 @@ export type CanonicalLink =
   | AccountCharacterLinkV1
   | AccountPlayerLinkV1
   | CharacterPlayerLinkV1
+  | CharacterSiteLinkV1
   | TaskParentLinkV1
   | TaskSiteLinkV1
   | TaskCharacterLinkV1
@@ -276,6 +287,7 @@ export type CanonicalLink =
   | TaskFinRecLinkV1
   | ItemCharacterLinkV1
   | ItemSaleLinkV1
+  | SaleCharacterLinkV1
   | FinrecCharacterLinkV1;
 
 
@@ -346,12 +358,15 @@ export interface StockPoint {
   quantity: number;
 }
 
-/** 
- * THE VAULT (Wallet)
- * Holds specific assets belonging to a Character.
+/**
+ * Wallet read model.
+ *
+ * A wallet balance is projected from the financial ledger and canonical Links
+ * for a Character or Player. It is not authoritative balance state on either
+ * entity.
  */
 export interface Wallet {
-  jungleCoins: number;        // The J$ Coin Balance
+  jungleCoins: number;        // Projected J$ balance
   // Future: zaps?: number;
   // Future: nfts?: string[];
 }
@@ -389,11 +404,23 @@ export type SiteMetadata =
   | DigitalSiteMetadata
   | SystemSiteMetadata;
 
+/** Root classification shared by all Site variants. */
+export type SiteSubtype = PhysicalBusinessType | DigitalSiteType | SystemSiteType;
+
 /** Site Entity - Core entity for all locations */
 export interface Site extends EntityEnvelope {
   name: string;
   description?: string;
-  metadata: SiteMetadata;
+  type: SiteType;
+  subtype: SiteSubtype;
+  /** Physical-site fields, required/used when `type` is `physical`. */
+  settlementId?: string;
+  googleMapsAddress?: string;
+  coordinates?: { lat: number; lng: number };
+  /** Digital-site field, used when `type` is `digital-site`. */
+  url?: string;
+  /** @deprecated Legacy nested classification. New persistence uses root `type`/`subtype`. */
+  metadata?: SiteMetadata;
   status: SiteStatus; // SiteStatus enum - Active or Inactive
 }
 
@@ -846,9 +873,7 @@ export interface Discount {
 /** Payment information */
 export interface Payment {
   method: PaymentMethod;
-  amount: number;
-  currency: Currency;
-  receivedAt?: Date;       // when payment was actually received
+  amount: Money;
   notes?: string;          // payment notes
 
   // Exchange payment specific fields (when method = EXCHANGE)
@@ -889,6 +914,10 @@ export interface ItemSaleLine extends SaleLineBase {
 
 export interface ServiceLineContextV1 {
   createTask?: boolean;
+  /** Canonical description sent to the Task created for this service line. */
+  taskDescription?: string;
+  /** Canonical station sent to the Task created for this service line. */
+  taskStation?: Station;
   taskId?: EntityId; // Existing task link
   taskType?: TaskType;
   taskParentId?: EntityId;
@@ -903,7 +932,8 @@ export interface ServiceLineContextV1 {
 /** Service sale: optional Task creation */
 export interface ServiceLine extends SaleLineBase {
   kind: 'service';
-  station: Station;
+  /** @deprecated Transient compatibility input; use context.taskStation for Task creation. */
+  station?: Station;
   revenue: Money;
   context?: ServiceLineContextV1;
 }
@@ -968,7 +998,7 @@ export interface BoothSaleContextV1 {
 }
 
 export interface SaleLifecycleV1 {
-  postedAt?: UtcIsoString;
+  /** Canonical timestamp when the sale payment was received/charged. */
   chargedAt?: UtcIsoString;
   doneAt?: UtcIsoString;
   cancelledAt?: UtcIsoString;
@@ -985,14 +1015,19 @@ export interface SaleWorkflowRefsV1 {
 export interface Sale extends EntityEnvelope {
   type: SaleType;
   status: SaleStatus;
-  saleDate: UtcIsoString; // Immutable once set
+  /** @deprecated Transient legacy UI/read compatibility. Canonical Sale creation time is createdAt. */
+  saleDate?: UtcIsoString;
 
   // Ambassador Fields
-  siteId: EntityId;
+  /** @deprecated Transient command/read-model compatibility field. Canonical authority is SALE_SITE. */
+  siteId?: EntityId;
+  /** @deprecated Transient command/read-model compatibility field. Canonical customer authority is SALE_CHARACTER. */
   counterpartyName?: string;
+  /** @deprecated Transient command input. Canonical customer authority is SALE_CHARACTER. */
   characterId?: EntityId | null; // Customer
   partnerId?: EntityId | null;   // Booth partner
-  playerCharacterId?: EntityId | null;
+  /** @deprecated Transient command input. Canonical owner authority is SALE_CHARACTER(owner). */
+  ownerId?: EntityId | null;
 
   // Lines & Payments
   lines: SaleLine[];
@@ -1010,7 +1045,7 @@ export interface Sale extends EntityEnvelope {
   lifecycle: SaleLifecycleV1;
   workflowRefs?: SaleWorkflowRefsV1;
 
-  context: SaleContextV1;
+  context?: SaleContextV1;
 }
 
 
@@ -1018,28 +1053,8 @@ export interface Sale extends EntityEnvelope {
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SECTION 7: PLAYER & CHARACTER ENTITIES
+// SECTION 7: PLAYER ENTITY
 // ═══════════════════════════════════════════════════════════════════════════
-
-/** Player Metrics - Performance tracking */
-export interface PlayerMetrics {
-  LATENCY: number;        // Time to complete a task
-  EFFICIENCY: number;     // Coefficient of performance in Task Completion (10/10)
-  DISCIPLINE: number;     // Coefficient of performance in Schedule Compliance (20/20) and Inhibition (-0)
-  REVIEW: boolean;        // Whether the player has reviewed its accomplishments this month
-  REVIEW_DATE: Date;      // Last Date of the review
-}
-
-
-
-/** Relationship with another entity (future social graph) */
-export interface Relationship {
-  targetCharacterId: string;     // references another Character entity
-  role: CharacterRole;       // how they relate (customer, collaborator, etc.)
-  strength?: number;             // 0..100 perceived relationship strength
-  since?: Date;                  // when this relationship started
-  notes?: string;                // additional context
-}
 
 /** Player Badge - Role-based recognition */
 export interface PlayerBadge {
@@ -1050,8 +1065,8 @@ export interface PlayerBadge {
   createdAt: Date;
 }
 
-/** Character Achievement - User-defined milestones */
-export interface CharacterAchievement {
+/** Player achievement - game reward/progression recognition. */
+export interface PlayerAchievement {
   id: string;
   name: string;
   description?: string;
@@ -1064,16 +1079,15 @@ export interface CharacterAchievement {
  * The real person who controls the business through this gamified admin app
  * 
  * Architecture Hierarchy:
- * Player → Authentication → Rewards & Currency → RPG Stats → Character Management
+ * Player → Rewards & Currency → Player Gamification → Character Management
  * 
  * Key Concepts:
  * - Controls ALL business operations (tasks, inventory, sales)
  * - Earns Points (HP, FP, RP, XP) as REWARDS for real-life actions
- * - Has Jungle Coins (J$) - 🏛️ AMBASSADOR FIELD (belongs to Financial entity)
- * - Main currency is USD ($), J$ is exchangeable asset
- * - Has RPG stats (Skills, Intellectual Functions, Attributes) - NOT YET IMPLEMENTED
- * - Has CommColor for personality/communication style
- * - Real progression system comes in future versions
+ * - May receive J$ through the points-exchange workflow, but does not own an authoritative J$ field
+ * - J$ is a financial-ledger asset and its balance is a projection, not Player state
+ * - Player progression is based on points, levels, achievements, and badges
+ * - Additional player progression systems may come in future versions
  */
 
 export interface PointAmountV1 {
@@ -1101,7 +1115,7 @@ export interface PlayerRewardsV1 {
     exchanged: PointAmountV1;
     historic: PointAmountV1;
   };
-  achievements: string[];
+  achievements: PlayerAchievement[];
   badges: PlayerBadge[];
 }
 
@@ -1118,20 +1132,29 @@ export interface Player extends EntityEnvelope {
   pendingPoints?: PointAmountV1;
 
   // 2. CHARACTER MANAGEMENT
-  characterId?: EntityId | null;   // 🏛️ Main character managed by this player
+  /** @deprecated Read-only/transient migration input. Canonical authority is CHARACTER_PLAYER. */
+  characterId?: EntityId | null;
 
   // 3. BADGES
   /** @deprecated Read-only migration alias; badges now live in rewards. */
   badges?: PlayerBadge[];
 
-  // 4. LIFECYCLE & METRICS
+  // 4. LIFECYCLE
   lastActiveAt: UtcIsoString;
-  totalTasksCompleted: number;
-  totalSalesCompleted: number;
-  totalItemsSold: number;
-  metrics?: PlayerMetrics;
 
   isActive: boolean;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 7.1: CHARACTER ENTITY
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Character Qualification - Character-specific progression evidence */
+export interface CharacterQualification {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: Date;
 }
 
 /**
@@ -1142,7 +1165,7 @@ export interface Player extends EntityEnvelope {
  * - Internal: The Player's identity in the game world (player-character)
  * 
  * Architecture Hierarchy:
- * Character → Roles → Information → CommColor → Character Points CP → Achievements → Relationships
+ * Character → Roles → Information → CommColor → Character Points CP → Qualifications
  * 
  * WHO they are:
  * - Player-character: The Player's avatar in the game (PLAYER role)
@@ -1154,11 +1177,12 @@ export interface Player extends EntityEnvelope {
  * - Token Holders: Token-based role (TOKENHOLDER role, set by Founder)
  * 
  * Key Concepts:
- * - NO login/authentication (managed by Player)
- * - NO RPG stats (Skills, Intellectual Functions, Attributes) - those belong to Player
+ * - NO login/authentication (managed by Account)
+ * - YES RPG/skill progression (Cognitive, Emotional, and Technical skills)
  * - YES CommColor - KEY for knowing how to communicate with them!
- * - Has CP (Character Points) - different from Player points
- * - Has Character-specific achievements - different from Player achievements
+ * - Has CP and MP (Character/Mastery Points) - different from Player points
+ * - Has Character-specific qualifications - different from Player achievements
+ * - May receive J$ as a financial counterparty; any wallet display is a ledger projection
  * - Roles define their relationship to system AND Player
  */
 export interface Character extends EntityEnvelope {
@@ -1183,18 +1207,16 @@ export interface Character extends EntityEnvelope {
   // 4. CHARACTER PROGRESSION - Character-specific metrics
   CP?: number;                            // Character Points
   MP?: number;                            // Mastery Points
-  skills?: Partial<Record<CognitiveSkill | EmotionalSkill | PracticalSkill, number>>;
-  achievements: CharacterAchievement[];   // Character milestones/achievements
+  skills?: Partial<Record<CognitiveSkill | EmotionalSkill | TechnicalSkill, number>>;
+  qualifications: CharacterQualification[]; // Character qualifications
 
-  // 5. BUSINESS METRICS
-  purchasedAmount: number;       // What they've bought from the business
-  beneficiaryPaidAmount?: number; // Amount paid to this character
-
-  // 6. RELATIONSHIPS (Ambassador Fields)
+  // 5. RELATIONSHIPS (Ambassador Fields)
+  /** @deprecated Read-only/transient migration input. Canonical authority is CHARACTER_PLAYER. */
   playerId?: EntityId | null;
+  /** @deprecated Read-only/transient migration input. Canonical authority is CHARACTER_SITE. */
   siteId?: EntityId | null;
 
-  // 7. LIFECYCLE
+  // 6. LIFECYCLE
   lastActiveAt: UtcIsoString;
   isActive: boolean;
 }
@@ -1208,11 +1230,10 @@ export interface CharacterViewV1 {
   character: Character;
   walletProjection?: Wallet;
   inventoryProjection?: EntityId[];
-  relationshipProjection?: Relationship[];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SECTION 7.1: CHARACTER INFRA-ENTITIES (Legal Entities)
+// SECTION 7.2: CHARACTER INFRA-ENTITIES (Legal Entities)
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
@@ -1257,10 +1278,11 @@ export interface Agent extends EntityEnvelope {
 // Note: Player and Character are SEPARATE but CONNECTED entities
 // - Player: Controls business, has authentication, earns rewards, manages characters
 // - Character: People - customers, family, collaborators (NO business control, NO login)
-// - Player has RPG stats (Skills, Intellectual Functions, Attributes) - NOT YET IMPLEMENTED
-// - Character has NO RPG stats - ONLY Player has growth mechanics
+// - Player has gamification progression: levels, rewards, points, achievements, and badges
+// - Character has RPG/skill progression: CP, MP, Cognitive, Emotional, and Technical skills
 // - BOTH have CommColor (Player for self-awareness, Character for knowing how to communicate with them)
-// - BOTH can receive Points & Jungle Coins (Player earns them, Character receives from Player)
+// - Player may receive J$ through points exchange; Character may receive J$ as a financial counterparty
+// - Neither stores an authoritative J$ balance; wallet views are financial-ledger projections
 // - Main currency is USD ($), Jungle Coins (J$) are crypto-like in-game asset ($10 each)
 // - Points can be exchanged for Jungle Coins, which can be exchanged for USD
 // - Links System handles all relationships (canonical CHARACTER_PLAYER)

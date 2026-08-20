@@ -116,15 +116,6 @@ export default function SalesModalOnlineContent({
         </div>
 
         <>
-          <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'} mb-2`}>
-            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ambassadors</div>
-            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ambassadors</div>
-            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ambassadors</div>
-            {emissaryColumnExpanded && (
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Emissaries</div>
-            )}
-          </div>
-
           <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
             <div className="space-y-4">
               <div className="space-y-2">

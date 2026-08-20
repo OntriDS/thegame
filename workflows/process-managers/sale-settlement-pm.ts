@@ -20,7 +20,13 @@ import { updateFinancialRecordsFromSale } from '../update-propagation-utils';
 import { ensureFinancialDoneLog } from '../entities-workflows/financial.workflow';
 import { appendEntityLog } from '../entities-logging';
 import { processSaleLines } from '../sale-line-utils';
-import { stagePointsForPlayer, rewardPointsToPlayer } from '../points-rewards-utils';
+import { stagePointsForPlayer, rewardPointsToPlayer, resolveToPlayerIdMaybeCharacter } from '../points-rewards-utils';
+import { resolveSaleCharacterId, resolveSaleOwnerId } from '@/lib/sale-relationship-selectors';
+
+function saleHasRewardPoints(sale: Sale): boolean {
+  const points = sale.context?.rewardIntent?.points;
+  return Boolean(points && (points.xp || points.rp || points.fp || points.hp));
+}
 
 export class SaleSettlementProcessManager {
   static async process(execution: WorkflowExecutionV1): Promise<void> {
@@ -40,7 +46,7 @@ export class SaleSettlementProcessManager {
       }
 
       // 1. Character Creation (if newCustomerName is provided)
-      if (sale.context?.newCustomerName && !sale.characterId) {
+      if (sale.context?.newCustomerName && !(await resolveSaleCharacterId(sale))) {
           await this.processCharacterCreation(execution, sale);
       }
 
@@ -278,7 +284,7 @@ export class SaleSettlementProcessManager {
       (sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED);
     const isCollected = sale.status === SaleStatus.COLLECTED;
     
-    if (isCharged) {
+    if (isCharged && saleHasRewardPoints(sale)) {
       const stepName = 'stagePoints';
       const effectKey = EffectKeys.sideEffect('sale', sale.id, 'saleDoneLogged');
       
@@ -298,8 +304,10 @@ export class SaleSettlementProcessManager {
         console.log(`[SaleSettlementPM] Staging points for sale ${sale.id}`);
         const logTimestamp = sale.lifecycle?.doneAt || (sale as any).chargedAt || getUTCNow();
         
-        const playerId = sale.playerCharacterId;
-        if (!playerId) throw new Error(`Cannot stage Sale points: no explicit Player recipient (${sale.id})`);
+        const ownerCharacterId = await resolveSaleOwnerId(sale);
+        if (!ownerCharacterId) throw new Error(`Cannot stage Sale points: no owner Character (${sale.id})`);
+        const playerId = await resolveToPlayerIdMaybeCharacter(ownerCharacterId);
+        if (!playerId) throw new Error(`Cannot stage Sale points: Sale owner has no Player (${sale.id})`);
         const staged = await stagePointsForPlayer(playerId, sale.context?.rewardIntent?.points, sale.id, EntityType.SALE, logTimestamp);
         if (sale.context?.rewardIntent?.points && !staged) {
           throw new Error(`Cannot stage Sale points: recipient Player not found or points are empty (${sale.id})`);
@@ -347,7 +355,7 @@ export class SaleSettlementProcessManager {
       }
     }
 
-    if (isCollected) {
+    if (isCollected && saleHasRewardPoints(sale)) {
       const stepName = 'vestPoints';
       const effectKey = EffectKeys.sideEffect('sale', sale.id, 'saleCollectedLogged');
       
@@ -367,8 +375,10 @@ export class SaleSettlementProcessManager {
         console.log(`[SaleSettlementPM] Vesting points for sale ${sale.id}`);
         const logTimestamp = sale.lifecycle?.collectedAt || sale.lifecycle?.doneAt || (sale as any).chargedAt || getUTCNow();
         
-        const playerId = sale.playerCharacterId;
-        if (!playerId) throw new Error(`Cannot vest Sale points: no explicit Player recipient (${sale.id})`);
+        const ownerCharacterId = await resolveSaleOwnerId(sale);
+        if (!ownerCharacterId) throw new Error(`Cannot vest Sale points: no owner Character (${sale.id})`);
+        const playerId = await resolveToPlayerIdMaybeCharacter(ownerCharacterId);
+        if (!playerId) throw new Error(`Cannot vest Sale points: Sale owner has no Player (${sale.id})`);
         await rewardPointsToPlayer(playerId, sale.context?.rewardIntent?.points, sale.id, EntityType.SALE, logTimestamp);
 
         const resolved = await resolveEffectClaim({

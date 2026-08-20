@@ -1,0 +1,37 @@
+{
+  "id": "entity-test-sale-direct-service-clean",
+  "schemaVersion": 1,
+  "version": 0,
+  "name": "testing-direct-service-sale",
+  "type": "direct",
+  "status": "pending",
+  "lines": [
+    {
+      "lineId": "service-line-1",
+      "kind": "service",
+      "revenue": {
+        "minorUnits": "5000",
+        "currency": "USD"
+      },
+      "context": {
+        "createTask": true,
+        "taskDescription": "Testing direct service",
+        "taskStation": "strategy",
+        "taskType": "mission"
+      }
+    }
+  ],
+  "totals": {
+    "subtotal": {
+      "minorUnits": "5000",
+      "currency": "USD"
+    },
+    "totalRevenue": {
+      "minorUnits": "5000",
+      "currency": "USD"
+    }
+  },
+  "lifecycle": {},
+  "createdAt": "2026-08-20T16:45:57.992Z",
+  "updatedAt": "2026-08-20T16:45:57.992Z"
+}

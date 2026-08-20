@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireProvisioningM2MAuth } from '@/lib/api-auth';
-import { kv, kvMGet } from '@/lib/utils/kv';
+import { kv, kvMGet, kvGet, kvSet } from '@/lib/utils/kv';
 import { JungleClassEvent } from '@/types/jungle-academy';
 
 export const dynamic = 'force-dynamic';
@@ -47,5 +47,35 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('[Jungle Academy] GET events failed:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch events' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  if (!(await requireProvisioningM2MAuth(request))) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { eventId, newReason } = body;
+
+    if (!eventId || !newReason) {
+      return NextResponse.json({ success: false, error: 'Missing eventId or newReason' }, { status: 400 });
+    }
+
+    const eventKey = getClassEventKey(eventId);
+    const existingEvent = await kvGet<JungleClassEvent>(eventKey);
+
+    if (!existingEvent) {
+      return NextResponse.json({ success: false, error: 'Event not found' }, { status: 404 });
+    }
+
+    const updatedEvent = { ...existingEvent, event: newReason };
+    await kvSet(eventKey, updatedEvent);
+
+    return NextResponse.json({ success: true, event: updatedEvent });
+  } catch (error) {
+    console.error('[Jungle Academy] PATCH event failed:', error);
+    return NextResponse.json({ success: false, error: 'Failed to update event' }, { status: 500 });
   }
 }

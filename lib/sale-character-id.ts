@@ -6,7 +6,7 @@ const normalizeId = (value: unknown): string | null => {
   return trimmed === '' ? null : trimmed;
 };
 
-/** Customer / counterparty character on a Sale (canonical: `Sale.characterId`). */
+/** Customer / counterparty character compatibility input. Canonical authority is SALE_CHARACTER. */
 export function getSaleCharacterId(sale?: Sale | null): string | null {
   if (!sale) return null;
   return normalizeId(sale.characterId);

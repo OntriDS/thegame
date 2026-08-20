@@ -10,6 +10,7 @@ import { CharacterRole } from '@/types/enums';
 import { Search, User, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
+import { useAuth } from '@/lib/hooks/use-auth';
 
 interface PlayerCharacterSelectorModalProps {
   open: boolean;
@@ -24,18 +25,20 @@ export default function PlayerCharacterSelectorModal({
   onSelect, 
   currentPlayerCharacterId 
 }: PlayerCharacterSelectorModalProps) {
+  const { user: authUser } = useAuth();
   const [characters, setCharacters] = useState<Character[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(currentPlayerCharacterId || null);
   const [loading, setLoading] = useState(true);
 
-  // Load characters when modal opens; selection is explicit.
+  // Load characters when modal opens. If the authenticated user has a Player
+  // Character, use it as the default recipient without requiring re-selection.
   useEffect(() => {
     if (open) {
       loadCharacters();
       setSelectedId(currentPlayerCharacterId || null);
     }
-  }, [open, currentPlayerCharacterId, onSelect]);
+  }, [open, currentPlayerCharacterId, authUser?.characterId]);
 
   const loadCharacters = async () => {
     try {
@@ -49,6 +52,14 @@ export default function PlayerCharacterSelectorModal({
       );
       
       setCharacters(playerCharacters);
+      if (!currentPlayerCharacterId && authUser?.characterId) {
+        const authenticatedPlayerCharacter = playerCharacters.find(
+          character => character.id === authUser.characterId
+        );
+        if (authenticatedPlayerCharacter) {
+          setSelectedId(authenticatedPlayerCharacter.id);
+        }
+      }
     } catch (error) {
       console.error('Failed to load player characters:', error);
     } finally {

@@ -1,0 +1,13 @@
+{
+  "id": "entity-test-site-full",
+  "schemaVersion": 1,
+  "version": 0,
+  "name": "testing-site-full",
+  "description": "Full Site entity test",
+  "type": "digital-site",
+  "subtype": "website-app",
+  "url": "https://example.test/site-full",
+  "status": "active",
+  "createdAt": "2026-08-19T01:42:31.859Z",
+  "updatedAt": "2026-08-19T01:42:31.859Z"
+}

@@ -1337,5 +1337,5 @@ export default function MissionTreeModalContent({
 function getCategoryForSiteId(value: string, sites: Site[]): string {
   const site = sites.find(s => s.id === value);
   if (!site) return 'None';
-  return site.metadata.type || 'Uncategorized';
+  return site.type || 'Uncategorized';
 }

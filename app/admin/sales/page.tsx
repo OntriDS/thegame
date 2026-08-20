@@ -453,7 +453,7 @@ function SalesPageContent() {
                         </div>
                         <div className="text-sm text-muted-foreground">
                           <p>Date: {formatDateDDMMYYYY(new Date(sale.saleDate))}</p>
-                          <p>Site: {siteById.get(sale.siteId) || sale.siteId}</p>
+                          <p>Site: {siteById.get(sale.siteId ?? '') || sale.siteId || 'none'}</p>
                             {getSaleCounterpartyName(sale) && <p>Customer: {getSaleCounterpartyName(sale)}</p>}
                         </div>
                       </div>

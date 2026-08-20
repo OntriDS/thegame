@@ -185,7 +185,7 @@ export default function CharacterSitesSubmodal({
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <h4 className="font-semibold truncate">{site.name}</h4>
                                                         <Badge variant="secondary" className="text-xs">
-                                                            {site.metadata?.type || 'Unknown'}
+                                                            {site.type || 'Unknown'}
                                                         </Badge>
                                                     </div>
                                                     {site.description && (

@@ -213,6 +213,8 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
     console.log(`[processServiceLine] Processing service sale: ${line.description}`);
 
     const serviceContext = line.context;
+    const taskDescription = serviceContext?.taskDescription || line.description;
+    const taskStation = serviceContext?.taskStation || line.station;
 
     // Idempotency check
     const taskCreatedKey = EffectKeys.sideEffect('sale', sale.id, `taskCreated:${line.lineId}`);
@@ -247,12 +249,12 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
 
     const serviceTask: Task = {
       id: serviceContext?.taskId || `task-${sale.id}-${line.lineId}`,
-      name: line.description || 'Service Task',
-      description: `Service from sale: ${sale.counterpartyName}`,
+      name: taskDescription || 'Service Task',
+      description: taskDescription || `Service from sale: ${sale.counterpartyName || sale.name}`,
       type: serviceContext?.taskType || 'TASK' as any,
       status: 'Created' as any,
       priority: 'Normal' as any,
-      station: line.station,
+      station: taskStation || 'strategy' as any,
       progress: { percentage: 0 },
       order: ORDER_INCREMENT,
       createdAt: getUTCNow(),
@@ -281,8 +283,8 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
       name: serviceTask.name,
       createdFrom: 'service_sale',
       saleId: sale.id,
-      serviceDescription: line.description,
-      station: line.station
+      serviceDescription: taskDescription,
+      station: taskStation
     }, sale.saleDate || serviceTask.createdAt);
 
     console.log(`[processServiceLine] ✅ Created task from service: ${serviceTask.name}`);

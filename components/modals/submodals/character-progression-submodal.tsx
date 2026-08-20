@@ -6,10 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Trophy, Star, Plus, X, Award, ChevronDown } from 'lucide-react';
-import { Character, CharacterAchievement } from '@/types/entities';
+import { Character, CharacterQualification } from '@/types/entities';
 import { formatForDisplay } from '@/lib/utils/date-display-utils';;
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PREDEFINED_ACHIEVEMENTS } from '@/lib/constants/achievements';
+import { PREDEFINED_QUALIFICATIONS } from '@/lib/constants/qualifications';
 
 interface CharacterProgressionSubmodalProps {
   open: boolean;
@@ -24,38 +24,38 @@ export default function CharacterProgressionSubmodal({
   character,
   onSave,
 }: CharacterProgressionSubmodalProps) {
-  const [isCreatingAchievement, setIsCreatingAchievement] = useState(false);
-  const [achievementName, setAchievementName] = useState('');
-  const [achievementDescription, setAchievementDescription] = useState('');
+  const [isCreatingQualification, setIsCreatingQualification] = useState(false);
+  const [qualificationName, setQualificationName] = useState('');
+  const [qualificationDescription, setQualificationDescription] = useState('');
 
-  const achievements = character.achievements || [];
+  const qualifications = character.qualifications || [];
 
-  const handleSaveAchievement = async () => {
-    if (!achievementName.trim()) return;
+  const handleSaveQualification = async () => {
+    if (!qualificationName.trim()) return;
 
-    const newAchievement: CharacterAchievement = {
-      id: `achievement-${Date.now()}`,
-      name: achievementName.trim(),
-      description: achievementDescription.trim() || undefined,
+    const newQualification: CharacterQualification = {
+      id: `qualification-${Date.now()}`,
+      name: qualificationName.trim(),
+      description: qualificationDescription.trim() || undefined,
       createdAt: new Date(),
     };
 
     const updatedCharacter: Character = {
       ...character,
-      achievements: [...achievements, newAchievement],
+      qualifications: [...qualifications, newQualification],
       updatedAt: new Date(),
     };
 
     await onSave(updatedCharacter);
-    setAchievementName('');
-    setAchievementDescription('');
-    setIsCreatingAchievement(false);
+    setQualificationName('');
+    setQualificationDescription('');
+    setIsCreatingQualification(false);
   };
 
-  const handleDeleteAchievement = async (achievementId: string) => {
+  const handleDeleteQualification = async (qualificationId: string) => {
     const updatedCharacter: Character = {
       ...character,
-      achievements: achievements.filter(a => a.id !== achievementId),
+      qualifications: qualifications.filter(a => a.id !== qualificationId),
       updatedAt: new Date(),
     };
     await onSave(updatedCharacter);
@@ -99,101 +99,101 @@ export default function CharacterProgressionSubmodal({
                   </div>
                   <span className="font-semibold">Skill System Coming in V0.2</span>
                 </div>
-                <p className="text-muted-foreground">Allocate Mastery points to improve your character&apos;s cognitive, emotional, and practical abilities!</p>
+                <p className="text-muted-foreground">Allocate Mastery points to improve your character&apos;s cognitive, emotional, and technical abilities!</p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Achievements */}
+          {/* Qualifications */}
           <Card className="border-2">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Trophy className="h-5 w-5 text-primary" />
-                  Achievements
+                  Qualifications
                 </CardTitle>
-                {!isCreatingAchievement && (
+                {!isCreatingQualification && (
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setIsCreatingAchievement(true)}
+                    onClick={() => setIsCreatingQualification(true)}
                     className="flex items-center gap-1"
                   >
                     <Plus className="h-3 w-3" />
-                    Create Achievement
+                    Create Qualification
                   </Button>
                 )}
               </div>
             </CardHeader>
             <CardContent>
               {/* Creation Form */}
-              {isCreatingAchievement && (
+              {isCreatingQualification && (
                 <div className="mb-4 p-4 border-2 border-dashed border-primary/30 rounded-lg space-y-3 bg-primary/5">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold">New Achievement</span>
-                    <Button variant="ghost" size="sm" onClick={() => setIsCreatingAchievement(false)}>
+                    <span className="text-sm font-semibold">New Qualification</span>
+                    <Button variant="ghost" size="sm" onClick={() => setIsCreatingQualification(false)}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                   <div className="space-y-2">
                     <Select 
-                      value={PREDEFINED_ACHIEVEMENTS.includes(achievementName) ? achievementName : (achievementName ? 'custom' : '')} 
-                      onValueChange={(val) => setAchievementName(val === 'custom' ? '' : val)}
+                      value={PREDEFINED_QUALIFICATIONS.includes(qualificationName) ? qualificationName : (qualificationName ? 'custom' : '')}
+                      onValueChange={(val) => setQualificationName(val === 'custom' ? '' : val)}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select Quest/Achievement..." />
+                        <SelectValue placeholder="Select qualification..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {PREDEFINED_ACHIEVEMENTS.map(ach => (
-                          <SelectItem key={ach} value={ach}>{ach}</SelectItem>
+                        {PREDEFINED_QUALIFICATIONS.map(qualification => (
+                          <SelectItem key={qualification} value={qualification}>{qualification}</SelectItem>
                         ))}
-                        <SelectItem value="custom" className="font-bold text-primary">-- Custom Achievement --</SelectItem>
+                        <SelectItem value="custom" className="font-bold text-primary">-- Custom Qualification --</SelectItem>
                       </SelectContent>
                     </Select>
                     
-                    {(!PREDEFINED_ACHIEVEMENTS.includes(achievementName) && achievementName !== '' || !PREDEFINED_ACHIEVEMENTS.includes(achievementName) && achievementName === '') && (
+                    {(!PREDEFINED_QUALIFICATIONS.includes(qualificationName) && qualificationName !== '' || !PREDEFINED_QUALIFICATIONS.includes(qualificationName) && qualificationName === '') && (
                       <Input
-                        placeholder="Type custom achievement name..."
-                        value={achievementName}
-                        onChange={(e) => setAchievementName(e.target.value)}
+                        placeholder="Type custom qualification name..."
+                        value={qualificationName}
+                        onChange={(e) => setQualificationName(e.target.value)}
                       />
                     )}
                   </div>
                   <Input
                     placeholder="Description (optional)..."
-                    value={achievementDescription}
-                    onChange={(e) => setAchievementDescription(e.target.value)}
+                    value={qualificationDescription}
+                    onChange={(e) => setQualificationDescription(e.target.value)}
                   />
                   <div className="flex justify-end gap-2 pt-2">
-                    <Button variant="outline" size="sm" onClick={() => setIsCreatingAchievement(false)}>Cancel</Button>
+                    <Button variant="outline" size="sm" onClick={() => setIsCreatingQualification(false)}>Cancel</Button>
                     <Button
                       size="sm"
-                      onClick={handleSaveAchievement}
-                      disabled={!achievementName.trim()}
+                      onClick={handleSaveQualification}
+                      disabled={!qualificationName.trim()}
                     >
                       <Trophy className="h-3 w-3 mr-1" />
-                      Create Achievement
+                      Create Qualification
                     </Button>
                   </div>
                 </div>
               )}
 
-              {/* Achievement List */}
-              {achievements.length > 0 ? (
+              {/* Qualification List */}
+              {qualifications.length > 0 ? (
                 <div className="space-y-2">
-                  {achievements.map(achievement => (
-                    <div key={achievement.id} className="flex items-start justify-between p-3 border rounded-lg group">
+                  {qualifications.map(qualification => (
+                    <div key={qualification.id} className="flex items-start justify-between p-3 border rounded-lg group">
                       <div className="flex items-start gap-3">
                         <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                           <Trophy className="h-4 w-4 text-primary" />
                         </div>
                         <div>
-                          <div className="font-medium">{achievement.name}</div>
-                          {achievement.description && (
-                            <div className="text-sm text-muted-foreground">{achievement.description}</div>
+                          <div className="font-medium">{qualification.name}</div>
+                          {qualification.description && (
+                            <div className="text-sm text-muted-foreground">{qualification.description}</div>
                           )}
                           <div className="text-xs text-muted-foreground mt-1">
-                            {formatForDisplay(achievement.createdAt)}
+                            {formatForDisplay(qualification.createdAt)}
                           </div>
                         </div>
                       </div>
@@ -201,18 +201,18 @@ export default function CharacterProgressionSubmodal({
                         variant="ghost"
                         size="sm"
                         className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
-                        onClick={() => handleDeleteAchievement(achievement.id)}
+                        onClick={() => handleDeleteQualification(qualification.id)}
                       >
                         <X className="h-3 w-3 text-muted-foreground" />
                       </Button>
                     </div>
                   ))}
                 </div>
-              ) : !isCreatingAchievement ? (
+              ) : !isCreatingQualification ? (
                 <div className="text-center py-6">
                   <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-30" />
-                  <p className="text-muted-foreground text-sm">No achievements yet</p>
-                  <p className="text-xs text-muted-foreground mt-1">Create your first achievement to track your milestones!</p>
+                  <p className="text-muted-foreground text-sm">No qualifications yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">Create your first qualification to track your progression!</p>
                 </div>
               ) : null}
             </CardContent>

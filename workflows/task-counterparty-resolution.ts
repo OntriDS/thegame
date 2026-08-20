@@ -7,6 +7,7 @@ import { CharacterRole, EntityType, LinkType } from '@/types/enums';
 import { getSaleById } from '@/data-store/datastore';
 import { getLinksFor } from '@/links/link-registry';
 import { getSaleCharacterId } from '@/lib/sale-character-id';
+import { resolveSaleCharacterId } from '@/lib/sale-relationship-selectors';
 
 export type CounterpartyResolutionSource = 'task-field' | 'task-character-link' | 'sale-fallback' | 'none';
 
@@ -73,7 +74,7 @@ async function resolveBySaleFallback(sourceSaleId: string | null | undefined): P
   if (!sourceSaleId) return null;
 
   const sale = await getSaleById(sourceSaleId);
-  const saleCustomerId = getSaleCharacterId(sale);
+  const saleCustomerId = await resolveSaleCharacterId(sale);
   if (!saleCustomerId) return null;
 
   return {

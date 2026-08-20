@@ -18,6 +18,7 @@ import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution'
 import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 import { getTaskPlayerCharacterId } from '@/lib/compatibility/task-selectors';
 import { resolveTaskOwnerPlayerId } from './task-player-resolution';
+import { resolveSaleOwnerId } from '@/lib/sale-relationship-selectors';
 
 const normalizeDate = (value: Date | string | null | undefined): Date => {
   const parsed = parseDateOrNull(value);
@@ -684,7 +685,7 @@ export async function updateItemsFromSale(
           ...item,
           context: {
             ...item.context,
-            soldAt: item.context?.soldAt || (sale.lifecycle?.doneAt || sale.saleDate || getUTCNow()),
+            soldAt: item.context?.soldAt || (sale.lifecycle?.doneAt || sale.createdAt || sale.saleDate || getUTCNow()),
           },
           pricing: {
             ...item.pricing,
@@ -751,10 +752,12 @@ export async function updatePlayerPointsFromSource(
       return;
     }
 
-    // Find the target player (resolve from playerCharacterId when present)
+    // Find the target Player from the Sale owner Character or Task owner.
     const playerIdCandidate = sourceType === EntityType.TASK
       ? await resolveTaskOwnerPlayerId(newSource as Task) || await resolveTaskOwnerPlayerId(oldSource as Task)
-      : newSource?.playerCharacterId || oldSource?.playerCharacterId || null;
+      : sourceType === EntityType.SALE
+        ? await resolveSaleOwnerId(newSource as Sale) || await resolveSaleOwnerId(oldSource as Sale)
+        : newSource?.playerCharacterId || oldSource?.playerCharacterId || null;
     if (!playerIdCandidate) {
       console.warn(`[updatePlayerPointsFromSource] Task ${newSource.id} owner has no Player`);
       return;
@@ -844,7 +847,7 @@ export function hasStatePropsChanged(newEntity: any, oldEntity: any): boolean {
     newEntity.status !== oldEntity.status ||
     toDateTimestamp(newEntity.doneAt) !== toDateTimestamp(oldEntity.doneAt) ||
     toDateTimestamp(newEntity.collectedAt) !== toDateTimestamp(oldEntity.collectedAt) ||
-    toDateTimestamp(newEntity.saleDate) !== toDateTimestamp(oldEntity.saleDate)
+    toDateTimestamp(newEntity.createdAt) !== toDateTimestamp(oldEntity.createdAt)
   );
 }
 

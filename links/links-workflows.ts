@@ -9,6 +9,7 @@ import { createLink, removeLink, getLinksFor } from './link-registry';
 import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById } from '@/data-store/repositories/item.repo';
 import { getFinancialById } from '@/data-store/repositories/financial.repo';
 import { getCharacterById, getBusinessById } from '@/data-store/repositories/character.repo';
+import { getPlayerById } from '@/data-store/repositories/player.repo';
 import { getTaskById } from '@/data-store/repositories/task.repo';
 import { v4 as uuid } from 'uuid';
 import { appendEntityLog } from '@/workflows/entities-logging';
@@ -16,7 +17,8 @@ import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution'
 import { getItemCharacterId } from '@/lib/item-character-id';
 import { getFinancialCounterpartyId, getFinancialCounterpartyRole } from '@/lib/financial-record-counterparty-id';
 import { getSaleCharacterId } from '@/lib/sale-character-id';
-import { getAllSites } from '@/data-store/repositories/site.repo';
+import { resolveSaleCharacterId } from '@/lib/sale-relationship-selectors';
+import { getAllSites, getSiteById } from '@/data-store/repositories/site.repo';
 
 export function makeLink(linkType: LinkType, source: { type: EntityType; id: string }, target: { type: EntityType; id: string }, relationship?: string): Link {
   return {
@@ -251,7 +253,8 @@ export async function processItemEffects(item: Item): Promise<void> {
 }
 
 export async function processSaleEffects(sale: Sale): Promise<void> {
-  const saleCounterpartyCharId = getSaleCharacterId(sale);
+  const saleCounterpartyCharId = await resolveSaleCharacterId(sale);
+  const saleOwnerCharId = sale.ownerId || null;
   const existingLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
 
   // Helper: resolve an ID to a Character ID.
@@ -302,12 +305,18 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
   // resolving any business IDs to their linkedCharacterId.
   const allowedCharacterIds = new Set<string>();
   if (saleCounterpartyCharId) allowedCharacterIds.add(saleCounterpartyCharId);
+  if (saleOwnerCharId) allowedCharacterIds.add(saleOwnerCharId);
   if (sale.partnerId) {
     const charId = await resolveToCharacterId(sale.partnerId);
     if (charId) allowedCharacterIds.add(charId);
   }
   for (const l of existingLinks) {
-    if (l.linkType === LinkType.SALE_CHARACTER && !allowedCharacterIds.has(l.target.id)) {
+    if (
+      l.linkType === LinkType.SALE_CHARACTER &&
+      (!allowedCharacterIds.has(l.target.id) ||
+        (l.relationship === 'owner' && l.target.id !== saleOwnerCharId) ||
+        ((!l.relationship || l.relationship === 'customer') && l.target.id !== saleCounterpartyCharId))
+    ) {
       await removeLink(l.id);
     }
   }
@@ -323,7 +332,8 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     const l = makeLink(
       LinkType.SALE_CHARACTER,
       { type: EntityType.SALE, id: sale.id },
-      { type: EntityType.CHARACTER, id: saleCounterpartyCharId }
+      { type: EntityType.CHARACTER, id: saleCounterpartyCharId },
+      'customer'
     );
     const wasCreated = await createLink(l);
     if (wasCreated) {
@@ -337,6 +347,17 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
         totalRevenue: sale.totals.totalRevenue
       });
     }
+  }
+
+  // --- SALE_CHARACTER for the Character who made/owns the sale ---
+  if (saleOwnerCharId) {
+    const l = makeLink(
+      LinkType.SALE_CHARACTER,
+      { type: EntityType.SALE, id: sale.id },
+      { type: EntityType.CHARACTER, id: saleOwnerCharId },
+      'owner'
+    );
+    await createLink(l);
   }
 
   // --- SALE_CHARACTER for partnerId (resolves Business → linkedCharacterId) ---
@@ -496,20 +517,30 @@ export async function processCharacterEffects(character: Character): Promise<voi
   for (const link of existingPlayerLinks) await removeLink(link.id);
 
   if (character.playerId) {
+    const player = await getPlayerById(character.playerId);
+    if (!player) {
+      throw new Error(`Cannot link Character ${character.id} to missing Player ${character.playerId}.`);
+    }
     const link = makeLink(
       LinkType.CHARACTER_PLAYER,
       { type: EntityType.CHARACTER, id: character.id },
-      { type: EntityType.PLAYER, id: character.playerId }
+      { type: EntityType.PLAYER, id: character.playerId },
+      'primary'
     );
     await createLink(link);
   }
 
   // CHARACTER_SITE link (if character has home site)
   if (character.siteId) {
+    const site = await getSiteById(character.siteId);
+    if (!site) {
+      throw new Error(`Cannot link Character ${character.id} to missing Site ${character.siteId}.`);
+    }
     const link = makeLink(
       LinkType.CHARACTER_SITE,
       { type: EntityType.CHARACTER, id: character.id },
-      { type: EntityType.SITE, id: character.siteId }
+      { type: EntityType.SITE, id: character.siteId },
+      'owns'
     );
     await createLink(link);
   }
@@ -520,6 +551,10 @@ export async function processPlayerEffects(player: Player): Promise<void> {
   // Character -> Player relationship so the sparse Character side owns it.
   const characterId = typeof player.characterId === 'string' ? player.characterId.trim() : '';
   if (characterId) {
+    const character = await getCharacterById(characterId);
+    if (!character) {
+      throw new Error(`Cannot link Player ${player.id} to missing Character ${characterId}.`);
+    }
     const existingLinks = await getLinksFor({ type: EntityType.CHARACTER, id: characterId });
     for (const link of existingLinks) {
       if (
@@ -530,7 +565,8 @@ export async function processPlayerEffects(player: Player): Promise<void> {
     const link = makeLink(
       LinkType.CHARACTER_PLAYER,
       { type: EntityType.CHARACTER, id: characterId },
-      { type: EntityType.PLAYER, id: player.id }
+      { type: EntityType.PLAYER, id: player.id },
+      'primary'
     );
     await createLink(link);
   }

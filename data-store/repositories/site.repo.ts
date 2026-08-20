@@ -2,7 +2,7 @@
 import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey } from '../keys';
 import { EntityType, SiteType } from '@/types/enums';
-import type { Site, Settlement, PhysicalSiteMetadata } from '@/types/entities';
+import type { Site, Settlement } from '@/types/entities';
 
 const ENTITY = EntityType.SITE;
 const SETTLEMENT_ENTITY = EntityType.SETTLEMENT;
@@ -84,9 +84,8 @@ export async function removeSettlement(id: string): Promise<void> {
 export async function getSitesBySettlement(settlementId: string): Promise<Site[]> {
   const allSites = await getAllSites();
   return allSites.filter(site => {
-    if (site.metadata.type !== SiteType.PHYSICAL) return false;
-    const physicalMeta = site.metadata as PhysicalSiteMetadata;
-    return physicalMeta.settlementId === settlementId;
+    if (site.type !== SiteType.PHYSICAL) return false;
+    return site.settlementId === settlementId;
   });
 }
 
@@ -105,9 +104,8 @@ export async function getSitesByRadius(
   });
   
   return allSites.filter(site => {
-    if (site.metadata.type !== SiteType.PHYSICAL) return false;
-    const physicalMeta = site.metadata as PhysicalSiteMetadata;
-    const settlement = settlementsMap.get(physicalMeta.settlementId);
+    if (site.type !== SiteType.PHYSICAL) return false;
+    const settlement = settlementsMap.get(site.settlementId || '');
     
     if (!settlement?.coordinates) return false;
     

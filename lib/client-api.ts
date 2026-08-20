@@ -46,7 +46,7 @@ export type CharacterDirectorySortBy = 'name' | 'role';
 type CharacterDirectorySortOrder = 'asc' | 'desc';
 
 export interface CharacterDirectoryResponse {
-  items: Character[];
+  items: CharacterDirectoryItem[];
   total: number;
   page: number;
   pageSize: number;
@@ -57,6 +57,12 @@ export interface CharacterDirectoryResponse {
   roleFilter: string | null;
   roleCounts: Record<string, number>;
 }
+
+/** Character entity plus read-only financial totals projected for the directory. */
+export type CharacterDirectoryItem = Character & {
+  purchasedAmount: number;
+  beneficiaryPaidAmount: number;
+};
 
 export interface GetCharacterDirectoryParams {
   search?: string;

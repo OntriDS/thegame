@@ -80,8 +80,7 @@ export default function SeedDataPage() {
       // Load sites
       const sites = await ClientAPI.getSites();
       const siteBreakdown = sites.reduce((acc: Record<string, number>, site: any) => {
-        // Use metadata.type for sites (like PHYSICAL, CLOUD, SPECIAL)
-        const type = site.metadata?.type || site.type || site.status || 'No Type';
+        const type = site.type || site.status || 'No Type';
         acc[type] = (acc[type] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);

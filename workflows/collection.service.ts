@@ -50,7 +50,7 @@ export const CollectionService = {
                 ...sale,
                 status: SaleStatus.COLLECTED,
                 
-                collectedAt: endOfMonthUTC((sale as any).chargedAt ? new Date((sale as any).chargedAt) : sale.saleDate ? (sale.saleDate instanceof Date ? sale.saleDate : new Date(sale.saleDate as string)) : getUTCNow()),
+                collectedAt: endOfMonthUTC(sale.lifecycle?.chargedAt ? new Date(sale.lifecycle.chargedAt) : sale.createdAt ? new Date(sale.createdAt) : sale.saleDate ? new Date(sale.saleDate) : getUTCNow()),
                 updatedAt: getUTCNow()
             };
 

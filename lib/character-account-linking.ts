@@ -135,9 +135,10 @@ async function isCharacterAlreadyLinked(characterId: string): Promise<boolean> {
 async function isCharacterAvailableForProvisioning(character: Character): Promise<boolean> {
   if (character.isActive === false) return false;
   if (character.allowAccountLinking === false) return false;
-  if (character.accountId) return false;
-
-  return !(await isCharacterAlreadyLinked(character.id));
+  // ACCOUNT_CHARACTER is authoritative. accountId is only a legacy fallback
+  // while the final pointer-removal migration is still pending.
+  if (await isCharacterAlreadyLinked(character.id)) return false;
+  return !character.accountId;
 }
 
 type CandidateMatchProbe = {
@@ -228,9 +229,7 @@ async function createCustomerCharacter(input: {
     name: input.name,
     description: `Account created from akiles-ecosystem registration`,
     roles: [],
-    achievements: [],
-    purchasedAmount: 0,
-    inventory: [],
+    qualifications: [],
     playerId: null,
     lastActiveAt: now,
     isActive: true,

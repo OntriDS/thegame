@@ -1,0 +1,33 @@
+{
+  "id": "entity-test-sale-direct-product-clean",
+  "schemaVersion": 1,
+  "version": 0,
+  "name": "testing-direct-product-sale",
+  "type": "direct",
+  "status": "pending",
+  "lines": [
+    {
+      "lineId": "product-line-1",
+      "kind": "item",
+      "itemId": "imported-1762140802805-112",
+      "quantity": 1,
+      "unitPrice": {
+        "minorUnits": "1000",
+        "currency": "USD"
+      }
+    }
+  ],
+  "totals": {
+    "subtotal": {
+      "minorUnits": "1000",
+      "currency": "USD"
+    },
+    "totalRevenue": {
+      "minorUnits": "1000",
+      "currency": "USD"
+    }
+  },
+  "lifecycle": {},
+  "createdAt": "2026-08-20T16:45:25.694Z",
+  "updatedAt": "2026-08-20T16:45:25.694Z"
+}

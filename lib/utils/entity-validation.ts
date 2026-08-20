@@ -28,41 +28,36 @@ export function validateSite(site: any, index: number): ValidationResult {
     errors.push(`Missing or invalid 'name' field`);
   }
 
-  if (!site.metadata) {
-    errors.push(`Missing 'metadata' field`);
-    return { valid: false, errors, warnings };
-  }
-
-  // Validate metadata.type - STRICT: only accept valid enum values
-  const type = site.metadata.type;
+  const legacyMetadata = site.metadata;
+  const type = site.type ?? legacyMetadata?.type;
+  const subtype = site.subtype ?? legacyMetadata?.businessType ?? legacyMetadata?.digitalType ?? legacyMetadata?.systemType;
   if (!type) {
-    errors.push(`Missing 'metadata.type' field`);
+    errors.push(`Missing 'type' field`);
     return { valid: false, errors, warnings };
   }
 
   // Check if type matches valid SiteType enum values
   if (!Object.values(SiteType).includes(type as SiteType)) {
-    errors.push(`Invalid 'metadata.type': '${type}'. Must be one of: ${Object.values(SiteType).join(', ')}`);
+    errors.push(`Invalid 'type': '${type}'. Must be one of: ${Object.values(SiteType).join(', ')}`);
     return { valid: false, errors, warnings };
   }
 
-  // Validate type-specific metadata
+  // Validate type-specific root subtype/fields
 
   if (type === SiteType.PHYSICAL) {
-    if (!site.metadata.businessType) {
-      errors.push(`Physical sites require 'metadata.businessType' field`);
+    if (!subtype) {
+      errors.push(`Physical sites require 'subtype' field`);
     }
-    if (!site.metadata.settlementId) {
-      warnings.push(`Physical site missing 'metadata.settlementId' (recommended)`);
+    if (!(site.settlementId ?? legacyMetadata?.settlementId)) {
+      warnings.push(`Physical site missing 'settlementId' (recommended)`);
     }
   } else if (type === SiteType.DIGITAL_SITE) {
-    if (!site.metadata.digitalType) {
-      errors.push(`Digital sites require 'metadata.digitalType' field`);
+    if (!subtype) {
+      errors.push(`Digital sites require 'subtype' field`);
     }
   } else if (type === SiteType.SYSTEM) {
-    // STRICT: Only accept the exact field name 'systemType'
-    if (!site.metadata.systemType) {
-      errors.push(`System sites require 'metadata.systemType' field`);
+    if (!subtype) {
+      errors.push(`System sites require 'subtype' field`);
     }
   }
 
@@ -80,11 +75,15 @@ export function validateSite(site: any, index: number): ValidationResult {
     delete fixed.isArchived;
   }
 
-  // Remove isActive from metadata if present
-  if (fixed.metadata && 'isActive' in fixed.metadata) {
-    const { isActive, ...metadataWithoutActive } = fixed.metadata;
-    fixed.metadata = metadataWithoutActive;
-  }
+  // Legacy nested metadata is an input compatibility shape only. New writes
+  // normalize it at the datastore boundary and do not persist it.
+  delete fixed.metadata;
+  fixed.type = fixed.type ?? legacyMetadata?.type;
+  fixed.subtype = fixed.subtype ?? legacyMetadata?.businessType ?? legacyMetadata?.digitalType ?? legacyMetadata?.systemType;
+  fixed.settlementId = fixed.settlementId ?? legacyMetadata?.settlementId;
+  fixed.googleMapsAddress = fixed.googleMapsAddress ?? legacyMetadata?.googleMapsAddress;
+  fixed.coordinates = fixed.coordinates ?? legacyMetadata?.coordinates;
+  fixed.url = fixed.url ?? legacyMetadata?.url;
 
   return {
     valid: errors.length === 0,

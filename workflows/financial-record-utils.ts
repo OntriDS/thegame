@@ -30,6 +30,7 @@ import { getUTCNow } from '@/lib/utils/utc-utils';
 import { parseDateToUTC } from '@/lib/utils/date-parsers';
 import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution';
 import { getSaleCharacterId } from '@/lib/sale-character-id';
+import { resolveSaleCharacterId, resolveSaleOwnerId } from '@/lib/sale-relationship-selectors';
 import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 
 const getTaskMoneyValue = (task: Task, field: 'costIntent' | 'revenueIntent'): number => {
@@ -341,12 +342,12 @@ export async function removeFinancialRecordsCreatedByTask(taskId: string): Promi
   }
 }
 
-/** Sale-sourced finrec period: same chain as sale titles (doneAt → saleDate → createdAt). */
+/** Sale-sourced finrec period: same chain as sale lifecycle (doneAt → chargedAt → createdAt). */
 function coerceSaleFinrecDate(sale: Sale, fallback: Date): Date {
   return resolveCanonicalSaleTimelineDate(
     {
       doneAt: sale.lifecycle?.doneAt,
-      saleDate: sale.saleDate,
+      saleDate: sale.saleDate ?? sale.createdAt,
       createdAt: sale.createdAt,
     },
     fallback
@@ -356,23 +357,26 @@ function coerceSaleFinrecDate(sale: Sale, fallback: Date): Date {
 /** Customer / site strings for finrec titles only. Use "" when missing — no placeholders. */
 async function resolveSaleCustomerAndSiteLabels(sale: Sale): Promise<{ customerLabel: string; siteLabel: string }> {
   let customerLabel = (sale.counterpartyName && String(sale.counterpartyName).trim()) || '';
-  const saleCharacterId = getSaleCharacterId(sale);
+  const saleCharacterId = await resolveSaleCharacterId(sale);
   if (!customerLabel && saleCharacterId) {
     const ch = await getCharacterById(saleCharacterId);
     customerLabel = (ch?.name && String(ch.name).trim()) || '';
   }
 
+  const saleLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
+  const linkedSiteId = saleLinks.find(l => l.linkType === LinkType.SALE_SITE && l.target.type === EntityType.SITE)?.target.id;
+  const saleSiteId = linkedSiteId ?? sale.siteId;
   let siteLabel = '';
-  if (sale.siteId) {
+  if (saleSiteId) {
     try {
       const site = await getSiteById(sale.siteId);
       siteLabel =
         (site?.name && String(site.name).trim()) ||
-        String(sale.siteId).trim() ||
+        String(saleSiteId).trim() ||
         '';
     } catch (e) {
       console.warn('[resolveSaleCustomerAndSiteLabels] site lookup failed', e);
-      siteLabel = String(sale.siteId).trim() || '';
+      siteLabel = String(saleSiteId).trim() || '';
     }
   }
 
@@ -437,7 +441,7 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
   if (sale.lines) {
     const founderEntityIds = new Set<string>(
       [
-        sale.playerCharacterId,
+        await resolveSaleOwnerId(sale),
         sale.context?.boothSaleContext?.principalBusinessId
       ].filter(Boolean) as string[]
     );
@@ -466,7 +470,7 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
   const partnerCommFromMe = myItemsTotal * (1 - shareOfMyItems_Me);
 
   // Target Entity Resolution
-  let targetEntityId = sale.partnerId || getSaleCharacterId(sale);
+  let targetEntityId = sale.partnerId || await resolveSaleCharacterId(sale);
   let targetEntityName = 'Partner';
   if (targetEntityId) {
     const { getBusinessById } = await import('@/data-store/repositories/character.repo');
@@ -548,7 +552,7 @@ async function upsertPrimarySaleFinrecFromSale(
     month: derived.month,
     station: derived.station,
     type: derived.financialType,
-    siteId: sale.siteId ?? existing.siteId,
+    siteId: (await resolveSaleSiteId(sale)) ?? existing.siteId,
     targetSiteId: existing.targetSiteId,
     sourceSaleId: sale.id,
     salesChannel: derived.salesChannel,
@@ -561,8 +565,8 @@ async function upsertPrimarySaleFinrecFromSale(
     collectedAt: existing.collectedAt,
     doneAt: derived.dateToUse,
     updatedAt: now,
-    characterId: getSaleCharacterId(sale),
-    customerCharacterRole: getSaleCharacterId(sale) ? CharacterRole.CUSTOMER : undefined,
+    characterId: await resolveSaleCharacterId(sale),
+    customerCharacterRole: (await resolveSaleCharacterId(sale)) ? CharacterRole.CUSTOMER : undefined,
   };
 
   const saved = await upsertFinancial(next, { forceSave: true });
@@ -585,6 +589,11 @@ async function upsertPrimarySaleFinrecFromSale(
   }
 
   return saved;
+}
+
+async function resolveSaleSiteId(sale: Sale): Promise<string | undefined> {
+  const links = await getLinksFor({ type: EntityType.SALE, id: sale.id });
+  return links.find(l => l.linkType === LinkType.SALE_SITE && l.target.type === EntityType.SITE)?.target.id ?? sale.siteId;
 }
 
 /**
@@ -699,7 +708,7 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
     const initialRevenue = Number(sale.totals?.totalRevenue ?? 0) || 0;
     const cost = Number(sale.totals?.totalCost ?? 0) || 0;
     const netCashflow = initialRevenue - cost;
-    const saleCounterpartyId = getSaleCharacterId(sale);
+    const saleCounterpartyId = await resolveSaleCharacterId(sale);
     const newFinrec: FinancialRecord = {
       id: canonicalId,
       name: derived.finrecName,
@@ -708,7 +717,7 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       month: derived.month,
       station: derived.station,
       type: derived.financialType,
-      siteId: sale.siteId,
+      siteId: await resolveSaleSiteId(sale),
       targetSiteId: undefined,
       sourceSaleId: sale.id,
       salesChannel: derived.salesChannel,
@@ -780,7 +789,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
 
     // [IDEMPOTENCY CHECK] Load existing records linked to this sale
     const existingRecords = await getFinancialsBySourceSaleId(sale.id);
-    const saleCounterpartyId = getSaleCharacterId(sale);
+    const saleCounterpartyId = await resolveSaleCharacterId(sale);
 
     const cleanupPayoutCharacterLinks = async (
       financialRecordId: string,

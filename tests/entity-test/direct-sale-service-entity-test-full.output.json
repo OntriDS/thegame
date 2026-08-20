@@ -1,0 +1,157 @@
+{
+  "sale": {
+    "id": "entity-test-sale-direct-service-full",
+    "schemaVersion": 1,
+    "version": 0,
+    "name": "testing-direct-service-sale-full",
+    "description": "Full direct service Sale workflow test",
+    "type": "direct",
+    "status": "charged",
+    "lines": [
+      {
+        "lineId": "service-line-full",
+        "kind": "service",
+        "revenue": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        },
+        "context": {
+          "createTask": true,
+          "taskDescription": "Testing charged service task",
+          "taskStation": "strategy",
+          "taskId": "entity-test-task-direct-sale-full",
+          "taskType": "mission"
+        }
+      }
+    ],
+    "payments": [
+      {
+        "method": "fiat-usd",
+        "amount": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        }
+      }
+    ],
+    "totals": {
+      "subtotal": {
+        "minorUnits": "5000",
+        "currency": "USD"
+      },
+      "totalRevenue": {
+        "minorUnits": "5000",
+        "currency": "USD"
+      }
+    },
+    "lifecycle": {
+      "chargedAt": "2026-08-20T16:50:54.758Z",
+      "doneAt": "2026-08-20T16:50:54.758Z"
+    },
+    "context": {
+      "paymentBreakdown": {
+        "cashUSD": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        }
+      },
+      "rewardIntent": {
+        "points": {
+          "xp": 3,
+          "rp": 1,
+          "fp": 0,
+          "hp": 0
+        }
+      }
+    },
+    "createdAt": "2026-08-20T16:50:54.758Z",
+    "updatedAt": "2026-08-20T16:50:54.758Z"
+  },
+  "task": {
+    "id": "entity-test-task-direct-sale-full",
+    "name": "Testing charged service task",
+    "description": "Testing charged service task",
+    "type": "mission",
+    "status": "Created",
+    "priority": "Normal",
+    "station": "strategy",
+    "progress": {
+      "percentage": 0
+    },
+    "order": 1000,
+    "createdAt": "2026-08-20T16:51:19.030Z",
+    "updatedAt": "2026-08-20T16:51:19.030Z",
+    "siteId": "hq",
+    "context": {},
+    "schemaVersion": 1,
+    "version": 0
+  },
+  "links": [
+    {
+      "id": "8ee5cf33-2ef5-4ecf-90c2-d01c8f791328",
+      "linkType": "SALE_SITE",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-direct-service-full"
+      },
+      "target": {
+        "type": "site",
+        "id": "hq"
+      },
+      "createdAt": "2026-08-20T16:50:58.098Z"
+    },
+    {
+      "id": "c9716158-3163-4851-a699-a8d0356219da",
+      "linkType": "SALE_FINREC",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-direct-service-full"
+      },
+      "target": {
+        "type": "financial",
+        "id": "finrec-entity-test-sale-direct-service-full"
+      },
+      "createdAt": "2026-08-20T16:51:15.856Z"
+    },
+    {
+      "id": "a04d6fa7-5f7a-4da6-ab9d-3903269881da",
+      "linkType": "SALE_TASK",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-direct-service-full"
+      },
+      "target": {
+        "type": "task",
+        "id": "entity-test-task-direct-sale-full"
+      },
+      "createdAt": "2026-08-20T16:51:27.321Z"
+    },
+    {
+      "id": "2ba415b3-2076-4d5f-82c7-c69dc59cfc3a",
+      "linkType": "SALE_CHARACTER",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-direct-service-full"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1775889257983-6pkhdapnl"
+      },
+      "relationship": "owner",
+      "createdAt": "2026-08-20T16:51:01.719Z"
+    },
+    {
+      "id": "3cc8dbca-a037-4198-bab4-63bccb0fdc72",
+      "linkType": "SALE_CHARACTER",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-direct-service-full"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1775889257983-6pkhdapnl"
+      },
+      "relationship": "customer",
+      "createdAt": "2026-08-20T16:50:59.566Z"
+    }
+  ]
+}

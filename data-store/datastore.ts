@@ -2,11 +2,11 @@
 // data-store/datastore.ts
 // Orchestration layer: repositories → workflows → links → logging
 
-import type { Task, Item, FinancialRecord, FinancialRecordRelationInput, Sale, Character, Player, Site, Settlement, Region, Account, Business, Contract, Agent } from '@/types/entities';
-import { roundSaleTotals } from '@/lib/utils/financial-utils';
+import type { Task, Item, FinancialRecord, FinancialRecordRelationInput, Sale, Character, Player, PlayerAchievement, Site, Settlement, Region, Account, Business, Contract, Agent } from '@/types/entities';
+import { getSaleFinancialConsistencyIssues, roundSaleTotals } from '@/lib/utils/financial-utils';
 import { ensureItemSaleLineIds, normalizeSale } from '@/lib/utils/sale-lines-normalize';
 import type { TaskSnapshot, ItemSnapshot, SaleSnapshot, FinancialSnapshot } from '@/types/archive';
-import { CharacterRole, EntityType, EntitySchemaVersion, ItemType, TaskPriority, TaskStatus, FinancialStatus, TaskType, SaleStatus, ItemStatus } from '@/types/enums';
+import { CharacterRole, EntityType, EntitySchemaVersion, ItemType, TaskPriority, TaskStatus, FinancialStatus, TaskType, SaleStatus, ItemStatus, LinkType } from '@/types/enums';
 import {
   upsertTask as repoUpsertTask,
   getAllTasks as repoGetAllTasks,
@@ -1248,8 +1248,68 @@ export async function removeFinancial(id: string): Promise<void> {
 }
 
 // SALES
+async function hydrateSaleCompatibility(sale: Sale): Promise<Sale> {
+  const { getLinksFor } = await import('@/links/link-registry');
+  const saleLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
+  const siteLink = saleLinks.find(
+    link => link.linkType === LinkType.SALE_SITE && link.target.type === EntityType.SITE
+  );
+  const characterLink = saleLinks.find(
+    link => link.linkType === LinkType.SALE_CHARACTER &&
+      link.target.type === EntityType.CHARACTER &&
+      (!link.relationship || link.relationship === 'customer')
+  );
+  const ownerLink = saleLinks.find(
+    link => link.linkType === LinkType.SALE_CHARACTER &&
+      link.relationship === 'owner' &&
+      link.target.type === EntityType.CHARACTER
+  );
+  const linkedCharacterId = characterLink?.target.id;
+  const linkedOwnerId = ownerLink?.target.id;
+  let counterpartyName = sale.counterpartyName;
+  if (!counterpartyName && linkedCharacterId) {
+    const character = await getCharacterById(linkedCharacterId);
+    counterpartyName = character?.name;
+  }
+  return {
+    ...sale,
+    ...(siteLink ? { siteId: siteLink.target.id } : {}),
+    ...(linkedCharacterId ? { characterId: linkedCharacterId } : {}),
+    ...(linkedOwnerId ? { ownerId: linkedOwnerId } : {}),
+    ...(counterpartyName ? { counterpartyName } : {}),
+    ...(sale.saleDate ? {} : { saleDate: sale.createdAt }),
+  };
+}
+
+async function ensureSaleSiteLink(saleId: string, siteId?: string): Promise<void> {
+  if (!siteId) return;
+  const { createLink, getLinksFor } = await import('@/links/link-registry');
+  const { makeLink } = await import('@/links/links-workflows');
+  const existing = await getLinksFor({ type: EntityType.SALE, id: saleId });
+  if (existing.some(link => link.linkType === LinkType.SALE_SITE && link.target.type === EntityType.SITE && link.target.id === siteId)) return;
+  await createLink(makeLink(LinkType.SALE_SITE, { type: EntityType.SALE, id: saleId }, { type: EntityType.SITE, id: siteId }));
+}
+
+async function ensureSaleCharacterLink(saleId: string, characterId?: string | null, relationship: 'customer' | 'owner' = 'customer'): Promise<void> {
+  if (!characterId) return;
+  const { createLink, getLinksFor } = await import('@/links/link-registry');
+  const { makeLink } = await import('@/links/links-workflows');
+  const existing = await getLinksFor({ type: EntityType.SALE, id: saleId });
+  if (existing.some(link => link.linkType === LinkType.SALE_CHARACTER && link.target.type === EntityType.CHARACTER && link.target.id === characterId && (link.relationship || 'customer') === relationship)) return;
+  await createLink(makeLink(LinkType.SALE_CHARACTER, { type: EntityType.SALE, id: saleId }, { type: EntityType.CHARACTER, id: characterId }, relationship));
+}
+
+function saleHasRewardPoints(sale: Sale): boolean {
+  const points = sale.context?.rewardIntent?.points;
+  return Boolean(points && (points.xp || points.rp || points.fp || points.hp));
+}
+
 export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean }): Promise<Sale> {
-  const previous = await repoGetSaleById(sale.id);
+  const previous = await getSaleById(sale.id);
+  const transientSiteId = sale.siteId ?? previous?.siteId;
+  const transientCharacterId = sale.characterId ?? previous?.characterId;
+  const transientOwnerId = sale.ownerId ?? previous?.ownerId;
+  const transientCounterpartyName = sale.counterpartyName ?? previous?.counterpartyName;
 
   // Identity Shield: Time-Window Deduplication (2 minutes)
   // Only apply to NEW sales (no previous record found) to allow legitimate updates
@@ -1269,7 +1329,7 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
       return (
         existing.counterpartyName === sale.counterpartyName &&
         existing.status === sale.status &&
-        existing.saleDate === sale.saleDate
+        (existing.createdAt ?? existing.saleDate) === (sale.createdAt ?? sale.saleDate)
       );
     });
 
@@ -1279,25 +1339,65 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
     }
   }
 
-  const saleToPersist = roundSaleTotals(
-    ensureItemSaleLineIds(normalizeSale(normalizeSaleOutputTaxonomy(sale)))
+  const normalizedSale = roundSaleTotals(
+    ensureItemSaleLineIds(normalizeSale(normalizeSaleOutputTaxonomy({
+      ...sale,
+      lifecycle: (() => {
+        const { saleAt: _legacySaleAt, ...canonicalLifecycle } = sale.lifecycle || {};
+        return canonicalLifecycle;
+      })(),
+    })))
   );
-  const saved = await repoUpsertSale(saleToPersist);
+  if (String(normalizedSale.type).toLowerCase() === 'direct') {
+    const consistencyIssues = getSaleFinancialConsistencyIssues(normalizedSale);
+    if (consistencyIssues.length > 0) {
+      throw new Error(`SALE_FINANCIAL_INCONSISTENCY: ${consistencyIssues.join('; ')}`);
+    }
+  }
+  const {
+    siteId: _transientSiteId,
+    saleDate: _transientSaleDate,
+    characterId: _transientCharacterId,
+    ownerId: _transientOwnerId,
+    counterpartyName: _transientCounterpartyName,
+    ...canonicalSale
+  } = normalizedSale;
+  const saved = await repoUpsertSale(canonicalSale as Sale);
+
+  // The sale workflow can create its financial record before the general link
+  // pass runs. Establish SALE_SITE first so that downstream records resolve
+  // their site from the canonical relationship.
+  await ensureSaleSiteLink(saved.id, transientSiteId);
+  await ensureSaleCharacterLink(saved.id, transientCharacterId, 'customer');
+  await ensureSaleCharacterLink(saved.id, transientOwnerId, 'owner');
 
   // Phase 2: Rolling Summary Update
   await SummaryService.updateSalesCounters(saved, previous || undefined);
 
   /** After onSaleUpsert, ensureSoldItemEntities may persist updated line itemIds (sold clones). Link sync must use that state, not the in-memory first write. */
-  let resultForLinks: Sale = saved;
+  const runtimeSale = {
+    ...saved,
+    ...(transientSiteId ? { siteId: transientSiteId } : {}),
+    ...(transientCharacterId ? { characterId: transientCharacterId } : {}),
+    ...(transientOwnerId ? { ownerId: transientOwnerId } : {}),
+    ...(transientCounterpartyName ? { counterpartyName: transientCounterpartyName } : {}),
+  } as Sale;
+  let resultForLinks: Sale = runtimeSale;
 
   if (!options?.skipWorkflowEffects) {
     const { onSaleUpsert } = await import('@/workflows/entities-workflows/sale.workflow');
-    await onSaleUpsert(saved, previous || undefined);
+    await onSaleUpsert(runtimeSale, previous || undefined);
 
     const latestRaw = await repoGetSaleById(sale.id);
     if (latestRaw) {
       const [revived] = reviveDates([latestRaw]);
-      resultForLinks = normalizeSale(revived);
+      resultForLinks = {
+        ...normalizeSale(revived),
+        ...(transientSiteId ? { siteId: transientSiteId } : {}),
+        ...(transientCharacterId ? { characterId: transientCharacterId } : {}),
+        ...(transientOwnerId ? { ownerId: transientOwnerId } : {}),
+        ...(transientCounterpartyName ? { counterpartyName: transientCounterpartyName } : {}),
+      } as Sale;
     }
   }
 
@@ -1310,7 +1410,8 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
 
 export async function getAllSales(): Promise<Sale[]> {
   const sales = await repoGetAllSales();
-  return sales.filter(sale => sale.status !== SaleStatus.COLLECTED).map(s => normalizeSale(s));
+  const activeSales = sales.filter(sale => sale.status !== SaleStatus.COLLECTED).map(s => normalizeSale(s));
+  return Promise.all(activeSales.map(hydrateSaleCompatibility));
 }
 
 // Phase 5: Unified & Optimized Sales fetching (Active + Archive)
@@ -1336,7 +1437,7 @@ export async function getSalesForMonth(year: number, month: number): Promise<Sal
   // The Vault specifically filters for CHARGED/COLLECTED.
   // I will leave filtering to the consumer if they want specific statuses, 
   // but for the "Sales Archive" tab, we should probably follow the existing logic.
-  return reviveDates<Sale[]>(sales).map(s => normalizeSale(s));
+  return Promise.all(reviveDates<Sale[]>(sales).map(s => hydrateSaleCompatibility(normalizeSale(s))));
 }
 
 /**
@@ -1386,7 +1487,7 @@ export async function getSaleById(id: string): Promise<Sale | null> {
   const raw = await repoGetSaleById(id);
   if (!raw) return null;
   const [revived] = reviveDates([raw]);
-  return normalizeSale(revived);
+  return hydrateSaleCompatibility(normalizeSale(revived));
 }
 
 export async function removeSale(id: string): Promise<void> {
@@ -1406,6 +1507,29 @@ export async function removeSale(id: string): Promise<void> {
 // CHARACTERS
 export async function upsertCharacter(character: Character, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Character> {
   const previous = await repoGetCharacterById(character.id);
+  const rawCharacter = character as Character & {
+    achievements?: unknown;
+    playerId?: unknown;
+    siteId?: unknown;
+    purchasedAmount?: unknown;
+    beneficiaryPaidAmount?: unknown;
+  };
+  const {
+    achievements: legacyAchievements,
+    playerId: _legacyPlayerId,
+    siteId: _legacySiteId,
+    purchasedAmount: _purchasedAmount,
+    beneficiaryPaidAmount: _beneficiaryPaidAmount,
+    ...characterWithoutLegacyFields
+  } = rawCharacter;
+  const canonicalCharacter = {
+    ...characterWithoutLegacyFields,
+    ...(character.qualifications === undefined && legacyAchievements !== undefined
+      ? { qualifications: legacyAchievements }
+      : {}),
+    schemaVersion: character.schemaVersion ?? EntitySchemaVersion.V1,
+    version: previous ? ((previous.version ?? 0) + 1) : (character.version ?? 0),
+  } as Character;
 
   // Identity Shield: Time-Window Deduplication (2 minutes)
   if (!previous) {
@@ -1429,7 +1553,7 @@ export async function upsertCharacter(character: Character, options?: { skipWork
     }
   }
 
-  const saved = await repoUpsertCharacter(character);
+  const saved = await repoUpsertCharacter(canonicalCharacter);
   try {
     await syncEcosystemCharacterSnapshot(saved);
   } catch (error) {
@@ -1442,7 +1566,13 @@ export async function upsertCharacter(character: Character, options?: { skipWork
   }
 
   if (!options?.skipLinkEffects) {
-    await processLinkEntity(saved, EntityType.CHARACTER);
+    // Relationship inputs are transient compatibility data. They are used by
+    // the workflow to reconcile Links, but are not part of the saved entity.
+    await processLinkEntity({
+      ...saved,
+      playerId: rawCharacter.playerId,
+      siteId: rawCharacter.siteId,
+    } as Character, EntityType.CHARACTER);
   }
 
   return saved;
@@ -1467,6 +1597,28 @@ export async function removeCharacter(id: string): Promise<void> {
 }
 
 // PLAYERS
+function normalizePlayerAchievements(raw: unknown, fallbackCreatedAt: unknown): PlayerAchievement[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.flatMap((entry, index) => {
+    if (typeof entry === 'string') {
+      const name = entry.trim();
+      if (!name) return [];
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      return [{ id: `legacy-achievement-${index}-${slug || 'unnamed'}`, name, createdAt: fallbackCreatedAt } as PlayerAchievement];
+    }
+    if (!entry || typeof entry !== 'object') return [];
+    const candidate = entry as Partial<PlayerAchievement>;
+    if (typeof candidate.id !== 'string' || typeof candidate.name !== 'string') return [];
+    return [{
+      id: candidate.id,
+      name: candidate.name,
+      ...(typeof candidate.description === 'string' ? { description: candidate.description } : {}),
+      createdAt: candidate.createdAt ?? fallbackCreatedAt,
+    } as PlayerAchievement];
+  });
+}
+
 export async function upsertPlayer(player: Player, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Player> {
   const previous = await repoGetPlayerById(player.id);
   // Player authentication is resolved through Account ↔ Character. Do not
@@ -1474,11 +1626,28 @@ export async function upsertPlayer(player: Player, options?: { skipWorkflowEffec
   const {
     accountId: _legacyAccountId,
     links: _embeddedLinks,
+    characterId: _legacyCharacterId,
     points: legacyPoints,
     pendingPoints: legacyPendingPoints,
     totalPoints: legacyTotalPoints,
+    totalTasksCompleted: _legacyTotalTasksCompleted,
+    totalSalesCompleted: _legacyTotalSalesCompleted,
+    totalItemsSold: _legacyTotalItemsSold,
+    metrics: _legacyMetrics,
+    badges: legacyBadges,
+    achievements: legacyAchievements,
     ...canonicalPlayer
-  } = player as Player & { accountId?: string | null; links?: unknown };
+  } = player as Player & {
+    accountId?: string | null;
+    links?: unknown;
+    characterId?: string | null;
+    totalTasksCompleted?: unknown;
+    totalSalesCompleted?: unknown;
+    totalItemsSold?: unknown;
+    metrics?: unknown;
+    badges?: unknown;
+    achievements?: unknown;
+  };
   const zeroPoints = { hp: 0, fp: 0, rp: 0, xp: 0 };
   const current = player.rewards?.points.current ?? legacyPoints ?? zeroPoints;
   const pending = player.rewards?.points.pending ?? legacyPendingPoints ?? zeroPoints;
@@ -1490,12 +1659,14 @@ export async function upsertPlayer(player: Player, options?: { skipWorkflowEffec
     rp: vested.rp + pending.rp,
     xp: vested.xp + pending.xp,
   };
+  const rawAchievements = player.rewards?.achievements ?? legacyAchievements;
   const canonicalWithRewards = {
     ...canonicalPlayer,
-    rewards: player.rewards ?? {
-      points: { pending, vested, current, exchanged, historic },
-      achievements: [],
-      badges: player.badges ?? [],
+    rewards: {
+      ...(player.rewards ?? {}),
+      points: player.rewards?.points ?? { pending, vested, current, exchanged, historic },
+      achievements: normalizePlayerAchievements(rawAchievements, player.createdAt),
+      badges: player.rewards?.badges ?? (Array.isArray(legacyBadges) ? legacyBadges : []),
     },
   };
   const saved = await repoUpsertPlayer(canonicalWithRewards as Player);
@@ -1506,7 +1677,7 @@ export async function upsertPlayer(player: Player, options?: { skipWorkflowEffec
   }
 
   if (!options?.skipLinkEffects) {
-    await processLinkEntity(saved, EntityType.PLAYER);
+    await processLinkEntity({ ...saved, characterId: _legacyCharacterId } as Player, EntityType.PLAYER);
   }
 
   return saved;
@@ -1639,7 +1810,36 @@ export async function removeContract(id: string): Promise<void> {
 // SITES
 export async function upsertSite(site: Site, options?: { skipWorkflowEffects?: boolean }): Promise<Site> {
   const previous = await repoGetSiteById(site.id);
-  const saved = await repoUpsertSite(site);
+  const rawSite = site as Site & {
+    metadata?: Site['metadata'];
+    type?: Site['type'];
+    subtype?: Site['subtype'];
+    settlementId?: string;
+    googleMapsAddress?: string;
+    coordinates?: { lat: number; lng: number };
+    url?: string;
+  };
+  const legacyMetadata = rawSite.metadata;
+  const {
+    metadata: _legacyMetadata,
+    ...siteWithoutMetadata
+  } = rawSite;
+  const legacyType = legacyMetadata?.type;
+  const legacySubtype = legacyMetadata && (
+    'businessType' in legacyMetadata ? legacyMetadata.businessType
+      : 'digitalType' in legacyMetadata ? legacyMetadata.digitalType
+        : legacyMetadata.systemType
+  );
+  const canonicalSite = {
+    ...siteWithoutMetadata,
+    type: rawSite.type ?? legacyType,
+    subtype: rawSite.subtype ?? legacySubtype,
+    settlementId: rawSite.settlementId ?? (legacyMetadata && 'settlementId' in legacyMetadata ? legacyMetadata.settlementId : undefined),
+    googleMapsAddress: rawSite.googleMapsAddress ?? (legacyMetadata && 'googleMapsAddress' in legacyMetadata ? legacyMetadata.googleMapsAddress : undefined),
+    coordinates: rawSite.coordinates ?? (legacyMetadata && 'coordinates' in legacyMetadata ? legacyMetadata.coordinates : undefined),
+    url: rawSite.url ?? (legacyMetadata && 'url' in legacyMetadata ? legacyMetadata.url : undefined),
+  } as Site;
+  const saved = await repoUpsertSite(canonicalSite);
   await kvDel(buildMapReadModelKey());
 
   if (!options?.skipWorkflowEffects) {
@@ -1920,7 +2120,7 @@ export async function getPlayerArchiveEventsByMonth(mmyy: string): Promise<Playe
         sourceType: 'sale',
         sourceId: sale.id,
         description: sale.counterpartyName ?? 'Sale',
-        date: toUTCISOString(sale.lifecycle?.collectedAt ?? sale.saleDate ?? getUTCNow()),
+        date: toUTCISOString(sale.lifecycle?.collectedAt ?? sale.lifecycle?.chargedAt ?? sale.saleDate ?? sale.createdAt ?? getUTCNow()),
         points: {
           hp: sale.context?.rewardIntent?.points?.hp ?? 0,
           fp: sale.context?.rewardIntent?.points?.fp ?? 0,

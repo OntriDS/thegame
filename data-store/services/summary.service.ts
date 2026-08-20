@@ -80,10 +80,11 @@ export class SummaryService {
     newSale: Sale,
     oldSale?: Sale
   ): Promise<void> {
-    const date = newSale.lifecycle?.collectedAt || newSale.saleDate || new Date();
+    const date = newSale.lifecycle?.collectedAt || newSale.createdAt || newSale.saleDate || new Date();
     const monthYear = formatArchiveMonthKeyUTC(new Date(date));
     let salesVolumeDelta = 0;
     let salesRevenueDelta = 0;
+    let itemsSoldDelta = 0;
 
     const isCountable = (status?: string) =>
       status === SaleStatus.CHARGED || status === SaleStatus.COLLECTED;
@@ -91,19 +92,25 @@ export class SummaryService {
     const wasCountable = oldSale ? isCountable(oldSale.status) : false;
     const isNowCountable = isCountable(newSale.status);
 
+    const newItemsSold = this.sumPhysicalUnitsFromSales([newSale]);
+    const oldItemsSold = oldSale ? this.sumPhysicalUnitsFromSales([oldSale]) : 0;
+
     if (!wasCountable && isNowCountable) {
       salesVolumeDelta = 1;
       salesRevenueDelta = extractMoneyValue(newSale.totals.totalRevenue);
+      itemsSoldDelta = newItemsSold;
     } else if (wasCountable && !isNowCountable) {
       salesVolumeDelta = -1;
       salesRevenueDelta = -extractMoneyValue(oldSale?.totals.totalRevenue);
+      itemsSoldDelta = -oldItemsSold;
     } else if (wasCountable && isNowCountable) {
       salesVolumeDelta = 0; // Count stays the same
       salesRevenueDelta = extractMoneyValue(newSale.totals.totalRevenue) - extractMoneyValue(oldSale?.totals.totalRevenue);
+      itemsSoldDelta = newItemsSold - oldItemsSold;
     }
 
-    if (salesVolumeDelta !== 0 || salesRevenueDelta !== 0) {
-      await SummaryRepository.updateCounters({ monthYear, salesVolumeDelta, salesRevenueDelta });
+    if (salesVolumeDelta !== 0 || salesRevenueDelta !== 0 || itemsSoldDelta !== 0) {
+      await SummaryRepository.updateCounters({ monthYear, salesVolumeDelta, salesRevenueDelta, itemsSoldDelta });
     }
   }
 
@@ -114,29 +121,9 @@ export class SummaryService {
     newItem: Item,
     oldItem?: Item
   ): Promise<void> {
-    const date = newItem.context?.soldAt || newItem.updatedAt || new Date();
-    const monthYear = formatArchiveMonthKeyUTC(new Date(date));
-    let itemsSoldDelta = 0;
-
-    const isSold = (status?: string) => {
-      const u = (status as string || '').toUpperCase();
-      return u === 'SOLD' || u === 'ITEMSTATUS.SOLD' || u === 'COLLECTED' || u === 'ITEMSTATUS.COLLECTED';
-    };
-
-    const wasSold = oldItem ? isSold(oldItem.status) : false;
-    const isNowSold = isSold(newItem.status);
-
-    if (!wasSold && isNowSold) {
-      itemsSoldDelta = newItem.quantitySold || 0;
-    } else if (wasSold && !isNowSold) {
-      itemsSoldDelta = -(oldItem?.quantitySold || 0);
-    } else if (wasSold && isNowSold) {
-      itemsSoldDelta = (newItem.quantitySold || 0) - (oldItem?.quantitySold || 0);
-    }
-
-    if (itemsSoldDelta !== 0) {
-      await SummaryRepository.updateCounters({ monthYear, itemsSoldDelta });
-    }
+    // Items sold is now derived strictly from Sale lines (see sumPhysicalUnitsFromSales).
+    // Updating counters here would cause double counting or miscounts on rebuilds.
+    return Promise.resolve();
   }
 
   /**
@@ -184,20 +171,19 @@ export class SummaryService {
       return;
     }
 
-    const date = sale.lifecycle?.collectedAt || sale.saleDate || new Date();
+    const date = sale.lifecycle?.collectedAt || sale.createdAt || sale.saleDate || new Date();
     await SummaryRepository.updateCounters({
       monthYear: formatArchiveMonthKeyUTC(new Date(date)),
       salesVolumeDelta: -1,
-      salesRevenueDelta: -extractMoneyValue(sale.totals.totalRevenue)
+      salesRevenueDelta: -extractMoneyValue(sale.totals.totalRevenue),
+      itemsSoldDelta: -this.sumPhysicalUnitsFromSales([sale])
     });
   }
 
   static async handleItemDeletion(item: Item) {
-    const date = item.context?.soldAt || new Date();
-    await SummaryRepository.updateCounters({
-      monthYear: formatArchiveMonthKeyUTC(new Date(date)),
-      itemsSoldDelta: -(item.quantitySold || 0)
-    });
+    // Items sold is now derived strictly from Sale lines.
+    // Deleting an item independently shouldn't decrement itemsSold, as deleting the Sale handles it.
+    return Promise.resolve();
   }
 
   static async handleTaskDeletion(task: Task) {

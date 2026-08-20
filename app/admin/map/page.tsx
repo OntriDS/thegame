@@ -33,7 +33,7 @@ import { SiteModal } from "@/components/modals/site-modal";
 import SettlementSubmodal from '@/components/modals/submodals/settlement-submodal';
 import RegionSubmodal from '@/components/modals/submodals/region-submodal';
 import MapWrapper from '@/components/map/map-wrapper';
-import type { Site, Settlement, Region, PhysicalSiteMetadata } from "@/types/entities";
+import type { Site, Settlement, Region } from "@/types/entities";
 import { SiteType, SiteStatus } from "@/types/enums";
 import type { MapReadModel } from '@/types/map-types';
 import { getSiteStatusLabel } from "@/lib/constants/status-display-labels";
@@ -359,7 +359,7 @@ function MapPageContent() {
 
   // Helper to check if site is the protected "None" system site
   const isNoneSite = (site: Site): boolean => {
-    return site.metadata.type === SiteType.SYSTEM && (site.name === 'None' || site.id === 'none');
+    return site.type === SiteType.SYSTEM && (site.name === 'None' || site.id === 'none');
   };
 
   const handleEditSite = (site: Site) => {
@@ -389,12 +389,11 @@ function MapPageContent() {
       if (!site) return;
       
       const newSite = { ...site };
-      if (newSite.metadata.type === SiteType.PHYSICAL) {
-        const pMeta = newSite.metadata as PhysicalSiteMetadata;
-        if (pMeta.coordinates) {
-          pMeta.coordinates = { ...pMeta.coordinates, lat, lng };
+      if (newSite.type === SiteType.PHYSICAL) {
+        if (newSite.coordinates) {
+          newSite.coordinates = { ...newSite.coordinates, lat, lng };
         } else {
-          pMeta.coordinates = { lat, lng };
+          newSite.coordinates = { lat, lng };
         }
       }
       newSite.updatedAt = getUTCNow();
@@ -460,7 +459,7 @@ function MapPageContent() {
         if (siteFilter === 'all') {
           if (!isActive) return false;
         } else {
-          if (!isActive || site.metadata.type !== siteFilter) return false;
+          if (!isActive || site.type !== siteFilter) return false;
         }
       }
 
@@ -469,12 +468,12 @@ function MapPageContent() {
         const query = searchQuery.toLowerCase();
         const matchesName = site.name.toLowerCase().includes(query);
         const matchesDescription = site.description?.toLowerCase().includes(query) || false;
-        const matchesType = site.metadata.type.toLowerCase().includes(query);
+        const matchesType = site.type.toLowerCase().includes(query);
         const matchesId = site.id.toLowerCase().includes(query);
         
         // For physical sites, check settlement
-        if (site.metadata.type === SiteType.PHYSICAL && 'settlementId' in site.metadata) {
-          const matchesSettlement = site.metadata.settlementId?.toLowerCase().includes(query) || false;
+        if (site.type === SiteType.PHYSICAL) {
+          const matchesSettlement = site.settlementId?.toLowerCase().includes(query) || false;
           if (!matchesName && !matchesDescription && !matchesType && !matchesId && !matchesSettlement) {
             return false;
           }
@@ -497,7 +496,7 @@ function MapPageContent() {
           comparison = a.name.localeCompare(b.name);
           break;
         case 'type':
-          comparison = a.metadata.type.localeCompare(b.metadata.type);
+          comparison = a.type.localeCompare(b.type);
           break;
         case 'status':
           comparison = (a.status || SiteStatus.ACTIVE).localeCompare(b.status || SiteStatus.ACTIVE);
@@ -725,15 +724,15 @@ function MapPageContent() {
                       <TabsTrigger value="all">All ({sites.filter(s => s.status === SiteStatus.ACTIVE).length})</TabsTrigger>
                       <TabsTrigger value={SiteType.PHYSICAL}>
                         <MapPin className="h-4 w-4 mr-1" />
-                        Physical ({sites.filter(s => s.metadata.type === SiteType.PHYSICAL && s.status === SiteStatus.ACTIVE).length})
+                        Physical ({sites.filter(s => s.type === SiteType.PHYSICAL && s.status === SiteStatus.ACTIVE).length})
                       </TabsTrigger>
                       <TabsTrigger value={SiteType.DIGITAL_SITE}>
                         <Cloud className="h-4 w-4 mr-1" />
-                        Digital ({sites.filter(s => s.metadata.type === SiteType.DIGITAL_SITE && s.status === SiteStatus.ACTIVE).length})
+                        Digital ({sites.filter(s => s.type === SiteType.DIGITAL_SITE && s.status === SiteStatus.ACTIVE).length})
                       </TabsTrigger>
                       <TabsTrigger value={SiteType.SYSTEM}>
                         <Sparkles className="h-4 w-4 mr-1" />
-                        System ({sites.filter(s => s.metadata.type === SiteType.SYSTEM && s.status === SiteStatus.ACTIVE).length})
+                        System ({sites.filter(s => s.type === SiteType.SYSTEM && s.status === SiteStatus.ACTIVE).length})
                       </TabsTrigger>
                       <TabsTrigger value="inactive">
                         Inactive ({sites.filter(s => s.status === SiteStatus.INACTIVE).length})
@@ -765,8 +764,8 @@ function MapPageContent() {
                           <CardHeader className="pb-3">
                             <div className="flex items-center justify-between">
                               <CardTitle className="text-base font-medium">{site.name}</CardTitle>
-                              <Badge className={`text-xs ${getSiteTypeBadgeColor(site.metadata.type)}`}>
-                                {site.metadata.type}
+                              <Badge className={`text-xs ${getSiteTypeBadgeColor(site.type)}`}>
+                                {site.type}
                               </Badge>
                             </div>
                           </CardHeader>
@@ -778,10 +777,10 @@ function MapPageContent() {
                               <div className={`w-2 h-2 rounded-full ${site.status === SiteStatus.ACTIVE ? 'bg-green-500' : 'bg-gray-400'}`} />
                               <span className="text-muted-foreground">{getSiteStatusLabel(site.status || SiteStatus.ACTIVE)}</span>
                             </div>
-                            {site.metadata.type === SiteType.PHYSICAL && 'settlementId' in site.metadata && (
+                            {site.type === SiteType.PHYSICAL && (
                               <div className="text-xs text-muted-foreground">
                                 <MapPin className="h-3 w-3 inline mr-1" />
-                                {site.metadata.settlementId}
+                                {site.settlementId}
                               </div>
                             )}
                             <div className="text-xs text-muted-foreground font-mono">

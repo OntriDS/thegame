@@ -54,7 +54,7 @@ interface CharacterModalProps {
 
 /**
  * CharacterModal
- * Character management (Roles, Contact Info, CP, Achievements)
+ * Character management (Roles, Contact Info, CP, Qualifications)
  */
 export default function CharacterModal({ character, open, onOpenChange, onSave }: CharacterModalProps) {
   // Get current user authentication
@@ -89,9 +89,8 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   const draftId = useRef(character?.id || uuid());
 
   // V0.1 Core - Game Mechanics (Character-specific only!)
-  const [purchasedAmount, setPurchasedAmount] = useState<number>(0);
   const [CP, setCP] = useState<number | undefined>(undefined);
-  const [achievementsCharacter, setAchievementsCharacter] = useState<string[]>([]);
+  const [characterQualifications, setCharacterQualifications] = useState<string[]>([]);
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
 
   const [showInventoryModal, setShowInventoryModal] = useState(false);
@@ -152,7 +151,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           let initialRoles = normalizedRoles;
 
           setRoles(initialRoles);
-          setPurchasedAmount(character?.purchasedAmount ?? 0);
           setCP(character?.CP);
 
           // Reset init guard when editing
@@ -170,7 +168,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           setContactPhone('');
           setContactEmail('');
           setRoles([]); // Roles optional; CUSTOMER is granted via sales / store purchase, not by default
-          setPurchasedAmount(0);
           setCP(undefined);
           setJungleCoinsBalance(0);
         }
@@ -277,10 +274,9 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
 
         // Character Progression
         CP,
-        achievements: character?.achievements || [],
+        qualifications: character?.qualifications || [],
 
         // V0.1 required - Character-specific only
-        purchasedAmount,
         inventory: (character as any)?.inventory || [], // Empty array for new characters
 
         // Player entity link: unchanged on edit; absent on create (this modal does not assign Player rows).
@@ -522,40 +518,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
               </div>
             </div>
           </div>
-
-          {/* Customer Purchase Section (Conditional) */}
-          {isCustomer && (
-            <div className="border-t pt-4 mt-4">
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-sm font-semibold">Customer Purchase Data</Label>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowCustomerPurchase(!showCustomerPurchase)}
-                  className="h-7 text-xs"
-                >
-                  {showCustomerPurchase ? 'Hide' : 'Show'} Purchase Data
-                </Button>
-              </div>
-
-              {showCustomerPurchase && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="purchased-amount" className="text-xs">Purchased Amount ($)</Label>
-                    <NumericInput
-                      id="purchased-amount"
-                      value={purchasedAmount}
-                      onChange={setPurchasedAmount}
-                      placeholder="0.00"
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
 
           <DialogFooter className="flex items-center justify-between">
             <div className="flex items-center gap-4">

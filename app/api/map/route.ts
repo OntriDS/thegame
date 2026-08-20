@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { EntityType, LinkType, SiteType, SiteStatus } from '@/types/enums';
-import type { Settlement, PhysicalSiteMetadata } from '@/types/entities';
+import { EntityType, LinkType, SiteType, SiteStatus, PhysicalBusinessType } from '@/types/enums';
+import type { Settlement } from '@/types/entities';
 import { getAllRegions, getAllSettlements, getAllSites, getCharacterById } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { getLinksFor } from '@/links/link-registry';
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     ]);
 
     const physicalSites = sites.filter((site) => (
-      site.status === SiteStatus.ACTIVE && site.metadata.type === SiteType.PHYSICAL
+      site.status === SiteStatus.ACTIVE && site.type === SiteType.PHYSICAL
     ));
 
     const adminRegions = regions.filter((region) => region.isActive);
@@ -110,8 +110,7 @@ export async function GET(req: NextRequest) {
           return { id: ownerId, name: ownerName };
         })
         .filter((owner): owner is MapMarkerOwner => Boolean(owner));
-    const metadata = site.metadata as PhysicalSiteMetadata;
-      const settlement = metadata.settlementId ? activeSettlementsById.get(metadata.settlementId) : undefined;
+      const settlement = site.settlementId ? activeSettlementsById.get(site.settlementId) : undefined;
       if (!settlement || settlement.isUnlocked !== true) {
         continue;
       }
@@ -130,14 +129,14 @@ export async function GET(req: NextRequest) {
       }
 
       // Use precise site coordinates if available, otherwise fall back to settlement coordinates
-      const siteLat = metadata.coordinates?.lat ?? settlement.coordinates.lat;
-      const siteLng = metadata.coordinates?.lng ?? settlement.coordinates.lng;
+      const siteLat = site.coordinates?.lat ?? settlement.coordinates.lat;
+      const siteLng = site.coordinates?.lng ?? settlement.coordinates.lng;
 
       markers.push({
         siteId: site.id,
         siteName: site.name,
         siteType: SiteType.PHYSICAL,
-        businessType: metadata.businessType,
+        businessType: site.subtype as PhysicalBusinessType,
         settlementId: settlement.id,
         regionId: settlement.regionId,
         lat: siteLat,

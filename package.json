@@ -17,7 +17,14 @@
     "test:entity:full-collected": "vitest run tests/entity-test/task-entity-test-full-collected.ts",
     "test:entity:failed-negative": "vitest run tests/entity-test/task-entity-test-failed-negative.ts",
     "test:entity:item-manual-sold": "vitest run tests/entity-test/item-entity-test-manual-sold.ts",
-    "test:entity:character-clean": "vitest run tests/entity-test/character-entity-test-clean.ts"
+    "test:entity:character-clean": "vitest run tests/entity-test/character-entity-test-clean.ts",
+    "test:entity:character-full": "vitest run tests/entity-test/character-entity-test-full.ts",
+    "test:entity:player-clean": "vitest run tests/entity-test/player-entity-test-clean.ts",
+    "test:entity:player-full": "vitest run tests/entity-test/player-entity-test-full.ts",
+    "test:entity:site-clean": "vitest run tests/entity-test/site-entity-test-clean.ts",
+    "test:entity:site-full": "vitest run tests/entity-test/site-entity-test-full.ts",
+    "test:entity:direct-sale-clean": "vitest run tests/entity-test/direct-sale-entity-test-clean.ts",
+    "test:entity:direct-sale-full": "vitest run tests/entity-test/direct-sale-entity-test-full.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.758.0",

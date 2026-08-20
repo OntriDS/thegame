@@ -190,7 +190,7 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
     // Build CREATED log payload with standard pattern (name, type, status, then type-specific fields)
     const logPayload: any = {
       name: site.name || 'Unnamed Site',
-      type: site.metadata?.type || 'UNKNOWN',
+      type: site.type || 'UNKNOWN',
       status: site.status || SiteStatus.ACTIVE
     };
     
@@ -200,16 +200,16 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
     }
     
     // Add type-specific metadata fields based on site type
-    if (site.metadata) {
-      if (site.metadata.type === SiteType.PHYSICAL && 'businessType' in site.metadata) {
-        logPayload.businessType = site.metadata.businessType;
-        if (site.metadata.settlementId) {
-          logPayload.settlementId = site.metadata.settlementId;
+    if (site.type) {
+      if (site.type === SiteType.PHYSICAL) {
+        logPayload.businessType = site.subtype;
+        if (site.settlementId) {
+          logPayload.settlementId = site.settlementId;
         }
-      } else if (site.metadata.type === SiteType.DIGITAL_SITE && 'digitalType' in site.metadata) {
-        logPayload.digitalType = site.metadata.digitalType;
-      } else if (site.metadata.type === SiteType.SYSTEM && 'systemType' in site.metadata) {
-        logPayload.systemType = site.metadata.systemType;
+      } else if (site.type === SiteType.DIGITAL_SITE) {
+        logPayload.digitalType = site.subtype;
+      } else if (site.type === SiteType.SYSTEM) {
+        logPayload.systemType = site.subtype;
       }
     }
     
@@ -236,13 +236,12 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
   // Lean identity fields changed — cascade patch ALL log entries across ALL months and events
   if (previousSite) {
     const getLeanFields = (s: Site) => {
-      const meta = s.metadata as any || {};
       return {
         name: s.name || 'Unknown',
-        type: meta.type || 'Unknown',
-        businessType: meta.businessType || meta.digitalType || meta.systemType || 'Unknown',
-        url: (s as any).url || meta.url || '',
-        settlementId: meta.settlementId || null
+        type: s.type || 'Unknown',
+        businessType: s.subtype || 'Unknown',
+        url: s.url || '',
+        settlementId: s.settlementId || null
       };
     };
 

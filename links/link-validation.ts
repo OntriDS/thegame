@@ -30,7 +30,8 @@ export interface LinkValidationResult {
 export async function validateLink(
   linkType: LinkType,
   source: { type: EntityType; id: string },
-  target: { type: EntityType; id: string }
+  target: { type: EntityType; id: string },
+  relationship?: string
 ): Promise<LinkValidationResult> {
   const warnings: string[] = [];
 
@@ -78,7 +79,7 @@ export async function validateLink(
     }
 
     // 5. Business rules validation
-    const businessRulesResult = await validateBusinessRules(linkType, source, target);
+    const businessRulesResult = await validateBusinessRules(linkType, source, target, relationship);
     if (!businessRulesResult.isValid) {
       return {
         isValid: false,
@@ -353,7 +354,8 @@ async function checkReverseDuplicate(
 export async function validateBusinessRules(
   linkType: LinkType,
   source: { type: EntityType; id: string },
-  target: { type: EntityType; id: string }
+  target: { type: EntityType; id: string },
+  relationship?: string
 ): Promise<LinkValidationResult> {
   const warnings: string[] = [];
 
@@ -422,12 +424,12 @@ export async function validateBusinessRules(
       case 'SALE_CHARACTER': {
         const saleWithChar = await getSaleById(source.id);
         if (saleWithChar) {
-          const ok =
-            getSaleCharacterId(saleWithChar) === target.id ||
-            saleWithChar.partnerId === target.id;
+          const ok = relationship === 'owner'
+            ? saleWithChar.ownerId === target.id
+            : getSaleCharacterId(saleWithChar) === target.id || saleWithChar.partnerId === target.id;
           if (!ok) {
             warnings.push(
-              `Sale ${source.id} character link target ${target.id} is not customer or partner on the sale`
+              `Sale ${source.id} character link target ${target.id} is not the declared ${relationship || 'customer'} Character`
             );
           }
         }

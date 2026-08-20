@@ -542,7 +542,18 @@ export class IAMService {
 
     let character = await dsGetCharacterById(characterId);
     if (!character) throw new Error('Character not found in Game Data-Store');
-    if (character.accountId && character.accountId !== accountId) {
+    // ACCOUNT_CHARACTER is authoritative. The embedded accountId is only a
+    // temporary compatibility pointer for legacy records.
+    const characterLinks = await getLinksFor({ type: EntityType.CHARACTER, id: characterId });
+    const canonicalCharacterLink = characterLinks.find((link) =>
+      link.linkType === LinkType.ACCOUNT_CHARACTER &&
+      link.source.type === EntityType.ACCOUNT &&
+      link.target.type === EntityType.CHARACTER
+    );
+    if (canonicalCharacterLink && canonicalCharacterLink.source.id !== accountId) {
+      throw new Error('Character is already linked to another account');
+    }
+    if (!canonicalCharacterLink && character.accountId && character.accountId !== accountId) {
       throw new Error('Character is already linked to another account');
     }
     const now = getUTCNow();
@@ -558,7 +569,7 @@ export class IAMService {
         );
       }
     }
-    if (!character.accountId) {
+    if (character.accountId !== accountId) {
       await upsertCharacter(
         {
           ...character,
@@ -593,6 +604,7 @@ export class IAMService {
       linkType: LinkType.ACCOUNT_CHARACTER,
       source: { type: EntityType.ACCOUNT, id: accountId },
       target: { type: EntityType.CHARACTER, id: characterId },
+      relationship: 'primary',
       createdAt: now,
     };
     await rosettaCreateLink(link, { skipValidation: true });
@@ -605,29 +617,61 @@ export class IAMService {
 
   /**
    * Resolve the Game Data-Store character for an IAM account.
-   * Fast path: account.characterId → direct DS lookup.
-   * Fallback: query ACCOUNT_CHARACTER links in Rosetta Stone.
+   * Canonical path: ACCOUNT_CHARACTER Link → Character.
+   * Compatibility fallback: account.characterId → direct DS lookup, followed
+   * by Link repair for legacy records.
    */
   async resolveCharacterForAccount(accountId: string): Promise<GameCharacter | null> {
     const account = await this.getAccountById(accountId);
     if (!account) return null;
 
+    const links = await getLinksFor({ type: EntityType.ACCOUNT, id: accountId });
+    const acLink = links.find(l =>
+      l.linkType === LinkType.ACCOUNT_CHARACTER &&
+      l.source.type === EntityType.ACCOUNT &&
+      l.source.id === accountId &&
+      l.target.type === EntityType.CHARACTER
+    );
+    if (acLink) {
+      const char = await dsGetCharacterById(acLink.target.id);
+      if (!char) return null;
+      if (account.characterId !== char.id) {
+        account.characterId = char.id;
+        account.updatedAt = toUTCISOString(getUTCNow());
+        await kvSet(buildAccountKey(accountId), account);
+      }
+      if (char.accountId !== accountId) {
+        await upsertCharacter(
+          { ...char, accountId, updatedAt: getUTCNow() },
+          { skipWorkflowEffects: true, skipLinkEffects: true }
+        );
+      }
+      return (await dsGetCharacterById(char.id))!;
+    }
+
+    // Legacy fallback: repair the missing canonical Link when the old pointer
+    // still resolves to a real Character.
     if (account.characterId) {
       const char = await dsGetCharacterById(account.characterId);
-      if (char) return char;
+      if (char) {
+        await rosettaCreateLink({
+          id: uuidv4(),
+          linkType: LinkType.ACCOUNT_CHARACTER,
+          source: { type: EntityType.ACCOUNT, id: accountId },
+          target: { type: EntityType.CHARACTER, id: char.id },
+          relationship: 'primary',
+          createdAt: getUTCNow(),
+        }, { skipValidation: true });
+        if (char.accountId !== accountId) {
+          await upsertCharacter(
+            { ...char, accountId, updatedAt: getUTCNow() },
+            { skipWorkflowEffects: true, skipLinkEffects: true }
+          );
+        }
+        return (await dsGetCharacterById(char.id))!;
+      }
     }
-
-    const links = await getLinksFor({ type: EntityType.ACCOUNT, id: accountId });
-    const acLink = links.find(l => l.linkType === LinkType.ACCOUNT_CHARACTER);
-    if (!acLink) return null;
-
-    const char = await dsGetCharacterById(acLink.target.id);
-    if (char && !account.characterId) {
-      account.characterId = char.id;
-      account.updatedAt = toUTCISOString(getUTCNow());
-      await kvSet(buildAccountKey(accountId), account);
-    }
-    return char;
+    return null;
   }
 
   // ═══════════════════════════════════════════════════════════════

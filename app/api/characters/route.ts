@@ -3,15 +3,15 @@ import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { iamService } from '@/lib/iam-service';
-import { CharacterRole, EntityType, LinkType } from '@/types/enums';
+import { CharacterRole, EntityType, FinancialStatus, LinkType, SaleStatus } from '@/types/enums';
 import { characterHasSpecialRole, normalizeCharacterRole } from '@/lib/character-roles';
 import { canGrantSpecialRole, getRoleGrantDenialReason } from '@/lib/game-mechanics/roles-rules';
-import { getAllCharacters, getCharacterById, upsertCharacter, getAllFinancials, getFinancialById } from '@/data-store/datastore';
+import { getAllCharacters, getCharacterById, upsertCharacter, getFinancialById, getSaleById } from '@/data-store/datastore';
 import type { Character } from '@/types/entities';
 import { getLinksFor } from '@/links/link-registry';
 import { getUTCNow } from '@/lib/utils/utc-utils';
-import { getFinancialCounterpartyId, getFinancialCounterpartyRole } from '@/lib/financial-record-counterparty-id';
 import { extractMoneyValue } from '@/lib/utils/financial-utils';
+import { getSaleCharacterId } from '@/lib/sale-character-id';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,11 +50,6 @@ const getRoleSortValue = (character: Character): string => {
     .toLowerCase();
 };
 
-const isCustomerRole = (role?: string | null): boolean => {
-  const normalized = normalizeCharacterRole(role);
-  return normalized == null || normalized === CharacterRole.CUSTOMER;
-};
-
 const buildDirectoryRoleCounts = (characters: Character[]): Record<string, number> => {
   const result: Record<string, number> = {};
   for (const character of characters) {
@@ -75,35 +70,56 @@ const buildDirectoryAmountTotals = async (characterIds: string[]): Promise<Map<s
 
   if (characterIds.length === 0) return totals;
 
-  // Charged amount: based on customer-character relations from Financial records
-  const financials = await getAllFinancials();
-  for (const record of financials) {
-    const customerCharacterId = getFinancialCounterpartyId(record);
-    if (!customerCharacterId || !idSet.has(customerCharacterId)) continue;
-    if (!isCustomerRole(getFinancialCounterpartyRole(record))) continue;
-
-    const amount = extractMoneyValue(record.revenue);
-    if (!Number.isFinite(amount) || amount <= 0) continue;
-    const current = totals.get(customerCharacterId);
-    if (!current) continue;
-    current.purchasedAmount += amount;
-  }
-
-  // Beneficiary paid amount: based on FINREC links + record cost
-  const financialIdToCharacterIds = new Map<string, Set<string>>();
   const characterLinks = await Promise.all(
     characterIds.map((characterId) =>
       getLinksFor({
         type: EntityType.CHARACTER,
         id: characterId
       })
-        .then((links) => ({ characterId, links }))
+      .then((links) => ({ characterId, links }))
     )
   );
+
+  // Charged amount: SALE_CHARACTER links identify the related character;
+  // Sale.characterId still distinguishes the customer link from a partner
+  // link, and Sale.totals.totalRevenue supplies the commercial amount.
+  const saleIdsByCharacter = new Map<string, Set<string>>();
+  for (const { characterId, links } of characterLinks) {
+    for (const link of links) {
+      if (![LinkType.SALE_CHARACTER, LinkType.CHARACTER_SALE].includes(link.linkType)) continue;
+      const saleId = link.source.type === EntityType.SALE
+        ? link.source.id
+        : link.target.type === EntityType.SALE
+          ? link.target.id
+          : null;
+      if (!saleId) continue;
+      const saleIds = saleIdsByCharacter.get(characterId) || new Set<string>();
+      saleIds.add(saleId);
+      saleIdsByCharacter.set(characterId, saleIds);
+    }
+  }
+
+  for (const [characterId, saleIds] of saleIdsByCharacter) {
+    for (const saleId of saleIds) {
+      const sale = await getSaleById(saleId);
+      if (!sale || sale.status !== SaleStatus.CHARGED && sale.status !== SaleStatus.COLLECTED) continue;
+      if (getSaleCharacterId(sale) !== characterId) continue;
+
+      const amount = extractMoneyValue(sale.totals?.totalRevenue);
+      if (!Number.isFinite(amount) || amount <= 0) continue;
+      const current = totals.get(characterId);
+      if (current) current.purchasedAmount += amount;
+    }
+  }
+
+  // Beneficiary paid amount: canonical FINREC_CHARACTER links identify the
+  // beneficiary and FinancialRecord.cost supplies the payout value.
+  const financialIdToCharacterIds = new Map<string, Set<string>>();
 
   for (const { characterId, links } of characterLinks) {
     for (const link of links) {
       if (![LinkType.FINREC_CHARACTER, LinkType.CHARACTER_FINREC].includes(link.linkType)) continue;
+      if (String(link.relationship || '').toLowerCase() !== 'beneficiary') continue;
 
       const financialRecordId = link.source.type === EntityType.FINANCIAL
         ? link.source.id
@@ -125,16 +141,13 @@ const buildDirectoryAmountTotals = async (characterIds: string[]): Promise<Map<s
   for (const financial of beneficiaryFinancials) {
     if (!financial) continue;
 
-      // Ensure that this cost is only attributed as a payout if they are NOT the customer in this transaction.
-      // E.g., gateway commissions on a sale should not be treated as a payout to the customer.
-      if (isCustomerRole(getFinancialCounterpartyRole(financial))) continue;
+    const amount = extractMoneyValue(financial.cost);
+    if (!Number.isFinite(amount) || amount === 0) continue;
+    if (financial.status !== FinancialStatus.DONE && financial.status !== FinancialStatus.COLLECTED) continue;
 
-      const amount = extractMoneyValue(financial.cost);
-      if (!Number.isFinite(amount) || amount === 0) continue;
-
-      // Costs are stored as negative values in this codebase, so convert for payout totals.
-      const paidAmount = Math.abs(amount);
-      if (paidAmount <= 0) continue;
+    // Costs are stored as negative values in this codebase, so convert for payout totals.
+    const paidAmount = Math.abs(amount);
+    if (paidAmount <= 0) continue;
 
     const linkedCharacters = financialIdToCharacterIds.get(financial.id);
     if (!linkedCharacters) continue;
@@ -142,7 +155,7 @@ const buildDirectoryAmountTotals = async (characterIds: string[]): Promise<Map<s
     for (const characterId of linkedCharacters) {
       const current = totals.get(characterId);
       if (!current) continue;
-        current.beneficiaryPaidAmount += paidAmount;
+      current.beneficiaryPaidAmount += paidAmount;
     }
   }
 

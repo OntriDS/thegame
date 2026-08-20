@@ -1,0 +1,98 @@
+{
+  "character": {
+    "id": "entity-test-character-full",
+    "schemaVersion": 1,
+    "version": 0,
+    "name": "testing-character-full",
+    "description": "Full Character entity test",
+    "accountId": "entity-test-account",
+    "contactEmail": "character-full@example.test",
+    "contactPhone": "+50688889999",
+    "contactPhoneCountryCode": "+506",
+    "roles": [
+      "customer",
+      "gamer"
+    ],
+    "commColor": "blue",
+    "CP": 12,
+    "MP": 4,
+    "skills": {
+      "logic": 3,
+      "design-thinking": 2
+    },
+    "qualifications": [
+      {
+        "id": "qualification-game-demo",
+        "name": "Designed a videogame demo",
+        "description": "Evidence used for role progression.",
+        "createdAt": "2026-08-18T01:39:52.312Z"
+      }
+    ],
+    "lastActiveAt": "2026-08-19T01:39:52.312Z",
+    "isActive": true,
+    "createdAt": "2026-08-19T01:39:52.312Z",
+    "updatedAt": "2026-08-19T01:39:52.312Z"
+  },
+  "links": [
+    {
+      "id": "17808011-31ee-449d-8045-751baf756d30",
+      "linkType": "CHARACTER_PLAYER",
+      "source": {
+        "type": "character",
+        "id": "entity-test-character-full"
+      },
+      "target": {
+        "type": "player",
+        "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
+      },
+      "relationship": "primary",
+      "createdAt": "2026-08-19T01:39:58.860Z"
+    },
+    {
+      "id": "1287bfd2-0fe5-46bd-8ad8-ce484b083489",
+      "linkType": "CHARACTER_SITE",
+      "source": {
+        "type": "character",
+        "id": "entity-test-character-full"
+      },
+      "target": {
+        "type": "site",
+        "id": "hq"
+      },
+      "relationship": "owns",
+      "createdAt": "2026-08-19T01:40:00.704Z"
+    }
+  ],
+  "playerLinks": [
+    {
+      "id": "17808011-31ee-449d-8045-751baf756d30",
+      "linkType": "CHARACTER_PLAYER",
+      "source": {
+        "type": "character",
+        "id": "entity-test-character-full"
+      },
+      "target": {
+        "type": "player",
+        "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
+      },
+      "relationship": "primary",
+      "createdAt": "2026-08-19T01:39:58.860Z"
+    }
+  ],
+  "siteLinks": [
+    {
+      "id": "1287bfd2-0fe5-46bd-8ad8-ce484b083489",
+      "linkType": "CHARACTER_SITE",
+      "source": {
+        "type": "character",
+        "id": "entity-test-character-full"
+      },
+      "target": {
+        "type": "site",
+        "id": "hq"
+      },
+      "relationship": "owns",
+      "createdAt": "2026-08-19T01:40:00.704Z"
+    }
+  ]
+}

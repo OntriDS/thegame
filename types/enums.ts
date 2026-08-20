@@ -538,6 +538,7 @@ export const CHARACTER_ROLE_TYPES = {
 } as const;
 
 export enum CognitiveSkill {
+  DISCIPLINE = 'discipline',      // Consistency and focus
   LOGIC = 'logic',          // Analytical reasoning and deduction
   PERCEPTION = 'perception',     // Reaction and situational awareness
   VISION = 'vision',          // Foresight and macro-perspective
@@ -564,26 +565,28 @@ export enum EmotionalSkill {
   CHARISMA = 'charisma',       // Charm and interpersonal magnetism
   LEADERSHIP = 'leadership',     // Authority and guiding presence
   COMMUNICATION = 'communication',  // Rhetoric and clear articulation
+  AUTO_CRITIC = 'auto-criticism',   // Self-criticism
 }
 
-export enum PracticalSkill {
+export enum TechnicalSkill {
+  EFFICIENCY = 'efficiency',   // Coefficient of performance in Task Completion/Time to complete
   FITNESS = 'fitness',        // Physical health and strength
-  DESIGN_THINKING = 'design-thinking',
-  PROJECT_MANAGEMENT = 'project-management',
-  TEACHING = 'teaching',
-  NEGOTIATION = 'negotiation',
-  NARRATIVE = 'narrative',
-  DEVELOPING = 'developing',
-  HANDCRAFTING = 'handcrafting',
-  PAINTING = 'painting',
-  ILLUSTRATION = 'illustration',
+  DESIGN_THINKING = 'design-thinking', // Creativity with structure
+  PROJECT_MANAGEMENT = 'project-management', // Planning and execution
+  TEACHING = 'teaching',       // Educate or train others
+  NEGOTIATION = 'negotiation',   // Influence and agreement
+  NARRATIVE = 'narrative',     // Storytelling
+  DEVELOPING = 'developing',   // Building/creating
+  HANDCRAFTING = 'handcrafting', // Manual creation
+  PAINTING = 'painting',       // Visual artworks creation
+  ILLUSTRATION = 'illustration', // Visual art illustrations creation
 }
 
 /** Skills categories for UI organization and SearchableSelect grouping */
 export const SKILLS_CATEGORIES = {
   COGNITIVE: Object.values(CognitiveSkill),
   EMOTIONAL: Object.values(EmotionalSkill),
-  PRACTICAL: Object.values(PracticalSkill),
+  TECHNICAL: Object.values(TechnicalSkill),
 } as const;
 
 export enum CommColor {
@@ -629,8 +632,8 @@ export enum LinkType {
   SALE_TASK = 'SALE_TASK',      // Sale created Task
   SALE_ITEM = 'SALE_ITEM',      // Sale sold Item
   SALE_FINREC = 'SALE_FINREC',    // Sale linked to Financial Record
-  SALE_PLAYER = 'SALE_PLAYER',    // Sale earned Player points (only for PLAYERS)
-  SALE_CHARACTER = 'SALE_CHARACTER', // Sale customer is Character (customer, team member, etc.)
+  SALE_PLAYER = 'SALE_PLAYER',    // Legacy: Sale earned Player points; use SALE_CHARACTER(owner) instead
+  SALE_CHARACTER = 'SALE_CHARACTER', // Sale customer/owner Character
   SALE_BUSINESS = 'SALE_BUSINESS',   // Sale counterparty is a Business
   SALE_SITE = 'SALE_SITE',      // Sale is performed at a Site
 

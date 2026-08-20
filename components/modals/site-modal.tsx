@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import { Site, PhysicalSiteMetadata, DigitalSiteMetadata, SystemSiteMetadata, Settlement, Region } from '@/types/entities';
+import { Site, Settlement, Region } from '@/types/entities';
 import {
   SiteType,
   SiteStatus,
@@ -49,7 +49,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
   // Helper to check if site is the protected "None" system site
   const isNoneSite = (site: Site | null | undefined): boolean => {
     if (!site) return false;
-    return site.metadata.type === SiteType.SYSTEM && (site.name === 'None' || site.id === 'none');
+    return site.type === SiteType.SYSTEM && (site.name === 'None' || site.id === 'none');
   };
 
   const [name, setName] = useState('');
@@ -136,22 +136,19 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
         setName(site.name || '');
         setDescription(site.description || '');
         setStatus((site.status as SiteStatus) || SiteStatus.ACTIVE);
-        setSiteType(site.metadata.type);
+        setSiteType(site.type);
 
         // Load type-specific fields
-        if (site.metadata.type === SiteType.PHYSICAL) {
-          const pMeta = site.metadata as PhysicalSiteMetadata;
-          setSettlementId(pMeta.settlementId || '');
-          setBusinessType(pMeta.businessType);
-          setGoogleMapsAddress(pMeta.googleMapsAddress || '');
-          setCoordinates(pMeta.coordinates || null);
-        } else if (site.metadata.type === SiteType.DIGITAL_SITE) {
-          const digitalMeta = site.metadata as DigitalSiteMetadata;
-          setDigitalType(digitalMeta.digitalType || DigitalSiteType.REPOSITORY);
-          setDigitalUrl(digitalMeta.url || '');
-        } else if (site.metadata.type === SiteType.SYSTEM) {
-          const systemMeta = site.metadata as SystemSiteMetadata;
-          setSystemPurpose(systemMeta.systemType || SystemSiteType.UNIVERSAL_TRACKING);
+        if (site.type === SiteType.PHYSICAL) {
+          setSettlementId(site.settlementId || '');
+          setBusinessType(site.subtype as PhysicalBusinessType);
+          setGoogleMapsAddress(site.googleMapsAddress || '');
+          setCoordinates(site.coordinates || null);
+        } else if (site.type === SiteType.DIGITAL_SITE) {
+          setDigitalType(site.subtype as DigitalSiteType || DigitalSiteType.REPOSITORY);
+          setDigitalUrl(site.url || '');
+        } else if (site.type === SiteType.SYSTEM) {
+          setSystemPurpose(site.subtype as SystemSiteType || SystemSiteType.UNIVERSAL_TRACKING);
           setDigitalUrl('');
         }
         
@@ -193,38 +190,23 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
     setIsSaving(true);
 
     try {
-      // Build metadata based on site type
-      let metadata;
-
-      if (siteType === SiteType.PHYSICAL) {
-        metadata = {
-          type: SiteType.PHYSICAL,
-          businessType,
-          settlementId,
-          googleMapsAddress,
-          coordinates: coordinates && Number.isFinite(coordinates.lat) && Number.isFinite(coordinates.lng)
-            ? coordinates
-            : undefined
-        } as PhysicalSiteMetadata;
-      } else if (siteType === SiteType.DIGITAL_SITE) {
-        metadata = {
-          type: SiteType.DIGITAL_SITE,
-          digitalType,
-          url: digitalUrl
-        } as DigitalSiteMetadata & { url: string };
-      } else {
-        metadata = {
-          type: SiteType.SYSTEM,
-          systemType: systemPurpose
-        } as SystemSiteMetadata;
-      }
-
       const siteData: Site = {
         id: site?.id || `site-${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`,
         name,
         description,
+        type: siteType,
+        subtype: siteType === SiteType.PHYSICAL ? businessType
+          : siteType === SiteType.DIGITAL_SITE ? digitalType
+            : systemPurpose,
+        ...(siteType === SiteType.PHYSICAL ? {
+          settlementId,
+          googleMapsAddress,
+          coordinates: coordinates && Number.isFinite(coordinates.lat) && Number.isFinite(coordinates.lng)
+            ? coordinates
+            : undefined,
+        } : {}),
+        ...(siteType === SiteType.DIGITAL_SITE ? { url: digitalUrl } : {}),
         status,
-        metadata,
         createdAt: site?.createdAt || new Date(),
         updatedAt: new Date(),
       } as unknown as Site;

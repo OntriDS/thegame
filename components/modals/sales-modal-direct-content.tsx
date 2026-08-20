@@ -204,15 +204,6 @@ export default function SalesModalDirectContent({
 
         {whatKind === 'product' && (
           <>
-            <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'} mb-2`}>
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ambassadors</div>
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ambassadors</div>
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ambassadors</div>
-              {emissaryColumnExpanded && (
-                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Emissaries</div>
-              )}
-            </div>
-
             <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -468,15 +459,6 @@ export default function SalesModalDirectContent({
 
         {whatKind === 'service' && (
           <>
-            <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'} mb-2`}>
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ambassadors</div>
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ambassadors</div>
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ambassadors</div>
-              {emissaryColumnExpanded && (
-                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Emissaries</div>
-              )}
-            </div>
-
             <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -641,7 +623,7 @@ export default function SalesModalDirectContent({
               {emissaryColumnExpanded && (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-xs">Sale Player Points (SALE_PLAYER)</Label>
+                    <Label className="text-xs">Owner Rewards</Label>
                     <div className="grid grid-cols-4 gap-2">
                       <div>
                         <Label htmlFor="service-reward-xp" className="text-xs">XP</Label>

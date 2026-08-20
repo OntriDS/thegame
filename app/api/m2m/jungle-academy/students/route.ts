@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import { requireProvisioningM2MAuth } from '@/lib/api-auth';
-import { kvGet, kvSet, kvSAdd, kvSMembers, kvMGet } from '@/lib/utils/kv';
+import { kvGet, kvSet, kvSAdd, kvSMembers, kvMGet, kvDel, kvSRem } from '@/lib/utils/kv';
 import { JungleStudent, JungleGroupId } from '@/types/jungle-academy';
 
 export const dynamic = 'force-dynamic';
@@ -97,5 +97,32 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[Jungle Academy] POST student failed:', error);
     return NextResponse.json({ success: false, error: 'Failed to create student' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  if (!(await requireProvisioningM2MAuth(request))) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return NextResponse.json({ success: false, error: 'Missing student id' }, { status: 400 });
+  }
+
+  try {
+    // Remove student data
+    await kvDel(getStudentKey(id));
+
+    // Remove from all groups
+    const groups: string[] = ['all', 'eep', 'group-a', 'group-b', 'group-c'];
+    await Promise.all(groups.map(g => kvSRem(getGroupKey(g), id)));
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('[Jungle Academy] DELETE student failed:', error);
+    return NextResponse.json({ success: false, error: 'Failed to delete student' }, { status: 500 });
   }
 }

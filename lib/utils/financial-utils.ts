@@ -78,6 +78,52 @@ export function roundSaleTotals(sale: Sale): Sale {
   return { ...sale, totals: next };
 }
 
+/** Validate the commercial amounts carried by a Direct Sale. */
+export function getSaleFinancialConsistencyIssues(sale: Sale): string[] {
+  const issues: string[] = [];
+  const lineSubtotal = (sale.lines || []).reduce((sum, line: any) => {
+    if (line.kind === 'service') return sum + extractMoneyValue(line.revenue);
+    if (line.kind === 'item') return sum + extractMoneyValue(line.unitPrice) * Number(line.quantity || 0);
+    return sum;
+  }, 0);
+  const subtotal = extractMoneyValue(sale.totals?.subtotal);
+  const discount = extractMoneyValue(sale.totals?.discountTotal);
+  const tax = extractMoneyValue(sale.totals?.taxTotal);
+  const totalRevenue = extractMoneyValue(sale.totals?.totalRevenue);
+  const expectedTotal = lineSubtotal - discount + tax;
+  const close = (a: number, b: number) => Math.abs(a - b) <= 0.01;
+
+  if (!close(lineSubtotal, subtotal)) {
+    issues.push(`subtotal ${subtotal} does not match line subtotal ${lineSubtotal}`);
+  }
+  if (!close(expectedTotal, totalRevenue)) {
+    issues.push(`totalRevenue ${totalRevenue} does not match subtotal - discount + tax ${expectedTotal}`);
+  }
+
+  const isSettled = sale.status === 'charged' || sale.status === 'collected';
+  const totalCurrency = (sale.totals?.totalRevenue as any)?.currency;
+  const payments = sale.payments || [];
+  if (isSettled && payments.length > 0 && payments.every(payment => !totalCurrency || payment.amount.currency === totalCurrency)) {
+    const paid = payments.reduce((sum, payment) => sum + extractMoneyValue(payment.amount), 0);
+    if (!close(paid, totalRevenue)) {
+      issues.push(`payments ${paid} do not match totalRevenue ${totalRevenue}`);
+    }
+  }
+
+  const breakdown = sale.context?.paymentBreakdown;
+  if (isSettled && breakdown && totalCurrency) {
+    const breakdownAmounts = Object.values(breakdown).filter(Boolean) as any[];
+    const sameCurrency = breakdownAmounts.every(amount => !amount.currency || amount.currency === totalCurrency);
+    const breakdownTotal = sameCurrency
+      ? breakdownAmounts.reduce((sum, amount) => sum + extractMoneyValue(amount), 0)
+      : 0;
+    if (breakdownTotal > 0 && !close(breakdownTotal, totalRevenue)) {
+      issues.push(`paymentBreakdown ${breakdownTotal} does not match totalRevenue ${totalRevenue}`);
+    }
+  }
+  return issues;
+}
+
 // ============================================================================
 // SHARED TYPES
 // ============================================================================
