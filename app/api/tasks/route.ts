@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
         (taskBody as any).outputItemId
       )
     );
-    const rewardPoints = rawContext.rewardIntent?.points;
+    const rewardPoints = (rawContext.rewardIntent?.points || null) as Record<string, unknown> | null;
     const hasRewardIntent = Boolean(
       rewardPoints && hasNonZeroTaskPoints(rewardPoints)
     );
@@ -176,7 +176,6 @@ export async function POST(req: NextRequest) {
 
     const existingTask = taskBody.id ? await getTaskById(taskBody.id) : null;
     const requestedStatus = taskBody.status as TaskStatus | undefined;
-    const rewardPoints = ((taskBody.context as any)?.rewardIntent?.points || null) as Record<string, unknown> | null;
     const rewardValidation = validateTaskRewardStatus(requestedStatus, rewardPoints);
     if (rewardValidation) return NextResponse.json(rewardValidation, { status: 400 });
     const isTerminalStatus = (status?: TaskStatus) =>
