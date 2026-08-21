@@ -125,7 +125,7 @@ describe('entity-test: full Task at created status', () => {
     expect(task).not.toHaveProperty('playerCharacterId');
     expect(task.context).not.toHaveProperty('counterparty');
     expect(links).toEqual(expect.arrayContaining([
-      expect.objectContaining({ linkType: 'TASK_SITE' }),
+      expect.objectContaining({ linkType: 'TASK_SITE', relationship: 'performed-at' }),
       expect.objectContaining({ linkType: 'TASK_CHARACTER', relationship: 'owner' }),
       expect.objectContaining({ linkType: 'TASK_CHARACTER', relationship: 'beneficiary' }),
     ]));

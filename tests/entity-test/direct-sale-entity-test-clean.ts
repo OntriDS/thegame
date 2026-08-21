@@ -83,7 +83,7 @@ describe('entity-test: minimal Direct Sale', () => {
     });
     expect(saved.siteId).toBe(site.id);
     expect(await getLinksFor({ type: EntityType.SALE, id: productSaleId })).toEqual(
-      expect.arrayContaining([expect.objectContaining({ linkType: 'SALE_SITE', target: { type: EntityType.SITE, id: site.id } })])
+      expect.arrayContaining([expect.objectContaining({ linkType: 'SALE_SITE', relationship: 'sold-at', target: { type: EntityType.SITE, id: site.id } })])
     );
     expect(await getItemById(item.id)).toEqual(item);
   });
@@ -146,7 +146,7 @@ describe('entity-test: minimal Direct Sale', () => {
     });
     expect(saved.siteId).toBe(site.id);
     expect(await getLinksFor({ type: EntityType.SALE, id: serviceSaleId })).toEqual(
-      expect.arrayContaining([expect.objectContaining({ linkType: 'SALE_SITE', target: { type: EntityType.SITE, id: site.id } })])
+      expect.arrayContaining([expect.objectContaining({ linkType: 'SALE_SITE', relationship: 'sold-at', target: { type: EntityType.SITE, id: site.id } })])
     );
   });
 });

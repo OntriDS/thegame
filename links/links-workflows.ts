@@ -20,7 +20,7 @@ import { getSaleCharacterId } from '@/lib/sale-character-id';
 import { resolveSaleCharacterId } from '@/lib/sale-relationship-selectors';
 import { getAllSites, getSiteById } from '@/data-store/repositories/site.repo';
 
-export function makeLink(linkType: LinkType, source: { type: EntityType; id: string }, target: { type: EntityType; id: string }, relationship?: string): Link {
+export function makeLink(linkType: LinkType, source: { type: EntityType; id: string }, target: { type: EntityType; id: string }, relationship: string): Link {
   return {
     id: uuid(),
     linkType,
@@ -126,7 +126,7 @@ export async function syncTaskCharacterCounterpartyLinks(task: Task): Promise<vo
 
 export async function processTaskEffects(task: Task): Promise<void> {
   if (task.siteId) {
-    const l = makeLink(LinkType.TASK_SITE, { type: EntityType.TASK, id: task.id }, { type: EntityType.SITE, id: task.siteId });
+    const l = makeLink(LinkType.TASK_SITE, { type: EntityType.TASK, id: task.id }, { type: EntityType.SITE, id: task.siteId }, 'performed-at');
     await createLink(l);
   }
   if (task.outputItemId) {
@@ -145,7 +145,8 @@ export async function processTaskEffects(task: Task): Promise<void> {
     const l = makeLink(
       LinkType.SALE_TASK,
       { type: EntityType.SALE, id: sourceSaleId },
-      { type: EntityType.TASK, id: task.id }
+      { type: EntityType.TASK, id: task.id },
+      'sold-service'
     );
     await createLink(l);
   }
@@ -201,7 +202,7 @@ export async function processItemEffects(item: Item): Promise<void> {
   for (const s of item.stock || []) {
     const normalizedSiteId = String(s.siteId || '').trim();
     if (normalizedSiteId && validSiteIds.has(normalizedSiteId)) {
-      const l = makeLink(LinkType.ITEM_SITE, { type: EntityType.ITEM, id: item.id }, { type: EntityType.SITE, id: normalizedSiteId });
+      const l = makeLink(LinkType.ITEM_SITE, { type: EntityType.ITEM, id: item.id }, { type: EntityType.SITE, id: normalizedSiteId }, 'stored-at');
       await createLink(l);
     } else if (normalizedSiteId) {
       console.warn(
@@ -216,7 +217,8 @@ export async function processItemEffects(item: Item): Promise<void> {
     const l = makeLink(
       LinkType.ITEM_CHARACTER,
       { type: EntityType.ITEM, id: item.id },
-      { type: EntityType.CHARACTER, id: itemCharacterId }
+      { type: EntityType.CHARACTER, id: itemCharacterId },
+      'owned-by'
     );
     const wasCreated = await createLink(l);
 
@@ -323,7 +325,7 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
 
   // --- SALE_SITE ---
   if (sale.siteId) {
-    const l = makeLink(LinkType.SALE_SITE, { type: EntityType.SALE, id: sale.id }, { type: EntityType.SITE, id: sale.siteId });
+    const l = makeLink(LinkType.SALE_SITE, { type: EntityType.SALE, id: sale.id }, { type: EntityType.SITE, id: sale.siteId }, 'sold-at');
     await createLink(l);
   }
 
@@ -367,7 +369,8 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
       const l = makeLink(
         LinkType.SALE_CHARACTER,
         { type: EntityType.SALE, id: sale.id },
-        { type: EntityType.CHARACTER, id: charId }
+        { type: EntityType.CHARACTER, id: charId },
+        'partner'
       );
       await createLink(l);
     } else {
@@ -392,7 +395,8 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
         const l = makeLink(
           LinkType.SALE_ITEM,
           { type: EntityType.SALE, id: sale.id },
-          { type: EntityType.ITEM, id: line.itemId }
+          { type: EntityType.ITEM, id: line.itemId },
+          'sold-item'
         );
         await createLink(l);
       }
@@ -422,11 +426,11 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
   }
 
   if (relationsProvided && relations.siteId) {
-    const l = makeLink(LinkType.FINREC_SITE, { type: EntityType.FINANCIAL, id: fin.id }, { type: EntityType.SITE, id: relations.siteId }, 'source');
+    const l = makeLink(LinkType.FINREC_SITE, { type: EntityType.FINANCIAL, id: fin.id }, { type: EntityType.SITE, id: relations.siteId }, 'source-site');
     await createLink(l);
   }
   if (relationsProvided && relations.targetSiteId && relations.targetSiteId !== relations.siteId) {
-    const l = makeLink(LinkType.FINREC_SITE, { type: EntityType.FINANCIAL, id: fin.id }, { type: EntityType.SITE, id: relations.targetSiteId }, 'target');
+    const l = makeLink(LinkType.FINREC_SITE, { type: EntityType.FINANCIAL, id: fin.id }, { type: EntityType.SITE, id: relations.targetSiteId }, 'target-site');
     await createLink(l);
   }
 
@@ -477,7 +481,8 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
       const l = makeLink(
         LinkType.FINREC_ITEM,
         { type: EntityType.FINANCIAL, id: fin.id },
-        { type: EntityType.ITEM, id: createdItem.id }
+        { type: EntityType.ITEM, id: createdItem.id },
+        'item-bought'
       );
       await createLink(l);
     }
@@ -497,7 +502,8 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
       const l = makeLink(
         LinkType.TASK_FINREC,
         { type: EntityType.TASK, id: sourceTask.id },
-        { type: EntityType.FINANCIAL, id: fin.id }
+        { type: EntityType.FINANCIAL, id: fin.id },
+        'task-record'
       );
       await createLink(l);
     }

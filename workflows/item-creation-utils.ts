@@ -168,7 +168,8 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       await createLink(makeLink(
         LinkType.ITEM_CHARACTER,
         { type: EntityType.ITEM, id: createdItem.id },
-        { type: EntityType.CHARACTER, id: ownerId }
+        { type: EntityType.CHARACTER, id: ownerId },
+        'owned-by'
       ));
     }
     console.log(`[createItemFromTask] ✅ Item created successfully`);
@@ -300,7 +301,8 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       await createLink(makeLink(
         LinkType.ITEM_CHARACTER,
         { type: EntityType.ITEM, id: createdItem.id },
-        { type: EntityType.CHARACTER, id: resolvedOwnerCharacterId }
+        { type: EntityType.CHARACTER, id: resolvedOwnerCharacterId },
+        'owned-by'
       ));
     }
     console.log(`[createItemFromRecord] ✅ Item created successfully`);

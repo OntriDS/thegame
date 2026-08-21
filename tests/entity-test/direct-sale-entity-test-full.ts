@@ -7,6 +7,7 @@ vi.mock('server-only', () => ({}));
 import {
   getAllCharacters,
   getAllPlayers,
+  getPlayerById,
   getFinancialsBySourceSaleId,
   getItemById,
   getItemsBySourceRecordId,
@@ -47,6 +48,46 @@ async function waitFor(predicate: () => Promise<boolean>, timeoutMs = 30_000): P
     await wait(250);
   }
   throw new Error(`Timed out after ${timeoutMs}ms waiting for Direct Sale workflow effects.`);
+}
+
+function pointSnapshot(player: any) {
+  const points = player.rewards?.points;
+  if (!points) throw new Error(`Player ${player.id} has no canonical rewards.points projection.`);
+  return {
+    pending: { ...points.pending },
+    vested: { ...points.vested },
+    current: { ...points.current },
+    exchanged: { ...points.exchanged },
+    historic: { ...points.historic },
+  };
+}
+
+async function expectSaleRewardEvidence(saleId: string, playerId: string, before: ReturnType<typeof pointSnapshot>, expected: { xp: number; rp: number; fp: number; hp: number }) {
+  let after: ReturnType<typeof pointSnapshot> | undefined;
+  await waitFor(async () => {
+    const player = await getPlayerById(playerId);
+    if (!player) return false;
+    const candidate = pointSnapshot(player);
+    const pendingMatches = (['xp', 'rp', 'fp', 'hp'] as const).every(point =>
+      candidate.pending[point] - before.pending[point] === expected[point]
+    );
+    const historicMatches = (['xp', 'rp', 'fp', 'hp'] as const).every(point =>
+      candidate.historic[point] - before.historic[point] === expected[point]
+    );
+    if (!pendingMatches || !historicMatches) return false;
+    after = candidate;
+    return true;
+  }, 30_000);
+  if (!after) throw new Error(`Player ${playerId} reward ledger did not settle for Sale ${saleId}.`);
+  for (const bucket of ['pending', 'historic'] as const) {
+    for (const point of ['xp', 'rp', 'fp', 'hp'] as const) {
+      expect(after[bucket][point] - before[bucket][point]).toBe(expected[point]);
+    }
+  }
+  for (const bucket of ['vested', 'current', 'exchanged'] as const) {
+    expect(after[bucket]).toEqual(before[bucket]);
+  }
+
 }
 
 describe('entity-test: full Direct Sale', () => {
@@ -94,8 +135,11 @@ describe('entity-test: full Direct Sale', () => {
 
     expect(await getSaleById(productSaleId)).toBeNull();
     expect(await getSaleById(serviceSaleId)).toBeNull();
+    expect(await getFinancialsBySourceSaleId(productSaleId)).toHaveLength(0);
+    expect(await getFinancialsBySourceSaleId(serviceSaleId)).toHaveLength(0);
     await waitFor(async () => (await getTaskById(serviceTaskId)) === null, 10_000);
     expect(await getItemById(productItemId)).toBeNull();
+    await waitFor(async () => (await getItemById(`${productItemId}-sold-product-line-full`)) === null, 10_000);
     await waitFor(async () => (await getLinksFor({ type: EntityType.SALE, id: productSaleId })).length === 0, 10_000);
     await waitFor(async () => (await getLinksFor({ type: EntityType.SALE, id: serviceSaleId })).length === 0, 10_000);
   });
@@ -106,6 +150,9 @@ describe('entity-test: full Direct Sale', () => {
     const players = await getAllPlayers();
     const character = (await getAllCharacters()).find(candidate => candidate.playerId && players.some(player => player.id === candidate.playerId));
     if (!character || !character.playerId) throw new Error('Cannot run full Direct product Sale test: a Player-linked Character is required.');
+    const playerBefore = await getPlayerById(character.playerId);
+    if (!playerBefore) throw new Error('Cannot run full Direct product Sale test: linked Player could not be loaded.');
+    const pointsBefore = pointSnapshot(playerBefore);
 
     await upsertItem({
       id: productItemId,
@@ -149,10 +196,10 @@ describe('entity-test: full Direct Sale', () => {
         discountTotal: money('50'),
         taxTotal: money('130'),
         totalRevenue: money('1080'),
+        totalCost: money('100'),
       },
       lifecycle: { chargedAt: timestamp, doneAt: timestamp },
       context: {
-        paymentBreakdown: { cashUSD: money('1080') },
         rewardIntent: { points: { xp: 5, rp: 2, fp: 1, hp: 0 } },
       },
       createdAt: now,
@@ -169,10 +216,11 @@ describe('entity-test: full Direct Sale', () => {
     const saved = await getSaleById(productSaleId);
     const persisted = await getPersistedSaleById(productSaleId);
     const soldItems = await getItemsBySourceRecordId(productSaleId);
+    const productFinancials = await getFinancialsBySourceSaleId(productSaleId);
     const links = await getLinksFor({ type: EntityType.SALE, id: productSaleId });
     if (!saved || !persisted) throw new Error('Full Direct product Sale was not persisted.');
 
-    const output = { sale: JSON.parse(JSON.stringify(persisted)), links, soldItems: JSON.parse(JSON.stringify(soldItems)) };
+    const output = { sale: JSON.parse(JSON.stringify(persisted)), financials: JSON.parse(JSON.stringify(productFinancials)), links, soldItems: JSON.parse(JSON.stringify(soldItems)) };
     writeFileSync(resolve(__dirname, 'direct-sale-product-entity-test-full.output.json'), `${JSON.stringify(output, null, 2)}\n`, 'utf8');
     process.stderr.write(`[entity-test] full Direct product Sale workflow output:\n${JSON.stringify(output, null, 2)}\n`);
 
@@ -182,23 +230,32 @@ describe('entity-test: full Direct Sale', () => {
     expect(persisted).not.toHaveProperty('counterpartyName');
     expect(saved.siteId).toBe('hq');
     expect(links).toEqual(expect.arrayContaining([
-      expect.objectContaining({ linkType: 'SALE_SITE', target: { type: EntityType.SITE, id: 'hq' } }),
-      expect.objectContaining({ linkType: 'SALE_ITEM' }),
+      expect.objectContaining({ linkType: 'SALE_SITE', relationship: 'sold-at', target: { type: EntityType.SITE, id: 'hq' } }),
+      expect.objectContaining({ linkType: 'SALE_ITEM', relationship: 'sold-item' }),
       expect.objectContaining({ linkType: 'SALE_CHARACTER', relationship: 'customer', target: { type: EntityType.CHARACTER, id: character.id } }),
       expect.objectContaining({ linkType: 'SALE_CHARACTER', relationship: 'owner', target: { type: EntityType.CHARACTER, id: character.id } }),
     ]));
     const productFinrecLink = links.find(link => link.linkType === 'SALE_FINREC');
-    expect(productFinrecLink).toBeTruthy();
+    expect(productFinrecLink).toEqual(expect.objectContaining({ relationship: 'sale-record' }));
     const productFinrecLinks = productFinrecLink ? await getLinksFor(productFinrecLink.target) : [];
+    expect(productFinrecLinks.some(link => link.linkType === 'FINREC_ITEM')).toBe(false);
     expect(productFinrecLinks).toEqual(expect.arrayContaining([
-      expect.objectContaining({ linkType: 'FINREC_SITE', target: { type: EntityType.SITE, id: 'hq' } }),
+      expect.objectContaining({ linkType: 'FINREC_SITE', relationship: 'source-site', target: { type: EntityType.SITE, id: 'hq' } }),
     ]));
     expect(soldItems.length).toBeGreaterThan(0);
     expect(soldItems.some(item => item.status === ItemStatus.SOLD)).toBe(true);
+    expect(productFinancials).toEqual(expect.arrayContaining([
+      expect.objectContaining({ cost: money('100'), revenue: money('1080'), netCashflow: money('980') }),
+    ]));
     expect(persisted.payments?.[0]?.amount).toEqual(money('1080'));
     expect(persisted.payments?.[0]).not.toHaveProperty('currency');
     expect(persisted.payments?.[0]).not.toHaveProperty('receivedAt');
+    expect(persisted.context).not.toHaveProperty('paymentBreakdown');
+    expect(persisted.totals?.totalCost).toEqual(money('100'));
     expect(persisted.lifecycle?.chargedAt).toBe(timestamp);
+    expect(persisted.lines?.[0]?.lineId).toBe('product-line-full');
+    expect(links.some(link => String(link.linkType) === 'SALE_PLAYER')).toBe(false);
+    await expectSaleRewardEvidence(productSaleId, character.playerId, pointsBefore, { xp: 5, rp: 2, fp: 1, hp: 0 });
   });
 
   it('runs the full direct service Sale workflow and creates its Task link', async () => {
@@ -207,6 +264,9 @@ describe('entity-test: full Direct Sale', () => {
     const players = await getAllPlayers();
     const character = (await getAllCharacters()).find(candidate => candidate.playerId && players.some(player => player.id === candidate.playerId));
     if (!character || !character.playerId) throw new Error('Cannot run full Direct service Sale test: a Player-linked Character is required.');
+    const playerBefore = await getPlayerById(character.playerId);
+    if (!playerBefore) throw new Error('Cannot run full Direct service Sale test: linked Player could not be loaded.');
+    const pointsBefore = pointSnapshot(playerBefore);
 
     await upsertSale({
       id: serviceSaleId,
@@ -230,7 +290,6 @@ describe('entity-test: full Direct Sale', () => {
       totals: { subtotal: money('5000'), totalRevenue: money('5000') },
       lifecycle: { chargedAt: timestamp, doneAt: timestamp },
       context: {
-        paymentBreakdown: { cashUSD: money('5000') },
         rewardIntent: { points: { xp: 3, rp: 1, fp: 0, hp: 0 } },
       },
       createdAt: now,
@@ -267,18 +326,22 @@ describe('entity-test: full Direct Sale', () => {
     expect(persisted.payments?.[0]?.amount).toEqual(money('5000'));
     expect(persisted.payments?.[0]).not.toHaveProperty('currency');
     expect(persisted.payments?.[0]).not.toHaveProperty('receivedAt');
+    expect(persisted.context).not.toHaveProperty('paymentBreakdown');
     expect(persisted.lifecycle?.chargedAt).toBe(timestamp);
+    expect(persisted.lines?.[0]?.lineId).toBe('service-line-full');
+    expect(links.some(link => String(link.linkType) === 'SALE_PLAYER')).toBe(false);
+    await expectSaleRewardEvidence(serviceSaleId, character.playerId, pointsBefore, { xp: 3, rp: 1, fp: 0, hp: 0 });
     expect(links).toEqual(expect.arrayContaining([
-      expect.objectContaining({ linkType: 'SALE_SITE', target: { type: EntityType.SITE, id: 'hq' } }),
-      expect.objectContaining({ linkType: 'SALE_TASK', target: { type: EntityType.TASK, id: serviceTaskId } }),
+      expect.objectContaining({ linkType: 'SALE_SITE', relationship: 'sold-at', target: { type: EntityType.SITE, id: 'hq' } }),
+      expect.objectContaining({ linkType: 'SALE_TASK', relationship: 'sold-service', target: { type: EntityType.TASK, id: serviceTaskId } }),
       expect.objectContaining({ linkType: 'SALE_CHARACTER', relationship: 'customer', target: { type: EntityType.CHARACTER, id: character.id } }),
       expect.objectContaining({ linkType: 'SALE_CHARACTER', relationship: 'owner', target: { type: EntityType.CHARACTER, id: character.id } }),
     ]));
     const serviceFinrecLink = links.find(link => link.linkType === 'SALE_FINREC');
-    expect(serviceFinrecLink).toBeTruthy();
+    expect(serviceFinrecLink).toEqual(expect.objectContaining({ relationship: 'sale-record' }));
     const serviceFinrecLinks = serviceFinrecLink ? await getLinksFor(serviceFinrecLink.target) : [];
     expect(serviceFinrecLinks).toEqual(expect.arrayContaining([
-      expect.objectContaining({ linkType: 'FINREC_SITE', target: { type: EntityType.SITE, id: 'hq' } }),
+      expect.objectContaining({ linkType: 'FINREC_SITE', relationship: 'source-site', target: { type: EntityType.SITE, id: 'hq' } }),
     ]));
   });
 });

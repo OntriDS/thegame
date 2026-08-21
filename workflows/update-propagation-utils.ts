@@ -193,7 +193,7 @@ async function getFinancialSiteId(record: FinancialRecord): Promise<string | nul
   const links = await getLinksFor({ type: EntityType.FINANCIAL, id: record.id });
   const target = links.find((candidate: any) =>
     candidate.linkType === LinkType.FINREC_SITE &&
-    String(candidate.relationship || '').toLowerCase() === 'target' &&
+    String(candidate.relationship || '').toLowerCase() === 'target-site' &&
     candidate.target?.type === EntityType.SITE
   );
   const source = links.find((candidate: any) =>

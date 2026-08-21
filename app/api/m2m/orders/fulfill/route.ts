@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { iamService } from '@/lib/iam-service';
-import { CharacterRole, SaleStatus } from '@/types/enums';
+import { CharacterRole, PaymentMethod, SaleStatus } from '@/types/enums';
 import { getSaleById, upsertSale } from '@/data-store/datastore';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync-server';
@@ -15,6 +15,8 @@ type FulfillOrderRequest = {
   reference?: string;
   saleStatus?: string;
   commission?: number;
+  paymentAmount?: number;
+  paymentMethod?: string;
 };
 
 function normalizeString(value: unknown): string | undefined {
@@ -26,6 +28,10 @@ function normalizeString(value: unknown): string | undefined {
 function normalizeStatus(value: unknown): SaleStatus {
   const candidate = normalizeString(value)?.toLowerCase();
   return candidate === SaleStatus.COLLECTED ? SaleStatus.COLLECTED : SaleStatus.CHARGED;
+}
+
+function normalizePaymentMethod(value: unknown): PaymentMethod {
+  return value === PaymentMethod.BTC ? PaymentMethod.BTC : PaymentMethod.CARD;
 }
 
 export async function POST(request: NextRequest) {
@@ -87,13 +93,26 @@ export async function POST(request: NextRequest) {
 
     const requestedStatus = normalizeStatus(body.saleStatus);
     const commission = typeof body.commission === 'number' ? body.commission : 0;
+    const paymentAmount = typeof body.paymentAmount === 'number' && Number.isFinite(body.paymentAmount)
+      ? body.paymentAmount
+      : extractMoneyValue(sale.totals?.totalRevenue);
+    const chargedAt = sale.lifecycle?.chargedAt || getUTCNow();
+    const existingPayment = sale.payments?.[0];
 
     const nextSale = {
       ...sale,
       status: requestedStatus,
+      payments: existingPayment
+        ? sale.payments
+        : [{
+            method: normalizePaymentMethod(body.paymentMethod),
+            amount: toMoney(paymentAmount),
+            notes: 'Recorded from Akiles Ecosystem payment fulfillment',
+          }],
       lifecycle: {
         ...(sale.lifecycle || {}),
-        doneAt: sale.lifecycle?.doneAt || getUTCNow(),
+        chargedAt,
+        doneAt: sale.lifecycle?.doneAt || chargedAt,
       },
       totals: {
         ...(sale.totals || {}),

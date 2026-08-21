@@ -1,0 +1,33 @@
+{
+  "id": "entity-test-sale-online-clean",
+  "schemaVersion": 1,
+  "version": 0,
+  "name": "testing-online-sale",
+  "type": "online",
+  "status": "pending",
+  "lines": [
+    {
+      "lineId": "online-line-1",
+      "kind": "item",
+      "itemId": "67ccebd6-681e-4791-8ed6-28332de66e8b",
+      "quantity": 1,
+      "unitPrice": {
+        "minorUnits": "5000",
+        "currency": "USD"
+      }
+    }
+  ],
+  "totals": {
+    "subtotal": {
+      "minorUnits": "5000",
+      "currency": "USD"
+    },
+    "totalRevenue": {
+      "minorUnits": "5000",
+      "currency": "USD"
+    }
+  },
+  "lifecycle": {},
+  "createdAt": "2026-08-20T20:10:16.032Z",
+  "updatedAt": "2026-08-20T20:10:16.032Z"
+}

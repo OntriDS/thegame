@@ -175,7 +175,6 @@ function getLinkDescription(linkType: LinkType): string {
     
     // PLAYER relationships
     'PLAYER_TASK': 'remove points from player',
-    'PLAYER_SALE': 'remove points from player',
     'PLAYER_FINREC': 'remove points from player',
     'PLAYER_ITEM': 'remove item from player',
     'PLAYER_CHARACTER': 'remove legacy reverse character link from player',

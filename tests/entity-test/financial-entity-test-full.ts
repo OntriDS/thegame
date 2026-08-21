@@ -118,8 +118,12 @@ describe('entity-test: full FinancialRecord', () => {
     expect(links).toEqual(expect.arrayContaining([
       expect.objectContaining({
         linkType: LinkType.FINREC_ITEM,
+        relationship: 'item-bought',
         target: { type: EntityType.ITEM, id: generatedItems[0].id },
       }),
     ]));
+    expect(links.some((link) =>
+      link.linkType === LinkType.FINREC_PLAYER || link.linkType === LinkType.PLAYER_FINREC
+    )).toBe(false);
   });
 });

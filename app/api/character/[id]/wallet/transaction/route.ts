@@ -101,7 +101,8 @@ export async function POST(
         const link = makeLink(
             LinkType.FINREC_CHARACTER,
             { type: EntityType.FINANCIAL, id: savedRecord.id },
-            { type: EntityType.CHARACTER, id: characterId }
+            { type: EntityType.CHARACTER, id: characterId },
+            type === 'transfer' ? 'beneficiary' : 'customer'
         );
 
         await createLink(link);

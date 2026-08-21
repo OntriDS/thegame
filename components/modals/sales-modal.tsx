@@ -12,7 +12,7 @@ import { Sale, SaleLine, Item, Discount, Site, Character, Task, ItemSaleLine, Se
 import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, CharacterRole, EntityType } from '@/types/enums';
 import type { Station } from '@/types/type-aliases';
 import { ArtDesignStation, SalesStation } from '@/lib/storage/taxonomy';
-import { CurrencyExchangeRates } from '@/lib/constants/financial-constants';
+import { CurrencyExchangeRates, DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib/constants/financial-constants';
 import { buildAutoSaleName, resolveCanonicalSaleTimelineDate } from '@/lib/utils/sale-auto-name-utils';
 import { getSalesChannelFromSaleType, normalizeStationValue } from '@/lib/utils/business-structure-utils';
 import { createStationCategoryOptions, getCategoryFromCombined } from '@/lib/utils/searchable-select-utils';
@@ -953,20 +953,28 @@ export default function SalesModal({
     // enters inventory. It must not be charged again on the sale. Sale cost is
     // reserved for service-sale costs entered in this modal; booth settlement
     // applies its own canonical cost calculation in its workflow.
-    const totalCost = isProductMode ? 0 : roundCurrency2(cost);
+    // Sale-level extra cost. Item acquisition/unit cost is already stored on
+    // the Item and must not be duplicated here.
+    const totalCost = roundCurrency2(cost);
 
     // Convert recordedPayments (SalePaymentLine[]) to Payment[] format
+    const exchange = exchangeRates || DEFAULT_CURRENCY_EXCHANGE_RATES;
+    const paymentAmountInUsd = (amount: number, currency?: string) => {
+      if (currency === Currency.CRC) return amount / exchange.colonesToUsd;
+      if (currency === Currency.BTC) return amount * exchange.bitcoinToUsd;
+      return amount;
+    };
     const effectivePayments = recordedPayments.length > 0
       ? recordedPayments.map(p => ({
         method: p.method,
-        amount: toMoney(p.amount, p.currency),
+        amount: toMoney(paymentAmountInUsd(p.amount, p.currency), Currency.USD),
         notes: p.notes,
         exchangeDescription: p.exchangeDescription,
         exchangeCategory: p.exchangeCategory
       }))
       : payments.length > 0 ? payments.map(({ receivedAt: _legacyReceivedAt, ...payment }) => ({
         ...payment,
-        amount: toMoney(payment.amount, payment.currency),
+        amount: toMoney(paymentAmountInUsd(payment.amount, payment.currency), Currency.USD),
         currency: undefined,
       })) : undefined;
 
@@ -1026,7 +1034,7 @@ export default function SalesModal({
         discountTotal: toMoney(totalDiscountR),
         taxTotal: toMoney(taxTotalR),
         totalRevenue: toMoney(totalRevenue),
-        ...(isProductMode ? {} : { totalCost: toMoney(totalCost) }),
+        ...(totalCost > 0 ? { totalCost: toMoney(totalCost) } : {}),
       },
       lifecycle: {
         ...sale?.lifecycle,
@@ -1175,8 +1183,9 @@ export default function SalesModal({
         : l.quantity * extractMoneyValue(l.unitPrice)), 0)
       : quickRows.reduce((acc, r) => acc + (r.quantity * r.unitPrice), 0);
     const method = getDefaultMethodForType(type);
-    const currency = method === PaymentMethod.FIAT_CRC || method === PaymentMethod.SINPE ? Currency.CRC : Currency.USD;
-    setPayments([{ method: method as string, amount: total, currency: currency as string }]);
+    // Sale totals are USD-first. The payment method records the rail (e.g. SINPE);
+    // the persisted payment amount is canonical USD after conversion at save time.
+    setPayments([{ method: method as string, amount: total, currency: Currency.USD as string }]);
   };
 
   const addServiceLine = () => {

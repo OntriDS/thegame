@@ -219,7 +219,8 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
     const link = makeLink(
       LinkType.TASK_FINREC,
       { type: EntityType.TASK, id: task.id },
-      { type: EntityType.FINANCIAL, id: createdFinrec.id }
+      { type: EntityType.FINANCIAL, id: createdFinrec.id },
+      'task-record'
     );
 
     await createLink(link);
@@ -405,12 +406,20 @@ export interface BoothFinancialSplit {
  * NEW: Calculate components for Performance Ledger split (Option C)
  */
 export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinancialSplit> {
-  const boothFee = extractMoneyValue(sale.context?.boothFee)
-    || sale.context?.boothSaleContext?.boothCost
-    || 0;
   const rates = await getFinancialConversionRates();
   const rate = rates?.colonesToUsd ?? DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd;
-  const boothFeeUSD = boothFee / rate;
+  const legacyContext = sale.context as (Sale['context'] & {
+    boothFee?: Money;
+    boothSaleContext?: Sale['context']['boothSaleContext'] & {
+      boothCost?: number;
+      contractId?: EntityId | null;
+    };
+  }) | undefined;
+  const boothCostUSD = sale.context?.boothCost !== undefined
+    ? extractMoneyValue(sale.context.boothCost)
+    : legacyContext?.boothFee !== undefined
+      ? extractMoneyValue(legacyContext.boothFee) / rate
+      : Number(legacyContext?.boothSaleContext?.boothCost || 0) / rate;
 
   const dateToUse = coerceSaleFinrecDate(sale, getUTCNow());
 
@@ -420,7 +429,7 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
   let shareOfExpenses_Me = 1.0;
 
   // Fetch Contract Clauses
-  const contractId = sale.context?.boothSaleContext?.contractId;
+  const contractId = sale.context?.contractId ?? legacyContext?.boothSaleContext?.contractId;
   if (contractId) {
     const contract = await getContractById(contractId);
     if (contract && contract.status === ContractStatus.ACTIVE && Array.isArray(contract.clauses)) {
@@ -442,7 +451,6 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
     const founderEntityIds = new Set<string>(
       [
         await resolveSaleOwnerId(sale),
-        sale.context?.boothSaleContext?.principalBusinessId
       ].filter(Boolean) as string[]
     );
 
@@ -465,7 +473,7 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
   }
 
   // Final Split Components
-  const myBoothCost = boothFeeUSD * shareOfExpenses_Me;
+  const myBoothCost = boothCostUSD * shareOfExpenses_Me;
   const myCommFromPartner = partnerItemsTotal * shareOfPartnerItems_Me;
   const partnerCommFromMe = myItemsTotal * (1 - shareOfMyItems_Me);
 
@@ -541,8 +549,8 @@ async function upsertPrimarySaleFinrecFromSale(
   derived: Awaited<ReturnType<typeof resolveSaleDerivedFinrecFields>>
 ): Promise<FinancialRecord> {
   const now = getUTCNow();
-  const totalRevenue = Number(sale.totals?.totalRevenue ?? 0) || 0;
-  const cost = Number(sale.totals?.totalCost ?? 0) || 0;
+  const totalRevenue = extractMoneyValue(sale.totals?.totalRevenue);
+  const cost = extractMoneyValue(sale.totals?.totalCost);
   const netCashflow = totalRevenue - cost;
   const next: FinancialRecord = {
     ...existing,
@@ -583,7 +591,8 @@ async function upsertPrimarySaleFinrecFromSale(
       makeLink(
         LinkType.SALE_FINREC,
         { type: EntityType.SALE, id: sale.id },
-        { type: EntityType.FINANCIAL, id: saved.id }
+        { type: EntityType.FINANCIAL, id: saved.id },
+        'sale-record'
       )
     );
   }
@@ -597,68 +606,21 @@ async function resolveSaleSiteId(sale: Sale): Promise<string | undefined> {
 }
 
 /**
- * Sync FINREC_ITEM targets from sale line `itemId`s.
- * Must run against a Sale whose item lines already point at **sold clone** rows when those exist
- * (`ensureSoldItemEntities` persists that in KV). Early in `onSaleUpsert`, lines still reference
- * inventory SKUs — `resyncFinrecItemLinksAfterSoldItemClones` runs after clones to correct links.
+ * Sale-created FinancialRecords are revenue/settlement records. Their Item
+ * relationship is already represented by SALE_ITEM, so remove any legacy
+ * FINREC_ITEM links instead of recreating them with purchase semantics.
  */
-async function syncFinrecItemLinks(finrecId: string, sale: Sale): Promise<void> {
-  const desiredItemIds = new Set<string>(
-    (sale.lines || [])
-      .filter((line): line is ItemSaleLine => line.kind === 'item' && 'itemId' in line && !!line.itemId)
-      .map((line) => line.itemId)
-  );
-
+async function removeSaleFinrecItemLinks(finrecId: string): Promise<void> {
   const links = await getLinksFor({ type: EntityType.FINANCIAL, id: finrecId });
-  const finrecItemLinks = links.filter(
-    (l) =>
-      l.linkType === LinkType.FINREC_ITEM &&
-      l.source.type === EntityType.FINANCIAL &&
-      l.source.id === finrecId &&
-      l.target.type === EntityType.ITEM
-  );
-  const existingItemIds = new Set(finrecItemLinks.map((l) => l.target.id));
-
-  for (const link of finrecItemLinks) {
-    if (!desiredItemIds.has(link.target.id)) {
+  for (const link of links) {
+    if (
+      link.linkType === LinkType.FINREC_ITEM &&
+      link.source.type === EntityType.FINANCIAL &&
+      link.source.id === finrecId &&
+      link.target.type === EntityType.ITEM
+    ) {
       await removeLink(link.id);
     }
-  }
-
-  for (const itemId of desiredItemIds) {
-    if (!existingItemIds.has(itemId)) {
-      await createLink(
-        makeLink(
-          LinkType.FINREC_ITEM,
-          { type: EntityType.FINANCIAL, id: finrecId },
-          { type: EntityType.ITEM, id: itemId }
-        )
-      );
-    }
-  }
-}
-
-/**
- * Re-run FINREC_ITEM sync using the sale row **after** `ensureSoldItemEntities` (clone ids on lines).
- * Sale-sourced primary finrecs are those linked via SALE_FINREC whose id is not a payout ledger.
- */
-export async function resyncFinrecItemLinksAfterSoldItemClones(sale: Sale): Promise<void> {
-  const hasItemLines = (sale.lines || []).some(
-    (l): l is ItemSaleLine => l.kind === 'item' && 'itemId' in l && !!l.itemId?.trim()
-  );
-  if (!hasItemLines) return;
-
-  const saleLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
-  const finrecTargets = saleLinks.filter(
-    (l) =>
-      l.linkType === LinkType.SALE_FINREC &&
-      l.target.type === EntityType.FINANCIAL &&
-      typeof l.target.id === 'string' &&
-      !l.target.id.includes('payout')
-  );
-
-  for (const l of finrecTargets) {
-    await syncFinrecItemLinks(l.target.id, sale);
   }
 }
 
@@ -692,21 +654,21 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
         }
       }
       const saved = await upsertPrimarySaleFinrecFromSale(sale, keeper, derived);
-      await syncFinrecItemLinks(saved.id, sale);
+      await removeSaleFinrecItemLinks(saved.id);
       console.log(`[createFinancialRecordFromSale] ✅ Deduped and updated finrec: ${saved.name}`);
       return saved;
     }
 
     if (nonPayout.length === 1) {
       const saved = await upsertPrimarySaleFinrecFromSale(sale, nonPayout[0]!, derived);
-      await syncFinrecItemLinks(saved.id, sale);
+      await removeSaleFinrecItemLinks(saved.id);
       console.log(`[createFinancialRecordFromSale] ✅ Updated existing finrec: ${saved.name}`);
       return saved;
     }
 
     const canonicalId = `finrec-${sale.id}`;
-    const initialRevenue = Number(sale.totals?.totalRevenue ?? 0) || 0;
-    const cost = Number(sale.totals?.totalCost ?? 0) || 0;
+    const initialRevenue = extractMoneyValue(sale.totals?.totalRevenue);
+    const cost = extractMoneyValue(sale.totals?.totalCost);
     const netCashflow = initialRevenue - cost;
     const saleCounterpartyId = await resolveSaleCharacterId(sale);
     const newFinrec: FinancialRecord = {
@@ -742,11 +704,12 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       makeLink(
         LinkType.SALE_FINREC,
         { type: EntityType.SALE, id: sale.id },
-        { type: EntityType.FINANCIAL, id: createdFinrec.id }
+        { type: EntityType.FINANCIAL, id: createdFinrec.id },
+        'sale-record'
       )
     );
 
-    await syncFinrecItemLinks(createdFinrec.id, sale);
+    await removeSaleFinrecItemLinks(createdFinrec.id);
 
     console.log(`[createFinancialRecordFromSale] ✅ Created finrec and SALE_FINREC: ${createdFinrec.name}`);
     return createdFinrec;
@@ -762,8 +725,8 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
 export async function calculatePartnerPayout(sale: Sale): Promise<number> {
   const split = await calculateBoothFinancials(sale);
   
-  // Total Revenue contained in the Sale object
-  const totalRevenue = sale.totals.totalRevenue || 0;
+  // Sale totals are canonical Money, not raw numbers.
+  const totalRevenue = extractMoneyValue(sale.totals?.totalRevenue);
   // Partner Gross = What was sold as partner items (cash Akiles is holding)
   const partnerGross = totalRevenue - split.myGross;
   
@@ -831,9 +794,11 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       siteId: sale.siteId,
       sourceSaleId: sale.id,
       salesChannel: derived.salesChannel,
-      revenue: split.myGross,
-      cost: split.myBoothCost,
-      netCashflow: split.myGross - split.myBoothCost,
+      // Booth split arithmetic is performed in USD numbers; persist the
+      // FinancialRecord through the canonical Money boundary.
+      revenue: toMoney(split.myGross, 'USD'),
+      cost: toMoney(split.myBoothCost, 'USD'),
+      netCashflow: toMoney(split.myGross - split.myBoothCost, 'USD'),
       status: ((sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED) ) ? FinancialStatus.DONE : FinancialStatus.PENDING,
       doneAt: split.date,
       updatedAt: getUTCNow(),
@@ -849,7 +814,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
     const saleLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
     const hasIncomeLink = saleLinks.some(l => l.linkType === LinkType.SALE_FINREC && l.target.id === incomeRecordId);
     if (!hasIncomeLink) {
-      const link = makeLink(LinkType.SALE_FINREC, { type: EntityType.SALE, id: sale.id }, { type: EntityType.FINANCIAL, id: incomeRecordId });
+      const link = makeLink(LinkType.SALE_FINREC, { type: EntityType.SALE, id: sale.id }, { type: EntityType.FINANCIAL, id: incomeRecordId }, 'sale-record');
       await createLink(link);
     }
 
@@ -876,9 +841,9 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         siteId: sale.siteId,
         sourceSaleId: sale.id,
         salesChannel: SalesStation.BOOTH_SALES as Station,
-        revenue: split.myCommFromPartner,
-        cost: split.partnerCommFromMe,
-        netCashflow: split.myCommFromPartner - split.partnerCommFromMe,
+        revenue: toMoney(split.myCommFromPartner, 'USD'),
+        cost: toMoney(split.partnerCommFromMe, 'USD'),
+        netCashflow: toMoney(split.myCommFromPartner - split.partnerCommFromMe, 'USD'),
         status: ((sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED) ) ? FinancialStatus.DONE : FinancialStatus.PENDING,
         doneAt: split.date,
         updatedAt: getUTCNow(),
@@ -893,7 +858,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       // Verify/Create SALE_FINREC Link
       const hasPayoutSaleLink = saleLinks.some(l => l.linkType === LinkType.SALE_FINREC && l.target.id === payoutRecordId);
       if (!hasPayoutSaleLink) {
-        const saleLink = makeLink(LinkType.SALE_FINREC, { type: EntityType.SALE, id: sale.id }, { type: EntityType.FINANCIAL, id: payoutRecordId });
+        const saleLink = makeLink(LinkType.SALE_FINREC, { type: EntityType.SALE, id: sale.id }, { type: EntityType.FINANCIAL, id: payoutRecordId }, 'sale-record');
         await createLink(saleLink);
       }
 
@@ -907,7 +872,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
              (l.target.type === EntityType.FINANCIAL && l.target.id === payoutRecordId && l.source.type === EntityType.CHARACTER && l.source.id === payoutCounterpartyId))
         );
         if (!hasCharLink) {
-          const charLink = makeLink(LinkType.FINREC_CHARACTER, { type: EntityType.FINANCIAL, id: payoutRecordId }, { type: EntityType.CHARACTER, id: payoutCounterpartyId });
+          const charLink = makeLink(LinkType.FINREC_CHARACTER, { type: EntityType.FINANCIAL, id: payoutRecordId }, { type: EntityType.CHARACTER, id: payoutCounterpartyId }, 'beneficiary');
           await createLink(charLink);
         }
       }
@@ -980,7 +945,8 @@ export async function createFinancialRecordFromPointsExchange(
     const link = makeLink(
       LinkType.PLAYER_FINREC,
       { type: EntityType.PLAYER, id: playerId },
-      { type: EntityType.FINANCIAL, id: createdFinrec.id }
+      { type: EntityType.FINANCIAL, id: createdFinrec.id },
+      'cash-out'
     );
 
     await createLink(link);
@@ -1105,14 +1071,16 @@ export async function createFinancialRecordFromJ$CashOut(
     const pLink = makeLink(
       LinkType.PLAYER_FINREC,
       { type: EntityType.PLAYER, id: playerId },
-      { type: EntityType.FINANCIAL, id: personalFinrec.id }
+      { type: EntityType.FINANCIAL, id: personalFinrec.id },
+      'cash-out'
     );
     await createLink(pLink);
 
     const cLink = makeLink(
       LinkType.PLAYER_FINREC,
       { type: EntityType.PLAYER, id: playerId },
-      { type: EntityType.FINANCIAL, id: companyFinrec.id }
+      { type: EntityType.FINANCIAL, id: companyFinrec.id },
+      'cash-out'
     );
     await createLink(cLink);
 
@@ -1120,7 +1088,8 @@ export async function createFinancialRecordFromJ$CashOut(
       const charLink = makeLink(
         LinkType.FINREC_CHARACTER,
         { type: EntityType.FINANCIAL, id: companyFinrec.id },
-        { type: EntityType.CHARACTER, id: playerCharacterId }
+        { type: EntityType.CHARACTER, id: playerCharacterId },
+        'beneficiary'
       );
       await createLink(charLink);
     }

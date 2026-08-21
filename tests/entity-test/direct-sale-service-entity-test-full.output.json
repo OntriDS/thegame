@@ -44,16 +44,10 @@
       }
     },
     "lifecycle": {
-      "chargedAt": "2026-08-20T16:50:54.758Z",
-      "doneAt": "2026-08-20T16:50:54.758Z"
+      "chargedAt": "2026-08-21T00:06:23.654Z",
+      "doneAt": "2026-08-21T00:06:23.654Z"
     },
     "context": {
-      "paymentBreakdown": {
-        "cashUSD": {
-          "minorUnits": "5000",
-          "currency": "USD"
-        }
-      },
       "rewardIntent": {
         "points": {
           "xp": 3,
@@ -63,8 +57,8 @@
         }
       }
     },
-    "createdAt": "2026-08-20T16:50:54.758Z",
-    "updatedAt": "2026-08-20T16:50:54.758Z"
+    "createdAt": "2026-08-21T00:06:23.654Z",
+    "updatedAt": "2026-08-21T00:06:23.654Z"
   },
   "task": {
     "id": "entity-test-task-direct-sale-full",
@@ -78,8 +72,8 @@
       "percentage": 0
     },
     "order": 1000,
-    "createdAt": "2026-08-20T16:51:19.030Z",
-    "updatedAt": "2026-08-20T16:51:19.030Z",
+    "createdAt": "2026-08-21T00:06:46.636Z",
+    "updatedAt": "2026-08-21T00:06:46.636Z",
     "siteId": "hq",
     "context": {},
     "schemaVersion": 1,
@@ -87,46 +81,7 @@
   },
   "links": [
     {
-      "id": "8ee5cf33-2ef5-4ecf-90c2-d01c8f791328",
-      "linkType": "SALE_SITE",
-      "source": {
-        "type": "sale",
-        "id": "entity-test-sale-direct-service-full"
-      },
-      "target": {
-        "type": "site",
-        "id": "hq"
-      },
-      "createdAt": "2026-08-20T16:50:58.098Z"
-    },
-    {
-      "id": "c9716158-3163-4851-a699-a8d0356219da",
-      "linkType": "SALE_FINREC",
-      "source": {
-        "type": "sale",
-        "id": "entity-test-sale-direct-service-full"
-      },
-      "target": {
-        "type": "financial",
-        "id": "finrec-entity-test-sale-direct-service-full"
-      },
-      "createdAt": "2026-08-20T16:51:15.856Z"
-    },
-    {
-      "id": "a04d6fa7-5f7a-4da6-ab9d-3903269881da",
-      "linkType": "SALE_TASK",
-      "source": {
-        "type": "sale",
-        "id": "entity-test-sale-direct-service-full"
-      },
-      "target": {
-        "type": "task",
-        "id": "entity-test-task-direct-sale-full"
-      },
-      "createdAt": "2026-08-20T16:51:27.321Z"
-    },
-    {
-      "id": "2ba415b3-2076-4d5f-82c7-c69dc59cfc3a",
+      "id": "5306cd7c-04b9-422e-9c87-3bfe2ca31af4",
       "linkType": "SALE_CHARACTER",
       "source": {
         "type": "sale",
@@ -137,10 +92,52 @@
         "id": "character-1775889257983-6pkhdapnl"
       },
       "relationship": "owner",
-      "createdAt": "2026-08-20T16:51:01.719Z"
+      "createdAt": "2026-08-21T00:06:31.538Z"
     },
     {
-      "id": "3cc8dbca-a037-4198-bab4-63bccb0fdc72",
+      "id": "0f48acff-8c68-4f47-a602-54e59032d938",
+      "linkType": "SALE_FINREC",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-direct-service-full"
+      },
+      "target": {
+        "type": "financial",
+        "id": "finrec-entity-test-sale-direct-service-full"
+      },
+      "relationship": "sale-record",
+      "createdAt": "2026-08-21T00:06:43.931Z"
+    },
+    {
+      "id": "1aa84991-781d-448b-975b-9b9afec45738",
+      "linkType": "SALE_TASK",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-direct-service-full"
+      },
+      "target": {
+        "type": "task",
+        "id": "entity-test-task-direct-sale-full"
+      },
+      "relationship": "sold-service",
+      "createdAt": "2026-08-21T00:06:52.647Z"
+    },
+    {
+      "id": "b1c3cd3c-0b0d-4144-b2c8-96f3011d117b",
+      "linkType": "SALE_SITE",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-direct-service-full"
+      },
+      "target": {
+        "type": "site",
+        "id": "hq"
+      },
+      "relationship": "sold-at",
+      "createdAt": "2026-08-21T00:06:28.226Z"
+    },
+    {
+      "id": "eff7a294-34a4-455a-8809-b9f5585f0315",
       "linkType": "SALE_CHARACTER",
       "source": {
         "type": "sale",
@@ -151,7 +148,7 @@
         "id": "character-1775889257983-6pkhdapnl"
       },
       "relationship": "customer",
-      "createdAt": "2026-08-20T16:50:59.566Z"
+      "createdAt": "2026-08-21T00:06:29.593Z"
     }
   ]
 }

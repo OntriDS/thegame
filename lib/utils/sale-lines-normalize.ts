@@ -1,7 +1,6 @@
 // @ts-nocheck
 // Legacy: kind 'bundle' + itemId → kind 'item'. ItemType.BUNDLE stays on Item only.
 
-import { v4 as uuid } from 'uuid';
 import { toMoney } from '@/lib/utils/financial-utils';
 import type { ItemSaleLine, Sale, SaleLine, ServiceLine } from '@/types/entities';
 
@@ -24,9 +23,9 @@ function normalizeOptionalMoneyValue(value: unknown): unknown {
   return Number.isFinite(numeric) && numeric !== 0 ? normalizeMoneyValue(value) : undefined;
 }
 
-export function normalizeSaleLine(line: unknown): SaleLine | null {
+export function normalizeSaleLine(line: unknown, fallbackLineId?: string): SaleLine | null {
   if (!isRecord(line)) return null;
-  const lineId = String(line.lineId ?? '');
+  const lineId = String(line.lineId ?? fallbackLineId ?? '');
   if (!lineId) return null;
 
   const kind = String(line.kind ?? '');
@@ -91,17 +90,19 @@ export function normalizeSaleLine(line: unknown): SaleLine | null {
   return null;
 }
 
-export function normalizeSaleLines(lines: SaleLine[] | undefined | null): SaleLine[] {
+export function normalizeSaleLines(lines: SaleLine[] | undefined | null, saleId?: string): SaleLine[] {
   if (!lines?.length) return [];
   const out: SaleLine[] = [];
-  for (const line of lines) {
-    const n = normalizeSaleLine(line);
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
+    const fallbackLineId = saleId ? `${saleId}-line-${index + 1}` : undefined;
+    const n = normalizeSaleLine(line, fallbackLineId);
     if (n) out.push(n);
   }
   return out;
 }
 
-/** Persist stable UUID lineIds so sold-clone keys and multi-line same-SKU sales never collide. */
+/** Preserve supplied lineIds and deterministically fill missing ones during normalization. */
 export function ensureItemSaleLineIds(sale: Sale): Sale {
   const lines = sale.lines;
   if (!lines?.length) return sale;
@@ -114,7 +115,7 @@ export function ensureItemSaleLineIds(sale: Sale): Sale {
     const lid = il.lineId;
     if (lid != null && String(lid).trim() !== '') return line;
     changed = true;
-    return { ...il, lineId: uuid() };
+    return { ...il, lineId: `${sale.id}-line-${lines.indexOf(line) + 1}` };
   });
 
   return changed ? { ...sale, lines: next } : sale;
@@ -123,7 +124,7 @@ export function ensureItemSaleLineIds(sale: Sale): Sale {
 export function normalizeSale<T extends Pick<Sale, 'lines' | 'type'>>(sale: T): T {
   let next = sale as T;
   if (sale?.lines?.length) {
-    next = { ...next, lines: normalizeSaleLines(sale.lines as SaleLine[]) } as T;
+    next = { ...next, lines: normalizeSaleLines(sale.lines as SaleLine[], (sale as Sale).id) } as T;
   }
   return next;
 }

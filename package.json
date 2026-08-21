@@ -24,7 +24,14 @@
     "test:entity:site-clean": "vitest run tests/entity-test/site-entity-test-clean.ts",
     "test:entity:site-full": "vitest run tests/entity-test/site-entity-test-full.ts",
     "test:entity:direct-sale-clean": "vitest run tests/entity-test/direct-sale-entity-test-clean.ts",
-    "test:entity:direct-sale-full": "vitest run tests/entity-test/direct-sale-entity-test-full.ts"
+    "test:entity:direct-sale-full": "vitest run tests/entity-test/direct-sale-entity-test-full.ts",
+    "test:entity:network-sale-clean": "vitest run tests/entity-test/network-sale-entity-test-clean.ts",
+    "test:entity:network-sale-full": "vitest run tests/entity-test/network-sale-entity-test-full.ts",
+    "test:entity:online-sale-clean": "vitest run tests/entity-test/online-sale-entity-test-clean.ts",
+    "test:entity:online-sale-full": "vitest run tests/entity-test/online-sale-entity-test-full.ts",
+    "test:entity:online-sale-m2m": "vitest run tests/entity-test/online-sale-m2m-integration-test.ts",
+    "test:entity:booth-sale-clean": "vitest run tests/entity-test/booth-sale-entity-test-clean.ts"
+    ,"test:entity:booth-sale-full": "vitest run tests/entity-test/booth-sale-entity-test-full.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.758.0",

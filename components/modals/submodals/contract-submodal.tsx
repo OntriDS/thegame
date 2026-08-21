@@ -250,9 +250,10 @@ export function ContractSubmodal({
 
                 const link: any = {
                     id: uuid(),
-                    linkType: LinkType.CONTRACT_CHARACTER,
-                    source: { type: EntityType.CONTRACT, id: contract.id },
-                    target: { type: EntityType.CHARACTER, id: targetCharacterId },
+                    linkType: LinkType.CHARACTER_CONTRACT,
+                    source: { type: EntityType.CHARACTER, id: targetCharacterId },
+                    target: { type: EntityType.CONTRACT, id: contract.id },
+                    relationship: 'owner',
                     createdAt: new Date(),
                 };
 

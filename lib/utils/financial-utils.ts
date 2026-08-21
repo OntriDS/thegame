@@ -110,7 +110,8 @@ export function getSaleFinancialConsistencyIssues(sale: Sale): string[] {
     }
   }
 
-  const breakdown = sale.context?.paymentBreakdown;
+  const breakdown = (sale.context as (Sale['context'] & { paymentBreakdown?: Record<string, Money> }) | undefined)
+    ?.paymentBreakdown;
   if (isSettled && breakdown && totalCurrency) {
     const breakdownAmounts = Object.values(breakdown).filter(Boolean) as any[];
     const sameCurrency = breakdownAmounts.every(amount => !amount.currency || amount.currency === totalCurrency);

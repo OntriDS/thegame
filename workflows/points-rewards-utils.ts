@@ -178,7 +178,7 @@ export async function awardPointsToPlayer(
         break;
       case 'sale':
         // Sale rewards are attributed through SALE_CHARACTER(owner) -> CHARACTER_PLAYER.
-        // No direct SALE_PLAYER link is created.
+        // Sale rewards are attributed through SALE_CHARACTER(owner) -> CHARACTER_PLAYER.
         await appendPlayerPointsLog(resolvedPlayerId, points, sourceId, sourceType, customTimestamp);
         return;
       case 'item':
@@ -194,7 +194,7 @@ export async function awardPointsToPlayer(
       linkType,
       { type: sourceEntityType, id: sourceId },
       { type: EntityType.PLAYER, id: resolvedPlayerId },
-      sourceType === 'task' ? 'points-earned' : undefined
+      'points-earned'
     );
 
     await createLink(link);
@@ -409,7 +409,7 @@ export async function rewardPointsToPlayer(
       case 'financial': linkType = LinkType.FINREC_PLAYER; resolvedSourceEntityType = EntityType.FINANCIAL; break;
       case 'sale':
         // Sale rewards are attributed through SALE_CHARACTER(owner) -> CHARACTER_PLAYER.
-        // No direct SALE_PLAYER link is created.
+        // Sale rewards are attributed through SALE_CHARACTER(owner) -> CHARACTER_PLAYER.
         await appendPlayerPointsLog(resolvedPlayerId, points, sourceEntityId, sourceEntityType, customTimestamp);
         return;
       case 'item': linkType = LinkType.ITEM_PLAYER; resolvedSourceEntityType = EntityType.ITEM; break;
@@ -420,7 +420,7 @@ export async function rewardPointsToPlayer(
       linkType,
       { type: resolvedSourceEntityType, id: sourceEntityId },
       { type: EntityType.PLAYER, id: resolvedPlayerId },
-      sourceEntityType === 'task' ? 'points-earned' : undefined
+      'points-earned'
     );
 
     await createLink(link);

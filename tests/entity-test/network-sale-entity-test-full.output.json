@@ -1,0 +1,242 @@
+{
+  "sale": {
+    "id": "entity-test-sale-network-full",
+    "schemaVersion": 1,
+    "version": 0,
+    "name": "testing-network-sale-full",
+    "description": "Full Network Sale workflow test",
+    "type": "network",
+    "status": "charged",
+    "lines": [
+      {
+        "lineId": "network-line-full",
+        "kind": "item",
+        "itemId": "entity-test-item-network-full-sold-network-line-full",
+        "quantity": 1,
+        "unitPrice": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        }
+      }
+    ],
+    "payments": [
+      {
+        "method": "sinpe",
+        "amount": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        }
+      }
+    ],
+    "totals": {
+      "subtotal": {
+        "minorUnits": "5000",
+        "currency": "USD"
+      },
+      "totalRevenue": {
+        "minorUnits": "5000",
+        "currency": "USD"
+      },
+      "totalCost": {
+        "minorUnits": "500",
+        "currency": "USD"
+      }
+    },
+    "lifecycle": {
+      "chargedAt": "2026-08-21T00:08:10.940Z",
+      "doneAt": "2026-08-21T00:08:10.940Z"
+    },
+    "context": {
+      "rewardIntent": {
+        "points": {
+          "xp": 4,
+          "rp": 2,
+          "fp": 0,
+          "hp": 0
+        }
+      }
+    },
+    "createdAt": "2026-08-21T00:08:10.940Z",
+    "updatedAt": "2026-08-21T00:08:10.940Z"
+  },
+  "item": {
+    "id": "entity-test-item-network-full",
+    "name": "testing-network-product",
+    "type": "bundle",
+    "subItemType": "print",
+    "status": "for-sale",
+    "stock": [
+      {
+        "siteId": "hq",
+        "quantity": 3
+      }
+    ],
+    "pricing": {
+      "unitCost": {
+        "minorUnits": "1000",
+        "currency": "USD"
+      },
+      "targetPrice": {
+        "minorUnits": "5000",
+        "currency": "USD"
+      }
+    },
+    "context": {
+      "collection": "no-collection",
+      "year": 2026,
+      "restockToTarget": true,
+      "targetAmount": 3
+    },
+    "createdAt": "2026-08-21T00:08:10.940Z",
+    "updatedAt": "2026-08-21T00:08:23.785Z",
+    "schemaVersion": 1,
+    "version": 1
+  },
+  "financials": [
+    {
+      "id": "finrec-entity-test-sale-network-full",
+      "name": "network sale • HQ • 20-08-26",
+      "year": 2026,
+      "month": 8,
+      "station": "network",
+      "type": "company",
+      "cost": {
+        "minorUnits": "500",
+        "currency": "USD"
+      },
+      "revenue": {
+        "minorUnits": "5000",
+        "currency": "USD"
+      },
+      "createdAt": "2026-08-21T00:08:26.643Z",
+      "updatedAt": "2026-08-21T00:08:26.643Z",
+      "schemaVersion": 1,
+      "version": 0,
+      "netCashflow": {
+        "minorUnits": "4500",
+        "currency": "USD"
+      },
+      "status": "done",
+      "description": "Sale-sourced financial · entity-test-sale-network-full",
+      "salesChannel": "network",
+      "lifecycle": {
+        "doneAt": "2026-08-21T00:08:10.940Z"
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "360dfe84-5901-4b9a-a37a-49a859547b66",
+      "linkType": "SALE_SITE",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-network-full"
+      },
+      "target": {
+        "type": "site",
+        "id": "hq"
+      },
+      "relationship": "sold-at",
+      "createdAt": "2026-08-21T00:08:16.401Z"
+    },
+    {
+      "id": "3678de30-5770-4bee-9b1f-ee2d5a3b8622",
+      "linkType": "SALE_CHARACTER",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-network-full"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1775889257983-6pkhdapnl"
+      },
+      "relationship": "customer",
+      "createdAt": "2026-08-21T00:08:17.702Z"
+    },
+    {
+      "id": "f3d471b1-72e3-46ff-9bc4-6dc333d1d40e",
+      "linkType": "SALE_CHARACTER",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-network-full"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1775889257983-6pkhdapnl"
+      },
+      "relationship": "owner",
+      "createdAt": "2026-08-21T00:08:19.371Z"
+    },
+    {
+      "id": "00824b00-065b-4c11-b637-fe4490da1b4c",
+      "linkType": "SALE_FINREC",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-network-full"
+      },
+      "target": {
+        "type": "financial",
+        "id": "finrec-entity-test-sale-network-full"
+      },
+      "relationship": "sale-record",
+      "createdAt": "2026-08-21T00:08:34.837Z"
+    },
+    {
+      "id": "6f060580-7d6a-442e-99b9-55276c43171d",
+      "linkType": "SALE_ITEM",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-network-full"
+      },
+      "target": {
+        "type": "item",
+        "id": "entity-test-item-network-full-sold-network-line-full"
+      },
+      "relationship": "sold-item",
+      "createdAt": "2026-08-21T00:08:37.438Z"
+    }
+  ],
+  "soldItems": [
+    {
+      "id": "entity-test-item-network-full-sold-network-line-full",
+      "name": "testing-network-product",
+      "type": "bundle",
+      "subItemType": "print",
+      "status": "sold",
+      "stock": [
+        {
+          "siteId": "hq",
+          "quantity": 0
+        }
+      ],
+      "pricing": {
+        "unitCost": {
+          "minorUnits": "1000",
+          "currency": "USD"
+        },
+        "targetPrice": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        },
+        "actualSaleValue": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        }
+      },
+      "context": {
+        "collection": "no-collection",
+        "year": 2026,
+        "restockToTarget": true,
+        "targetAmount": 3,
+        "soldAt": "2026-08-21T00:08:10.940Z"
+      },
+      "createdAt": "2026-08-21T00:08:10.940Z",
+      "updatedAt": "2026-08-21T00:08:38.818Z",
+      "schemaVersion": 1,
+      "version": 2,
+      "quantitySold": 1,
+      "sourceRecordId": "entity-test-sale-network-full",
+      "description": "Sold in Gastón • Tagua Cafe (21-08-2026)"
+    }
+  ]
+}

@@ -202,7 +202,7 @@ export type TaskItemLinkV1 = LinkEnvelopeV1<
 
 export type ItemSiteLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.ITEM_SITE,
-  { relationship: 'stored' | 'displayed' | 'in-transit' }
+  { relationship: 'stored-at' | 'displayed-at' | 'in-transit' }
 >;
 
 export type AccountCharacterLinkV1 = LinkEnvelopeV1<
@@ -247,7 +247,7 @@ export type TaskPlayerLinkV1 = LinkEnvelopeV1<
 
 export type TaskFinRecLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.TASK_FINREC,
-  { relationship: 'generated' | 'settled' }
+  { relationship: 'task-record' }
 >;
 
 export type ItemCharacterLinkV1 = LinkEnvelopeV1<
@@ -255,19 +255,59 @@ export type ItemCharacterLinkV1 = LinkEnvelopeV1<
   { relationship: 'owned-by' }
 >;
 
-export type ItemSaleLinkV1 = LinkEnvelopeV1<
-  CanonicalLinkType.ITEM_SALE,
-  { relationship: 'sold-in' }
+export type SaleItemLinkV1 = LinkEnvelopeV1<
+  CanonicalLinkType.SALE_ITEM,
+  { relationship: 'sold-item' }
+>;
+
+export type SaleTaskLinkV1 = LinkEnvelopeV1<
+  CanonicalLinkType.SALE_TASK,
+  { relationship: 'sold-service' }
+>;
+
+export type SaleFinRecLinkV1 = LinkEnvelopeV1<
+  CanonicalLinkType.SALE_FINREC,
+  { relationship: 'sale-record' }
 >;
 
 export type SaleCharacterLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.SALE_CHARACTER,
-  { relationship: 'customer' | 'owner' }
+  { relationship: 'customer' | 'owner' | 'partner' }
+>;
+
+export type FinrecSiteLinkV1 = LinkEnvelopeV1<
+  CanonicalLinkType.FINREC_SITE,
+  { relationship: 'source-site' | 'target-site' }
+>;
+
+export type FinrecItemLinkV1 = LinkEnvelopeV1<
+  CanonicalLinkType.FINREC_ITEM,
+  { relationship: 'item-bought' }
+>;
+
+export type SaleSiteLinkV1 = LinkEnvelopeV1<
+  CanonicalLinkType.SALE_SITE,
+  { relationship: 'sold-at' }
 >;
 
 export type FinrecCharacterLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.FINREC_CHARACTER,
   { relationship: 'customer' | 'beneficiary' }
+>;
+
+export type SiteSiteLinkV1 = LinkEnvelopeV1<
+  CanonicalLinkType.SITE_SITE,
+  { relationship: 'moved-to' }
+>;
+
+export type CharacterContractLinkV1 = LinkEnvelopeV1<
+  CanonicalLinkType.CHARACTER_CONTRACT,
+  { relationship: 'owner' }
+>;
+
+export type CharacterBusinessLinkV1 = LinkEnvelopeV1<
+  CanonicalLinkType.CHARACTER_BUSINESS,
+  { relationship: 'owns' | 'represents' }
 >;
 
 /**
@@ -286,9 +326,18 @@ export type CanonicalLink =
   | TaskPlayerLinkV1
   | TaskFinRecLinkV1
   | ItemCharacterLinkV1
-  | ItemSaleLinkV1
+  | SaleItemLinkV1
+  | SaleTaskLinkV1
+  | SaleFinRecLinkV1
   | SaleCharacterLinkV1
-  | FinrecCharacterLinkV1;
+  | SaleSiteLinkV1
+  | FinrecSiteLinkV1
+  | FinrecItemLinkV1
+  | TaskFinRecLinkV1
+  | FinrecCharacterLinkV1
+  | SiteSiteLinkV1
+  | CharacterContractLinkV1
+  | CharacterBusinessLinkV1;
 
 
 /**
@@ -913,6 +962,11 @@ export interface ItemSaleLine extends SaleLineBase {
 }
 
 export interface ServiceLineContextV1 {
+  /**
+   * When true, this service line represents a charged task and the sale
+   * workflow creates that Task. Booth partner-selling services intentionally
+   * omit this flag: they are recurring sales services, not task work.
+   */
   createTask?: boolean;
   /** Canonical description sent to the Task created for this service line. */
   taskDescription?: string;
@@ -929,7 +983,10 @@ export interface ServiceLineContextV1 {
   productionPlan?: ProductionPlanFacetV1; // Shared from TaskContextV1
 }
 
-/** Service sale: optional Task creation */
+/**
+ * Service sale line. Direct sales may use it to create a Task; Booth sales
+ * also use it for the reciprocal service of selling a partner's products.
+ */
 export interface ServiceLine extends SaleLineBase {
   kind: 'service';
   /** @deprecated Transient compatibility input; use context.taskStation for Task creation. */
@@ -942,13 +999,10 @@ export type SaleLine = ItemSaleLine | ServiceLine;
 
 export interface SaleContextV1 {
   overallDiscount?: Discount;
-  boothFee?: Money;
-  paymentBreakdown?: {
-    cashUSD?: Money;
-    cashCRC?: Money;
-    card?: Money;
-    bitcoin?: Money;
-  };
+  /** Canonical booth operating cost/rental amount, stored in USD. */
+  boothCost?: Money;
+  /** Active Booth contract used by settlement calculations. */
+  contractId?: EntityId | null;
   newCustomerName?: string;
   source?: string;
   cancelReason?: string;
@@ -958,43 +1012,23 @@ export interface SaleContextV1 {
     reference?: string | null;
   };
   boothSaleContext?: BoothSaleContextV1;
+  onlineSaleContext?: OnlineSaleContextV1;
   rewardIntent?: RewardIntentFacetV1; // Staged rewards
 }
 
-export interface BoothSaleBreakdownV1 {
-  principalSharePct_Me: number;
-  principalSharePct_Partner: number;
-  partnerSharePct_Me: number;
-  partnerSharePct_Partner: number;
-  mySales: number;
-  partnerSales: number;
-  costMe: number;
-  costPartner: number;
-}
-
-export interface BoothSaleCalculatedTotalsV1 {
-  grossSales: number;
-  myNet: number;
-  partnerNet: number;
-  myCommissions: number;
-  partnerCommissions: number;
-  breakdown: BoothSaleBreakdownV1;
-}
-
-export interface BoothPaymentDistributionV1 {
-  bitcoin: number;
-  card: number;
-  cashCRC: number;
-  cashUSD: number;
+/** Customer-facing additions included in an Online checkout total. */
+export interface OnlineSaleContextV1 {
+  checkoutCharges?: {
+    shipping?: Money;
+    transactionFee?: Money;
+    processingFee?: Money;
+  };
 }
 
 export interface BoothSaleContextV1 {
+  /** Legacy Booth party references; new writes use canonical Links and Sale.context.contractId. */
   principalBusinessId?: EntityId | null;
   counterpartyBusinessId?: EntityId | null;
-  contractId?: EntityId | null;
-  boothCost: number;
-  calculatedTotals?: BoothSaleCalculatedTotalsV1;
-  paymentDistribution?: BoothPaymentDistributionV1;
 }
 
 export interface SaleLifecycleV1 {
@@ -1025,7 +1059,8 @@ export interface Sale extends EntityEnvelope {
   counterpartyName?: string;
   /** @deprecated Transient command input. Canonical customer authority is SALE_CHARACTER. */
   characterId?: EntityId | null; // Customer
-  partnerId?: EntityId | null;   // Booth partner
+  /** @deprecated Transient Booth input; canonical partner authority is SALE_CHARACTER(partner). */
+  partnerId?: EntityId | null;
   /** @deprecated Transient command input. Canonical owner authority is SALE_CHARACTER(owner). */
   ownerId?: EntityId | null;
 

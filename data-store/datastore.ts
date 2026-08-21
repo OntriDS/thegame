@@ -1287,7 +1287,7 @@ async function ensureSaleSiteLink(saleId: string, siteId?: string): Promise<void
   const { makeLink } = await import('@/links/links-workflows');
   const existing = await getLinksFor({ type: EntityType.SALE, id: saleId });
   if (existing.some(link => link.linkType === LinkType.SALE_SITE && link.target.type === EntityType.SITE && link.target.id === siteId)) return;
-  await createLink(makeLink(LinkType.SALE_SITE, { type: EntityType.SALE, id: saleId }, { type: EntityType.SITE, id: siteId }));
+  await createLink(makeLink(LinkType.SALE_SITE, { type: EntityType.SALE, id: saleId }, { type: EntityType.SITE, id: siteId }, 'sold-at'));
 }
 
 async function ensureSaleCharacterLink(saleId: string, characterId?: string | null, relationship: 'customer' | 'owner' = 'customer'): Promise<void> {
@@ -1297,11 +1297,6 @@ async function ensureSaleCharacterLink(saleId: string, characterId?: string | nu
   const existing = await getLinksFor({ type: EntityType.SALE, id: saleId });
   if (existing.some(link => link.linkType === LinkType.SALE_CHARACTER && link.target.type === EntityType.CHARACTER && link.target.id === characterId && (link.relationship || 'customer') === relationship)) return;
   await createLink(makeLink(LinkType.SALE_CHARACTER, { type: EntityType.SALE, id: saleId }, { type: EntityType.CHARACTER, id: characterId }, relationship));
-}
-
-function saleHasRewardPoints(sale: Sale): boolean {
-  const points = sale.context?.rewardIntent?.points;
-  return Boolean(points && (points.xp || points.rp || points.fp || points.hp));
 }
 
 export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean }): Promise<Sale> {
@@ -1348,7 +1343,7 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
       })(),
     })))
   );
-  if (String(normalizedSale.type).toLowerCase() === 'direct') {
+  if (['direct', 'network'].includes(String(normalizedSale.type).toLowerCase())) {
     const consistencyIssues = getSaleFinancialConsistencyIssues(normalizedSale);
     if (consistencyIssues.length > 0) {
       throw new Error(`SALE_FINANCIAL_INCONSISTENCY: ${consistencyIssues.join('; ')}`);
@@ -1359,6 +1354,7 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
     saleDate: _transientSaleDate,
     characterId: _transientCharacterId,
     ownerId: _transientOwnerId,
+    partnerId: transientPartnerId,
     counterpartyName: _transientCounterpartyName,
     ...canonicalSale
   } = normalizedSale;
@@ -1380,6 +1376,7 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
     ...(transientSiteId ? { siteId: transientSiteId } : {}),
     ...(transientCharacterId ? { characterId: transientCharacterId } : {}),
     ...(transientOwnerId ? { ownerId: transientOwnerId } : {}),
+    ...(transientPartnerId ? { partnerId: transientPartnerId } : {}),
     ...(transientCounterpartyName ? { counterpartyName: transientCounterpartyName } : {}),
   } as Sale;
   let resultForLinks: Sale = runtimeSale;
@@ -1396,6 +1393,7 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
         ...(transientSiteId ? { siteId: transientSiteId } : {}),
         ...(transientCharacterId ? { characterId: transientCharacterId } : {}),
         ...(transientOwnerId ? { ownerId: transientOwnerId } : {}),
+        ...(transientPartnerId ? { partnerId: transientPartnerId } : {}),
         ...(transientCounterpartyName ? { counterpartyName: transientCounterpartyName } : {}),
       } as Sale;
     }

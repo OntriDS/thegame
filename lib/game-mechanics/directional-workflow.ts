@@ -193,7 +193,6 @@ function generateUpdateData(
   // This would typically update player points, status changes, etc.
   switch (rule.linkType) {
     case LinkType.PLAYER_TASK:
-    case LinkType.PLAYER_SALE:
     case LinkType.PLAYER_FINREC:
       return {
         points: trigger.metadata?.rewards?.points || {},

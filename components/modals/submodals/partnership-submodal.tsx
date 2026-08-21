@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { ClientAPI } from '@/lib/client-api';
 import { EntityType, LinkType } from '@/types/enums';
 import { ContractSubmodal } from '@/components/modals/submodals/contract-submodal';
+import { v4 as uuid } from 'uuid';
 
 
 interface PartnershipManagerSubmodalProps {
@@ -160,16 +161,34 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
             // But ClientAPI.getLinksFor(type, id) usually finds connected links.
             const links = await ClientAPI.getLinksFor({ type: relationship.entityType, id: relationship.entityId });
 
-            // Find CONTRACT_CHARACTER link
-            // Link structure: Source=Contract, Target=Character
+            // Find the canonical Character -> Contract owner link first.
             const contractLink = links.find(l =>
-                l.linkType === LinkType.CONTRACT_CHARACTER &&
-                l.target.id === relationship.entityId
+                l.linkType === LinkType.CHARACTER_CONTRACT &&
+                l.source.id === relationship.entityId
             );
 
-            if (contractLink) {
+            // Migrate an older Contract -> Character link when encountered.
+            const legacyContractLink = !contractLink ? links.find(l =>
+                l.linkType === LinkType.CONTRACT_CHARACTER &&
+                l.target.id === relationship.entityId
+            ) : undefined;
+
+            if (legacyContractLink) {
+                await ClientAPI.createLink({
+                    id: uuid(),
+                    linkType: LinkType.CHARACTER_CONTRACT,
+                    source: { type: 'character', id: relationship.entityId },
+                    target: { type: 'contract', id: legacyContractLink.source.id },
+                    relationship: 'owner',
+                    createdAt: new Date(),
+                } as any);
+                await ClientAPI.removeLink(legacyContractLink.id);
+            }
+
+            if (contractLink || legacyContractLink) {
                 // Fetch the actual contract
-                const contract = await ClientAPI.getContractById(contractLink.source.id);
+                const contractId = contractLink?.target.id || legacyContractLink?.source.id;
+                const contract = contractId ? await ClientAPI.getContractById(contractId) : null;
                 setContractInitialData(contract || undefined);
             } else {
                 setContractInitialData(undefined); // Start Fresh
@@ -194,10 +213,10 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
             const links = await ClientAPI.getLinksFor({ type: relationship.entityType, id: relationship.entityId });
 
             // 2. Identify Links to Delete
-            // For now, focus on CONTRACT_CHARACTER links which define active business roles
+            // Remove canonical Character -> Contract owner links.
             const linksToDelete = links.filter(l =>
-                l.linkType === LinkType.CONTRACT_CHARACTER &&
-                l.target.id === relationship.entityId
+                (l.linkType === LinkType.CHARACTER_CONTRACT && l.source.id === relationship.entityId) ||
+                (l.linkType === LinkType.CONTRACT_CHARACTER && l.target.id === relationship.entityId)
             );
 
             // 3. Delete Links

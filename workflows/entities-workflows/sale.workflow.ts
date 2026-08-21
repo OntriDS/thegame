@@ -27,7 +27,6 @@ import {
 import { stagePointsForPlayer, removePointsFromPlayer, rewardPointsToPlayer, resolveToPlayerIdMaybeCharacter } from '../points-rewards-utils';
 import { processSaleLines, ensureSoldItemEntities } from '../sale-line-utils';
 import { executeWorkflow } from '../coordinator';
-import { resyncFinrecItemLinksAfterSoldItemClones } from '../financial-record-utils';
 import { updateFinancialRecordsFromSale, updateItemsFromSale, hasRevenueChanged, hasCostChanged, hasLinesChanged } from '../update-propagation-utils';
 import { createCharacterFromSale } from '../character-creation-utils';
 // UTC STANDARDIZATION: Using new UTC utilities
@@ -37,8 +36,11 @@ import { getSaleLogDetails } from '@/lib/utils/sale-log-details';
 import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
 import { getSaleCharacterId } from '@/lib/sale-character-id';
 import { resolveSaleCharacterId, resolveSaleOwnerId } from '@/lib/sale-relationship-selectors';
+import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 
 function saleHasRewardPoints(sale: Sale): boolean {
+  // Booth sales do not participate in the Player reward system.
+  if (sale.type === SaleType.BOOTH) return false;
   const p = sale.context?.rewardIntent?.points;
   if (!p) return false;
   return (p.xp || 0) > 0 || (p.rp || 0) > 0 || (p.fp || 0) > 0 || (p.hp || 0) > 0;
@@ -226,12 +228,12 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     const totalCalculatedCost = split.myBoothCost + payout;
 
     // If calculated cost differs from current cost, update it before log creation
-    if (totalCalculatedCost >= 0 && Math.abs((sale.totals.totalCost || 0) - totalCalculatedCost) > 0.01) {
+    if (totalCalculatedCost >= 0 && Math.abs(extractMoneyValue(sale.totals.totalCost) - totalCalculatedCost) > 0.01) {
       sale = {
         ...sale,
         totals: {
           ...sale.totals,
-          totalCost: totalCalculatedCost
+          totalCost: toMoney(totalCalculatedCost, 'USD')
         }
       };
       // Skip workflow interactions to prevent infinite loops, but allow simple persistence
@@ -275,13 +277,24 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     };
 
     const linesChanged = hasLinesChanged(sale, previousSale);
+    const boothCostForComparison = (candidate: Sale): number => {
+      const legacyContext = candidate.context as (Sale['context'] & {
+        boothFee?: unknown;
+        boothSaleContext?: Sale['context']['boothSaleContext'] & { boothCost?: number };
+      }) | undefined;
+      // New records are canonical USD. Legacy values are only read for migration compatibility.
+      return candidate.context?.boothCost !== undefined
+        ? extractMoneyValue(candidate.context.boothCost)
+        : legacyContext?.boothFee !== undefined
+          ? extractMoneyValue(legacyContext.boothFee as any)
+          : Number(legacyContext?.boothSaleContext?.boothCost || 0);
+    };
     // Check if relevant financial drivers changed (Revenue, Fee, Counterparty, identity, period, etc)
     const hasFinancialDriversChanged =
       linesChanged ||
       hasRevenueChanged(sale, previousSale) ||
       hasCostChanged(sale, previousSale) ||
-      (sale.context?.boothSaleContext?.boothCost ?? null) !==
-        (previousSale.context?.boothSaleContext?.boothCost ?? null) ||
+      boothCostForComparison(sale) !== boothCostForComparison(previousSale) ||
       sale.partnerId !== previousSale.partnerId ||
       saleCharacterId !== previousSaleCharacterId ||
       sale.name !== previousSale.name ||
@@ -305,12 +318,12 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         const totalCalculatedCost = split.myBoothCost + payout;
 
         // If calculated cost differs from current cost, update it
-        if (totalCalculatedCost >= 0 && Math.abs((sale.totals.totalCost || 0) - totalCalculatedCost) > 0.01) {
+        if (totalCalculatedCost >= 0 && Math.abs(extractMoneyValue(sale.totals.totalCost) - totalCalculatedCost) > 0.01) {
           const updatedSaleWithCost = {
             ...sale,
             totals: {
               ...sale.totals,
-              totalCost: totalCalculatedCost
+            totalCost: toMoney(totalCalculatedCost, 'USD')
             }
           };
           // Update sale with cost - allow workflow to run normally
@@ -435,7 +448,10 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   const isCharged = sale.status !== SaleStatus.CANCELLED &&
     (sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED);
   const hasItemLines = sale.lines?.some(l => l.kind === 'item');
-  if (isCharged && hasItemLines) {
+  // Online M2M fulfillment is coordinated by SaleSettlementProcessManager.
+  // Do not run the legacy synchronous inventory path as well: both paths can
+  // decrement the same inventory row during payment callbacks.
+  if (isCharged && hasItemLines && !(handledByCoordinator && sale.type === SaleType.ONLINE)) {
     // Decrement live inventory from the original sale lines before the next
     // step rewrites those lines to sold-clone IDs. The effect claim inside
     // processItemSaleLine makes this safe on retries and resaves.
@@ -444,8 +460,6 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     // Lines may now point at sold-item rows in KV; use reloaded sale so SOLD logs attach to those ids, not the first-persist snapshot.
     const saleForItemLogs = await getSaleById(sale.id);
     const saleAfterClones = saleForItemLogs ?? sale;
-    // FINREC_ITEM was synced earlier in this same upsert from inventory line ids; align to sold clones.
-    await resyncFinrecItemLinksAfterSoldItemClones(saleAfterClones);
     await ensureItemSoldLogsFromSale(saleAfterClones);
   }
 

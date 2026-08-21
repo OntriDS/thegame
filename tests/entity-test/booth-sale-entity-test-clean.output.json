@@ -1,0 +1,33 @@
+{
+  "id": "entity-test-sale-booth-clean",
+  "schemaVersion": 1,
+  "version": 0,
+  "name": "testing-booth-sale",
+  "type": "booth",
+  "status": "pending",
+  "lines": [
+    {
+      "lineId": "booth-line-1",
+      "kind": "item",
+      "itemId": "imported-1762140802806-245",
+      "quantity": 1,
+      "unitPrice": {
+        "minorUnits": "5000",
+        "currency": "USD"
+      }
+    }
+  ],
+  "totals": {
+    "subtotal": {
+      "minorUnits": "5000",
+      "currency": "USD"
+    },
+    "totalRevenue": {
+      "minorUnits": "5000",
+      "currency": "USD"
+    }
+  },
+  "lifecycle": {},
+  "createdAt": "2026-08-21T02:50:04.864Z",
+  "updatedAt": "2026-08-21T02:50:04.864Z"
+}

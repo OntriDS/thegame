@@ -32,7 +32,8 @@ export async function POST(req: NextRequest) {
              const newLink = makeLink(
                LinkType.TASK_FINREC,
                { type: EntityType.TASK, id: task.id },
-               { type: EntityType.FINANCIAL, id: fin.id }
+               { type: EntityType.FINANCIAL, id: fin.id },
+               'task-record'
              );
              
              await createLink(newLink, { skipValidation: true }); // Avoid validation loops or canonical rejection issues during repair
@@ -60,7 +61,8 @@ export async function POST(req: NextRequest) {
              const newLink = makeLink(
                LinkType.SALE_FINREC,
                { type: EntityType.SALE, id: sale.id },
-               { type: EntityType.FINANCIAL, id: fin.id }
+               { type: EntityType.FINANCIAL, id: fin.id },
+               'sale-record'
              );
              
              await createLink(newLink, { skipValidation: true });

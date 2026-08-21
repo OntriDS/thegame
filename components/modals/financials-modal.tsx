@@ -266,7 +266,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         month: record.month || month
       });
 
-      // Initialize player character
+      // Initialize the item selection; FinancialRecords do not select a Player
       setSelectedItemId('');
       setLocalDoneAt(record.lifecycle?.doneAt ? new Date(record.lifecycle.doneAt) : undefined);
 

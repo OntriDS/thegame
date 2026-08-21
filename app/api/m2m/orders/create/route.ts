@@ -1,12 +1,13 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuid } from 'uuid';
-import { getUTCNow, startOfDayUTC } from '@/lib/utils/utc-utils';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 import { iamService } from '@/lib/iam-service';
 import { SaleStatus, SaleType, type Station } from '@/types/enums';
 import { SalesStation } from '@/lib/storage/taxonomy';
 import type { Sale, SaleLine, ItemSaleLine } from '@/types/entities';
-import { upsertSale } from '@/data-store/datastore';
+import { getSaleById, upsertSale } from '@/data-store/datastore';
+import { toMoney } from '@/lib/utils/financial-utils';
 
 type CreateOrderRequest = {
   orderId?: string;
@@ -21,6 +22,11 @@ type CreateOrderRequest = {
   siteId?: string;
   characterId?: string | null;
   counterpartyName?: string;
+  checkoutCharges?: {
+    shipping?: number;
+    transactionFee?: number;
+    processingFee?: number;
+  };
 };
 
 function normalizeNumber(value: unknown, fallback = 0): number {
@@ -72,6 +78,24 @@ function buildTotals(lines: ItemSaleLine[], fallbackTotal?: number): Sale['total
   };
 }
 
+function normalizeCheckoutCharges(input: CreateOrderRequest['checkoutCharges']) {
+  const charges = {
+    shipping: Math.max(0, normalizeNumber(input?.shipping)),
+    transactionFee: Math.max(0, normalizeNumber(input?.transactionFee)),
+    processingFee: Math.max(0, normalizeNumber(input?.processingFee)),
+  };
+  const hasCharges = Object.values(charges).some((amount) => amount > 0);
+  return hasCharges
+    ? {
+        checkoutCharges: Object.fromEntries(
+          Object.entries(charges)
+            .filter(([, amount]) => amount > 0)
+            .map(([key, amount]) => [key, toMoney(amount)]),
+        ),
+      }
+    : undefined;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -109,8 +133,25 @@ export async function POST(request: NextRequest) {
 
     const now = getUTCNow();
     const orderId = normalizeString(body.orderId) || uuid();
+    const existing = await getSaleById(orderId);
+    if (existing) {
+      if (existing.status === SaleStatus.PENDING || existing.status === SaleStatus.ON_HOLD) {
+        return NextResponse.json({
+          success: true,
+          orderId: existing.id,
+          sale: existing,
+          note: 'Order already exists; returning the existing pending order',
+        });
+      }
+      return NextResponse.json(
+        { success: false, error: `Order ${orderId} already exists in terminal status: ${existing.status}` },
+        { status: 409 },
+      );
+    }
     const total = buildTotals(lines, body.total);
+    const siteId = normalizeString(body.siteId) || 'site-akiles-ecosystem';
     const characterId = normalizeString(body.characterId);
+    const onlineSaleContext = normalizeCheckoutCharges(body.checkoutCharges);
     const sale: Sale = {
       id: orderId,
       name: `Ecosystem Order ${orderId}`,
@@ -119,11 +160,12 @@ export async function POST(request: NextRequest) {
       description: `Order created by M2M from Akiles Ecosystem`,
       context: {
         source: 'akiles-ecosystem',
+        ...(onlineSaleContext ? { onlineSaleContext } : {}),
       },
-      saleDate: startOfDayUTC(now),
       type: SaleType.ONLINE,
       status: SaleStatus.PENDING,
-      siteId: normalizeString(body.siteId) || 'site-akiles-ecosystem',
+      lifecycle: {},
+      siteId,
       counterpartyName: normalizeString(body.counterpartyName) || 'akiles-ecosystem',
       characterId: characterId ?? null,
       lines: lines as SaleLine[],

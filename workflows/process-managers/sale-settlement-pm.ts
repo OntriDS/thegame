@@ -7,7 +7,7 @@
 // - Step outcomes are recorded in the workflow execution
 
 import type { WorkflowExecutionV1, Sale, StepOutcomeV1 } from '@/types/entities';
-import { WorkflowStatus, EffectClaimStatus, EntityType, LogEventType, SaleStatus } from '@/types/enums';
+import { WorkflowStatus, EffectClaimStatus, EntityType, LogEventType, SaleStatus, SaleType } from '@/types/enums';
 import { saveWorkflowExecution } from '@/data-store/workflow-store';
 import { getSaleById } from '@/data-store/datastore';
 import { getUTCNow } from '@/lib/utils/utc-utils';
@@ -19,11 +19,14 @@ import { createCharacterFromSale } from '../character-creation-utils';
 import { updateFinancialRecordsFromSale } from '../update-propagation-utils';
 import { ensureFinancialDoneLog } from '../entities-workflows/financial.workflow';
 import { appendEntityLog } from '../entities-logging';
-import { processSaleLines } from '../sale-line-utils';
+import { processSaleLines, ensureSoldItemEntities } from '../sale-line-utils';
+import { ensureItemSoldLogsFromSale } from '../entities-logging';
 import { stagePointsForPlayer, rewardPointsToPlayer, resolveToPlayerIdMaybeCharacter } from '../points-rewards-utils';
 import { resolveSaleCharacterId, resolveSaleOwnerId } from '@/lib/sale-relationship-selectors';
 
 function saleHasRewardPoints(sale: Sale): boolean {
+  // Booth sales do not participate in the Player reward system.
+  if (sale.type === SaleType.BOOTH) return false;
   const points = sale.context?.rewardIntent?.points;
   return Boolean(points && (points.xp || points.rp || points.fp || points.hp));
 }
@@ -236,6 +239,13 @@ export class SaleSettlementProcessManager {
     try {
       console.log(`[SaleSettlementPM] Processing inventory for sale ${sale.id}`);
       await processSaleLines(sale);
+      if (sale.lines?.some(line => line.kind === 'item')) {
+        await ensureSoldItemEntities(sale);
+        const latestSale = await getSaleById(sale.id);
+        if (latestSale) {
+          await ensureItemSoldLogsFromSale(latestSale);
+        }
+      }
       
       const resolved = await resolveEffectClaim({
         idempotencyKey: effectKey,

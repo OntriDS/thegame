@@ -48,6 +48,7 @@ import {
   SaleType,
   SaleStatus,
   CharacterRole,
+  PaymentMethod,
 } from "@/types/enums";
 import { SalesStation } from "@/lib/storage/taxonomy";
 import {
@@ -108,7 +109,7 @@ export interface BoothSalesViewProps {
   exchangeRate?: number;
 }
 
-function getBoothContext(sale?: Sale | null): BoothSaleContextV1 {
+function getBoothContext(sale?: Sale | null): BoothSaleContextV1 & { boothCost?: number } {
   return sale?.context?.boothSaleContext || { boothCost: 0 };
 }
 
@@ -118,6 +119,40 @@ function getSaleAmount(value: unknown): number {
   }
   const amount = Number(value);
   return Number.isFinite(amount) ? amount : 0;
+}
+
+function getInitialBoothCostCRC(sale: Sale | null | undefined, exchangeRate: number): number {
+  const canonicalCost = sale?.context?.boothCost;
+  if (canonicalCost !== undefined) return extractMoneyValue(canonicalCost) * exchangeRate;
+
+  const legacyContext = sale?.context as (Sale['context'] & { boothFee?: unknown }) | undefined;
+  return getSaleAmount(legacyContext?.boothFee ?? getBoothContext(sale).boothCost);
+}
+
+function getInitialPaymentInput(
+  sale: Sale | null | undefined,
+  method: PaymentMethod,
+  exchangeRate: number,
+  legacyValue: unknown,
+): number {
+  const canonicalPayment = sale?.payments?.find((payment) => payment.method === method);
+  if (canonicalPayment) {
+    const amountUSD = extractMoneyValue(canonicalPayment.amount);
+    return method === PaymentMethod.FIAT_USD ? amountUSD : amountUSD * exchangeRate;
+  }
+  const legacyAmount = getSaleAmount(legacyValue);
+  const legacyCurrency =
+    legacyValue && typeof legacyValue === "object" && "currency" in legacyValue
+      ? String((legacyValue as { currency?: unknown }).currency || "")
+      : "";
+  return method !== PaymentMethod.FIAT_USD && legacyCurrency === "USD"
+    ? legacyAmount * exchangeRate
+    : legacyAmount;
+}
+
+function getLegacyPaymentBreakdown(sale: Sale | null | undefined): Record<string, unknown> | undefined {
+  return (sale?.context as (Sale['context'] & { paymentBreakdown?: Record<string, unknown> }) | undefined)
+    ?.paymentBreakdown;
 }
 
 /** Parent DialogFooter calls this so booth saves use fullSale (metadata, payments, partner context). */
@@ -187,7 +222,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
     const [selectedContractId, setSelectedContractId] = useState<string>(() => {
       const boothContext = getBoothContext(sale);
       return (
-      boothContext.contractId ||
+      sale?.context?.contractId ||
         ""
       );
     });
@@ -198,6 +233,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         const boothContext = getBoothContext(sale);
         return (
           boothContext.principalBusinessId ||
+          contracts.find((contract) => contract.id === sale?.context?.contractId)?.principalBusinessId ||
           ""
         );
       });
@@ -207,6 +243,12 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       const boothContext = getBoothContext(sale);
       // 1. Try modern metadata first
       if (boothContext.counterpartyBusinessId) return boothContext.counterpartyBusinessId;
+      const contractCounterparty = contracts.find(
+        (contract) => contract.id === sale?.context?.contractId,
+      )?.counterpartyBusinessId;
+      if (contractCounterparty && businesses.some((business) => business.id === contractCounterparty)) {
+        return contractCounterparty;
+      }
       // 3. Fallback for older sales records (migrate Character ID to Business ID or preexisting Business ID)
       const charId = sale?.partnerId || "";
       if (charId) {
@@ -253,13 +295,14 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       return serviceLines.map((sl) => {
         // Safely cast to 'any' to dynamically extract either ServiceLine or ItemSaleLine values
         const line = sl as any;
-        const amountCRC =
-          line.settlement?.originalAmountCRC ?? line.salePriceCrc ?? 0;
+        // New Booth writes keep the canonical line revenue only. Legacy
+        // original amounts remain readable so old sales can still be edited.
         const amountUSD =
-          line.settlement?.originalAmountUSD ??
-          (line.revenue !== undefined
+          line.revenue !== undefined
             ? extractMoneyValue(line.revenue)
-            : (line.quantity || 0) * extractMoneyValue(line.unitPrice));
+            : (line.quantity || 0) * extractMoneyValue(line.unitPrice);
+        const amountCRC =
+          line.settlement?.originalAmountCRC ?? amountUSD * (exchangeRate || 500);
         const desc = line.description || "";
         const categoryMatch = desc.includes("] ") ? desc.split("] ")[1] : desc;
 
@@ -274,7 +317,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
             "",
         };
       });
-    }, [lines]);
+    }, [lines, exchangeRate]);
 
     // Delete Confirmation State
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -291,19 +334,39 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
     // Payment Distribution State
     // Modifiable Financials State (First-Class Fields)
     const [boothCost, setBoothCost] = useState<number>(() =>
-      getSaleAmount(sale?.context?.boothFee),
+      getInitialBoothCostCRC(sale, exchangeRate || 500),
     );
     const [paymentBitcoin, setPaymentBitcoin] = useState<number>(
-      getSaleAmount(sale?.context?.paymentBreakdown?.bitcoin),
+      getInitialPaymentInput(
+        sale,
+        PaymentMethod.BTC,
+        exchangeRate || 500,
+        getLegacyPaymentBreakdown(sale)?.bitcoin,
+      ),
     );
     const [paymentCard, setPaymentCard] = useState<number>(
-      getSaleAmount(sale?.context?.paymentBreakdown?.card),
+      getInitialPaymentInput(
+        sale,
+        PaymentMethod.CARD,
+        exchangeRate || 500,
+        getLegacyPaymentBreakdown(sale)?.card,
+      ),
     );
     const [paymentCashCRC, setPaymentCashCRC] = useState<number>(
-      getSaleAmount(sale?.context?.paymentBreakdown?.cashCRC),
+      getInitialPaymentInput(
+        sale,
+        PaymentMethod.FIAT_CRC,
+        exchangeRate || 500,
+        getLegacyPaymentBreakdown(sale)?.cashCRC,
+      ),
     );
     const [paymentCashUSD, setPaymentCashUSD] = useState<number>(
-      getSaleAmount(sale?.context?.paymentBreakdown?.cashUSD),
+      getInitialPaymentInput(
+        sale,
+        PaymentMethod.FIAT_USD,
+        exchangeRate || 500,
+        getLegacyPaymentBreakdown(sale)?.cashUSD,
+      ),
     );
 
     // Effect to auto-calculate Cash remainder initially (OPTIONAL)
@@ -722,17 +785,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         station: SalesStation.BOOTH_SALES as Station,
         // Revenue in USD (Source of Truth for Financials)
         revenue: toMoney(amountCRC / safeExchangeRate + amountUSD),
-        // Descriptive label
-        description: `[Partner: ${getPartnerName(selectedPartnerId)}] ${quickCat}`,
         taxAmount: toMoney(0),
         settlement: {
-          originalAmountCRC: amountCRC,
-          originalAmountUSD: amountUSD,
           category: quickCat,
           partnerId: selectedPartnerId,
-          // Shares will be recalculated on Save, but good to have baseline
-          partnerShare: 0,
-          myCommission: 0,
         },
       } as unknown as ServiceLine;
 
@@ -763,22 +819,17 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       // Safeguard against division by zero
       const safeExchangeRate = exchangeRate || 500;
 
-      // 1. Re-process lines to ensure shares are up to date (Calculated Totals might have changed)
-      // We iterate over the existing lines. If it's a Partner Service line, we update its metadata.
+      // 1. Normalize partner attribution without persisting calculated shares.
+      // The linked contract remains the authority for settlement percentages.
       const updatedLines = lines.map((line) => {
         if (line.kind === "service" && line.station === "booth-sales") {
           return {
             ...line,
             settlement: {
-              ...(line as any).settlement,
-              partnerShare: !Number.isNaN(
-                totals.breakdown.partnerSharePct_Partner,
-              )
-                ? totals.breakdown.partnerSharePct_Partner
-                : 0,
-              myCommission: !Number.isNaN(totals.breakdown.partnerSharePct_Me)
-                ? totals.breakdown.partnerSharePct_Me
-                : 0,
+              // Contract clauses are the authority for these percentages.
+              // Do not persist a calculated snapshot on the sale line.
+              category: (line as any).settlement?.category,
+              partnerId: (line as any).settlement?.partnerId ?? null,
             },
           };
         }
@@ -788,35 +839,34 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       // 2. (Skipped) Combine Step is gone. updatedLines IS allLines.
 
       // 3. Construct Metadata Context
-      const boothMetadata = {
-        boothSaleContext: {
-          principalBusinessId: selectedFounderBusinessId,
-          counterpartyBusinessId: selectedPartnerId,
-          contractId: selectedContractId,
-          boothCost: boothCost,
-          calculatedTotals: {
-            ...totals,
-            breakdown: {
-              principalSharePct_Me: totals.breakdown.principalSharePct_Me || 0,
-              principalSharePct_Partner:
-                totals.breakdown.principalSharePct_Partner || 0,
-              partnerSharePct_Me: totals.breakdown.partnerSharePct_Me || 0,
-              partnerSharePct_Partner:
-                totals.breakdown.partnerSharePct_Partner || 0,
-              mySales: totals.breakdown.mySales || 0,
-              partnerSales: totals.breakdown.partnerSales || 0,
-              costMe: totals.breakdown.costMe || 0,
-              costPartner: totals.breakdown.costPartner || 0,
-            },
-          },
-          paymentDistribution: {
-            bitcoin: paymentBitcoin,
-            card: paymentCard,
-            cashCRC: paymentCashCRC,
-            cashUSD: paymentCashUSD,
-          },
-        },
-      };
+      // Payment inputs are entered in their received currency, but the
+      // canonical Sale payment amounts are persisted in USD. The method keeps
+      // the original payment instrument/currency visible to the workflow.
+      const payments = [
+        { method: PaymentMethod.BTC, amount: paymentBitcoin / safeExchangeRate },
+        { method: PaymentMethod.CARD, amount: paymentCard / safeExchangeRate },
+        { method: PaymentMethod.FIAT_CRC, amount: paymentCashCRC / safeExchangeRate },
+        { method: PaymentMethod.FIAT_USD, amount: paymentCashUSD },
+      ]
+        .filter((payment) => Number.isFinite(payment.amount) && payment.amount > 0)
+        .map((payment) => ({
+          method: payment.method,
+          amount: toMoney(payment.amount, "USD"),
+        }));
+
+      // Do not carry the legacy payment containers forward when editing an
+      // older Booth sale. They remain readable by compatibility code, but new
+      // persistence has one authority: Sale.payments.
+      const {
+        boothCost: _existingBoothCost,
+        paymentBreakdown: _legacyPaymentBreakdown,
+        rewardIntent: _legacyRewardIntent,
+        boothSaleContext: _legacyBoothSaleContext,
+        ...saleContextWithoutLegacyPayments
+      } = (sale?.context as (Sale['context'] & {
+        paymentBreakdown?: unknown;
+      }) | undefined) || {};
+      const boothCostUSD = boothCost > 0 ? boothCost / safeExchangeRate : 0;
 
       // 4. Construct FULL Valid Sale Object
       // Using CHARGED as the standard 'Completed' status for sales
@@ -844,6 +894,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
 
         // Financials (Converted to USD)
         lines: updatedLines,
+        payments,
         totals: {
           subtotal: toMoney(totals.grossSales / safeExchangeRate),
           discountTotal: toMoney(0),
@@ -852,15 +903,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         },
 
         context: {
-          ...(sale?.context || {}),
-          boothFee: toMoney(boothCost, "CRC"),
-          paymentBreakdown: {
-            bitcoin: toMoney(paymentBitcoin, "USD"),
-            card: toMoney(paymentCard, "USD"),
-            cashCRC: toMoney(paymentCashCRC, "CRC"),
-            cashUSD: toMoney(paymentCashUSD, "USD"),
-          },
-          boothSaleContext: boothMetadata.boothSaleContext,
+          ...saleContextWithoutLegacyPayments,
+          // The UI collects the booth cost in CRC; persist it only when used.
+          ...(boothCostUSD > 0 ? { boothCost: toMoney(boothCostUSD, "USD") } : {}),
+          contractId: selectedContractId || null,
         },
 
         // Canonical lifecycle state

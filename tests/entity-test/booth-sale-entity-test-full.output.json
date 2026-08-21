@@ -1,0 +1,283 @@
+{
+  "sale": {
+    "id": "entity-test-sale-booth-full",
+    "schemaVersion": 1,
+    "version": 0,
+    "name": "testing-booth-sale-full",
+    "description": "Full Booth Sale workflow test",
+    "type": "booth",
+    "status": "charged",
+    "lines": [
+      {
+        "lineId": "booth-line-full",
+        "kind": "item",
+        "itemId": "entity-test-item-booth-full-sold-booth-line-full",
+        "quantity": 1,
+        "unitPrice": {
+          "minorUnits": "10000",
+          "currency": "USD"
+        }
+      },
+      {
+        "lineId": "booth-partner-service-full",
+        "kind": "service",
+        "station": "booth-sales",
+        "revenue": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        },
+        "settlement": {
+          "category": "Partner Product",
+          "partnerId": "1147ae28-6d9c-43bb-8ebc-0bf52b5859a3"
+        }
+      }
+    ],
+    "payments": [
+      {
+        "method": "fiat-crc",
+        "amount": {
+          "minorUnits": "10000",
+          "currency": "USD"
+        }
+      },
+      {
+        "method": "fiat-usd",
+        "amount": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        }
+      }
+    ],
+    "totals": {
+      "subtotal": {
+        "minorUnits": "15000",
+        "currency": "USD"
+      },
+      "totalRevenue": {
+        "minorUnits": "15000",
+        "currency": "USD"
+      },
+      "totalCost": {
+        "minorUnits": "4250",
+        "currency": "USD"
+      }
+    },
+    "context": {
+      "boothCost": {
+        "minorUnits": "1000",
+        "currency": "USD"
+      },
+      "contractId": "entity-test-contract-booth-full"
+    },
+    "lifecycle": {
+      "chargedAt": "2026-08-21T04:01:17.620Z",
+      "doneAt": "2026-08-21T04:01:17.620Z"
+    },
+    "createdAt": "2026-08-21T04:01:17.620Z",
+    "updatedAt": "2026-08-21T04:01:17.620Z"
+  },
+  "financials": [
+    {
+      "id": "finrec-payout-entity-test-sale-booth-full",
+      "name": "booth sale • HQ • 20-08-26 • partner",
+      "year": 2026,
+      "month": 8,
+      "station": "booth-sales",
+      "type": "company",
+      "revenue": {
+        "minorUnits": "3750",
+        "currency": "USD"
+      },
+      "cost": {
+        "minorUnits": "2500",
+        "currency": "USD"
+      },
+      "status": "done",
+      "updatedAt": "2026-08-21T04:01:56.431Z",
+      "createdAt": "2026-08-21T04:01:56.431Z",
+      "schemaVersion": 1,
+      "version": 0,
+      "netCashflow": {
+        "minorUnits": "1250",
+        "currency": "USD"
+      },
+      "description": "Impact Ledger: Commission split with partner",
+      "salesChannel": "booth-sales",
+      "lifecycle": {
+        "doneAt": "2026-08-21T04:01:17.620Z"
+      }
+    },
+    {
+      "id": "finrec-entity-test-sale-booth-full",
+      "name": "booth sale • HQ • 20-08-26",
+      "year": 2026,
+      "month": 8,
+      "station": "booth-sales",
+      "type": "company",
+      "revenue": {
+        "minorUnits": "10000",
+        "currency": "USD"
+      },
+      "cost": {
+        "minorUnits": "500",
+        "currency": "USD"
+      },
+      "status": "done",
+      "updatedAt": "2026-08-21T04:01:43.936Z",
+      "createdAt": "2026-08-21T04:01:43.936Z",
+      "schemaVersion": 1,
+      "version": 0,
+      "netCashflow": {
+        "minorUnits": "9500",
+        "currency": "USD"
+      },
+      "description": "Performance Ledger: My items and booth cost share",
+      "salesChannel": "booth-sales",
+      "lifecycle": {
+        "doneAt": "2026-08-21T04:01:17.620Z"
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "3e264540-38a1-413e-b739-371d163f5bb5",
+      "linkType": "SALE_ITEM",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-booth-full"
+      },
+      "target": {
+        "type": "item",
+        "id": "entity-test-item-booth-full-sold-booth-line-full"
+      },
+      "relationship": "sold-item",
+      "createdAt": "2026-08-21T04:02:00.525Z"
+    },
+    {
+      "id": "0b1d2ee9-f8f5-41d9-a08d-97d7870e4c09",
+      "linkType": "SALE_FINREC",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-booth-full"
+      },
+      "target": {
+        "type": "financial",
+        "id": "finrec-payout-entity-test-sale-booth-full"
+      },
+      "relationship": "sale-record",
+      "createdAt": "2026-08-21T04:02:03.907Z"
+    },
+    {
+      "id": "74ee5254-ca19-4cff-8334-a0b9f5010192",
+      "linkType": "SALE_SITE",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-booth-full"
+      },
+      "target": {
+        "type": "site",
+        "id": "hq"
+      },
+      "relationship": "sold-at",
+      "createdAt": "2026-08-21T04:01:31.740Z"
+    },
+    {
+      "id": "c848862b-367e-4c14-9bfb-37c167a9e0e3",
+      "linkType": "SALE_CHARACTER",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-booth-full"
+      },
+      "target": {
+        "type": "character",
+        "id": "1147ae28-6d9c-43bb-8ebc-0bf52b5859a3"
+      },
+      "relationship": "customer",
+      "createdAt": "2026-08-21T04:01:33.388Z"
+    },
+    {
+      "id": "2fcecfef-587a-45aa-8fd2-dacbb4aa48e3",
+      "linkType": "SALE_CHARACTER",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-booth-full"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1775889257983-6pkhdapnl"
+      },
+      "relationship": "owner",
+      "createdAt": "2026-08-21T04:01:35.337Z"
+    },
+    {
+      "id": "1bc4b163-e7c3-4fb6-bcf2-0432419355b8",
+      "linkType": "SALE_CHARACTER",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-booth-full"
+      },
+      "target": {
+        "type": "character",
+        "id": "1147ae28-6d9c-43bb-8ebc-0bf52b5859a3"
+      },
+      "relationship": "partner",
+      "createdAt": "2026-08-21T04:02:16.397Z"
+    },
+    {
+      "id": "5c1def52-a516-4ba9-9e87-8b0da6a1ac5b",
+      "linkType": "SALE_FINREC",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-booth-full"
+      },
+      "target": {
+        "type": "financial",
+        "id": "finrec-entity-test-sale-booth-full"
+      },
+      "relationship": "sale-record",
+      "createdAt": "2026-08-21T04:01:54.793Z"
+    }
+  ],
+  "soldItems": [
+    {
+      "id": "entity-test-item-booth-full-sold-booth-line-full",
+      "name": "Entity Test Booth Product",
+      "type": "bundle",
+      "subItemType": "booth-test-product",
+      "status": "sold",
+      "stock": [
+        {
+          "siteId": "hq",
+          "quantity": 0
+        }
+      ],
+      "pricing": {
+        "unitCost": {
+          "minorUnits": "3000",
+          "currency": "USD"
+        },
+        "targetPrice": {
+          "minorUnits": "10000",
+          "currency": "USD"
+        },
+        "actualSaleValue": {
+          "minorUnits": "10000",
+          "currency": "USD"
+        }
+      },
+      "context": {
+        "collection": "no-collection",
+        "year": 2026,
+        "restockToTarget": false,
+        "soldAt": "2026-08-21T04:01:17.620Z"
+      },
+      "schemaVersion": 1,
+      "version": 1,
+      "createdAt": "2026-08-21T04:01:17.620Z",
+      "updatedAt": "2026-08-21T04:01:55.407Z",
+      "quantitySold": 1,
+      "sourceRecordId": "entity-test-sale-booth-full",
+      "description": "Sold in Sale (21-08-2026)"
+    }
+  ]
+}

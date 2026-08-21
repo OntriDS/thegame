@@ -84,7 +84,7 @@ async function getFinancialLinksForCharacter(characterId: string): Promise<Canon
   );
 
   return links.filter(
-    (link): link is CanonicalLink =>
+    (link: CanonicalLink | null): link is CanonicalLink =>
       link !== null &&
       link.linkType === CanonicalLinkType.FINREC_CHARACTER &&
       link.target.type === EntityType.CHARACTER &&

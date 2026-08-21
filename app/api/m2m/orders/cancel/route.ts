@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { iamService } from '@/lib/iam-service';
 import { SaleStatus } from '@/types/enums';
 import { getSaleById, upsertSale, removeSale } from '@/data-store/datastore';
+import { getUTCNow, toUTCISOString } from '@/lib/utils/utc-utils';
 
 type CancelOrderRequest = {
   orderId?: string;
@@ -89,10 +90,13 @@ export async function POST(request: NextRequest) {
     const nextSale = {
       ...sale,
       status: SaleStatus.CANCELLED,
+      lifecycle: {
+        ...(sale.lifecycle || {}),
+        cancelledAt: toUTCISOString(getUTCNow()),
+      },
       context: {
         ...(sale.context || {}),
         cancelReason: body.reason || 'Checkout abandoned or failed in ecosystem',
-        cancelledAt: new Date().toISOString(),
       }
     };
     await upsertSale(nextSale);

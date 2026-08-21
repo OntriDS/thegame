@@ -632,14 +632,13 @@ export enum LinkType {
   SALE_TASK = 'SALE_TASK',      // Sale created Task
   SALE_ITEM = 'SALE_ITEM',      // Sale sold Item
   SALE_FINREC = 'SALE_FINREC',    // Sale linked to Financial Record
-  SALE_PLAYER = 'SALE_PLAYER',    // Legacy: Sale earned Player points; use SALE_CHARACTER(owner) instead
   SALE_CHARACTER = 'SALE_CHARACTER', // Sale customer/owner Character
   SALE_BUSINESS = 'SALE_BUSINESS',   // Sale counterparty is a Business
   SALE_SITE = 'SALE_SITE',      // Sale is performed at a Site
 
   // FINANCIAL RECORD relationships
   FINREC_TASK = 'FINREC_TASK',    // Financial Record tracks Task
-  FINREC_ITEM = 'FINREC_ITEM',    // Financial Record tracks Item
+  FINREC_ITEM = 'FINREC_ITEM',    // Financial Record bought Item
   FINREC_SALE = 'FINREC_SALE',    // Financial Record linked to Sale
   FINREC_PLAYER = 'FINREC_PLAYER',  // Financial → Player (legacy / generic points link type; finrec workflow does not award points)
   FINREC_CHARACTER = 'FINREC_CHARACTER', // Financial Record assigned to Character (customer, team member, etc.)
@@ -665,7 +664,6 @@ export enum LinkType {
 
   // PLAYER relationships
   PLAYER_TASK = 'PLAYER_TASK', // Player has Tasks Points (reverse)
-  PLAYER_SALE = 'PLAYER_SALE', // Player has Sales Points (reverse)
   PLAYER_FINREC = 'PLAYER_FINREC', // Player its tied to this Financial Record (reverse)
   PLAYER_ITEM = 'PLAYER_ITEM', // Player owns/possesses this Item (reverse)
   PLAYER_CHARACTER = 'PLAYER_CHARACTER', // Legacy reverse alias; canonical direction is CHARACTER_PLAYER
@@ -677,7 +675,8 @@ export enum LinkType {
   CHARACTER_ACCOUNT = 'CHARACTER_ACCOUNT', // Character belongs to Account (reverse)
 
   // CONTRACT relationships
-  CONTRACT_CHARACTER = 'CONTRACT_CHARACTER', // Contract applies to Character (Partner)
+  CHARACTER_CONTRACT = 'CHARACTER_CONTRACT', // Character owns a Contract
+  CONTRACT_CHARACTER = 'CONTRACT_CHARACTER', // Legacy reverse direction
 }
 
 /** Entity Types for Link System */
@@ -732,7 +731,7 @@ export enum ContractStatus {
 export enum ContractClauseType {
   SALES_COMMISSION = 'commission',      // Products sold by Partner (Company pays commission)
   SALES_SERVICE = 'sales-service',      // My service performed for Partner (Company provides service)
-  EXPENSE_SHARING = 'expense-sharing',   // Shared costs (e.g. Booth Fee)
+  EXPENSE_SHARING = 'expense-sharing',   // Shared costs (e.g. booth cost)
   OTHER = 'other'
 }
 
@@ -916,6 +915,7 @@ export enum CanonicalLinkType {
   SITE_SETTLEMENT = 'SITE_SETTLEMENT',
   SITE_SITE = 'SITE_SITE',
 
+  CHARACTER_CONTRACT = 'CHARACTER_CONTRACT',
   CONTRACT_CHARACTER = 'CONTRACT_CHARACTER',
 }
 
@@ -935,7 +935,6 @@ export const LEGACY_LINK_NORMALIZATION = {
   SITE_CHARACTER: 'CHARACTER_SITE',
 
   PLAYER_TASK: 'TASK_PLAYER',
-  PLAYER_SALE: 'SALE_PLAYER',
   PLAYER_FINREC: 'FINREC_PLAYER',
   CHARACTER_TASK: 'TASK_CHARACTER',
   CHARACTER_SALE: 'SALE_CHARACTER',

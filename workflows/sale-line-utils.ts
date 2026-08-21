@@ -188,7 +188,8 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     const link = makeLink(
       LinkType.SALE_ITEM,
       { type: EntityType.SALE, id: sale.id },
-      { type: EntityType.ITEM, id: line.itemId }
+      { type: EntityType.ITEM, id: line.itemId },
+      'sold-item'
     );
     await createLink(link);
 
@@ -271,7 +272,8 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
     const link = makeLink(
       LinkType.SALE_TASK,
       { type: EntityType.SALE, id: sale.id },
-      { type: EntityType.TASK, id: serviceTask.id }
+      { type: EntityType.TASK, id: serviceTask.id },
+      'sold-service'
     );
     await createLink(link);
 
@@ -308,7 +310,8 @@ async function ensureSaleItemLink(saleId: string, soldItemId: string): Promise<v
   const soldItemLink = makeLink(
     LinkType.SALE_ITEM,
     { type: EntityType.SALE, id: saleId },
-    { type: EntityType.ITEM, id: soldItemId }
+    { type: EntityType.ITEM, id: soldItemId },
+    'sold-item'
   );
   await createLink(soldItemLink);
 }
@@ -523,8 +526,16 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
 
     if (changedLines) {
       console.log(`[ensureSoldItemEntities] Updating sale ${sale.id} to explicitly point to sold item entities.`);
-      const { upsertSale } = await import('@/data-store/datastore');
-      await upsertSale({ ...sale, lines: newLines }, { skipWorkflowEffects: true, skipLinkEffects: true });
+      const { getSaleById, upsertSale } = await import('@/data-store/datastore');
+      // Another workflow step may have persisted calculated totals (for
+      // example Booth totalCost) after this process received its snapshot.
+      // Merge the latest Sale before replacing line itemIds so that this
+      // bookkeeping write cannot erase canonical totals.
+      const latestSale = await getSaleById(sale.id);
+      await upsertSale(
+        { ...(latestSale || sale), lines: newLines },
+        { skipWorkflowEffects: true, skipLinkEffects: true },
+      );
     }
 }
 

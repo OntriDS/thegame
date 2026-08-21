@@ -24,7 +24,8 @@ export async function createSiteMovementLink(
   const link = makeLink(
     LinkType.SITE_SITE,
     { type: EntityType.SITE, id: fromSiteId },
-    { type: EntityType.SITE, id: toSiteId }
+    { type: EntityType.SITE, id: toSiteId },
+    'moved-to'
   );
 
   await createLink(link);

@@ -1,0 +1,217 @@
+{
+  "sale": {
+    "id": "entity-test-sale-online-full",
+    "schemaVersion": 1,
+    "version": 0,
+    "name": "testing-online-sale-full",
+    "description": "Full customer Online Sale workflow test",
+    "type": "online",
+    "status": "charged",
+    "lines": [
+      {
+        "lineId": "online-line-full",
+        "kind": "item",
+        "itemId": "entity-test-item-online-full-sold-online-line-full",
+        "quantity": 1,
+        "unitPrice": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        }
+      }
+    ],
+    "payments": [
+      {
+        "method": "card",
+        "amount": {
+          "minorUnits": "6125",
+          "currency": "USD"
+        }
+      }
+    ],
+    "totals": {
+      "subtotal": {
+        "minorUnits": "5000",
+        "currency": "USD"
+      },
+      "totalRevenue": {
+        "minorUnits": "6125",
+        "currency": "USD"
+      },
+      "totalCost": {
+        "minorUnits": "300",
+        "currency": "USD"
+      }
+    },
+    "lifecycle": {
+      "chargedAt": "2026-08-21T00:00:30.983Z",
+      "doneAt": "2026-08-21T00:00:30.983Z"
+    },
+    "context": {
+      "source": "akiles-ecosystem",
+      "onlineSaleContext": {
+        "checkoutCharges": {
+          "shipping": {
+            "minorUnits": "800",
+            "currency": "USD"
+          },
+          "transactionFee": {
+            "minorUnits": "25",
+            "currency": "USD"
+          },
+          "processingFee": {
+            "minorUnits": "300",
+            "currency": "USD"
+          }
+        }
+      }
+    },
+    "createdAt": "2026-08-21T00:00:30.983Z",
+    "updatedAt": "2026-08-21T00:00:30.983Z"
+  },
+  "financials": [
+    {
+      "id": "finrec-entity-test-sale-online-full",
+      "name": "online sale • HQ • 20-08-26",
+      "year": 2026,
+      "month": 8,
+      "station": "online-sales",
+      "type": "company",
+      "cost": {
+        "minorUnits": "300",
+        "currency": "USD"
+      },
+      "revenue": {
+        "minorUnits": "6125",
+        "currency": "USD"
+      },
+      "createdAt": "2026-08-21T00:00:42.831Z",
+      "updatedAt": "2026-08-21T00:00:42.831Z",
+      "schemaVersion": 1,
+      "version": 0,
+      "netCashflow": {
+        "minorUnits": "5825",
+        "currency": "USD"
+      },
+      "status": "done",
+      "description": "Sale-sourced financial · entity-test-sale-online-full",
+      "salesChannel": "online-sales",
+      "lifecycle": {
+        "doneAt": "2026-08-21T00:00:30.983Z"
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "289cfd11-6dc7-4da8-a114-5f444fcf8533",
+      "linkType": "SALE_CHARACTER",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-online-full"
+      },
+      "target": {
+        "type": "character",
+        "id": "fd409c60-a316-4b23-a68a-d9e14903e42f"
+      },
+      "relationship": "customer",
+      "createdAt": "2026-08-21T00:00:36.953Z"
+    },
+    {
+      "id": "b51eb19b-f6f2-4cdb-90a9-4c2bf638336c",
+      "linkType": "SALE_ITEM",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-online-full"
+      },
+      "target": {
+        "type": "item",
+        "id": "entity-test-item-online-full"
+      },
+      "relationship": "sold-item",
+      "createdAt": "2026-08-21T00:00:42.238Z"
+    },
+    {
+      "id": "86bd4da7-ae19-4732-bd21-6d3f344a3f1f",
+      "linkType": "SALE_FINREC",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-online-full"
+      },
+      "target": {
+        "type": "financial",
+        "id": "finrec-entity-test-sale-online-full"
+      },
+      "relationship": "sale-record",
+      "createdAt": "2026-08-21T00:00:49.763Z"
+    },
+    {
+      "id": "a8065d34-2fb0-467f-98b1-b184d64d772c",
+      "linkType": "SALE_ITEM",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-online-full"
+      },
+      "target": {
+        "type": "item",
+        "id": "entity-test-item-online-full-sold-online-line-full"
+      },
+      "relationship": "sold-item",
+      "createdAt": "2026-08-21T00:00:57.829Z"
+    },
+    {
+      "id": "5e31ea0d-e25d-4073-8a6c-dca2db96f427",
+      "linkType": "SALE_SITE",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-online-full"
+      },
+      "target": {
+        "type": "site",
+        "id": "hq"
+      },
+      "relationship": "sold-at",
+      "createdAt": "2026-08-21T00:00:35.600Z"
+    }
+  ],
+  "soldItems": [
+    {
+      "id": "entity-test-item-online-full-sold-online-line-full",
+      "name": "testing-online-product",
+      "type": "bundle",
+      "subItemType": "print",
+      "status": "sold",
+      "stock": [
+        {
+          "siteId": "hq",
+          "quantity": 0
+        }
+      ],
+      "pricing": {
+        "unitCost": {
+          "minorUnits": "1000",
+          "currency": "USD"
+        },
+        "targetPrice": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        },
+        "actualSaleValue": {
+          "minorUnits": "5000",
+          "currency": "USD"
+        }
+      },
+      "context": {
+        "collection": "no-collection",
+        "year": 2026,
+        "restockToTarget": false,
+        "soldAt": "2026-08-21T00:00:30.983Z"
+      },
+      "createdAt": "2026-08-21T00:00:30.983Z",
+      "updatedAt": "2026-08-21T00:00:53.566Z",
+      "schemaVersion": 1,
+      "version": 0,
+      "quantitySold": 1,
+      "sourceRecordId": "entity-test-sale-online-full",
+      "description": "Sold in Cristina • Coquette's Armoire (21-08-2026)"
+    }
+  ]
+}

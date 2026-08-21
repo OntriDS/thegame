@@ -41,6 +41,10 @@
         "minorUnits": "1080",
         "currency": "USD"
       },
+      "totalCost": {
+        "minorUnits": "100",
+        "currency": "USD"
+      },
       "discountTotal": {
         "minorUnits": "50",
         "currency": "USD"
@@ -51,16 +55,10 @@
       }
     },
     "lifecycle": {
-      "chargedAt": "2026-08-20T16:48:50.847Z",
-      "doneAt": "2026-08-20T16:48:50.847Z"
+      "chargedAt": "2026-08-21T00:04:39.132Z",
+      "doneAt": "2026-08-21T00:04:39.132Z"
     },
     "context": {
-      "paymentBreakdown": {
-        "cashUSD": {
-          "minorUnits": "1080",
-          "currency": "USD"
-        }
-      },
       "rewardIntent": {
         "points": {
           "xp": 5,
@@ -70,12 +68,44 @@
         }
       }
     },
-    "createdAt": "2026-08-20T16:48:50.847Z",
-    "updatedAt": "2026-08-20T16:48:50.847Z"
+    "createdAt": "2026-08-21T00:04:39.132Z",
+    "updatedAt": "2026-08-21T00:04:39.132Z"
   },
+  "financials": [
+    {
+      "id": "finrec-entity-test-sale-direct-product-full",
+      "name": "direct sale • HQ • 20-08-26",
+      "year": 2026,
+      "month": 8,
+      "station": "direct-sales",
+      "type": "company",
+      "cost": {
+        "minorUnits": "100",
+        "currency": "USD"
+      },
+      "revenue": {
+        "minorUnits": "1080",
+        "currency": "USD"
+      },
+      "createdAt": "2026-08-21T00:04:54.767Z",
+      "updatedAt": "2026-08-21T00:04:54.767Z",
+      "schemaVersion": 1,
+      "version": 0,
+      "netCashflow": {
+        "minorUnits": "980",
+        "currency": "USD"
+      },
+      "status": "done",
+      "description": "Sale-sourced financial · entity-test-sale-direct-product-full",
+      "salesChannel": "direct-sales",
+      "lifecycle": {
+        "doneAt": "2026-08-21T00:04:39.132Z"
+      }
+    }
+  ],
   "links": [
     {
-      "id": "821724dc-b85c-4749-8eff-2329625603c4",
+      "id": "aa70979e-467a-4eb1-96b0-e75d3c84e38d",
       "linkType": "SALE_SITE",
       "source": {
         "type": "sale",
@@ -85,10 +115,11 @@
         "type": "site",
         "id": "hq"
       },
-      "createdAt": "2026-08-20T16:48:57.129Z"
+      "relationship": "sold-at",
+      "createdAt": "2026-08-21T00:04:44.070Z"
     },
     {
-      "id": "5b3b4086-c24c-465f-ba3d-68588ba415a8",
+      "id": "66d98014-dd8f-41af-ac91-10c988fc5003",
       "linkType": "SALE_CHARACTER",
       "source": {
         "type": "sale",
@@ -99,10 +130,10 @@
         "id": "character-1775889257983-6pkhdapnl"
       },
       "relationship": "customer",
-      "createdAt": "2026-08-20T16:48:58.487Z"
+      "createdAt": "2026-08-21T00:04:45.653Z"
     },
     {
-      "id": "282e3fac-8b60-477c-b466-58b8ded71c1e",
+      "id": "079ef060-fb28-4abf-93ae-9c3063ca6337",
       "linkType": "SALE_CHARACTER",
       "source": {
         "type": "sale",
@@ -113,10 +144,10 @@
         "id": "character-1775889257983-6pkhdapnl"
       },
       "relationship": "owner",
-      "createdAt": "2026-08-20T16:49:00.119Z"
+      "createdAt": "2026-08-21T00:04:47.606Z"
     },
     {
-      "id": "cdf48e37-6fd1-429d-9aa5-f8efd76c547e",
+      "id": "e468c4a0-e84c-4ee5-b9e2-7b8e6ef9858b",
       "linkType": "SALE_ITEM",
       "source": {
         "type": "sale",
@@ -126,10 +157,11 @@
         "type": "item",
         "id": "entity-test-item-direct-sale-full-sold-product-line-full"
       },
-      "createdAt": "2026-08-20T16:49:17.642Z"
+      "relationship": "sold-item",
+      "createdAt": "2026-08-21T00:04:59.450Z"
     },
     {
-      "id": "8bf1ea00-902b-430e-b357-7efbc4869ec6",
+      "id": "405b0139-1ce2-491e-9103-64811007187e",
       "linkType": "SALE_FINREC",
       "source": {
         "type": "sale",
@@ -139,7 +171,8 @@
         "type": "financial",
         "id": "finrec-entity-test-sale-direct-product-full"
       },
-      "createdAt": "2026-08-20T16:49:19.787Z"
+      "relationship": "sale-record",
+      "createdAt": "2026-08-21T00:05:01.252Z"
     }
   ],
   "soldItems": [
@@ -172,15 +205,15 @@
       "context": {
         "collection": "no-collection",
         "year": 2026,
-        "soldAt": "2026-08-20T16:48:50.847Z"
+        "soldAt": "2026-08-21T00:04:39.132Z"
       },
-      "createdAt": "2026-08-20T16:48:50.847Z",
-      "updatedAt": "2026-08-20T16:49:07.127Z",
+      "createdAt": "2026-08-21T00:04:39.132Z",
+      "updatedAt": "2026-08-21T00:04:55.178Z",
       "schemaVersion": 1,
       "version": 0,
       "quantitySold": 1,
       "sourceRecordId": "entity-test-sale-direct-product-full",
-      "description": "Sold in Existing test Character (20-08-2026)"
+      "description": "Sold in Existing test Character (21-08-2026)"
     }
   ]
 }

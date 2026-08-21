@@ -137,7 +137,6 @@ export function validateLinkTypeCompatibility(
     'SALE_TASK': { source: [EntityType.SALE], target: [EntityType.TASK] },
     'SALE_ITEM': { source: [EntityType.SALE], target: [EntityType.ITEM] },
     'SALE_FINREC': { source: [EntityType.SALE], target: [EntityType.FINANCIAL] },
-    'SALE_PLAYER': { source: [EntityType.SALE], target: [EntityType.PLAYER] },
     'SALE_CHARACTER': { source: [EntityType.SALE], target: [EntityType.CHARACTER] },
     'SALE_BUSINESS': { source: [EntityType.SALE], target: [EntityType.BUSINESS] },
     'SALE_SITE': { source: [EntityType.SALE], target: [EntityType.SITE] },
@@ -170,7 +169,6 @@ export function validateLinkTypeCompatibility(
 
     // PLAYER relationships (5)
     'PLAYER_TASK': { source: [EntityType.PLAYER], target: [EntityType.TASK] },
-    'PLAYER_SALE': { source: [EntityType.PLAYER], target: [EntityType.SALE] },
     'PLAYER_FINREC': { source: [EntityType.PLAYER], target: [EntityType.FINANCIAL] },
     'PLAYER_ITEM': { source: [EntityType.PLAYER], target: [EntityType.ITEM] },
     'PLAYER_CHARACTER': { source: [EntityType.PLAYER], target: [EntityType.CHARACTER] },
@@ -184,7 +182,9 @@ export function validateLinkTypeCompatibility(
     // AGENT relationships (1)
     'AGENT_TASK': { source: [EntityType.AGENT], target: [EntityType.TASK] },
 
-    // CONTRACT relationships (1)
+    // CONTRACT relationships
+    'CHARACTER_CONTRACT': { source: [EntityType.CHARACTER], target: [EntityType.CONTRACT] },
+    // Legacy reverse direction, read/migration compatibility only.
     'CONTRACT_CHARACTER': { source: [EntityType.CONTRACT], target: [EntityType.CHARACTER] }
   };
 
@@ -280,8 +280,6 @@ async function checkReverseDuplicate(
     [LinkType.SITE_ITEM]: null,
     [LinkType.SALE_FINREC]: null,
     [LinkType.FINREC_SALE]: null,
-    [LinkType.SALE_PLAYER]: null,
-    [LinkType.PLAYER_SALE]: null,
     [LinkType.SALE_CHARACTER]: null,
     [LinkType.CHARACTER_SALE]: null,
     [LinkType.SALE_SITE]: null,
@@ -302,6 +300,7 @@ async function checkReverseDuplicate(
     [LinkType.TASK_AGENT]: null,
     [LinkType.AGENT_TASK]: null,
     [LinkType.CHARACTER_BUSINESS]: null,
+    [LinkType.CHARACTER_CONTRACT]: null,
     [LinkType.CONTRACT_CHARACTER]: null,
     [LinkType.SALE_BUSINESS]: null,
     [LinkType.FINREC_BUSINESS]: null,
@@ -426,7 +425,9 @@ export async function validateBusinessRules(
         if (saleWithChar) {
           const ok = relationship === 'owner'
             ? saleWithChar.ownerId === target.id
-            : getSaleCharacterId(saleWithChar) === target.id || saleWithChar.partnerId === target.id;
+            : relationship === 'partner'
+              ? saleWithChar.partnerId === target.id
+              : getSaleCharacterId(saleWithChar) === target.id;
           if (!ok) {
             warnings.push(
               `Sale ${source.id} character link target ${target.id} is not the declared ${relationship || 'customer'} Character`

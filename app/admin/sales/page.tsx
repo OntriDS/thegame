@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useThemeColors } from "@/lib/hooks/use-theme-colors";
 import { useEntityUpdates } from "@/lib/hooks/use-entity-updates";
 import { ClientAPI } from "@/lib/client-api";
-import { Sale, Character } from "@/types/entities";
+import { Sale, Character, FinancialRecord } from "@/types/entities";
 import { getSaleCharacterId } from '@/lib/sale-character-id';
 import { 
   getSaleLinks
@@ -30,6 +30,7 @@ import { useMonthlySummary } from '@/lib/hooks/use-monthly-summary';
 function SalesPageContent() {
   const { activeBg } = useThemeColors();
   const [sales, setSales] = useState<Sale[]>([]);
+  const [financialRecords, setFinancialRecords] = useState<FinancialRecord[]>([]);
   const [sites, setSites] = useState<any[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [filteredSales, setFilteredSales] = useState<Sale[]>([]);
@@ -134,16 +135,18 @@ function SalesPageContent() {
 
       // Fetch Full Detailed Sales (O(N) - BACKGROUND)
       setIsLoading(true);
-      const [salesData, sitesData, ratesData, charactersData] = await Promise.all([
+      const [salesData, sitesData, ratesData, charactersData, financialData] = await Promise.all([
         ClientAPI.getSales(
           monthNum,
           yearNum
         ),
         ClientAPI.getSites(),
         ClientAPI.getFinancialConversionRates(),
-        ClientAPI.getCharacters()
+        ClientAPI.getCharacters(),
+        ClientAPI.getFinancialRecords(monthNum, yearNum),
       ]);
       setSales(salesData);
+      setFinancialRecords(financialData);
       setSites(sitesData);
       setCharacters(charactersData);
       const safeRates = ratesData && typeof ratesData.colonesToUsd === 'number'
@@ -205,27 +208,15 @@ function SalesPageContent() {
     let netProfit = 0;
 
     if (sale.type === SaleType.BOOTH) {
-      const exchangeRate = exchangeRates?.colonesToUsd || DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd;
-
-      const myNetCRCRaw = sale.context?.boothSaleContext?.calculatedTotals?.myNet;
-
-      const myNetCRC = extractMoneyValue(myNetCRCRaw);
-
-      if (myNetCRC !== 0 || myNetCRCRaw !== undefined) {
-        netProfit = myNetCRC / exchangeRate;
-        // Reverse-engineer apparent cost for consistent UI structure in dashboards
-        cost = grossRevenue - netProfit;
-      } else {
-        // Canonical calculation fallback when older V1 booth records lack the
-        // precomputed split: derive it from canonical context and lines.
-        const boothFeeValue = extractMoneyValue(sale.context?.boothFee);
-        const boothFeeUSD = boothFeeValue / exchangeRate;
-        const partnerPayouts = sale.lines
-          .filter(l => l.kind === 'service' && (l as any).station === 'booth-sales')
-          .reduce((sum, l) => sum + extractMoneyValue((l as any).revenue), 0);
-
-        cost = boothFeeUSD + partnerPayouts;
-        netProfit = grossRevenue - cost;
+      // The Booth financial workflow creates two records. The sales page
+      // displays the core performance record; the partner-impact record stays
+      // separate and is not folded into this value.
+      const coreRecord = financialRecords.find(
+        (record) => record.sourceSaleId === sale.id && !record.id.includes('payout'),
+      );
+      if (coreRecord) {
+        cost = extractMoneyValue(coreRecord.cost);
+        netProfit = extractMoneyValue(coreRecord.netCashflow);
       }
     } else {
       const explicitCost = extractMoneyValue(sale.totals?.totalCost);
@@ -240,7 +231,7 @@ function SalesPageContent() {
     }
 
     return { grossRevenue, cost, netProfit };
-  }, [exchangeRates]);
+  }, [financialRecords]);
 
   useEffect(() => {
     const nextMonthlySalesProfit = sales

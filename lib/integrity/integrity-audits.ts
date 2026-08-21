@@ -160,7 +160,8 @@ export async function auditLinkConsistency(month: number, year: number): Promise
 }
 
 function paymentLooksPresent(sale: Sale): boolean {
-  const pb = sale.context?.paymentBreakdown;
+  const pb = (sale.context as (Sale['context'] & { paymentBreakdown?: Record<string, Money> }) | undefined)
+    ?.paymentBreakdown;
   const breakdownSum = pb
     ? extractMoneyValue(pb.cashUSD) + extractMoneyValue(pb.cashCRC) + extractMoneyValue(pb.card) + extractMoneyValue(pb.bitcoin)
     : 0;
