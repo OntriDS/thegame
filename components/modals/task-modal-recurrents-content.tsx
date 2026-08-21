@@ -35,6 +35,7 @@ import {
   createCharacterOptions,
 } from '@/lib/utils/searchable-select-utils';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
+import { getSiteTypeLabel } from '@/lib/constants/site-taxonomy-labels';
 import { getStationSelectValue } from '@/lib/utils/business-structure-utils';
 import type { Station, SubItemType } from '@/types/type-aliases';
 import { v4 as uuid } from 'uuid';
@@ -48,6 +49,7 @@ import { FrequencyConfig } from '@/components/ui/frequency-calendar';
 // UTC STANDARDIZATION: Using new UTC utilities
 import { validateFrequencyConfig } from '@/lib/utils/recurrent-validation';;
 import { getUTCNow } from '@/lib/utils/utc-utils';
+import { getLinkedCharacterId } from '@/lib/utils/entity-link-selectors';
 import { formatForDisplay } from '@/lib/utils/date-display-utils';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
@@ -371,15 +373,14 @@ export default function RecurrentTreeModalContent({
         .filter((link: any) => link.linkType === 'TASK_CHARACTER' && link.relationship === 'owner' && link.target?.type === 'character')
         .map((link: any) => link.target.id)[0];
       if (ownerId) setOwnerId(ownerId);
-      const counterpartyLink = links.find((link: any) =>
-        link.linkType === 'TASK_CHARACTER' &&
-        (link.relationship === CharacterRole.CUSTOMER || link.relationship === CharacterRole.BENEFICIARY) &&
-        link.target?.type === 'character'
-      );
-      if (counterpartyLink) {
-        setCustomerCharacterId(counterpartyLink.target.id);
-        setCustomerCharacterRole(counterpartyLink.relationship as CharacterRole);
+      const customerId = getLinkedCharacterId(links, 'TASK_CHARACTER', CharacterRole.CUSTOMER);
+      const beneficiaryId = getLinkedCharacterId(links, 'TASK_CHARACTER', CharacterRole.BENEFICIARY);
+      const counterpartyId = customerId || beneficiaryId;
+      if (counterpartyId) {
+        setCustomerCharacterId(counterpartyId);
+        setCustomerCharacterRole(beneficiaryId ? CharacterRole.BENEFICIARY : CharacterRole.CUSTOMER);
         setIsNewCustomer(false);
+        setNewCustomerName('');
       }
     }).catch(() => undefined);
     return () => { cancelled = true; };
@@ -1451,5 +1452,6 @@ export default function RecurrentTreeModalContent({
 function getCategoryForSiteId(value: string, sites: Site[]): string {
   const site = sites.find((s) => s.id === value);
   if (!site) return 'None';
-  return site.type || 'Uncategorized';
+  const siteType = site.type || site.metadata?.type;
+  return siteType ? getSiteTypeLabel(siteType) : 'Uncategorized';
 }

@@ -54,6 +54,7 @@ import { MonthYearSelector } from '@/components/ui/month-year-selector';
 import { ensureCounterpartyRole } from '@/lib/utils/character-role-sync';
 import { getFinancialCounterpartyId, getFinancialCounterpartyRole } from '@/lib/financial-record-counterparty-id';
 import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
+import { getLinkedCharacterId, getLinkedSiteId } from '@/lib/utils/entity-link-selectors';
 
 
 // FinancialsModal: UI-only form for financial record data collection and validation
@@ -275,25 +276,18 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       // Link Registry when editing an existing record.
       void ClientAPI.getLinksFor({ type: EntityType.FINANCIAL, id: record.id })
         .then((links) => {
-          const sourceSiteLink = links.find((link: any) =>
-            link.linkType === LinkType.FINREC_SITE &&
-            String(link.relationship || '').toLowerCase() === 'source' &&
-            link.target?.type === EntityType.SITE
-          );
-          const targetSiteLink = links.find((link: any) =>
-            link.linkType === LinkType.FINREC_SITE &&
-            String(link.relationship || '').toLowerCase() === 'target' &&
-            link.target?.type === EntityType.SITE
-          );
+          const sourceSiteId = getLinkedSiteId(links, LinkType.FINREC_SITE, 'source');
+          const targetSiteId = getLinkedSiteId(links, LinkType.FINREC_SITE, 'target');
           const characterLink = links.find((link: any) =>
             link.linkType === LinkType.FINREC_CHARACTER &&
             link.target?.type === EntityType.CHARACTER
           );
+          const characterId = getLinkedCharacterId(links, LinkType.FINREC_CHARACTER);
           setFormData((previous) => ({
             ...previous,
-            site: sourceSiteLink?.target?.id || '',
-            targetSite: targetSiteLink?.target?.id || '',
-            characterId: characterLink?.target?.id || previous.characterId,
+            site: sourceSiteId || '',
+            targetSite: targetSiteId || '',
+            characterId: characterId || previous.characterId,
             customerCharacterRole: toCustomerCounterpartyRole(
               String(characterLink?.relationship || '').toLowerCase() === 'beneficiary'
                 ? CharacterRole.BENEFICIARY

@@ -40,16 +40,16 @@ export const createSiteOptionsWithCategories = (sites: Site[]): Array<{ value: s
 
   // Stable sort by group order; keep original order within the same group
   const sortedSites = [...sites].sort((a, b) => {
-    const aType = a.metadata?.type || SiteType.PHYSICAL;
-    const bType = b.metadata?.type || SiteType.PHYSICAL;
+    const aType = a.type || a.metadata?.type;
+    const bType = b.type || b.metadata?.type;
     const aIdx = groupOrder[aType] ?? 99;
     const bIdx = groupOrder[bType] ?? 99;
     return aIdx - bIdx;
   });
 
   return sortedSites.map(site => {
-    const siteType = site.type || SiteType.PHYSICAL;
-    const category = getSiteTypeLabel(siteType);
+    const siteType = site.type || site.metadata?.type;
+    const category = siteType ? getSiteTypeLabel(siteType) : 'Uncategorized';
 
     return {
       value: site.id,

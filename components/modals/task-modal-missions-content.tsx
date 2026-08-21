@@ -25,6 +25,7 @@ import { getItemStatusLabel, getTaskStatusLabel } from '@/lib/constants/status-d
 import { getTaskPriorityLabel, getTaskTypeLabel } from '@/lib/constants/task-taxonomy-labels';
 import { getStationFromCombined, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined, createCharacterOptions, createStationCategoryOptions, getCategoryFromCombined } from '@/lib/utils/searchable-select-utils';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
+import { getSiteTypeLabel } from '@/lib/constants/site-taxonomy-labels';
 import { getStationSelectValue } from '@/lib/utils/business-structure-utils';
 import type { Station, SubItemType } from '@/types/type-aliases';
 import { v4 as uuid } from 'uuid';
@@ -43,6 +44,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { format } from 'date-fns'; // Keeping for time formatting (HH:mm)
 import { formatForDisplay, formatDayMonth } from '@/lib/utils/date-display-utils';
 import { getUTCNow } from '@/lib/utils/utc-utils';
+import { getLinkedCharacterId } from '@/lib/utils/entity-link-selectors';
 import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 import { TaskModalFooter } from './task-modal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
@@ -355,15 +357,14 @@ export default function MissionTreeModalContent({
         .filter((link: any) => link.linkType === 'TASK_CHARACTER' && link.relationship === 'owner' && link.target?.type === 'character')
         .map((link: any) => link.target.id)[0];
       if (ownerId) setOwnerId(ownerId);
-      const counterpartyLink = links.find((link: any) =>
-        link.linkType === 'TASK_CHARACTER' &&
-        (link.relationship === CharacterRole.CUSTOMER || link.relationship === CharacterRole.BENEFICIARY) &&
-        link.target?.type === 'character'
-      );
-      if (counterpartyLink) {
-        setCustomerCharacterId(counterpartyLink.target.id);
-        setCustomerCharacterRole(counterpartyLink.relationship as CharacterRole);
+      const customerId = getLinkedCharacterId(links, 'TASK_CHARACTER', CharacterRole.CUSTOMER);
+      const beneficiaryId = getLinkedCharacterId(links, 'TASK_CHARACTER', CharacterRole.BENEFICIARY);
+      const counterpartyId = customerId || beneficiaryId;
+      if (counterpartyId) {
+        setCustomerCharacterId(counterpartyId);
+        setCustomerCharacterRole(beneficiaryId ? CharacterRole.BENEFICIARY : CharacterRole.CUSTOMER);
         setIsNewCustomer(false);
+        setNewCustomerName('');
       }
     }).catch(() => undefined);
     return () => { cancelled = true; };
@@ -1337,5 +1338,6 @@ export default function MissionTreeModalContent({
 function getCategoryForSiteId(value: string, sites: Site[]): string {
   const site = sites.find(s => s.id === value);
   if (!site) return 'None';
-  return site.type || 'Uncategorized';
+  const siteType = site.type || site.metadata?.type;
+  return siteType ? getSiteTypeLabel(siteType) : 'Uncategorized';
 }

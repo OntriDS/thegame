@@ -9,7 +9,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sale, SaleLine, Item, Discount, Site, Character, Task, ItemSaleLine, ServiceLine, Business, Contract } from '@/types/entities';
-import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, CharacterRole, EntityType } from '@/types/enums';
+import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, CharacterRole, EntityType, LinkType } from '@/types/enums';
 import type { Station } from '@/types/type-aliases';
 import { ArtDesignStation, SalesStation } from '@/lib/storage/taxonomy';
 import { CurrencyExchangeRates, DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib/constants/financial-constants';
@@ -43,6 +43,7 @@ import SalesModalBoothContent, { type BoothSalesViewHandle as SalesModalBoothCon
 import DatesSubmodal from './submodals/dates-submodal';
 import { ensureCounterpartyRole as syncCounterpartyRole } from '@/lib/utils/character-role-sync';
 import { getSaleCharacterId } from '@/lib/sale-character-id';
+import { getLinkedCharacterId, getLinkedSiteId } from '@/lib/utils/entity-link-selectors';
 
 const normalizeSiteId = (value: string | null | undefined): string =>
   String(value || '')
@@ -318,6 +319,27 @@ export default function SalesModal({
     saleSiteHydrationKeyRef.current = key;
     setSiteId(sale.siteId ?? '');
   }, [open, sale?.id, sale?.siteId]);
+
+  // Canonical relationship hydration. Legacy root fields above remain only as
+  // an initial migration fallback; links are authoritative when available.
+  useEffect(() => {
+    if (!open || !sale?.id) return;
+    let cancelled = false;
+    void ClientAPI.getLinksFor({ type: EntityType.SALE, id: sale.id }).then((links) => {
+      if (cancelled) return;
+      const linkedSiteId = getLinkedSiteId(links, LinkType.SALE_SITE, 'sold-at');
+      const linkedCustomerId = getLinkedCharacterId(links, LinkType.SALE_CHARACTER, CharacterRole.CUSTOMER);
+      const linkedOwnerId = getLinkedCharacterId(links, LinkType.SALE_CHARACTER, 'owner');
+      if (linkedSiteId) setSiteId(linkedSiteId);
+      if (linkedCustomerId) {
+        setCharacterId(linkedCustomerId);
+        setIsNewCustomer(false);
+        setNewCustomerName('');
+      }
+      if (linkedOwnerId) setOwnerId(linkedOwnerId);
+    }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [open, sale?.id, sale?.updatedAt]);
 
   // Load data on mount
   useEffect(() => {
