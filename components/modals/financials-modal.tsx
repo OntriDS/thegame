@@ -530,20 +530,42 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
 
     const recordId = draftId.current;
     const station = formData.station;
+    const context = {
+      ...(formData.jungleCoins !== 0 ? { jungleCoins: formData.jungleCoins } : {}),
+      ...(formData.isNewCustomer && formData.newCustomerName.trim()
+        ? { newCustomerName: formData.newCustomerName.trim() }
+        : {}),
+      ...(formData.outputItemType || formData.outputItemName
+        ? {
+            productionPlan: {
+              outputItemType: formData.outputItemType || undefined,
+              outputQuantity: formData.outputQuantity || undefined,
+              outputUnitCost: toMoney(formData.outputUnitCost),
+              outputItemName: formData.outputItemName || undefined,
+              outputItemCollection: formData.outputItemCollection || undefined,
+              outputItemSubType: formData.outputItemSubType || undefined,
+              outputItemPrice: toMoney(formData.outputItemPrice),
+              isNewItem: formData.isNewItem,
+              isSold: outputItemStatus === ItemStatus.SOLD,
+              outputItemStatus,
+            },
+          }
+        : {}),
+    };
 
     const recordData: FinancialRecord = {
       id: recordId,
       schemaVersion: 1,
       version: record?.version ?? 0,
       name: formData.name || `${formData.station} - ${formatMonthYear(new Date(formData.year, formData.month - 1))}`,
-      description: formData.description,
+      ...(formData.description?.trim() ? { description: formData.description.trim() } : {}),
       createdAt: record?.createdAt || new Date(),
       updatedAt: new Date(),
       year: formData.year,
       month: formData.month,
       station: formData.station as Station,
       type: isCompany ? 'company' : 'personal',
-      salesChannel: record?.salesChannel ?? null,
+      ...(record?.salesChannel != null ? { salesChannel: record.salesChannel } : {}),
       cost: toMoney(formData.cost),
       revenue: toMoney(formData.revenue),
       netCashflow: toMoney(formData.revenue - formData.cost),
@@ -557,24 +579,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
           localDoneAt ??
           (String(formData.status) !== String(FinancialStatus.PENDING) ? new Date() : undefined),
       },
-      context: {
-        ...(formData.jungleCoins !== 0 ? { jungleCoins: formData.jungleCoins } : {}),
-        newCustomerName: formData.isNewCustomer ? formData.newCustomerName : undefined,
-        productionPlan: formData.outputItemType || formData.outputItemName
-          ? {
-              outputItemType: formData.outputItemType || undefined,
-              outputQuantity: formData.outputQuantity || undefined,
-              outputUnitCost: toMoney(formData.outputUnitCost),
-              outputItemName: formData.outputItemName || undefined,
-              outputItemCollection: formData.outputItemCollection || undefined,
-              outputItemSubType: formData.outputItemSubType || undefined,
-              outputItemPrice: toMoney(formData.outputItemPrice),
-              isNewItem: formData.isNewItem,
-              isSold: outputItemStatus === ItemStatus.SOLD,
-              outputItemStatus,
-            }
-          : undefined,
-      },
+      ...(Object.keys(context).length > 0 ? { context } : {}),
     };
     const financialCommand = {
       ...recordData,
