@@ -72,6 +72,16 @@ export async function POST(req: NextRequest) {
 
     const cleanTaskBody = { ...(taskBody as unknown as Record<string, unknown>) } as Record<string, unknown>;
     const requestedOwnerIds = Array.isArray(taskBody.ownerIds) ? taskBody.ownerIds : undefined;
+    const legacyCounterpartyId = normalizeCharacterId(
+      (taskBody as { counterpartyCharacterId?: string | null }).counterpartyCharacterId
+    );
+    const legacyCounterpartyRole = (taskBody as { counterpartyRole?: string | null }).counterpartyRole;
+    if (!(cleanTaskBody as any).__counterparty && legacyCounterpartyId) {
+      (cleanTaskBody as any).__counterparty = {
+        id: legacyCounterpartyId,
+        role: legacyCounterpartyRole || 'customer',
+      };
+    }
     // These fields are compatibility inputs only. New Task writes use the
     // canonical schedule/context facets and canonical Links.
     delete cleanTaskBody.characterId;
@@ -80,6 +90,11 @@ export async function POST(req: NextRequest) {
     delete cleanTaskBody.frequencyConfig;
     delete cleanTaskBody.isCollected;
     delete cleanTaskBody.ownerIds;
+    // Relationship identity is persisted only through TASK_CHARACTER.
+    // Accept these legacy fields as migration input, but never persist them.
+    delete cleanTaskBody.counterpartyCharacterId;
+    delete cleanTaskBody.counterpartyRole;
+    delete cleanTaskBody.customerCharacterRole;
     if (cleanTaskBody.description === '') delete cleanTaskBody.description;
     if (cleanTaskBody.parentId == null) delete cleanTaskBody.parentId;
     if (cleanTaskBody.siteId == null) delete cleanTaskBody.siteId;

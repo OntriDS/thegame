@@ -46,6 +46,9 @@ async function resolveByTaskFields(task: Task): Promise<ResolvedTaskCounterparty
   if (!characterId) return null;
 
   const characterRole = normalizeRole(task.context?.counterparty?.role) ??
+    // Read-only migration fallback for records written before TASK_CHARACTER
+    // became canonical. These fields are never written back.
+    normalizeRole((task as any).counterpartyRole) ??
     normalizeRole(task.customerCharacterRole) ??
     CharacterRole.CUSTOMER;
   return { characterId, characterRole, source: 'task-field' };
@@ -101,6 +104,8 @@ export const getTaskCounterpartyId = (task?: Task | null): string | null => {
   if (!task) return null;
   return normalizeId((task as any).__counterparty?.id) ||
     normalizeId(task.context?.counterparty?.counterpartyId) ||
+    // Read-only migration fallback; canonical persistence is the link.
+    normalizeId((task as any).counterpartyCharacterId) ||
     normalizeId(task.characterId);
 };
 

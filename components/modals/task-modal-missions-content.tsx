@@ -44,7 +44,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { format } from 'date-fns'; // Keeping for time formatting (HH:mm)
 import { formatForDisplay, formatDayMonth } from '@/lib/utils/date-display-utils';
 import { getUTCNow } from '@/lib/utils/utc-utils';
-import { getLinkedCharacterId } from '@/lib/utils/entity-link-selectors';
+import { getLinkedCharacterSelection } from '@/lib/utils/entity-link-selectors';
 import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 import { TaskModalFooter } from './task-modal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
@@ -259,11 +259,21 @@ export default function MissionTreeModalContent({
       );
       setSelectedItemId(existingTask.outputItemId || '');
       const existingTaskCounterpartyId =
-        existingTask.context?.counterparty?.counterpartyId ?? execTask.characterId ?? null;
+        existingTask.context?.counterparty?.counterpartyId ??
+        // Read-only migration fallback for tasks saved before TASK_CHARACTER
+        // became the authority. The next save uses __counterparty and removes
+        // these legacy root fields.
+        (existingTask as any).counterpartyCharacterId ??
+        execTask.characterId ??
+        null;
+      const existingTaskCounterpartyRole =
+        existingTask.context?.counterparty?.role ??
+        (existingTask as any).counterpartyRole ??
+        execTask.customerCharacterRole;
       setCustomerCharacterId(existingTaskCounterpartyId);
       setIsNewCustomer(!Boolean(existingTaskCounterpartyId));
       setNewCustomerName(execTask.newCustomerName || '');
-      setCustomerCharacterRole(normalizeTaskCounterpartyRole(existingTask.context?.counterparty?.role ?? execTask.customerCharacterRole));
+      setCustomerCharacterRole(normalizeTaskCounterpartyRole(existingTaskCounterpartyRole));
       setOwnerId(getTaskOwnerIds(existingTask)[0] || null);
       setRewards({
         points: {
@@ -357,12 +367,10 @@ export default function MissionTreeModalContent({
         .filter((link: any) => link.linkType === 'TASK_CHARACTER' && link.relationship === 'owner' && link.target?.type === 'character')
         .map((link: any) => link.target.id)[0];
       if (ownerId) setOwnerId(ownerId);
-      const customerId = getLinkedCharacterId(links, 'TASK_CHARACTER', CharacterRole.CUSTOMER);
-      const beneficiaryId = getLinkedCharacterId(links, 'TASK_CHARACTER', CharacterRole.BENEFICIARY);
-      const counterpartyId = customerId || beneficiaryId;
-      if (counterpartyId) {
-        setCustomerCharacterId(counterpartyId);
-        setCustomerCharacterRole(beneficiaryId ? CharacterRole.BENEFICIARY : CharacterRole.CUSTOMER);
+      const counterparty = getLinkedCharacterSelection(links, 'TASK_CHARACTER');
+      if (counterparty) {
+        setCustomerCharacterId(counterparty.id);
+        setCustomerCharacterRole(normalizeTaskCounterpartyRole(counterparty.role));
         setIsNewCustomer(false);
         setNewCustomerName('');
       }
@@ -512,8 +520,13 @@ export default function MissionTreeModalContent({
             }
           : undefined,
       },
-      counterpartyCharacterId: !isNewCustomer && customerCharacterId ? customerCharacterId : null,
-      counterpartyRole: hasCounterparty ? customerCharacterRole : null,
+      // Relationship command only; TASK_CHARACTER is the persisted authority.
+      __counterparty: hasCounterparty
+        ? {
+            id: !isNewCustomer && customerCharacterId ? customerCharacterId : null,
+            role: customerCharacterRole,
+          }
+        : null,
       ownerIds: effectiveOwnerIds,
       order: determineOrder(),
       
@@ -548,7 +561,7 @@ export default function MissionTreeModalContent({
     setIsSaving(true);
     try {
       await onSave(candidate);
-      await ensureCounterpartyRole((candidate as any).characterId, (candidate as any).customerCharacterRole);
+      await ensureCounterpartyRole((candidate as any).__counterparty?.id || null, (candidate as any).__counterparty?.role || null);
       dispatchEntityUpdated(entityTypeToKind(EntityType.TASK));
       onOpenChange(false);
     } catch (error) {
@@ -566,7 +579,7 @@ export default function MissionTreeModalContent({
     try {
       const newTask = buildTaskFromForm(zeroPoints);
       await onSave(newTask);
-      await ensureCounterpartyRole((newTask as any).characterId, (newTask as any).customerCharacterRole);
+      await ensureCounterpartyRole((newTask as any).__counterparty?.id || null, (newTask as any).__counterparty?.role || null);
       dispatchEntityUpdated(entityTypeToKind(EntityType.TASK));
       onOpenChange(false);
     } catch (error) {

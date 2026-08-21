@@ -328,6 +328,18 @@ export async function PATCH(request: NextRequest) {
     delete (updatedTask as any).characterId;
     delete (updatedTask as any).ownerId;
     delete (updatedTask as any).customerCharacterRole;
+    // TASK_CHARACTER is the relationship authority. Legacy counterparty roots
+    // are accepted only as transient migration input and must not be stored.
+    const legacyCounterpartyId = (task as any).counterpartyCharacterId;
+    const legacyCounterpartyRole = (task as any).counterpartyRole;
+    if (!(updatedTask as any).__counterparty && legacyCounterpartyId) {
+      (updatedTask as any).__counterparty = {
+        id: legacyCounterpartyId,
+        role: legacyCounterpartyRole || 'customer',
+      };
+    }
+    delete (updatedTask as any).counterpartyCharacterId;
+    delete (updatedTask as any).counterpartyRole;
 
     const saved = await upsertTask(updatedTask);
 

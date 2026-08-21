@@ -49,6 +49,7 @@ export default defineConfig({
       'tests/entity-test/settlement-entity-test-full.ts',
       'tests/entity-test/region-entity-test-clean.ts',
       'tests/entity-test/region-entity-test-full.ts',
+      'tests/entity-test/task-counterparty-hydration-test.ts',
     ],
     testTimeout: 60000,
     hookTimeout: 120000,

@@ -48,11 +48,11 @@ describe('entity-test: full Task at created status', () => {
       siteId: site.id,
       parentId: parent.id,
       ownerIds: [owner.id],
+      __counterparty: {
+        id: owner.id,
+        role: 'beneficiary',
+      },
       context: {
-        counterparty: {
-          counterpartyId: owner.id,
-          role: 'beneficiary',
-        },
         financialIntent: {
           costIntent: { minorUnits: '5000', currency: 'USD' },
           revenueIntent: { minorUnits: '10000', currency: 'USD' },
@@ -123,6 +123,8 @@ describe('entity-test: full Task at created status', () => {
     });
     expect(task).not.toHaveProperty('ownerIds');
     expect(task).not.toHaveProperty('playerCharacterId');
+    expect(task).not.toHaveProperty('counterpartyCharacterId');
+    expect(task).not.toHaveProperty('counterpartyRole');
     expect(task.context).not.toHaveProperty('counterparty');
     expect(links).toEqual(expect.arrayContaining([
       expect.objectContaining({ linkType: 'TASK_SITE', relationship: 'performed-at' }),
