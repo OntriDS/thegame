@@ -180,9 +180,7 @@ function getLinkDescription(linkType: LinkType): string {
     'PLAYER_CHARACTER': 'remove legacy reverse character link from player',
     
     // ACCOUNT relationships
-    'ACCOUNT_PLAYER': 'remove account from player',
     'ACCOUNT_CHARACTER': 'remove account from character',
-    'PLAYER_ACCOUNT': 'remove player from account',
     'CHARACTER_ACCOUNT': 'remove character from account'
   };
   

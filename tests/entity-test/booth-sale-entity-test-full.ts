@@ -72,7 +72,7 @@ describe('entity-test: full Booth Sale', () => {
   let partnerPlayerBefore: any;
   let principalBusinessLinkId: string | undefined;
   let partnerBusinessLinkId: string | undefined;
-  let characterContractLinkId: string | undefined;
+  let characterContractLinkIds: string[] = [];
 
   beforeEach(async () => {
     const previousFinancials = await getFinancialsBySourceSaleId(saleId);
@@ -126,12 +126,12 @@ describe('entity-test: full Booth Sale', () => {
     for (const soldItem of await getItemsBySourceRecordId(saleId)) await removeItem(soldItem.id);
     await removeSale(saleId);
 
-    for (const linkId of [principalBusinessLinkId, partnerBusinessLinkId, characterContractLinkId].filter(Boolean)) {
+    for (const linkId of [principalBusinessLinkId, partnerBusinessLinkId, ...characterContractLinkIds].filter(Boolean)) {
       await removeLink(linkId!);
     }
     principalBusinessLinkId = undefined;
     partnerBusinessLinkId = undefined;
-    characterContractLinkId = undefined;
+    characterContractLinkIds = [];
 
     await removeItem(itemId);
     await removeContract(contractId);
@@ -164,7 +164,6 @@ describe('entity-test: full Booth Sale', () => {
       id: principalBusinessId,
       name: 'Entity Test Booth Principal Business',
       type: BusinessType.COMPANY,
-      linkedCharacterId: ownerCharacter.id,
       isActive: true,
       schemaVersion: 1,
       version: 0,
@@ -175,7 +174,6 @@ describe('entity-test: full Booth Sale', () => {
       id: partnerBusinessId,
       name: 'Entity Test Booth Partner Business',
       type: BusinessType.COMPANY,
-      linkedCharacterId: partnerCharacter.id,
       isActive: true,
       schemaVersion: 1,
       version: 0,
@@ -204,10 +202,7 @@ describe('entity-test: full Booth Sale', () => {
     await upsertContract({
       id: contractId,
       name: 'Entity Test Booth Contract',
-      principalBusinessId,
-      counterpartyBusinessId: partnerBusinessId,
       status: ContractStatus.ACTIVE,
-      validFrom: now,
       clauses: [
         { id: 'commission', type: ContractClauseType.SALES_COMMISSION, companyShare: 0.75, partnerShare: 0.25 },
         { id: 'service', type: ContractClauseType.SALES_SERVICE, companyShare: 0.75, partnerShare: 0.25 },
@@ -219,14 +214,21 @@ describe('entity-test: full Booth Sale', () => {
       updatedAt: now,
     } as any);
 
-    const characterContractLink = makeLink(
+    const ownerContractLink = makeLink(
       LinkType.CHARACTER_CONTRACT,
-      { type: EntityType.CHARACTER, id: partnerCharacter.id },
+      { type: EntityType.CHARACTER, id: ownerCharacter.id },
       { type: EntityType.CONTRACT, id: contractId },
       'owner',
     );
-    await createLink(characterContractLink);
-    characterContractLinkId = characterContractLink.id;
+    const counterpartyContractLink = makeLink(
+      LinkType.CHARACTER_CONTRACT,
+      { type: EntityType.CHARACTER, id: partnerCharacter.id },
+      { type: EntityType.CONTRACT, id: contractId },
+      'counterparty',
+    );
+    await createLink(ownerContractLink);
+    await createLink(counterpartyContractLink);
+    characterContractLinkIds = [ownerContractLink.id, counterpartyContractLink.id];
 
     await upsertItem({
       id: itemId,

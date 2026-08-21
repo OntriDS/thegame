@@ -1,0 +1,40 @@
+{
+  "settlement": {
+    "id": "entity-test-settlement-full",
+    "name": "testing-settlement-full",
+    "regionId": "testing-region-full",
+    "googleMapsAddress": "Full testing address",
+    "coordinates": {
+      "lat": 9.93,
+      "lng": -84.08
+    },
+    "isActive": true,
+    "shape": {
+      "type": "circle",
+      "center": {
+        "lat": 9.93,
+        "lng": -84.08
+      },
+      "radius": 250
+    },
+    "isUnlocked": true,
+    "createdAt": "2026-08-21T18:33:38.598Z",
+    "updatedAt": "2026-08-21T18:33:38.598Z"
+  },
+  "links": [
+    {
+      "id": "entity-test-site-settlement-link-full",
+      "linkType": "SITE_SETTLEMENT",
+      "source": {
+        "type": "site",
+        "id": "entity-test-settlement-site-full"
+      },
+      "target": {
+        "type": "settlement",
+        "id": "entity-test-settlement-full"
+      },
+      "relationship": "located-in",
+      "createdAt": "2026-08-21T18:33:38.598Z"
+    }
+  ]
+}

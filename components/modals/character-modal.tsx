@@ -73,7 +73,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
 
   // Account Info Modal
   const [showAccountInfo, setShowAccountInfo] = useState(false);
-  /** `undefined` = identity link still resolving; `null` = no active IAM row for this character.accountId */
+  /** `undefined` = identity link still resolving; `null` = no active IAM row for this character */
   const [accountData, setAccountData] = useState<any | null | undefined>(undefined);
 
   // Loading state
@@ -109,13 +109,14 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
       if (open) {
         if (character) {
           // Editing existing character
-          // Linked IAM account (`accountId`): hydrate identity from Account — not gated on PLAYER;
+          // Resolve the IAM account through ACCOUNT_CHARACTER — not through a
+          // Character.accountId compatibility pointer.
           // auth already uses this character + roles (FOUNDER, TEAM, etc.); name may only live on Account.
-          const shouldLoadLinkedAccount = !!character.accountId;
+          const shouldLoadLinkedAccount = true;
           if (shouldLoadLinkedAccount) {
             setAccountData(undefined);
             try {
-              const account = await ClientAPI.getAccount(character.accountId!);
+              const account = await ClientAPI.getAccountByCharacterId(character.id);
               const accountUsable = account && account.isActive !== false;
               if (accountUsable) {
                 setAccountData(account);
@@ -223,9 +224,9 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
     !character ||
     roles.some(role => specialRolesList.includes(role));
 
-  // Identity follows IAM only when DS still points at an account id AND that account is active (GET returned a usable row)
+  // Identity follows IAM when the canonical Link lookup returned an active row.
   const identityManagedByAccount =
-    !!character?.accountId && accountData !== null && (accountData === undefined || accountData.isActive !== false);
+    accountData !== null && accountData !== undefined && accountData.isActive !== false;
 
   // Get theme for dark mode detection
   const { isDark } = useTheme();
@@ -259,9 +260,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         createdAt: character?.createdAt || new Date(),
         updatedAt: new Date(),
         isActive: character?.isActive ?? true,  // Character is active by default
-
-        // Keep accountId only while an active IAM row is driving identity; otherwise clear stale pointers (e.g. after admin disable/delete)
-        accountId: identityManagedByAccount ? (character?.accountId ?? null) : null,
 
         // Character core
         roles,
@@ -750,10 +748,10 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
 
   useEffect(() => {
     const loadAccount = async () => {
-      if (open && character.accountId) {
+      if (open) {
         setIsLoading(true);
         try {
-          const loaded = await ClientAPI.getAccount(character.accountId);
+          const loaded = await ClientAPI.getAccountByCharacterId(character.id);
           setAccount(loaded);
         } catch (error) {
           console.error('Failed to load account:', error);
@@ -780,15 +778,10 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
         <div className="space-y-4 py-4">
           {isLoading ? (
             <div className="text-center py-4 text-muted-foreground">Loading account data...</div>
-          ) : !character.accountId ? (
-            <div className="text-center py-6 text-muted-foreground">
-              <p>No Account entity linked to this character yet.</p>
-              <p className="text-xs mt-2">Account will be created when email/phone is added.</p>
-            </div>
           ) : !account ? (
             <div className="text-center py-6 text-muted-foreground">
-              <p>Account entity not found.</p>
-              <p className="text-xs mt-2">Account ID: {character.accountId}</p>
+              <p>No Account entity is linked to this character.</p>
+              <p className="text-xs mt-2">Account will be created when identity access is provisioned.</p>
             </div>
           ) : (
             <>

@@ -1,0 +1,8 @@
+{
+  "id": "entity-test-settlement-clean",
+  "name": "testing-settlement-clean",
+  "regionId": "testing-region-clean",
+  "isActive": true,
+  "createdAt": "2026-08-21T18:33:38.597Z",
+  "updatedAt": "2026-08-21T18:33:38.597Z"
+}

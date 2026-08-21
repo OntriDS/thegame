@@ -29,7 +29,6 @@ async function toUiAccount(
         id: char.id,
         name: char.name,
         roles: char.roles,
-        accountId: char.accountId,
         playerId: char.playerId,
       };
     }
@@ -49,11 +48,7 @@ async function toUiAccount(
     resetToken: undefined,
     resetTokenExpiry: undefined,
     privacySettings: { showEmail: false, showPhone: false, showRealName: true },
-    characterId: type === 'm2m' ? '' : (iamAccount.characterId || character?.id || ''),
-    playerId:
-      type === 'm2m'
-        ? ''
-        : iamAccount.playerId || (character as any)?.playerId || '',
+    characterId: type === 'm2m' ? '' : (character?.id || ''),
     lastActiveAt: new Date(iamAccount.updatedAt || Date.now()),
     character,
     type,
@@ -72,6 +67,13 @@ export async function GET(req: NextRequest) {
   try {
     const iamAccounts = await iamService.listAccounts();
     const accounts = await Promise.all(iamAccounts.map(acc => toUiAccount(acc)));
+
+    const characterIdFilter = req.nextUrl.searchParams.get('characterId');
+    if (characterIdFilter) {
+      return NextResponse.json(
+        accounts.find((account) => account.character?.id === characterIdFilter) || null,
+      );
+    }
 
     const m2mApps = await iamService.listM2MApps();
     const m2mAccounts = m2mApps.map(app => ({
@@ -94,7 +96,6 @@ export async function GET(req: NextRequest) {
         id: 'system',
         name: app.appId,
         roles: [CharacterRole.AGENT],
-        accountId: 'system',
         description: 'System-managed M2M Application',
         qualifications: [],
         playerId: 'system',
@@ -172,7 +173,8 @@ export async function POST(req: NextRequest) {
       isVerified: isVerified !== undefined ? !!isVerified : undefined,
     });
 
-    if (existing.characterId !== String(characterId)) {
+    const linkedCharacter = await iamService.resolveCharacterForAccount(existing.id);
+    if (linkedCharacter?.id !== String(characterId)) {
       await iamService.linkAccountToCharacter(existing.id, String(characterId));
     }
 

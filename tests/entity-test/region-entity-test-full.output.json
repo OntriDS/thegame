@@ -1,0 +1,41 @@
+{
+  "id": "entity-test-region-full",
+  "name": "testing-region-full",
+  "center": {
+    "lat": 9.93,
+    "lng": -84.08
+  },
+  "defaultZoom": 12,
+  "isUnlocked": false,
+  "shape": {
+    "type": "polygon",
+    "coordinates": [
+      {
+        "lat": 9.92,
+        "lng": -84.09
+      },
+      {
+        "lat": 9.94,
+        "lng": -84.09
+      },
+      {
+        "lat": 9.94,
+        "lng": -84.07
+      }
+    ]
+  },
+  "maxBounds": [
+    [
+      9.9,
+      -84.12
+    ],
+    [
+      9.96,
+      -84.04
+    ]
+  ],
+  "parentId": null,
+  "isActive": true,
+  "createdAt": "2026-08-21T17:00:39.447Z",
+  "updatedAt": "2026-08-21T17:00:39.447Z"
+}

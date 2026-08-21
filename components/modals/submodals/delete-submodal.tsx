@@ -316,7 +316,7 @@ export default function DeleteModal({
   };
 
   const getLinkedCharacterId = (account: Account): string | undefined => {
-    return account.character?.id || account.characterId;
+    return account.character?.id || undefined;
   };
 
   const getAccountDescription = (account: Account): string => {

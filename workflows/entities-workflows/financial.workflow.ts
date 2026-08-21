@@ -75,7 +75,6 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
           // Update financial record with the created character ID
           const updatedFinancial = {
             ...financial,
-            characterId: createdCharacter.id,
             __financialRelations: {
               ...((financial as any).__financialRelations || {}),
               characterId: createdCharacter.id,

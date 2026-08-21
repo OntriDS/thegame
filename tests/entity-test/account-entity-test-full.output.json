@@ -1,0 +1,122 @@
+{
+  "account": {
+    "id": "8b8e3430-c378-4f4d-ac38-8579c98085c3",
+    "name": "testing-account-full",
+    "email": "entity-test-account-full@example.test",
+    "passwordHash": null,
+    "passphraseFlag": false,
+    "isActive": true,
+    "isVerified": false,
+    "createdAt": "2026-08-21T16:05:40.990Z",
+    "updatedAt": "2026-08-21T16:05:41.921Z"
+  },
+  "links": [
+    {
+      "id": "98d7bb6c-06dd-4158-8776-e4e73a535f66",
+      "linkType": "ACCOUNT_CHARACTER",
+      "source": {
+        "type": "account",
+        "id": "8b8e3430-c378-4f4d-ac38-8579c98085c3"
+      },
+      "target": {
+        "type": "character",
+        "id": "entity-test-account-character-full"
+      },
+      "relationship": "primary",
+      "createdAt": "2026-08-21T16:05:41.921Z"
+    }
+  ],
+  "characterLinks": [
+    {
+      "id": "98d7bb6c-06dd-4158-8776-e4e73a535f66",
+      "linkType": "ACCOUNT_CHARACTER",
+      "source": {
+        "type": "account",
+        "id": "8b8e3430-c378-4f4d-ac38-8579c98085c3"
+      },
+      "target": {
+        "type": "character",
+        "id": "entity-test-account-character-full"
+      },
+      "relationship": "primary",
+      "createdAt": "2026-08-21T16:05:41.921Z"
+    },
+    {
+      "id": "8ef2b582-37be-41ec-8a43-d488fd8c9d2b",
+      "linkType": "CHARACTER_PLAYER",
+      "source": {
+        "type": "character",
+        "id": "entity-test-account-character-full"
+      },
+      "target": {
+        "type": "player",
+        "id": "entity-test-account-player-full"
+      },
+      "relationship": "primary",
+      "createdAt": "2026-08-21T16:05:46.012Z"
+    }
+  ],
+  "playerLinks": [
+    {
+      "id": "8ef2b582-37be-41ec-8a43-d488fd8c9d2b",
+      "linkType": "CHARACTER_PLAYER",
+      "source": {
+        "type": "character",
+        "id": "entity-test-account-character-full"
+      },
+      "target": {
+        "type": "player",
+        "id": "entity-test-account-player-full"
+      },
+      "relationship": "primary",
+      "createdAt": "2026-08-21T16:05:46.012Z"
+    }
+  ],
+  "player": {
+    "id": "entity-test-account-player-full",
+    "schemaVersion": 1,
+    "version": 0,
+    "name": "testing-account-player-full",
+    "level": 1,
+    "rewards": {
+      "points": {
+        "pending": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 0
+        },
+        "vested": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 0
+        },
+        "current": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 0
+        },
+        "exchanged": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 0
+        },
+        "historic": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 0
+        }
+      },
+      "achievements": [],
+      "badges": []
+    },
+    "lastActiveAt": "2026-08-21T16:05:39.281Z",
+    "isActive": true,
+    "createdAt": "2026-08-21T16:05:39.281Z",
+    "updatedAt": "2026-08-21T16:05:39.281Z"
+  }
+}

@@ -10,11 +10,11 @@
       "percentage": 100
     },
     "schedule": {
-      "dueDate": "2026-08-25T02:09:23.745Z"
+      "dueDate": "2026-08-28T19:01:18.459Z"
     },
     "order": 1000,
     "siteId": "hq",
-    "parentId": "9c001a60-7f3c-4a8a-a261-6ff3e96fafed",
+    "parentId": "b9344172-d326-4e2c-8bdd-4cdb763f7e85",
     "context": {
       "financialIntent": {
         "costIntent": {
@@ -52,15 +52,15 @@
         "isSold": false
       }
     },
-    "createdAt": "2026-08-18T02:09:23.745Z",
-    "updatedAt": "2026-08-18T02:09:38.024Z",
+    "createdAt": "2026-08-21T19:01:18.459Z",
+    "updatedAt": "2026-08-21T19:01:31.669Z",
     "schemaVersion": 1,
     "version": 1,
-    "doneAt": "2026-08-18T02:09:38.024Z"
+    "doneAt": "2026-08-21T19:01:31.669Z"
   },
   "links": [
     {
-      "id": "95b3cca3-5400-409a-9969-192488b2d7c9",
+      "id": "844e20e2-4c44-4dd6-acf4-cefc4a84e4c5",
       "linkType": "TASK_SITE",
       "source": {
         "type": "task",
@@ -70,10 +70,11 @@
         "type": "site",
         "id": "hq"
       },
-      "createdAt": "2026-08-18T02:09:24.827Z"
+      "relationship": "performed-at",
+      "createdAt": "2026-08-21T19:01:19.379Z"
     },
     {
-      "id": "f1b66cec-650b-46ce-b52f-94a46a6e082c",
+      "id": "a3049b11-40f1-43c3-bc8d-efc9de8b8bc5",
       "linkType": "TASK_CHARACTER",
       "source": {
         "type": "task",
@@ -81,13 +82,13 @@
       },
       "target": {
         "type": "character",
-        "id": "6dc4160e-8163-4a25-aaa8-ab8158ff4821"
+        "id": "character-1775889257983-6pkhdapnl"
       },
       "relationship": "beneficiary",
-      "createdAt": "2026-08-18T02:10:22.564Z"
+      "createdAt": "2026-08-21T19:02:11.514Z"
     },
     {
-      "id": "c2fda5a8-24f9-43ca-b7da-a62525222cad",
+      "id": "44aa9b9e-7391-49d4-a83b-374a0d599606",
       "linkType": "TASK_CHARACTER",
       "source": {
         "type": "task",
@@ -95,13 +96,13 @@
       },
       "target": {
         "type": "character",
-        "id": "6dc4160e-8163-4a25-aaa8-ab8158ff4821"
+        "id": "character-1775889257983-6pkhdapnl"
       },
       "relationship": "owner",
-      "createdAt": "2026-08-18T02:10:24.317Z"
+      "createdAt": "2026-08-21T19:02:12.886Z"
     },
     {
-      "id": "2dce5c2b-ea3c-4481-b64b-0942b8783653",
+      "id": "6c2bf9a0-a63f-4888-b9fd-00edc00a8912",
       "linkType": "TASK_PLAYER",
       "source": {
         "type": "task",
@@ -112,10 +113,10 @@
         "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
       },
       "relationship": "points-earned",
-      "createdAt": "2026-08-18T02:09:54.268Z"
+      "createdAt": "2026-08-21T19:01:44.390Z"
     },
     {
-      "id": "af146bbd-0cad-4f42-ad44-4fd65be48484",
+      "id": "3303b608-e921-46e7-9f53-e1440cacf4d2",
       "linkType": "TASK_FINREC",
       "source": {
         "type": "task",
@@ -125,10 +126,11 @@
         "type": "financial",
         "id": "finrec-entity-test-task-full-done"
       },
-      "createdAt": "2026-08-18T02:10:09.615Z"
+      "relationship": "task-record",
+      "createdAt": "2026-08-21T19:01:59.355Z"
     },
     {
-      "id": "cbee4bbe-a2a1-4068-a275-485cb09cf5f7",
+      "id": "1f13b183-e23b-4676-9ca9-e885acc0239a",
       "linkType": "TASK_ITEM",
       "source": {
         "type": "task",
@@ -136,15 +138,15 @@
       },
       "target": {
         "type": "item",
-        "id": "item-entity-test-task-full-done-1787019012224"
+        "id": "item-entity-test-task-full-done-1787338921992"
       },
       "relationship": "produced",
-      "createdAt": "2026-08-18T02:10:25.875Z"
+      "createdAt": "2026-08-21T19:02:14.278Z"
     }
   ],
   "items": [
     {
-      "id": "item-entity-test-task-full-done-1787019012224",
+      "id": "item-entity-test-task-full-done-1787338921992",
       "schemaVersion": 1,
       "version": 0,
       "name": "testing-full-done-output",
@@ -163,8 +165,8 @@
         }
       },
       "sourceTaskId": "entity-test-task-full-done",
-      "createdAt": "2026-08-18T02:10:12.224Z",
-      "updatedAt": "2026-08-18T02:10:12.224Z",
+      "createdAt": "2026-08-21T19:02:01.992Z",
+      "updatedAt": "2026-08-21T19:02:01.992Z",
       "context": {
         "year": 2026
       },
@@ -196,7 +198,7 @@
       },
       "status": "done",
       "lifecycle": {
-        "doneAt": "2026-08-18T02:09:38.024Z"
+        "doneAt": "2026-08-21T19:01:31.669Z"
       },
       "context": {
         "productionPlan": {
@@ -217,8 +219,8 @@
           "isSold": false
         }
       },
-      "createdAt": "2026-08-18T02:09:56.360Z",
-      "updatedAt": "2026-08-18T02:09:56.360Z",
+      "createdAt": "2026-08-21T19:01:46.642Z",
+      "updatedAt": "2026-08-21T19:01:46.642Z",
       "netCashflow": {
         "minorUnits": "5000",
         "currency": "USD"
@@ -228,7 +230,7 @@
   ],
   "pointEvidence": [
     {
-      "id": "2dce5c2b-ea3c-4481-b64b-0942b8783653",
+      "id": "6c2bf9a0-a63f-4888-b9fd-00edc00a8912",
       "linkType": "TASK_PLAYER",
       "source": {
         "type": "task",
@@ -239,7 +241,7 @@
         "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
       },
       "relationship": "points-earned",
-      "createdAt": "2026-08-18T02:09:54.268Z"
+      "createdAt": "2026-08-21T19:01:44.390Z"
     }
   ]
 }

@@ -5,7 +5,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { 
   getAllTasks, getAllItems, getAllSales, getAllFinancials, 
-  getAllSites, getAllCharacters, getAllPlayers, getAllAccounts
+  getAllSites, getAllCharacters, getAllPlayers
 } from '@/data-store/datastore';
 import { getAllLinks } from '@/links/link-registry';
 import { TaskStatus, TaskPriority } from '@/types/enums';

@@ -10,11 +10,11 @@
       "percentage": 100
     },
     "schedule": {
-      "dueDate": "2026-08-25T02:21:45.824Z"
+      "dueDate": "2026-08-28T19:03:34.219Z"
     },
     "order": 1000,
     "siteId": "hq",
-    "parentId": "0dc3fe85-15b5-4f90-a15a-ba4ac5291905",
+    "parentId": "355e20c6-7de9-4039-9a1d-fe6cc89b76b0",
     "context": {
       "financialIntent": {
         "costIntent": {
@@ -52,16 +52,16 @@
         "isSold": false
       }
     },
-    "createdAt": "2026-08-18T02:21:45.824Z",
-    "updatedAt": "2026-08-18T02:22:39.820Z",
+    "createdAt": "2026-08-21T19:03:34.219Z",
+    "updatedAt": "2026-08-21T19:04:35.894Z",
     "schemaVersion": 1,
     "version": 2,
-    "doneAt": "2026-08-18T02:22:00.350Z",
-    "collectedAt": "2026-08-18T02:22:39.820Z"
+    "doneAt": "2026-08-21T19:03:49.646Z",
+    "collectedAt": "2026-08-21T19:04:35.894Z"
   },
   "links": [
     {
-      "id": "3fe1797f-61af-4e92-b911-8b504572ab0a",
+      "id": "44a94d79-72b2-48a9-93c5-4ad7147ef683",
       "linkType": "TASK_PLAYER",
       "source": {
         "type": "task",
@@ -72,10 +72,10 @@
         "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
       },
       "relationship": "points-earned",
-      "createdAt": "2026-08-18T02:22:16.219Z"
+      "createdAt": "2026-08-21T19:04:01.591Z"
     },
     {
-      "id": "cd5802ac-488d-4913-a1c0-4a24b0dbb9a4",
+      "id": "2defb7e2-cb4f-4a63-a600-58ae5ea49053",
       "linkType": "TASK_FINREC",
       "source": {
         "type": "task",
@@ -85,10 +85,11 @@
         "type": "financial",
         "id": "finrec-entity-test-task-full-collected"
       },
-      "createdAt": "2026-08-18T02:22:23.797Z"
+      "relationship": "task-record",
+      "createdAt": "2026-08-21T19:04:17.470Z"
     },
     {
-      "id": "7a994892-9c07-4635-93de-a46a40ad42f7",
+      "id": "bec9cb04-9653-43fa-b070-c90b1081949a",
       "linkType": "TASK_ITEM",
       "source": {
         "type": "task",
@@ -96,13 +97,13 @@
       },
       "target": {
         "type": "item",
-        "id": "item-entity-test-task-full-collected-1787019746154"
+        "id": "item-entity-test-task-full-collected-1787339060028"
       },
       "relationship": "produced",
-      "createdAt": "2026-08-18T02:22:38.441Z"
+      "createdAt": "2026-08-21T19:04:33.890Z"
     },
     {
-      "id": "e934915f-6910-4e93-9afa-771e59661d71",
+      "id": "883f1b94-60be-4e9f-805b-0e3715bbec89",
       "linkType": "TASK_SITE",
       "source": {
         "type": "task",
@@ -112,10 +113,11 @@
         "type": "site",
         "id": "hq"
       },
-      "createdAt": "2026-08-18T02:21:46.726Z"
+      "relationship": "performed-at",
+      "createdAt": "2026-08-21T19:03:35.169Z"
     },
     {
-      "id": "ac7a29fe-89e4-4059-9d00-1d59f6303401",
+      "id": "fac21862-082a-42ab-90b7-97c82730b375",
       "linkType": "TASK_CHARACTER",
       "source": {
         "type": "task",
@@ -123,13 +125,13 @@
       },
       "target": {
         "type": "character",
-        "id": "character-1762706537139-1ewtmjczv"
+        "id": "character-1775889257983-6pkhdapnl"
       },
       "relationship": "beneficiary",
-      "createdAt": "2026-08-18T02:22:58.325Z"
+      "createdAt": "2026-08-21T19:04:56.185Z"
     },
     {
-      "id": "a2d6b443-1bf2-437f-bbc2-3ce79bc5f1d4",
+      "id": "c9d87135-03e9-4163-bc17-5d62b4b14f9b",
       "linkType": "TASK_CHARACTER",
       "source": {
         "type": "task",
@@ -137,15 +139,15 @@
       },
       "target": {
         "type": "character",
-        "id": "character-1762706537139-1ewtmjczv"
+        "id": "character-1775889257983-6pkhdapnl"
       },
       "relationship": "owner",
-      "createdAt": "2026-08-18T02:22:59.872Z"
+      "createdAt": "2026-08-21T19:04:57.786Z"
     }
   ],
   "items": [
     {
-      "id": "item-entity-test-task-full-collected-1787019746154",
+      "id": "item-entity-test-task-full-collected-1787339060028",
       "schemaVersion": 1,
       "version": 0,
       "name": "testing-full-collected-output",
@@ -164,8 +166,8 @@
         }
       },
       "sourceTaskId": "entity-test-task-full-collected",
-      "createdAt": "2026-08-18T02:22:26.154Z",
-      "updatedAt": "2026-08-18T02:22:26.154Z",
+      "createdAt": "2026-08-21T19:04:20.028Z",
+      "updatedAt": "2026-08-21T19:04:20.028Z",
       "context": {
         "year": 2026
       },
@@ -197,7 +199,7 @@
       },
       "status": "done",
       "lifecycle": {
-        "doneAt": "2026-08-18T02:22:00.350Z"
+        "doneAt": "2026-08-21T19:03:49.646Z"
       },
       "context": {
         "productionPlan": {
@@ -218,8 +220,8 @@
           "isSold": false
         }
       },
-      "createdAt": "2026-08-18T02:22:18.575Z",
-      "updatedAt": "2026-08-18T02:22:18.575Z",
+      "createdAt": "2026-08-21T19:04:03.752Z",
+      "updatedAt": "2026-08-21T19:04:03.752Z",
       "netCashflow": {
         "minorUnits": "5000",
         "currency": "USD"
@@ -229,7 +231,7 @@
   ],
   "pointEvidence": [
     {
-      "id": "3fe1797f-61af-4e92-b911-8b504572ab0a",
+      "id": "44a94d79-72b2-48a9-93c5-4ad7147ef683",
       "linkType": "TASK_PLAYER",
       "source": {
         "type": "task",
@@ -240,7 +242,7 @@
         "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
       },
       "relationship": "points-earned",
-      "createdAt": "2026-08-18T02:22:16.219Z"
+      "createdAt": "2026-08-21T19:04:01.591Z"
     }
   ],
   "playerBefore": {
@@ -249,33 +251,18 @@
     "name": "Akiles",
     "description": "Player One",
     "createdAt": "2025-11-03T01:14:48.514Z",
-    "updatedAt": "2026-08-18T02:10:20.586Z",
+    "updatedAt": "2026-08-21T19:01:43.580Z",
     "version": 1,
     "level": 0,
-    "characterId": "cc4ba319-8788-436e-ab46-56a7a92b2564",
-    "badges": [
-      {
-        "id": "badge-1772997678939",
-        "name": "Bug Buster",
-        "description": "Solved 1000 Bugs",
-        "requiredRoles": [
-          "developer"
-        ],
-        "createdAt": "2026-03-08T19:21:18.939Z"
-      }
-    ],
     "lastActiveAt": "2025-11-03T01:14:48.514Z",
-    "totalTasksCompleted": 0,
-    "totalSalesCompleted": 0,
-    "totalItemsSold": 0,
     "isActive": true,
     "rewards": {
       "points": {
         "pending": {
           "hp": 1,
-          "fp": 65,
-          "rp": 223,
-          "xp": 173
+          "fp": 80,
+          "rp": 291,
+          "xp": 338
         },
         "vested": {
           "hp": 1,
@@ -285,8 +272,8 @@
         },
         "current": {
           "hp": 0,
-          "fp": 25,
-          "rp": 80,
+          "fp": 11,
+          "rp": 14,
           "xp": 0
         },
         "exchanged": {
@@ -297,9 +284,9 @@
         },
         "historic": {
           "hp": 2,
-          "fp": 114,
-          "rp": 448,
-          "xp": 243
+          "fp": 129,
+          "rp": 516,
+          "xp": 408
         }
       },
       "achievements": [],
@@ -322,33 +309,18 @@
     "name": "Akiles",
     "description": "Player One",
     "createdAt": "2025-11-03T01:14:48.514Z",
-    "updatedAt": "2026-08-18T02:22:12.401Z",
+    "updatedAt": "2026-08-21T19:04:00.632Z",
     "version": 1,
     "level": 0,
-    "characterId": "cc4ba319-8788-436e-ab46-56a7a92b2564",
-    "badges": [
-      {
-        "id": "badge-1772997678939",
-        "name": "Bug Buster",
-        "description": "Solved 1000 Bugs",
-        "requiredRoles": [
-          "developer"
-        ],
-        "createdAt": "2026-03-08T19:21:18.939Z"
-      }
-    ],
     "lastActiveAt": "2025-11-03T01:14:48.514Z",
-    "totalTasksCompleted": 0,
-    "totalSalesCompleted": 0,
-    "totalItemsSold": 0,
     "isActive": true,
     "rewards": {
       "points": {
         "pending": {
           "hp": 1,
-          "fp": 66,
-          "rp": 225,
-          "xp": 178
+          "fp": 81,
+          "rp": 293,
+          "xp": 343
         },
         "vested": {
           "hp": 1,
@@ -358,8 +330,8 @@
         },
         "current": {
           "hp": 0,
-          "fp": 25,
-          "rp": 80,
+          "fp": 11,
+          "rp": 14,
           "xp": 0
         },
         "exchanged": {
@@ -370,9 +342,9 @@
         },
         "historic": {
           "hp": 2,
-          "fp": 115,
-          "rp": 450,
-          "xp": 248
+          "fp": 130,
+          "rp": 518,
+          "xp": 413
         }
       },
       "achievements": [],
@@ -395,33 +367,18 @@
     "name": "Akiles",
     "description": "Player One",
     "createdAt": "2025-11-03T01:14:48.514Z",
-    "updatedAt": "2026-08-18T02:22:49.385Z",
+    "updatedAt": "2026-08-21T19:04:47.881Z",
     "version": 1,
     "level": 0,
-    "characterId": "cc4ba319-8788-436e-ab46-56a7a92b2564",
-    "badges": [
-      {
-        "id": "badge-1772997678939",
-        "name": "Bug Buster",
-        "description": "Solved 1000 Bugs",
-        "requiredRoles": [
-          "developer"
-        ],
-        "createdAt": "2026-03-08T19:21:18.939Z"
-      }
-    ],
     "lastActiveAt": "2025-11-03T01:14:48.514Z",
-    "totalTasksCompleted": 0,
-    "totalSalesCompleted": 0,
-    "totalItemsSold": 0,
     "isActive": true,
     "rewards": {
       "points": {
         "pending": {
           "hp": 1,
-          "fp": 65,
-          "rp": 223,
-          "xp": 173
+          "fp": 80,
+          "rp": 291,
+          "xp": 338
         },
         "vested": {
           "hp": 1,
@@ -431,8 +388,8 @@
         },
         "current": {
           "hp": 0,
-          "fp": 26,
-          "rp": 82,
+          "fp": 12,
+          "rp": 16,
           "xp": 5
         },
         "exchanged": {
@@ -443,9 +400,9 @@
         },
         "historic": {
           "hp": 2,
-          "fp": 115,
-          "rp": 450,
-          "xp": 248
+          "fp": 130,
+          "rp": 518,
+          "xp": 413
         }
       },
       "achievements": [],
@@ -468,33 +425,18 @@
     "name": "Akiles",
     "description": "Player One",
     "createdAt": "2025-11-03T01:14:48.514Z",
-    "updatedAt": "2026-08-18T02:23:27.349Z",
+    "updatedAt": "2026-08-21T19:05:34.492Z",
     "version": 1,
     "level": 0,
-    "characterId": "cc4ba319-8788-436e-ab46-56a7a92b2564",
-    "badges": [
-      {
-        "id": "badge-1772997678939",
-        "name": "Bug Buster",
-        "description": "Solved 1000 Bugs",
-        "requiredRoles": [
-          "developer"
-        ],
-        "createdAt": "2026-03-08T19:21:18.939Z"
-      }
-    ],
     "lastActiveAt": "2025-11-03T01:14:48.514Z",
-    "totalTasksCompleted": 0,
-    "totalSalesCompleted": 0,
-    "totalItemsSold": 0,
     "isActive": true,
     "rewards": {
       "points": {
         "pending": {
           "hp": 1,
-          "fp": 65,
-          "rp": 223,
-          "xp": 173
+          "fp": 80,
+          "rp": 291,
+          "xp": 338
         },
         "vested": {
           "hp": 1,
@@ -504,8 +446,8 @@
         },
         "current": {
           "hp": 0,
-          "fp": 25,
-          "rp": 80,
+          "fp": 11,
+          "rp": 14,
           "xp": 0
         },
         "exchanged": {
@@ -516,9 +458,9 @@
         },
         "historic": {
           "hp": 2,
-          "fp": 114,
-          "rp": 448,
-          "xp": 243
+          "fp": 129,
+          "rp": 516,
+          "xp": 408
         }
       },
       "achievements": [],

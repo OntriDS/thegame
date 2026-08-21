@@ -75,32 +75,6 @@ export async function upsertFinancial(financial: FinancialRecord, relations?: Fi
     await kvSAdd(buildArchiveMonthsKey(), currentMonthKey);
   }
 
-  // Maintain sourceTaskId index
-  const sourceTaskId = relations?.sourceTaskId ?? (financial as any).sourceTaskId;
-  const sourceSaleId = relations?.sourceSaleId ?? (financial as any).sourceSaleId;
-  if (sourceTaskId) {
-    const sourceTaskIndexKey = buildEntityIndexKey(ENTITY, 'sourceTaskId', sourceTaskId);
-    await kvSAdd(sourceTaskIndexKey, financial.id);
-  }
-
-  // Clean up old sourceTaskId index if it changed or was removed
-  if (previousFinancial?.sourceTaskId && previousFinancial.sourceTaskId !== sourceTaskId) {
-    const oldSourceTaskIndexKey = buildEntityIndexKey(ENTITY, 'sourceTaskId', previousFinancial.sourceTaskId);
-    await kvSRem(oldSourceTaskIndexKey, financial.id);
-  }
-
-  // Maintain sourceSaleId index
-  if (sourceSaleId) {
-    const sourceSaleIndexKey = buildEntityIndexKey(ENTITY, 'sourceSaleId', sourceSaleId);
-    await kvSAdd(sourceSaleIndexKey, financial.id);
-  }
-
-  // Clean up old sourceSaleId index if it changed or was removed
-  if (previousFinancial?.sourceSaleId && previousFinancial.sourceSaleId !== sourceSaleId) {
-    const oldSourceSaleIndexKey = buildEntityIndexKey(ENTITY, 'sourceSaleId', previousFinancial.sourceSaleId);
-    await kvSRem(oldSourceSaleIndexKey, financial.id);
-  }
-
   // Clean up old month index if month/year changed
   if (previousFinancial?.year && previousFinancial?.month && financial.year && financial.month) {
     const prevMonthKey = formatArchiveMonthKeyUTCFromParts(previousFinancial.year, previousFinancial.month);
@@ -119,14 +93,6 @@ export async function deleteFinancial(id: string): Promise<void> {
 
   // Get financial to clean up indexes
   const financial = await kvGet<FinancialRecord>(key);
-  if (financial?.sourceTaskId) {
-    const sourceTaskIndexKey = buildEntityIndexKey(ENTITY, 'sourceTaskId', financial.sourceTaskId);
-    await kvSRem(sourceTaskIndexKey, id);
-  }
-  if (financial?.sourceSaleId) {
-    const sourceSaleIndexKey = buildEntityIndexKey(ENTITY, 'sourceSaleId', financial.sourceSaleId);
-    await kvSRem(sourceSaleIndexKey, id);
-  }
   if (financial?.year && financial?.month) {
     const prevMonthKey = formatArchiveMonthKeyUTCFromParts(financial.year, financial.month);
     await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), id);

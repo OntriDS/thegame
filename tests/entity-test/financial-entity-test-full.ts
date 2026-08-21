@@ -39,10 +39,6 @@ describe('entity-test: full FinancialRecord', () => {
       month: now.getUTCMonth() + 1,
       station: 'strategy' as any,
       type: 'personal',
-      siteId: 'hq',
-      targetSiteId: 'site-world',
-      characterId: owner.id,
-      playerCharacterId: owner.id,
       salesChannel: 'direct-sales' as any,
       cost: { minorUnits: '2500', currency: 'USD' },
       revenue: { minorUnits: '10000', currency: 'USD' },
@@ -50,9 +46,7 @@ describe('entity-test: full FinancialRecord', () => {
       status: FinancialStatus.COLLECTED,
       lifecycle: { doneAt, collectedAt },
       context: {
-        counterparty: { counterpartyId: owner.id, role: 'beneficiary' },
         jungleCoins: 1,
-        paymentObservation: { paid: false, charged: false },
         productionPlan: {
           outputItemType: 'bundle',
           outputItemSubType: 'print',
@@ -71,6 +65,12 @@ describe('entity-test: full FinancialRecord', () => {
       },
       createdAt: doneAt,
       updatedAt: now,
+      __financialRelations: {
+        siteId: 'hq',
+        targetSiteId: 'site-world',
+        characterId: owner.id,
+        characterRelationship: 'beneficiary',
+      },
     } as any, { forceSave: true });
 
     const saved = await getFinancialById(financialId);
@@ -109,7 +109,6 @@ describe('entity-test: full FinancialRecord', () => {
     expect(persisted).not.toHaveProperty('siteId');
     expect(persisted).not.toHaveProperty('targetSiteId');
     expect(persisted.context).not.toHaveProperty('counterparty');
-    expect(persisted.context).not.toHaveProperty('paymentObservation');
     expect(generatedItems).toHaveLength(1);
     expect(generatedItems[0]).toMatchObject({ sourceRecordId: financialId, status: 'for-sale' });
     expect(links).toEqual(expect.arrayContaining([

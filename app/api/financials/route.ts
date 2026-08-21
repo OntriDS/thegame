@@ -47,14 +47,17 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as FinancialRecord;
     const createdAt = body.createdAt ? new Date(body.createdAt) : new Date();
     const updatedAt = new Date(Math.max(Date.now(), createdAt.getTime()));
-    const { links: _dropEmbeddedLinks, ...bodyRest } = body;
+    const rawBody = body as any;
+    const legacyKeys = ['doneAt', 'collectedAt', 'siteId', 'targetSiteId', 'characterId', 'playerCharacterId', 'sourceTaskId', 'sourceSaleId'];
+    const legacyKey = legacyKeys.find((key) => Object.prototype.hasOwnProperty.call(rawBody, key));
+    if (legacyKey) throw new Error(`FINANCIAL_CANONICAL_WRITE_REJECTED: ${legacyKey} must be represented by lifecycle or canonical Links.`);
+    const { links: _dropEmbeddedLinks, ...bodyRest } = rawBody;
     const financial = {
       ...bodyRest,
       id: body.id || uuid(),
       createdAt,
       updatedAt,
-      collectedAt: body.collectedAt ? new Date(body.collectedAt) : undefined,
-      doneAt: body.doneAt ? new Date(body.doneAt) : undefined
+      lifecycle: body.lifecycle,
     };
     const forceSave = req.nextUrl.searchParams.get('force') === 'true';
     const saved = await upsertFinancial(financial, { forceSave });

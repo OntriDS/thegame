@@ -8,7 +8,6 @@ import { getItemById } from '@/data-store/repositories/item.repo';
 import { getSaleById } from '@/data-store/repositories/sale.repo';
 import { getCharacterById } from '@/data-store/repositories/character.repo';
 import { getPlayerById } from '@/data-store/repositories/player.repo';
-import { getAccountById } from '@/data-store/repositories/account.repo';
 import { kvGet } from '@/lib/utils/kv';
 import { buildDataKey } from '@/data-store/keys';
 import { getLinksFor } from './link-registry';
@@ -159,12 +158,13 @@ export function validateLinkTypeCompatibility(
     'CHARACTER_PLAYER': { source: [EntityType.CHARACTER], target: [EntityType.PLAYER] },
     'CHARACTER_BUSINESS': { source: [EntityType.CHARACTER], target: [EntityType.BUSINESS] },
 
-    // SITE relationships (6)
+    // SITE relationships (7)
     'SITE_TASK': { source: [EntityType.SITE], target: [EntityType.TASK] },
     'SITE_CHARACTER': { source: [EntityType.SITE], target: [EntityType.CHARACTER] },
     'SITE_FINREC': { source: [EntityType.SITE], target: [EntityType.FINANCIAL] },
     'SITE_ITEM': { source: [EntityType.SITE], target: [EntityType.ITEM] },
     'SITE_SALE': { source: [EntityType.SITE], target: [EntityType.SALE] },
+    'SITE_SETTLEMENT': { source: [EntityType.SITE], target: [EntityType.SETTLEMENT] },
     'SITE_SITE': { source: [EntityType.SITE], target: [EntityType.SITE] },
 
     // PLAYER relationships (5)
@@ -173,10 +173,8 @@ export function validateLinkTypeCompatibility(
     'PLAYER_ITEM': { source: [EntityType.PLAYER], target: [EntityType.ITEM] },
     'PLAYER_CHARACTER': { source: [EntityType.PLAYER], target: [EntityType.CHARACTER] },
 
-    // ACCOUNT relationships (4)
-    'ACCOUNT_PLAYER': { source: [EntityType.ACCOUNT], target: [EntityType.PLAYER] },
+    // ACCOUNT relationships (2)
     'ACCOUNT_CHARACTER': { source: [EntityType.ACCOUNT], target: [EntityType.CHARACTER] },
-    'PLAYER_ACCOUNT': { source: [EntityType.PLAYER], target: [EntityType.ACCOUNT] },
     'CHARACTER_ACCOUNT': { source: [EntityType.CHARACTER], target: [EntityType.ACCOUNT] },
 
     // AGENT relationships (1)
@@ -284,6 +282,7 @@ async function checkReverseDuplicate(
     [LinkType.CHARACTER_SALE]: null,
     [LinkType.SALE_SITE]: null,
     [LinkType.SITE_SALE]: null,
+    [LinkType.SITE_SETTLEMENT]: null,
     [LinkType.FINREC_PLAYER]: null,
     [LinkType.PLAYER_FINREC]: null,
     [LinkType.FINREC_CHARACTER]: null,
@@ -293,8 +292,6 @@ async function checkReverseDuplicate(
     [LinkType.CHARACTER_PLAYER]: null,
     [LinkType.PLAYER_CHARACTER]: null,
     [LinkType.SITE_SITE]: null,
-    [LinkType.ACCOUNT_PLAYER]: null,
-    [LinkType.PLAYER_ACCOUNT]: null,
     [LinkType.ACCOUNT_CHARACTER]: null,
     [LinkType.CHARACTER_ACCOUNT]: null,
     [LinkType.TASK_AGENT]: null,
@@ -450,38 +447,13 @@ export async function validateBusinessRules(
         break;
       }
 
-      case 'ACCOUNT_PLAYER':
-        // Validate that player belongs to the account
-        const playerForAccount = await getPlayerById(target.id);
-        const legacyPlayerAccountId = (playerForAccount as (typeof playerForAccount & { accountId?: string | null }) | null)?.accountId;
-        if (legacyPlayerAccountId && legacyPlayerAccountId !== source.id) {
-          warnings.push(`Legacy Player accountId (${legacyPlayerAccountId}) does not match source account ID (${source.id})`);
-        }
-        break;
-
       case 'ACCOUNT_CHARACTER':
-        // Validate that character belongs to the account
-        const characterForAccount = await getCharacterById(target.id);
-        if (characterForAccount && characterForAccount.accountId !== source.id) {
-          warnings.push(`Character accountId (${characterForAccount.accountId}) does not match source account ID (${source.id})`);
-        }
-        break;
-
-      case 'PLAYER_ACCOUNT':
-        // Validate that player belongs to the account
-        const playerWithAccount = await getPlayerById(source.id);
-        const legacyPlayerAccountIdForReverse = (playerWithAccount as (typeof playerWithAccount & { accountId?: string | null }) | null)?.accountId;
-        if (legacyPlayerAccountIdForReverse && legacyPlayerAccountIdForReverse !== target.id) {
-          warnings.push(`Legacy Player accountId (${legacyPlayerAccountIdForReverse}) does not match target account ID (${target.id})`);
-        }
+        // ACCOUNT_CHARACTER itself is the ownership assertion. The account
+        // and character documents no longer carry embedded pointers.
         break;
 
       case 'CHARACTER_ACCOUNT':
-        // Validate that character belongs to the account
-        const characterWithAccount = await getCharacterById(source.id);
-        if (characterWithAccount && characterWithAccount.accountId !== target.id) {
-          warnings.push(`Character accountId (${characterWithAccount.accountId}) does not match target account ID (${target.id})`);
-        }
+        // Reverse navigation is represented by the canonical link.
         break;
 
       // Add more business rule validations as needed

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { NumericInput } from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import { Trash2, Plus, FileText, PenTool, AlertTriangle } from 'lucide-react';
+import { Trash2, Plus, FileText, PenTool } from 'lucide-react';
 import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
 import { Contract, Business, ContractClause, Character } from '@/types/entities';
 import { ContractStatus, ContractClauseType, LinkType, EntityType, CharacterRole } from '@/types/enums';
@@ -48,27 +48,39 @@ export function ContractSubmodal({
 }: ContractSubmodalProps) {
     const [name, setName] = useState('');
     const [status, setStatus] = useState<ContractStatus>(ContractStatus.ACTIVE);
-    const [notes, setNotes] = useState('');
     const [clauses, setClauses] = useState<ContractClause[]>([]);
 
     // Principal Selection State (Me)
     const [principalCharacterId, setPrincipalCharacterId] = useState<string>('');
-    const [selectedPrincipalId, setSelectedPrincipalId] = useState<string>(''); // This is the Business ID
-
     // Counterparty State (Them)
-    const [selectedEntityType, setSelectedEntityType] = useState<'character' | 'business'>('character');
     const [selectedCounterpartyId, setSelectedCounterpartyId] = useState<string>('');
     const [isSaving, setIsSaving] = useState(false);
+    const [businessCharacterIds, setBusinessCharacterIds] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        let cancelled = false;
+        Promise.all(availableBusinesses.map(async (business) => {
+            const links = await ClientAPI.getLinksFor({ type: EntityType.BUSINESS, id: business.id });
+            const owner = links.find((link: any) =>
+                link.linkType === LinkType.CHARACTER_BUSINESS &&
+                link.source?.type === EntityType.CHARACTER &&
+                link.target?.type === EntityType.BUSINESS &&
+                link.target.id === business.id
+            );
+            return owner ? [business.id, owner.source.id] as const : null;
+        })).then((entries) => {
+            if (!cancelled) setBusinessCharacterIds(Object.fromEntries(entries.filter(Boolean) as Array<readonly [string, string]>));
+        }).catch(() => {
+            if (!cancelled) setBusinessCharacterIds({});
+        });
+        return () => { cancelled = true; };
+    }, [availableBusinesses]);
 
     // Filtered Options
     // Filtered Options
     const principalCharacters = React.useMemo(() =>
-        availableCharacters.filter(c => c.roles.includes(CharacterRole.PLAYER)),
+        availableCharacters.filter(c => c.roles.includes(CharacterRole.FOUNDER) || c.roles.includes(CharacterRole.PLAYER)),
         [availableCharacters]);
-
-    const principalBusinesses = React.useMemo(() =>
-        availableBusinesses.filter(b => b.linkedCharacterId === principalCharacterId),
-        [availableBusinesses, principalCharacterId]);
 
     // Initial Load Effect
     useEffect(() => {
@@ -76,20 +88,30 @@ export function ContractSubmodal({
             if (initialData) {
                 setName(initialData.name);
                 setStatus(initialData.status);
-                setNotes(initialData.notes || '');
                 setClauses(initialData.clauses || []);
-                // If editing, IDs are fixed in data. We might need to reverse-lookup principal character for UI?
-                // For now, allow editing standard fields, but maybe lock entities if editing.
+                ClientAPI.getLinksFor({ type: EntityType.CONTRACT, id: initialData.id }).then((links: any[]) => {
+                    const characterLinks = links.filter((link) =>
+                        link.linkType === LinkType.CHARACTER_CONTRACT &&
+                        link.source?.type === EntityType.CHARACTER &&
+                        link.target?.id === initialData.id
+                    );
+                    const owner = characterLinks.find((link) => link.relationship === 'owner');
+                    const counterparty = characterLinks.find((link) => link.relationship === 'counterparty');
+                    if (owner) setPrincipalCharacterId(owner.source.id);
+                    if (counterparty) setSelectedCounterpartyId(counterparty.source.id);
+                }).catch(() => undefined);
             } else {
                 // New Contract Defaults
                 setStatus(ContractStatus.ACTIVE); // Default to Active
-                setNotes('');
                 setClauses([]);
 
                 // Set default counterparty if props provided
                 if (counterpartyEntity) {
-                    setSelectedCounterpartyId(counterpartyEntity.id);
-                    setSelectedEntityType(counterpartyEntity.type as any);
+                    setSelectedCounterpartyId(
+                        counterpartyEntity.type === 'character'
+                            ? counterpartyEntity.id
+                            : (businessCharacterIds[counterpartyEntity.id] || '')
+                    );
                 } else {
                     setSelectedCounterpartyId('');
                 }
@@ -98,37 +120,27 @@ export function ContractSubmodal({
                 const defaultPrincipal = principalCharacters[0];
                 if (defaultPrincipal) {
                     setPrincipalCharacterId(defaultPrincipal.id);
-                    // If they have only 1 business, auto-select it?
-                    const myBusinesses = availableBusinesses.filter(b => b.linkedCharacterId === defaultPrincipal.id);
-                    if (myBusinesses.length === 1) {
-                        setSelectedPrincipalId(myBusinesses[0].id);
-                    }
                 }
             }
         }
-    }, [open, initialData, counterpartyEntity, availableBusinesses, principalCharacters]); // Minimal deps to avoid loops
+    }, [open, initialData, counterpartyEntity, availableBusinesses, principalCharacters, businessCharacterIds]); // Minimal deps to avoid loops
 
     // Name Auto-Generator
     useEffect(() => {
         if (!initialData && open) {
             // Resolve Names
             let pName = 'Me';
-            if (selectedPrincipalId) {
-                const bus = availableBusinesses.find(b => b.id === selectedPrincipalId);
-                if (bus) pName = bus.name;
+            if (principalCharacterId) {
+                const character = availableCharacters.find(x => x.id === principalCharacterId);
+                if (character) pName = character.name;
             }
 
             let cName = 'Partner';
             if (counterpartyEntity) {
                 cName = counterpartyEntity.name;
             } else if (selectedCounterpartyId) {
-                if (selectedEntityType === 'character') {
-                    const c = availableCharacters.find(x => x.id === selectedCounterpartyId);
-                    if (c) cName = c.name;
-                } else {
-                    const b = availableBusinesses.find(x => x.id === selectedCounterpartyId);
-                    if (b) cName = b.name;
-                }
+                const c = availableCharacters.find(x => x.id === selectedCounterpartyId);
+                if (c) cName = c.name;
             }
 
             // Only update if user hasn't typed a custom name (starts with 'Me' or contains 'Agreement')
@@ -138,7 +150,7 @@ export function ContractSubmodal({
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedPrincipalId, selectedCounterpartyId, selectedEntityType, open]);
+    }, [principalCharacterId, selectedCounterpartyId, open]);
 
 
     const addClause = (type: ContractClauseType) => {
@@ -201,17 +213,18 @@ export function ContractSubmodal({
     const handleSave = async () => {
         if (!name) return;
 
-        // 1. Determine Principal (Me)
-        const finalPrincipalId = initialData?.principalBusinessId || selectedPrincipalId || principalEntity?.id;
-        if (!finalPrincipalId) {
-            console.error("Principal Business is required");
+        // Contract party identity is canonical through Character→Contract links.
+        const finalPrincipalCharacterId = principalCharacterId ||
+            (principalEntity?.type === 'character' ? principalEntity.id : businessCharacterIds[principalEntity?.id || '']);
+        if (!finalPrincipalCharacterId) {
+            console.error("Issuer Character is required");
             return; // TODO: Show error UI
         }
 
-        // 2. Determine Counterparty (Them)
-        const finalCounterpartyId = initialData?.counterpartyBusinessId || counterpartyEntity?.id || selectedCounterpartyId;
-        if (!finalCounterpartyId) {
-            console.error("Counterparty is required");
+        const finalCounterpartyCharacterId = selectedCounterpartyId ||
+            (counterpartyEntity?.type === 'character' ? counterpartyEntity.id : businessCharacterIds[counterpartyEntity?.id || '']);
+        if (!finalCounterpartyCharacterId) {
+            console.error("Counterparty Character is required");
             return;
         }
 
@@ -221,52 +234,47 @@ export function ContractSubmodal({
             const contract: Contract = {
                 id: initialData?.id || uuid(),
                 name,
-                description: notes,
-                principalBusinessId: finalPrincipalId,
-                counterpartyBusinessId: finalCounterpartyId,
                 status,
-                validFrom: initialData?.validFrom || new Date(),
                 clauses: clauses,
-                notes: notes || undefined,
                 createdAt: initialData?.createdAt || new Date(),
                 updatedAt: new Date(),
             } as unknown as Contract;
 
             onSave(contract);
 
-            // Link Creation Logic (New Contracts Only)
-            if (!initialData) {
-                let targetCharacterId = finalCounterpartyId;
-
-                // If Business selected, resolve to Human
-                if (selectedEntityType === 'business' || counterpartyEntity?.type === 'business') {
-                    const selectedBus = availableBusinesses.find(b => b.id === finalCounterpartyId);
-                    if (selectedBus && selectedBus.linkedCharacterId) {
-                        targetCharacterId = selectedBus.linkedCharacterId;
-                    } else {
-                        console.warn("Selected Business has no linked Character.");
-                    }
-                }
-
-                const link: any = {
+            const contractLinks = [
+                {
                     id: uuid(),
                     linkType: LinkType.CHARACTER_CONTRACT,
-                    source: { type: EntityType.CHARACTER, id: targetCharacterId },
+                    source: { type: EntityType.CHARACTER, id: finalPrincipalCharacterId },
                     target: { type: EntityType.CONTRACT, id: contract.id },
                     relationship: 'owner',
                     createdAt: new Date(),
-                };
-
-                await ClientAPI.createLink(link);
-
-                // Role Assignment
-                if (targetCharacterId) {
-                    try {
-                        await ensureCharacterHasRole(targetCharacterId, CharacterRole.PARTNER);
-                    } catch (err) {
-                        console.error('Failed to update character role', err);
-                    }
-                }
+                },
+                {
+                    id: uuid(),
+                    linkType: LinkType.CHARACTER_CONTRACT,
+                    source: { type: EntityType.CHARACTER, id: finalCounterpartyCharacterId },
+                    target: { type: EntityType.CONTRACT, id: contract.id },
+                    relationship: 'counterparty',
+                    createdAt: new Date(),
+                },
+            ];
+            const existingLinks = await ClientAPI.getLinksFor({ type: EntityType.CONTRACT, id: contract.id });
+            for (const link of contractLinks) {
+                const alreadyExists = existingLinks.some((existing: any) =>
+                    existing.linkType === LinkType.CHARACTER_CONTRACT &&
+                    existing.relationship === link.relationship &&
+                    existing.source?.type === EntityType.CHARACTER &&
+                    existing.source?.id === link.source.id &&
+                    existing.target?.id === contract.id
+                );
+                if (!alreadyExists) await ClientAPI.createLink(link as any);
+            }
+            try {
+                await ensureCharacterHasRole(finalCounterpartyCharacterId, CharacterRole.PARTNER);
+            } catch (err) {
+                console.error('Failed to update character role', err);
             }
 
             onClose();
@@ -333,29 +341,12 @@ export function ContractSubmodal({
                                                 value={principalCharacterId}
                                                 onValueChange={(val) => {
                                                     setPrincipalCharacterId(val);
-                                                    setSelectedPrincipalId(''); // Reset business when char changes
                                                 }}
                                                 placeholder="Who are you?"
                                                 options={principalCharacters.map(c => ({ value: c.id, label: c.name, category: c.roles[0] }))}
                                             />
                                         </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-[10px] text-muted-foreground">My Business Entity</Label>
-                                            <SearchableSelect
-                                                value={selectedPrincipalId}
-                                                onValueChange={setSelectedPrincipalId}
-                                                placeholder="Select Legal Entity..."
-                                                options={principalBusinesses.map(b => ({ value: b.id, label: b.name, category: b.type }))}
-                                                disabled={!principalCharacterId}
-                                            />
-                                        </div>
                                     </div>
-                                    {!selectedPrincipalId && principalCharacterId && principalBusinesses.length === 0 && (
-                                        <div className="text-[10px] text-amber-500 flex items-center gap-1">
-                                            <AlertTriangle className="h-3 w-3" />
-                                            This character has no linked businesses. Please create one first.
-                                        </div>
-                                    )}
                                 </div>
                             )}
 
@@ -373,40 +364,17 @@ export function ContractSubmodal({
                             {/* 3. COUNTERPARTY SELECTOR (THEM) */}
                             {!counterpartyEntity && !initialData && (
                                 <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Counterparty (Them)</Label>
-                                        <div className="flex bg-muted p-1 rounded-md">
-                                            <button
-                                                onClick={() => { setSelectedEntityType('character'); setSelectedCounterpartyId(''); }}
-                                                className={`px-3 py-1 text-xs font-medium rounded-sm transition-all ${selectedEntityType === 'character' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                                            >
-                                                Character
-                                            </button>
-                                            <button
-                                                onClick={() => { setSelectedEntityType('business'); setSelectedCounterpartyId(''); }}
-                                                className={`px-3 py-1 text-xs font-medium rounded-sm transition-all ${selectedEntityType === 'business' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                                            >
-                                                Business
-                                            </button>
-                                        </div>
-                                    </div>
+                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Counterparty Character</Label>
 
                                     <SearchableSelect
                                         value={selectedCounterpartyId}
                                         onValueChange={setSelectedCounterpartyId}
-                                        placeholder={`Search ${selectedEntityType}s...`}
-                                        options={selectedEntityType === 'character'
-                                            ? availableCharacters.map(c => ({
-                                                value: c.id,
-                                                label: c.name,
-                                                category: c.roles?.[0] || 'Other'
-                                            }))
-                                            : availableBusinesses.map(b => ({
-                                                value: b.id,
-                                                label: b.name,
-                                                category: b.type || 'Business'
-                                            }))
-                                        }
+                                        placeholder="Search characters..."
+                                        options={availableCharacters.map(c => ({
+                                            value: c.id,
+                                            label: c.name,
+                                            category: c.roles?.[0] || 'Other'
+                                        }))}
                                         autoGroupByCategory={true}
                                         className="w-full"
                                     />

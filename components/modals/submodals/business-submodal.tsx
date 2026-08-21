@@ -5,23 +5,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Business, Character, Site } from '@/types/entities';
+import { Business } from '@/types/entities';
 import { BusinessType } from '@/types/enums';
 import { v4 as uuid } from 'uuid';
-import { createCharacterOptions, createSiteOptionsWithCategories } from '@/lib/utils';
-
-import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
-
-import { ClientAPI } from '@/lib/client-api';
 
 interface BusinessSubmodalProps {
     open: boolean;
     onClose: () => void;
     onSave: (entity: Business) => void;
     initialData?: Business;
-    defaultLinkedCharacterId?: string;
 }
 
 export function BusinessSubmodal({
@@ -29,40 +22,17 @@ export function BusinessSubmodal({
     onClose,
     onSave,
     initialData,
-    defaultLinkedCharacterId
 }: BusinessSubmodalProps) {
     const [name, setName] = useState('');
     const [type, setType] = useState<BusinessType>(BusinessType.COMPANY);
-    const [taxId, setTaxId] = useState('');
-    const [linkedCharacterId, setLinkedCharacterId] = useState<string>('');
-    const [linkedSiteId, setLinkedSiteId] = useState<string>('');
-
-    // Option Data
-    const [characters, setCharacters] = useState<Character[]>([]);
-    const [sites, setSites] = useState<Site[]>([]);
-
     // Identity Vault: Persist ID across renders
     const draftId = React.useRef(initialData?.id || uuid());
 
     useEffect(() => {
         if (open) {
-            // Load Options
-            const loadOptions = async () => {
-                const [chars, s] = await Promise.all([
-                    ClientAPI.getCharacters(),
-                    ClientAPI.getSites()
-                ]);
-                setCharacters(chars);
-                setSites(s);
-            };
-            loadOptions();
-
             if (initialData) {
                 setName(initialData.name);
                 setType(initialData.type);
-                setTaxId(initialData.taxId || '');
-                setLinkedCharacterId(initialData.linkedCharacterId || '');
-                setLinkedSiteId(initialData.linkedSiteId || '');
                 // Reset draftId to current editing item
                 draftId.current = initialData.id;
             } else {
@@ -70,12 +40,9 @@ export function BusinessSubmodal({
                 draftId.current = uuid();
                 setName('');
                 setType(BusinessType.COMPANY);
-                setTaxId('');
-                setLinkedCharacterId(defaultLinkedCharacterId || '');
-                setLinkedSiteId('');
             }
         }
-    }, [open, initialData, defaultLinkedCharacterId]);
+    }, [open, initialData]);
 
     const handleSave = () => {
         if (!name) return; // Validation
@@ -85,9 +52,6 @@ export function BusinessSubmodal({
             name,
             description: `Business for ${name}`,
             type,
-            taxId,
-            linkedCharacterId: linkedCharacterId || null,
-            linkedSiteId: linkedSiteId || null,
             isActive: true,
             createdAt: initialData?.createdAt || new Date(),
             updatedAt: new Date(),
@@ -136,42 +100,6 @@ export function BusinessSubmodal({
                         </Select>
                     </div>
 
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="taxId" className="text-right">Tax ID</Label>
-                        <Input
-                            id="taxId"
-                            value={taxId}
-                            onChange={(e) => setTaxId(e.target.value)}
-                            className="col-span-3"
-                            placeholder="Optional"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label className="text-right">Character</Label>
-                        <div className="col-span-3">
-                            <SearchableSelect
-                                value={linkedCharacterId}
-                                onValueChange={setLinkedCharacterId}
-                                options={createCharacterOptions(characters)}
-                                placeholder="Link to Character..."
-                            />
-
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label className="text-right">Base Site</Label>
-                        <div className="col-span-3">
-                            <SearchableSelect
-                                value={linkedSiteId}
-                                onValueChange={setLinkedSiteId}
-                                options={createSiteOptionsWithCategories(sites)}
-                                placeholder="Link to Site..."
-                            />
-
-                        </div>
-                    </div>
                 </div>
 
                 <DialogFooter>

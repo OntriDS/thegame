@@ -1,0 +1,13 @@
+{
+  "id": "entity-test-region-clean",
+  "name": "testing-region-clean",
+  "center": {
+    "lat": 9.93,
+    "lng": -84.08
+  },
+  "defaultZoom": 10,
+  "isActive": true,
+  "createdAt": "2026-08-21T17:00:39.451Z",
+  "updatedAt": "2026-08-21T17:00:39.451Z",
+  "isUnlocked": true
+}

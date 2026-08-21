@@ -31,7 +31,17 @@ export async function GET(req: NextRequest) {
     }
 
     const accountIds = await kvSMembers(IAM_ACCOUNTS_INDEX);
-    const accounts = await Promise.all(accountIds.map(id => iamService.getAccountById(id)));
+    const accounts = await Promise.all(accountIds.map(async (id) => {
+      const account = await iamService.getAccountById(id);
+      if (!account) return null;
+      const character = await iamService.resolveCharacterForAccount(id);
+      const { passwordHash: _passwordHash, resetToken: _resetToken, verificationToken: _verificationToken, ...safeAccount } = account;
+      return {
+        ...safeAccount,
+        characterId: character?.id || null,
+        character: character ? { id: character.id, name: character.name, roles: character.roles } : null,
+      };
+    }));
 
     const characters = await getAllCharacters();
 

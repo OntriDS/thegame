@@ -142,14 +142,15 @@ export async function updateFinancialRecordsFromTask(
             ...record.lifecycle,
             doneAt: record.lifecycle?.doneAt || record.createdAt,
           },
-          characterId: getTaskCounterpartyId(task),
           context: {
             ...record.context,
-            counterparty: {
-              ...record.context?.counterparty,
-              counterpartyId: getTaskCounterpartyId(task),
-              role: task.context?.counterparty?.role || task.customerCharacterRole || CharacterRole.CUSTOMER,
-            },
+          },
+          __financialRelations: {
+            sourceTaskId: task.id,
+            siteId: task.siteId,
+            targetSiteId: task.targetSiteId,
+            characterId: getTaskCounterpartyId(task),
+            characterRelationship: task.context?.counterparty?.role || task.customerCharacterRole || CharacterRole.CUSTOMER,
           },
           name: task.name,
           station: task.station,

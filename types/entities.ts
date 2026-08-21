@@ -77,7 +77,8 @@ export interface Settlement {
   id: string;
   name: string;
   regionId: string;
-  googleMapsAddress: string;
+  /** Optional external lookup/reference; map coordinates and shapes are authoritative. */
+  googleMapsAddress?: string;
   coordinates?: { lat: number; lng: number };  // NEW - for future Google Maps integration
   isActive: boolean;
   shape?: MapGeometryShape;
@@ -210,11 +211,6 @@ export type AccountCharacterLinkV1 = LinkEnvelopeV1<
   { relationship: 'primary' }
 >;
 
-export type AccountPlayerLinkV1 = LinkEnvelopeV1<
-  CanonicalLinkType.ACCOUNT_PLAYER,
-  { relationship: 'primary' }
->;
-
 export type CharacterPlayerLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.CHARACTER_PLAYER,
   { relationship: 'primary' }
@@ -290,6 +286,11 @@ export type SaleSiteLinkV1 = LinkEnvelopeV1<
   { relationship: 'sold-at' }
 >;
 
+export type SiteSettlementLinkV1 = LinkEnvelopeV1<
+  CanonicalLinkType.SITE_SETTLEMENT,
+  { relationship: 'located-in' }
+>;
+
 export type FinrecCharacterLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.FINREC_CHARACTER,
   { relationship: 'customer' | 'beneficiary' }
@@ -302,7 +303,8 @@ export type SiteSiteLinkV1 = LinkEnvelopeV1<
 
 export type CharacterContractLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.CHARACTER_CONTRACT,
-  { relationship: 'owner' }
+  // owner is the issuing Character; counterparty is the other Character.
+  { relationship: 'owner' | 'counterparty' }
 >;
 
 export type CharacterBusinessLinkV1 = LinkEnvelopeV1<
@@ -317,7 +319,6 @@ export type CanonicalLink =
   | TaskItemLinkV1
   | ItemSiteLinkV1
   | AccountCharacterLinkV1
-  | AccountPlayerLinkV1
   | CharacterPlayerLinkV1
   | CharacterSiteLinkV1
   | TaskParentLinkV1
@@ -331,6 +332,7 @@ export type CanonicalLink =
   | SaleFinRecLinkV1
   | SaleCharacterLinkV1
   | SaleSiteLinkV1
+  | SiteSettlementLinkV1
   | FinrecSiteLinkV1
   | FinrecItemLinkV1
   | TaskFinRecLinkV1
@@ -881,24 +883,19 @@ export interface ContractClause {
 
 /** 
  * CONTRACT - The Agreement (Financial Instrument)
- * Defines the business relationship via a list of Clauses.
+ * Defines agreement terms via a list of Clauses. Party identity is resolved
+ * through CHARACTER_CONTRACT links; Business is reached from Character via
+ * CHARACTER_BUSINESS when needed by a workflow.
  */
 export interface Contract extends EntityEnvelope {
-  // Parties
-  principalBusinessId: string;    // Me / The Company
-  counterpartyBusinessId: string; // The Partner business (counterparty in contract/sale context)
-
-  // Status & Lifecycle
+  // Current agreement state. The Contract is not a task and has no doneAt.
   status: ContractStatus;
-  validFrom: Date;
-  validTo?: Date;
 
   // The "Real World" Terms: A list of specific agreements
   clauses: ContractClause[];
 
   // Metadata
   isExclusive?: boolean;
-  notes?: string;
 }
 
 
@@ -1222,7 +1219,6 @@ export interface CharacterQualification {
  */
 export interface Character extends EntityEnvelope {
   // 1. IDENTITY & AUTHENTICATION
-  accountId?: EntityId | null;     // 🏛️ AMBASSADOR FIELD (links to Account entity)
 
   // 1.1 OPTIONAL CHARACTER CONTACT
   // Characters may be real people without an authenticated Account. These
@@ -1279,12 +1275,6 @@ export interface CharacterViewV1 {
  */
 export interface Business extends EntityEnvelope {
   type: BusinessType;
-  taxId?: string;               // Optional Tax ID / SSN / Cedula
-
-  // Connections
-  linkedCharacterId?: string | null;  // The person behind this entity (e.g. Akiles)
-  linkedSiteId?: string | null;       // The HQ or main contract site (e.g. Ecosystem)
-
   isActive: boolean;
 }
 
@@ -1342,42 +1332,40 @@ export interface Agent extends EntityEnvelope {
  * - Security-first design (authentication isolated)
  * - Privacy controls built-in
  * - One Account per real person per game universe
- * - Links to Player (optional) and Character (required)
+ * - Links to Character (required); an optional Player is reached through Character
+ */
+/**
+ * Safe Account view used by TheGame UI, APIs, and entity boundaries.
+ *
+ * Credential material belongs to the private IAM record in lib/iam-service.ts
+ * and must never be represented by this application-facing type.
  */
 export interface Account extends EntityEnvelope {
-  // IDENTITY (Single Source of Truth)
-  email: string;              // Real person's email (unique, required)
-  phone?: string;             // Real person's phone
-  phoneCountryCode?: string;  // Optional country code for phone normalization
-  requiresFounderAuth?: boolean;
+  // IDENTITY (single source of truth; IAM-owned)
+  name: string;
+  email: string;
+  phone?: string;
+  phoneCountryCode?: string;
 
-  // AUTHENTICATION (Security Layer)
-  passwordHash: string;
-  sessionToken?: string;
-  lastLoginAt?: UtcIsoString;
-  loginAttempts: number;
-
-  // ACCESS CONTROL
+  // SAFE ACCESS STATUS (not credentials)
   isActive: boolean;
   isVerified: boolean;
-  verificationToken?: string;
-  resetToken?: string;
-  resetTokenExpiry?: UtcIsoString;
+  loginAttempts: number;
 
-  // PRIVACY SETTINGS
+  // PRIVACY VIEW
   privacySettings: {
     showEmail: boolean;
     showPhone: boolean;
     showRealName: boolean;
   };
 
-  // RELATIONSHIPS
-  playerId?: EntityId | null;
-  characterId: EntityId;
+  // RELATIONSHIP VIEW (ACCOUNT_* Links are authoritative)
 
-  // LIFECYCLE
+  // LIFECYCLE / UI HYDRATION
   lastActiveAt: UtcIsoString;
-  character?: Character; // UI convenience field
+  character?: Character;
+  /** Compatibility discriminator for safe M2M account views. */
+  type?: string;
 }
 
 // Note: Account, Player, and Character THREE-ENTITY SYSTEM
@@ -1392,7 +1380,7 @@ export interface Account extends EntityEnvelope {
 // - Customer (no account): Character only → can't login
 // - Customer (with account): Account + Character → can login, view orders
 // - Team member: Account + Character (with TEAM role) → can login, limited admin access
-// - Founder/Player: Account + Character (FOUNDER, PLAYER roles) + Player → full access
+// - Founder/Player: Account + Character (FOUNDER, PLAYER roles) + optional Player → full access
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECTION 8: NOTE-TAKING SYSTEM

@@ -41,10 +41,10 @@ export async function POST(
                 month: currentDate.getMonth() + 1,
                 station: AdminStation.FINANCES as Station,
                 type: 'company',
-                siteId: undefined,
                 cost: toMoney(0),
                 revenue: toMoney(0),
-                jungleCoins: amount, // Positive = Added to wallet
+                context: { jungleCoins: amount }, // Positive = Added to wallet
+                __financialRelations: { characterId, characterRelationship: 'beneficiary' },
                 netCashflow: toMoney(0),
                 createdAt: new Date(),
                 updatedAt: new Date()
@@ -60,10 +60,10 @@ export async function POST(
                 month: currentDate.getMonth() + 1,
                 station: AdminStation.FINANCES as Station,
                 type: 'company',
-                siteId: undefined,
                 cost: toMoney(0),
                 revenue: toMoney(0),
-                jungleCoins: -amount, // Negative = Deducted
+                context: { jungleCoins: -amount }, // Negative = Deducted
+                __financialRelations: { characterId, characterRelationship: 'beneficiary' },
                 netCashflow: toMoney(0),
                 createdAt: new Date(),
                 updatedAt: new Date()

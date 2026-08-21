@@ -2,11 +2,12 @@
 // Business-specific workflow - logs to CHARACTER log
 // Businesses are infrastructure entities that belong to characters
 
-import { EntityType, LogEventType } from '@/types/enums';
+import { EntityType, LinkType, LogEventType } from '@/types/enums';
 import type { Business } from '@/types/entities';
 import { appendEntityLog } from '../entities-logging';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
+import { getLinksFor } from '@/links/link-registry';
 
 /**
  * Business workflow - Logs to CHARACTER log
@@ -20,11 +21,18 @@ export async function onBusinessUpsert(business: Business, previousBusiness?: Bu
             return; // Already logged
         }
 
-        // Log to CHARACTER log (businesses are infra entities of characters)
-        if (business.linkedCharacterId) {
+        // Log to the owning Character log. Ownership is resolved from the canonical Link.
+        const businessLinks = await getLinksFor({ type: EntityType.BUSINESS, id: business.id });
+        const ownerLink = businessLinks.find((link) =>
+            link.linkType === LinkType.CHARACTER_BUSINESS &&
+            link.source.type === EntityType.CHARACTER &&
+            link.target.type === EntityType.BUSINESS &&
+            link.target.id === business.id
+        );
+        if (ownerLink) {
             await appendEntityLog(
                 EntityType.CHARACTER,
-                business.linkedCharacterId,
+                ownerLink.source.id,
                 LogEventType.BUSINESS_LINKED,
                 {
                     name: business.name || 'Unknown Business',

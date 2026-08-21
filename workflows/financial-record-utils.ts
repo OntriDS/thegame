@@ -2,7 +2,7 @@
 // workflows/financial-record-utils.ts
 // Financial record creation and management utilities
 
-import type { Task, FinancialRecord, Sale, ItemSaleLine, Character, Contract, ServiceLine } from '@/types/entities';
+import type { Task, FinancialRecord, FinancialRecordRuntime, FinancialRecordRelationInput, Sale, ItemSaleLine, Character, Contract, ServiceLine } from '@/types/entities';
 import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, SaleType, SaleStatus, TaskStatus, ContractClauseType, ContractStatus, FinancialStatus, CharacterRole, EntitySchemaVersion } from '@/types/enums';
 import {
   upsertFinancial,
@@ -40,6 +40,14 @@ const getTaskMoneyValue = (task: Task, field: 'costIntent' | 'revenueIntent'): n
 
 const getTaskIsNewItem = (task: Task): boolean =>
   Boolean(task.context?.productionPlan?.isNewItem ?? (task as any).isNewItem);
+
+const withFinancialRelations = (
+  record: FinancialRecord,
+  relations: FinancialRecordRelationInput,
+): FinancialRecordRuntime => ({
+  ...record,
+  __financialRelations: relations,
+});
 
 /**
  * Get the current J$ Balance for an entity (Character or Player)
@@ -174,7 +182,8 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
       rawDate instanceof Date ? rawDate : parseDateToUTC(rawDate as string | number);
     const cost = taskCost;
     const revenue = taskRevenue;
-    const newFinrec: FinancialRecord = {
+    const counterpartyId = getTaskCounterpartyId(task);
+    const newFinrec = withFinancialRelations({
       id: `finrec-${task.id}`,
       schemaVersion: EntitySchemaVersion.V1,
       version: 0,
@@ -184,10 +193,6 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
       month: dateToUse.getMonth() + 1,
       station: task.station,
       type: getFinancialTypeForStation(task.station),
-      siteId: task.siteId,
-      targetSiteId: task.targetSiteId,
-      sourceTaskId: task.id, // AMBASSADOR field - points back to Task
-      characterId: getTaskCounterpartyId(task),
       cost: toMoney(cost),
       revenue: toMoney(revenue),
       netCashflow: toMoney(revenue - cost),
@@ -201,16 +206,18 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
         ...(task.status === TaskStatus.COLLECTED && task.collectedAt ? { collectedAt: task.collectedAt } : {}),
       },
       context: {
-        counterparty: {
-          counterpartyId: getTaskCounterpartyId(task),
-          role: task.context?.counterparty?.role || task.customerCharacterRole || CharacterRole.CUSTOMER,
-        },
         jungleCoins: 0,
         productionPlan: task.context?.productionPlan,
       },
       createdAt: currentDate,
       updatedAt: currentDate,
-    };
+    }, {
+      siteId: task.siteId,
+      targetSiteId: task.targetSiteId,
+      sourceTaskId: task.id,
+      characterId: counterpartyId,
+      characterRelationship: task.context?.counterparty?.role || task.customerCharacterRole || CharacterRole.CUSTOMER,
+    });
 
     // Store the financial record
     console.log(`[createFinancialRecordFromTask] Creating new financial record:`, newFinrec);
@@ -275,24 +282,31 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
     }
 
     // Update the financial record with new task data
-    const updatedFinrec = {
+    const updatedFinrec = withFinancialRelations({
       ...existingFinrec,
       name: task.name,
       description: `Financial record from task: ${task.name}`,
       cost: toMoney(getTaskMoneyValue(task, 'costIntent')),
       revenue: toMoney(getTaskMoneyValue(task, 'revenueIntent')),
       station: task.station,
+      netCashflow: toMoney(getTaskMoneyValue(task, 'revenueIntent') - getTaskMoneyValue(task, 'costIntent')),
+      context: {
+        ...(existingFinrec.context || {}),
+        ...(task.context?.productionPlan ? { productionPlan: task.context.productionPlan } : {}),
+      },
+      lifecycle: {
+        ...(existingFinrec.lifecycle || {}),
+        ...((task.doneAt || task.collectedAt) ? { doneAt: existingFinrec.lifecycle?.doneAt || task.doneAt || task.collectedAt } : {}),
+        ...(task.collectedAt ? { collectedAt: task.collectedAt } : {}),
+      },
+      updatedAt: getUTCNow()
+    }, {
       siteId: task.siteId,
       targetSiteId: task.targetSiteId,
+      sourceTaskId: task.id,
       characterId: getTaskCounterpartyId(task),
-      customerCharacterRole: task.context?.counterparty?.role || task.customerCharacterRole || CharacterRole.CUSTOMER,
-      outputItemId: getTaskIsNewItem(task) ? null : (task.outputItemId || null),
-      isNewItem: getTaskIsNewItem(task),
-      rewards: undefined,
-      netCashflow: toMoney(getTaskMoneyValue(task, 'revenueIntent') - getTaskMoneyValue(task, 'costIntent')),
-      doneAt: existingFinrec.doneAt || (task.doneAt ? task.doneAt as Date : (task.collectedAt ? task.collectedAt as Date : undefined)),
-      updatedAt: getUTCNow()
-    };
+      characterRelationship: task.context?.counterparty?.role || task.customerCharacterRole || CharacterRole.CUSTOMER,
+    });
 
     // Store the updated financial record
     console.log(`[updateFinancialRecordFromTask] Updating financial record:`, updatedFinrec);
@@ -485,7 +499,14 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
     const business = await getBusinessById(targetEntityId);
     if (business) {
       targetEntityName = business.name;
-      if (business.linkedCharacterId) targetEntityId = business.linkedCharacterId;
+      const businessLinks = await getLinksFor({ type: EntityType.BUSINESS, id: business.id });
+      const ownerLink = businessLinks.find((link) =>
+        link.linkType === LinkType.CHARACTER_BUSINESS &&
+        link.source.type === EntityType.CHARACTER &&
+        link.target.type === EntityType.BUSINESS &&
+        link.target.id === business.id
+      );
+      if (ownerLink) targetEntityId = ownerLink.source.id;
     } else {
       const character = await getCharacterById(targetEntityId);
       if (character) targetEntityName = character.name;
@@ -552,7 +573,9 @@ async function upsertPrimarySaleFinrecFromSale(
   const totalRevenue = extractMoneyValue(sale.totals?.totalRevenue);
   const cost = extractMoneyValue(sale.totals?.totalCost);
   const netCashflow = totalRevenue - cost;
-  const next: FinancialRecord = {
+  const saleCharacterId = await resolveSaleCharacterId(sale);
+  const saleSiteId = await resolveSaleSiteId(sale);
+  const next = withFinancialRelations({
     ...existing,
     name: derived.finrecName,
     description: derived.description,
@@ -560,22 +583,19 @@ async function upsertPrimarySaleFinrecFromSale(
     month: derived.month,
     station: derived.station,
     type: derived.financialType,
-    siteId: (await resolveSaleSiteId(sale)) ?? existing.siteId,
-    targetSiteId: existing.targetSiteId,
-    sourceSaleId: sale.id,
     salesChannel: derived.salesChannel,
-    cost,
-    revenue: totalRevenue,
-    jungleCoins: existing.context?.rewardIntent?.points ?? 0,
-    rewards: undefined,
-    netCashflow,
+    cost: toMoney(cost, 'USD'),
+    revenue: toMoney(totalRevenue, 'USD'),
+    netCashflow: toMoney(netCashflow, 'USD'),
     
-    collectedAt: existing.collectedAt,
-    doneAt: derived.dateToUse,
+    lifecycle: { ...(existing.lifecycle || {}), doneAt: derived.dateToUse },
     updatedAt: now,
-    characterId: await resolveSaleCharacterId(sale),
-    customerCharacterRole: (await resolveSaleCharacterId(sale)) ? CharacterRole.CUSTOMER : undefined,
-  };
+  }, {
+    siteId: saleSiteId,
+    sourceSaleId: sale.id,
+    characterId: saleCharacterId,
+    characterRelationship: saleCharacterId ? CharacterRole.CUSTOMER : null,
+  });
 
   const saved = await upsertFinancial(next, { forceSave: true });
 
@@ -671,7 +691,7 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
     const cost = extractMoneyValue(sale.totals?.totalCost);
     const netCashflow = initialRevenue - cost;
     const saleCounterpartyId = await resolveSaleCharacterId(sale);
-    const newFinrec: FinancialRecord = {
+    const newFinrec = withFinancialRelations({
       id: canonicalId,
       name: derived.finrecName,
       description: derived.description,
@@ -679,23 +699,20 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       month: derived.month,
       station: derived.station,
       type: derived.financialType,
-      siteId: await resolveSaleSiteId(sale),
-      targetSiteId: undefined,
-      sourceSaleId: sale.id,
       salesChannel: derived.salesChannel,
-      cost,
-      revenue: initialRevenue,
-      jungleCoins: 0,
-      rewards: undefined,
-      netCashflow,
+      cost: toMoney(cost, 'USD'),
+      revenue: toMoney(initialRevenue, 'USD'),
+      netCashflow: toMoney(netCashflow, 'USD'),
       
-      collectedAt: undefined,
-      doneAt: derived.dateToUse,
+      lifecycle: { doneAt: derived.dateToUse },
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
+    }, {
+      siteId: await resolveSaleSiteId(sale),
+      sourceSaleId: sale.id,
       characterId: saleCounterpartyId,
-      customerCharacterRole: saleCounterpartyId ? CharacterRole.CUSTOMER : undefined,
-    };
+      characterRelationship: saleCounterpartyId ? CharacterRole.CUSTOMER : null,
+    });
 
     console.log(`[createFinancialRecordFromSale] Creating finrec:`, newFinrec);
     const createdFinrec = await upsertFinancial(newFinrec, { forceSave: true });
@@ -782,7 +799,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
     const incomeRecord = existingRecords.find(r => r.id === incomeRecordId) || 
                          existingRecords.find(r => r.id.startsWith('finrec-') && !r.id.includes('payout'));
 
-    const incomeData: FinancialRecord = {
+    const incomeData = withFinancialRelations({
       ...(incomeRecord || {}),
       id: incomeRecordId,
       name: boothTitleBase,
@@ -791,8 +808,6 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       month: split.date.getMonth() + 1,
       station: derived.station,
       type: derived.financialType,
-      siteId: sale.siteId,
-      sourceSaleId: sale.id,
       salesChannel: derived.salesChannel,
       // Booth split arithmetic is performed in USD numbers; persist the
       // FinancialRecord through the canonical Money boundary.
@@ -800,12 +815,15 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       cost: toMoney(split.myBoothCost, 'USD'),
       netCashflow: toMoney(split.myGross - split.myBoothCost, 'USD'),
       status: ((sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED) ) ? FinancialStatus.DONE : FinancialStatus.PENDING,
-      doneAt: split.date,
+      lifecycle: { doneAt: split.date },
       updatedAt: getUTCNow(),
       createdAt: incomeRecord?.createdAt || getUTCNow(),
-    characterId: saleCounterpartyId,
-      customerCharacterRole: saleCounterpartyId ? CharacterRole.CUSTOMER : undefined,
-    } as FinancialRecord;
+    }, {
+      siteId: sale.siteId,
+      sourceSaleId: sale.id,
+      characterId: saleCounterpartyId,
+      characterRelationship: saleCounterpartyId ? CharacterRole.CUSTOMER : null,
+    });
 
     await upsertFinancial(incomeData, { forceSave: true });
     console.log(`[createFinancialRecordFromBoothSale] ✅ Synced Record 1 (${incomeRecordId}): Net=${incomeData.netCashflow}`);
@@ -829,7 +847,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
     if (hasContractImpact) {
       await cleanupPayoutCharacterLinks(payoutRecordId, payoutCounterpartyId);
 
-      const payoutData: FinancialRecord = {
+      const payoutData = withFinancialRelations({
         ...(payoutRecord || {}),
         id: payoutRecordId,
         name: partnerPayoutRecordName,
@@ -838,19 +856,20 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         month: split.date.getMonth() + 1,
         station: SalesStation.BOOTH_SALES as Station,
         type: 'company',
-        siteId: sale.siteId,
-        sourceSaleId: sale.id,
         salesChannel: SalesStation.BOOTH_SALES as Station,
         revenue: toMoney(split.myCommFromPartner, 'USD'),
         cost: toMoney(split.partnerCommFromMe, 'USD'),
         netCashflow: toMoney(split.myCommFromPartner - split.partnerCommFromMe, 'USD'),
         status: ((sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED) ) ? FinancialStatus.DONE : FinancialStatus.PENDING,
-        doneAt: split.date,
+        lifecycle: { doneAt: split.date },
         updatedAt: getUTCNow(),
         createdAt: payoutRecord?.createdAt || getUTCNow(),
+      }, {
+        siteId: sale.siteId,
+        sourceSaleId: sale.id,
         characterId: payoutCounterpartyId,
-        customerCharacterRole: payoutCounterpartyId ? CharacterRole.BENEFICIARY : undefined,
-      } as FinancialRecord;
+        characterRelationship: payoutCounterpartyId ? CharacterRole.BENEFICIARY : null,
+      });
 
       await upsertFinancial(payoutData, { forceSave: true });
       console.log(`[createFinancialRecordFromBoothSale] ✅ Synced Record 2 (${payoutRecordId}): Net=${payoutData.netCashflow}`);
@@ -880,7 +899,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       // If was there but no longer has impact, zero it
       await cleanupPayoutCharacterLinks(payoutRecordId, null);
 
-      const zeroedPayout = { 
+      const zeroedPayout = withFinancialRelations({
         ...payoutRecord, 
         name: partnerPayoutRecordName,
         description: 'No contract impact for this revision',
@@ -888,11 +907,13 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         cost: 0, 
         netCashflow: 0, 
         status: FinancialStatus.DONE,
-        characterId: null,
-        customerCharacterRole: undefined,
+        lifecycle: { ...(payoutRecord.lifecycle || {}) },
         updatedAt: getUTCNow() 
-      };
-      await upsertFinancial(zeroedPayout as FinancialRecord);
+      }, {
+        characterId: null,
+        characterRelationship: null,
+      });
+      await upsertFinancial(zeroedPayout);
     }
 
   } catch (error) {
@@ -928,12 +949,14 @@ export async function createFinancialRecordFromPointsExchange(
       month: currentDate.getMonth() + 1,
       station: station,
       type: 'personal', // Personal financial record
-      playerCharacterId: playerCharacterId, // Link to player's character
-      cost: 0, // No cost, just points exchange
-      revenue: 0, // No revenue, just currency exchange
-      jungleCoins: j$Received, // J$ received from exchange
-      rewards: undefined,
-      netCashflow: 0, // No cashflow, just currency exchange
+      cost: toMoney(0), // No cost, just points exchange
+      revenue: toMoney(0), // No revenue, just currency exchange
+      context: {
+        jungleCoins: j$Received,
+        exchangeType: 'POINTS_TO_J$',
+        exchangeCounterAmount: j$Received,
+      },
+      netCashflow: toMoney(0), // No cashflow, just currency exchange
       status: FinancialStatus.DONE,
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
@@ -1029,14 +1052,14 @@ export async function createFinancialRecordFromJ$CashOut(
       month: currentDate.getMonth() + 1,
       station: personalStation,
       type: 'personal',
-      playerCharacterId: playerCharacterId,
-      cost: 0,
-      revenue: 0,
-      jungleCoins: -j$Sold, // Negative: J$ deducted from player
-      netCashflow: 0,
-      
-      exchangeType,
-      exchangeCounterAmount: cashOutType === 'ZAPS' ? amountPaid : undefined,
+      cost: toMoney(0),
+      revenue: toMoney(0),
+      context: {
+        jungleCoins: -j$Sold,
+        exchangeType,
+        exchangeCounterAmount: cashOutType === 'ZAPS' ? amountPaid : undefined,
+      },
+      netCashflow: toMoney(0),
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
     };
@@ -1050,14 +1073,14 @@ export async function createFinancialRecordFromJ$CashOut(
       month: currentDate.getMonth() + 1,
       station: companyStation,
       type: 'company',
-      playerCharacterId: playerCharacterId,
-      cost: cashOutType === 'USD' ? amountPaid : 0, // USD cost for USD cash-out, 0 for Zaps (Zaps tracked separately)
-      revenue: 0,
-      jungleCoins: j$Sold, // Positive: J$ returns to company treasury
-      netCashflow: cashOutType === 'USD' ? -amountPaid : 0,
-      
-      exchangeType,
-      exchangeCounterAmount: cashOutType === 'ZAPS' ? amountPaid : undefined,
+      cost: toMoney(cashOutType === 'USD' ? amountPaid : 0), // USD cost for USD cash-out, 0 for Zaps (Zaps tracked separately)
+      revenue: toMoney(0),
+      context: {
+        jungleCoins: j$Sold,
+        exchangeType,
+        exchangeCounterAmount: cashOutType === 'ZAPS' ? amountPaid : undefined,
+      },
+      netCashflow: toMoney(cashOutType === 'USD' ? -amountPaid : 0),
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
     };

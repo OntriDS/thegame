@@ -30,8 +30,18 @@
     "test:entity:online-sale-clean": "vitest run tests/entity-test/online-sale-entity-test-clean.ts",
     "test:entity:online-sale-full": "vitest run tests/entity-test/online-sale-entity-test-full.ts",
     "test:entity:online-sale-m2m": "vitest run tests/entity-test/online-sale-m2m-integration-test.ts",
-    "test:entity:booth-sale-clean": "vitest run tests/entity-test/booth-sale-entity-test-clean.ts"
-    ,"test:entity:booth-sale-full": "vitest run tests/entity-test/booth-sale-entity-test-full.ts"
+    "test:entity:booth-sale-clean": "vitest run tests/entity-test/booth-sale-entity-test-clean.ts",
+    "test:entity:booth-sale-full": "vitest run tests/entity-test/booth-sale-entity-test-full.ts",
+    "test:entity:account-clean": "vitest run tests/entity-test/account-entity-test-clean.ts",
+    "test:entity:account-full": "vitest run tests/entity-test/account-entity-test-full.ts",
+    "test:entity:business-clean": "vitest run tests/entity-test/business-entity-test-clean.ts",
+    "test:entity:business-full": "vitest run tests/entity-test/business-entity-test-full.ts",
+    "test:entity:contract-clean": "vitest run tests/entity-test/contract-entity-test-clean.ts",
+    "test:entity:contract-full": "vitest run tests/entity-test/contract-entity-test-full.ts",
+    "test:entity:settlement-clean": "vitest run tests/entity-test/settlement-entity-test-clean.ts",
+    "test:entity:settlement-full": "vitest run tests/entity-test/settlement-entity-test-full.ts",
+    "test:entity:region-clean": "vitest run tests/entity-test/region-entity-test-clean.ts",
+    "test:entity:region-full": "vitest run tests/entity-test/region-entity-test-full.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.758.0",

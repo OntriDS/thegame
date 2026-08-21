@@ -62,10 +62,7 @@ export default function CharacterLegalEntitiesSubmodal({
             const allEntities = await ClientAPI.getBusinesses();
             setAllEntityOptions(allEntities);
 
-            // Union of Linked Entities AND Entities where linkedCharacterId matches
-            const myEntities = allEntities.filter((ent: Business) =>
-                entityIds.has(ent.id) || ent.linkedCharacterId === characterId
-            );
+            const myEntities = allEntities.filter((ent: Business) => entityIds.has(ent.id));
             setLinkedEntities(myEntities);
 
         } catch (error) {
@@ -94,18 +91,6 @@ export default function CharacterLegalEntitiesSubmodal({
                 linkType: LinkType.CHARACTER_BUSINESS,
             });
 
-            // 2. Sync linkedCharacterId (Primary Rep) in Entity
-            const entityToUpdate = allEntityOptions.find(e => e.id === selectedEntityId);
-            if (entityToUpdate && !entityToUpdate.linkedCharacterId) {
-                // Only overwrite if it doesn't have a rep? Or overwrite always?
-                // User said "A person could own multiple...".
-                // I'll overwrite, assuming "I am taking ownership/representation".
-                await ClientAPI.upsertBusiness({
-                    ...entityToUpdate,
-                    linkedCharacterId: characterId
-                });
-            }
-
             setIsLinking(false);
             setSelectedEntityId('');
             loadEntities();
@@ -128,15 +113,6 @@ export default function CharacterLegalEntitiesSubmodal({
                 await ClientAPI.removeLink(link.id);
             }
 
-            // 2. Clear linkedCharacterId if it matches current character
-            const entity = linkedEntities.find(e => e.id === entityId);
-            if (entity && entity.linkedCharacterId === characterId) {
-                await ClientAPI.upsertBusiness({
-                    ...entity,
-                    linkedCharacterId: null // or undefined, check type
-                });
-            }
-
             loadEntities();
         } catch (err) {
             console.error("Failed to unlink entity", err);
@@ -146,6 +122,12 @@ export default function CharacterLegalEntitiesSubmodal({
     const handleSaveSuccess = async (entity: Business) => {
         try {
             await ClientAPI.upsertBusiness(entity);
+            await ClientAPI.createLink({
+                source: { type: EntityType.CHARACTER, id: characterId },
+                target: { type: EntityType.BUSINESS, id: entity.id },
+                linkType: LinkType.CHARACTER_BUSINESS,
+                relationship: 'owns',
+            });
             setIsEditModalOpen(false);
             setEditingEntity(undefined);
             loadEntities();
@@ -243,11 +225,6 @@ export default function CharacterLegalEntitiesSubmodal({
                                                             </Badge>
                                                         </div>
                                                     </div>
-                                                    {entity.taxId && (
-                                                        <p className="text-xs text-muted-foreground mb-1">
-                                                            Tax ID: {entity.taxId}
-                                                        </p>
-                                                    )}
                                                     <div className="flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <Button
                                                             variant="outline"
@@ -289,7 +266,6 @@ export default function CharacterLegalEntitiesSubmodal({
                 onClose={() => setIsEditModalOpen(false)}
                 onSave={handleSaveSuccess}
                 initialData={editingEntity}
-                defaultLinkedCharacterId={characterId}
             />
         </Dialog>
     );

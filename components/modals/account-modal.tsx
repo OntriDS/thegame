@@ -73,16 +73,16 @@ export default function AccountModal({ account, character, open, onOpenChange, o
         // Get character IDs that already have accounts
         const linkedCharacterIds = new Set(
           accounts
-            .filter(acc => acc.characterId && acc.id !== account?.id) // Exclude current account being edited
-            .map(acc => acc.characterId)
+            .filter(acc => acc.character?.id && acc.id !== account?.id) // Exclude current account being edited
+            .map(acc => acc.character!.id)
         );
 
         // Filter out characters that already have accounts
         let available = chars.filter(char => !linkedCharacterIds.has(char.id));
 
         // If editing, include the currently linked character
-        if (account?.characterId) {
-          const currentChar = chars.find(char => char.id === account.characterId);
+        if (account?.character?.id) {
+          const currentChar = chars.find(char => char.id === account.character?.id);
           if (currentChar && !available.includes(currentChar)) {
             available = [...available, currentChar];
           }
@@ -98,7 +98,7 @@ export default function AccountModal({ account, character, open, onOpenChange, o
     };
 
     loadCharacters();
-  }, [open, account?.id, account?.characterId]);
+  }, [open, account?.id, account?.character?.id]);
 
   // Initialize when opening
   useEffect(() => {
@@ -111,8 +111,8 @@ export default function AccountModal({ account, character, open, onOpenChange, o
           setPassword(''); // Don't show existing password
 
           // Set selected character
-          if (account.characterId) {
-            setSelectedCharacterId(account.characterId);
+          if (account.character?.id) {
+            setSelectedCharacterId(account.character.id);
           }
 
           // Reset init guard when editing
@@ -345,8 +345,8 @@ export default function AccountModal({ account, character, open, onOpenChange, o
                 onValueChange={setSelectedCharacterId}
                 placeholder="Search characters..."
                 options={characterOptions}
-                disabled={isSaving || isLoadingCharacters || !!account?.characterId}
-                className={!!account?.characterId ? 'opacity-70' : ''}
+                disabled={isSaving || isLoadingCharacters || !!account?.character?.id}
+                className={!!account?.character?.id ? 'opacity-70' : ''}
               />
               {selectedCharacter && selectedCharacter.roles && selectedCharacter.roles.length > 0 && (
                 <div className="text-xs text-muted-foreground mt-1">

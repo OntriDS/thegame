@@ -9,7 +9,6 @@ import {
   getCharacterById,
   getPlayerById,
   getSiteById,
-  getAccountById,
   getBusinessById,
   getContractById,
   getSettlementById,
@@ -24,6 +23,7 @@ import { getLinksFor } from '@/links/link-registry';
 import { EntityType, SaleStatus } from '@/types/enums';
 import type { Sale, FinancialRecord } from '@/types/entities';
 import { extractMoneyValue } from '@/lib/utils/financial-utils';
+import { iamService } from '@/lib/iam-service';
 import { INTEGRITY_ISSUES_CAP, type IntegrityAuditResult, type IntegrityIssue } from './types';
 
 const MAX_ENTITIES_SCAN = 400;
@@ -65,7 +65,7 @@ async function entityExists(type: EntityType, id: string): Promise<boolean> {
     case EntityType.SITE:
       return !!(await getSiteById(id));
     case EntityType.ACCOUNT:
-      return !!(await getAccountById(id));
+      return !!(await iamService.getAccountById(id));
     case EntityType.BUSINESS:
       return !!(await getBusinessById(id));
     case EntityType.CONTRACT:

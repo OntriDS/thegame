@@ -550,6 +550,12 @@ export const ClientAPI = {
     return await res.json();
   },
 
+  getAccountByCharacterId: async (characterId: string): Promise<Account | null> => {
+    const res = await request(`/api/accounts?characterId=${encodeURIComponent(characterId)}`);
+    if (!res.ok) return null;
+    return await res.json();
+  },
+
   upsertAccount: async (account: Account): Promise<Account> => {
     const res = await request('/api/accounts', {
       method: 'POST',

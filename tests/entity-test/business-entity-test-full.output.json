@@ -1,0 +1,29 @@
+{
+  "business": {
+    "id": "entity-test-business-full",
+    "schemaVersion": 1,
+    "version": 0,
+    "name": "testing-business-full",
+    "description": "Full Business test",
+    "type": "company",
+    "isActive": true,
+    "createdAt": "2026-08-21T18:22:34.707Z",
+    "updatedAt": "2026-08-21T18:22:34.707Z"
+  },
+  "links": [
+    {
+      "id": "entity-test-business-character-link-full",
+      "linkType": "CHARACTER_BUSINESS",
+      "source": {
+        "type": "character",
+        "id": "entity-test-business-character-full"
+      },
+      "target": {
+        "type": "business",
+        "id": "entity-test-business-full"
+      },
+      "relationship": "owns",
+      "createdAt": "2026-08-21T18:22:34.707Z"
+    }
+  ]
+}

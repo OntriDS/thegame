@@ -1,0 +1,53 @@
+{
+  "contract": {
+    "id": "entity-test-contract-full",
+    "schemaVersion": 1,
+    "version": 0,
+    "name": "testing-contract-full",
+    "description": "Full contract summary",
+    "status": "active",
+    "clauses": [
+      {
+        "id": "contract-clause-full",
+        "type": "sales-service",
+        "itemCategory": "products",
+        "description": "Partner product selling service",
+        "companyShare": 0.25,
+        "partnerShare": 0.75
+      }
+    ],
+    "isExclusive": true,
+    "createdAt": "2026-08-21T18:22:34.710Z",
+    "updatedAt": "2026-08-21T18:22:34.710Z"
+  },
+  "links": [
+    {
+      "id": "entity-test-contract-owner-link-full",
+      "linkType": "CHARACTER_CONTRACT",
+      "source": {
+        "type": "character",
+        "id": "entity-test-contract-principal-character-full"
+      },
+      "target": {
+        "type": "contract",
+        "id": "entity-test-contract-full"
+      },
+      "relationship": "owner",
+      "createdAt": "2026-08-21T18:22:34.710Z"
+    },
+    {
+      "id": "entity-test-contract-counterparty-link-full",
+      "linkType": "CHARACTER_CONTRACT",
+      "source": {
+        "type": "character",
+        "id": "entity-test-contract-counterparty-character-full"
+      },
+      "target": {
+        "type": "contract",
+        "id": "entity-test-contract-full"
+      },
+      "relationship": "counterparty",
+      "createdAt": "2026-08-21T18:22:34.710Z"
+    }
+  ]
+}

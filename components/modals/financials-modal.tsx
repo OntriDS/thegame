@@ -543,9 +543,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       month: formData.month,
       station: formData.station as Station,
       type: isCompany ? 'company' : 'personal',
-      siteId: formData.site || null,
-      targetSiteId: formData.targetSite || null,
-      characterId: formData.isNewCustomer ? null : formData.characterId,  // Ambassador: Existing customer
       salesChannel: record?.salesChannel ?? null,
       cost: toMoney(formData.cost),
       revenue: toMoney(formData.revenue),
@@ -585,8 +582,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         siteId: formData.site || null,
         targetSiteId: formData.targetSite || null,
         characterId: formData.isNewCustomer ? null : formData.characterId,
-        sourceTaskId: (record as any)?.sourceTaskId ?? null,
-        sourceSaleId: (record as any)?.sourceSaleId ?? null,
+        // Source relationships are rehydrated from canonical Links; this
+        // modal only submits the explicit relation command when editing.
         characterRelationship: formData.isNewCustomer ? null : formData.customerCharacterRole,
       },
     } as FinancialRecord;

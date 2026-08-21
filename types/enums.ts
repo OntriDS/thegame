@@ -660,6 +660,7 @@ export enum LinkType {
   SITE_FINREC = 'SITE_FINREC',    // Site has a related Financial Record (reverse)
   SITE_ITEM = 'SITE_ITEM',      // Site has a related Item (reverse)
   SITE_SALE = 'SITE_SALE',      // Site has a related Sale (reverse)
+  SITE_SETTLEMENT = 'SITE_SETTLEMENT', // Site is located in a Settlement
   SITE_SITE = 'SITE_SITE',      // Site connected to another Site (inventory movement, logistics, etc.)
 
   // PLAYER relationships
@@ -669,13 +670,11 @@ export enum LinkType {
   PLAYER_CHARACTER = 'PLAYER_CHARACTER', // Legacy reverse alias; canonical direction is CHARACTER_PLAYER
 
   // ACCOUNT relationships (authentication & identity)
-  ACCOUNT_PLAYER = 'ACCOUNT_PLAYER',    // Account owns Player (optional)
   ACCOUNT_CHARACTER = 'ACCOUNT_CHARACTER', // Account owns Character (required)
-  PLAYER_ACCOUNT = 'PLAYER_ACCOUNT',    // Player belongs to Account (reverse)
   CHARACTER_ACCOUNT = 'CHARACTER_ACCOUNT', // Character belongs to Account (reverse)
 
   // CONTRACT relationships
-  CHARACTER_CONTRACT = 'CHARACTER_CONTRACT', // Character owns a Contract
+  CHARACTER_CONTRACT = 'CHARACTER_CONTRACT', // Character is issuer (owner) or counterparty of a Contract
   CONTRACT_CHARACTER = 'CONTRACT_CHARACTER', // Legacy reverse direction
 }
 
@@ -879,7 +878,6 @@ export type WorkflowType = typeof WORKFLOW_TYPES[number];
 
 export enum CanonicalLinkType {
   ACCOUNT_CHARACTER = 'ACCOUNT_CHARACTER',
-  ACCOUNT_PLAYER = 'ACCOUNT_PLAYER',
   CHARACTER_PLAYER = 'CHARACTER_PLAYER',
 
   TASK_PARENT = 'TASK_PARENT',
@@ -920,7 +918,6 @@ export enum CanonicalLinkType {
 }
 
 export const LEGACY_LINK_NORMALIZATION = {
-  PLAYER_ACCOUNT: 'ACCOUNT_PLAYER',
   CHARACTER_ACCOUNT: 'ACCOUNT_CHARACTER',
   PLAYER_CHARACTER: 'CHARACTER_PLAYER',
 

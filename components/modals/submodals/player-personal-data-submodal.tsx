@@ -30,9 +30,8 @@ export default function PersonalDataModal({ player, open, onOpenChange, onSave }
         setIsLoadingAccount(true);
         
         // Authentication belongs to Account ↔ Character. Resolve the account
-        // through the canonical CHARACTER_PLAYER link first; old Player rows
-        // may still carry accountId, which is read-only compatibility only.
-        let accountId = (player as Player & { accountId?: string | null }).accountId || null;
+        // through canonical Links; embedded accountId pointers are not read.
+        let account: any | null = null;
         try {
           const playerLinks = await ClientAPI.getLinksFor({ type: 'player', id: player.id });
           const characterLink = playerLinks.find((link: any) =>
@@ -49,16 +48,14 @@ export default function PersonalDataModal({ player, open, onOpenChange, onSave }
             ? characterLink.source?.id
             : characterLink?.target?.id;
           if (characterId) {
-            const character = await ClientAPI.getCharacterById(characterId);
-            accountId = character?.accountId || null;
+            account = await ClientAPI.getAccountByCharacterId(characterId);
           }
         } catch (error) {
           console.error('Failed to resolve Player account through canonical links:', error);
         }
 
-        if (accountId) {
+        if (account) {
           try {
-            const account = await ClientAPI.getAccount(accountId);
             if (account) {
               setAccountData(account);
               setName(account.name);

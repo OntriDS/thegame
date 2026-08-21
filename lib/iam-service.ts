@@ -72,19 +72,17 @@ const parseCharacterRoles = (rawRoles: unknown, label: string): CharacterRole[] 
 
 // --- Interfaces ---
 
-export interface Account {
+/** Private IAM persistence record. Never expose this type through UI/API DTOs. */
+export interface IamAccountRecord {
   id: string;
   name: string;
   email: string;
   phone?: string;
   phoneCountryCode?: string;
-  requiresFounderAuth?: boolean;
   passwordHash: string | null;
   passphraseFlag: boolean;
   isActive: boolean;
   isVerified: boolean;
-  characterId?: string;
-  playerId?: string;
   resetToken?: string;
   resetTokenExpiry?: string;
   verificationToken?: string;
@@ -148,7 +146,7 @@ export class IAMService {
   async createAccount(
     data: CreateAccountDTO,
     options?: { skipGlobalEmailMapping?: boolean },
-  ): Promise<Account> {
+  ): Promise<IamAccountRecord> {
     const now = getUTCNow();
     let passwordHash: string | null = null;
 
@@ -157,13 +155,12 @@ export class IAMService {
       passwordHash = await bcrypt.hash(data.password, saltRounds);
     }
 
-    const account: Account = {
+    const account: IamAccountRecord = {
       id: uuidv4(),
       name: data.name,
       email: data.email.toLowerCase(),
       phone: data.phone,
       phoneCountryCode: data.phoneCountryCode?.trim(),
-      requiresFounderAuth: false,
       passwordHash,
       passphraseFlag: data.passphraseFlag || false,
       isActive: true,
@@ -181,18 +178,18 @@ export class IAMService {
     return account;
   }
 
-  async getAccountById(id: string): Promise<Account | null> {
-    return await kvGet<Account>(buildAccountKey(id));
+  async getAccountById(id: string): Promise<IamAccountRecord | null> {
+    return await kvGet<IamAccountRecord>(buildAccountKey(id));
   }
 
-  async listAccounts(): Promise<Account[]> {
+  async listAccounts(): Promise<IamAccountRecord[]> {
     const accountIds = await kvSMembers(IAM_ACCOUNTS_INDEX);
     if (accountIds.length === 0) return [];
     const accounts = await Promise.all(accountIds.map(id => this.getAccountById(id)));
-    return accounts.filter((a): a is Account => !!a);
+    return accounts.filter((a): a is IamAccountRecord => !!a);
   }
 
-  async getAccountByEmail(email: string): Promise<Account | null> {
+  async getAccountByEmail(email: string): Promise<IamAccountRecord | null> {
     const mapping = await kvGet<{ accountId: string }>(buildAccountByEmailKey(email));
     if (!mapping?.accountId) return null;
 
@@ -206,12 +203,11 @@ export class IAMService {
       email?: string;
       phone?: string | undefined;
       phoneCountryCode?: string;
-      requiresFounderAuth?: boolean;
       password?: string;
       isActive?: boolean;
       isVerified?: boolean;
     }
-  ): Promise<Account> {
+  ): Promise<IamAccountRecord> {
     const account = await this.getAccountById(accountId);
     if (!account) throw new Error('Account not found');
     const now = getUTCNow();
@@ -235,13 +231,12 @@ export class IAMService {
     }
     await kvSet(buildAccountByEmailKey(nextEmail), { accountId: account.id });
 
-    const updated: Account = {
+    const updated: IamAccountRecord = {
       ...account,
       name: updates.name !== undefined ? updates.name.trim() : account.name,
       email: nextEmail,
       phone: updates.phone !== undefined ? updates.phone?.trim() : account.phone,
       phoneCountryCode: updates.phoneCountryCode !== undefined ? updates.phoneCountryCode?.trim() : account.phoneCountryCode,
-      requiresFounderAuth: updates.requiresFounderAuth !== undefined ? updates.requiresFounderAuth : account.requiresFounderAuth,
       passwordHash: passwordHash !== undefined ? passwordHash : account.passwordHash,
       isActive: updates.isActive !== undefined ? updates.isActive : account.isActive,
       isVerified: updates.isVerified !== undefined ? updates.isVerified : account.isVerified,
@@ -253,16 +248,14 @@ export class IAMService {
   }
 
   /**
-   * Unlink IAM account from the Game Data-Store character: merge identity onto the character,
-   * clear `accountId` on the character, remove Rosetta links for this account id.
+   * Unlink IAM account from the Game Data-Store character and remove its
+   * canonical ACCOUNT_CHARACTER link.
    */
-  private async unlinkIamAccountFromDatastore(account: Account): Promise<void> {
+  private async unlinkIamAccountFromDatastore(account: IamAccountRecord): Promise<void> {
     const now = getUTCNow();
     const accountId = account.id;
 
-    let character =
-      (account.characterId ? await dsGetCharacterById(account.characterId) : null) ??
-      (await this.resolveCharacterForAccount(accountId));
+    const character = await this.resolveCharacterForAccount(accountId);
 
     if (character) {
       const mergedName = (character.name?.trim() || account.name?.trim() || '').trim() || character.name;
@@ -274,7 +267,6 @@ export class IAMService {
       await upsertCharacter(
         {
           ...character,
-          accountId: null,
           name: mergedName,
           contactPhone: mergedPhone,
           contactEmail: mergedEmail,
@@ -300,10 +292,9 @@ export class IAMService {
 
     await this.unlinkIamAccountFromDatastore(account);
 
-    const updated: Account = {
+    const updated: IamAccountRecord = {
       ...account,
       isActive: false,
-      characterId: undefined,
       playerId: undefined,
       updatedAt: toUTCISOString(now),
     };
@@ -368,7 +359,7 @@ export class IAMService {
     });
 
     // Store token reference on account for easy lookup
-    const updated: Account = {
+    const updated: IamAccountRecord = {
       ...account,
       resetToken: token,
       resetTokenExpiry: expiry,
@@ -423,7 +414,7 @@ export class IAMService {
       return { success: false, error: 'Account not found' };
     }
 
-    const updated: Account = {
+    const updated: IamAccountRecord = {
       ...account,
       passwordHash,
       resetToken: undefined,
@@ -512,7 +503,7 @@ export class IAMService {
 
     const now = getUTCNow();
     const verifiedAt = toUTCISOString(now);
-    const updated: Account = {
+    const updated: IamAccountRecord = {
       ...account,
       isVerified: true,
       verificationToken: undefined,
@@ -533,17 +524,15 @@ export class IAMService {
 
   /**
    * Link an IAM account to an existing Game Data-Store character using the
-   * Rosetta Stone ACCOUNT_CHARACTER link. Updates account.characterId pointer
-   * for O(1) lookup during auth.
+   * Rosetta Stone ACCOUNT_CHARACTER link. The link is the sole
+   * account-character relationship authority.
    */
-  async linkAccountToCharacter(accountId: string, characterId: string): Promise<{ account: Account; character: GameCharacter }> {
+  async linkAccountToCharacter(accountId: string, characterId: string): Promise<{ account: IamAccountRecord; character: GameCharacter }> {
     const account = await this.getAccountById(accountId);
     if (!account) throw new Error('Account not found');
 
     let character = await dsGetCharacterById(characterId);
     if (!character) throw new Error('Character not found in Game Data-Store');
-    // ACCOUNT_CHARACTER is authoritative. The embedded accountId is only a
-    // temporary compatibility pointer for legacy records.
     const characterLinks = await getLinksFor({ type: EntityType.CHARACTER, id: characterId });
     const canonicalCharacterLink = characterLinks.find((link) =>
       link.linkType === LinkType.ACCOUNT_CHARACTER &&
@@ -553,35 +542,22 @@ export class IAMService {
     if (canonicalCharacterLink && canonicalCharacterLink.source.id !== accountId) {
       throw new Error('Character is already linked to another account');
     }
-    if (!canonicalCharacterLink && character.accountId && character.accountId !== accountId) {
-      throw new Error('Character is already linked to another account');
-    }
     const now = getUTCNow();
 
     // Detach the previous character pointer when this account is re-linked.
     // The canonical link and the character compatibility pointer must agree.
-    if (account.characterId && account.characterId !== characterId) {
-      const previousCharacter = await dsGetCharacterById(account.characterId);
-      if (previousCharacter?.accountId === accountId) {
-        await upsertCharacter(
-          { ...previousCharacter, accountId: null, updatedAt: now },
-          { skipWorkflowEffects: true, skipLinkEffects: true }
-        );
+    const accountLinksBeforeRelink = await getLinksFor({ type: EntityType.ACCOUNT, id: accountId });
+    const previousCharacterLink = accountLinksBeforeRelink.find((link) =>
+      link.linkType === LinkType.ACCOUNT_CHARACTER &&
+      link.source.type === EntityType.ACCOUNT &&
+      link.target.type === EntityType.CHARACTER &&
+      link.target.id !== characterId
+    );
+    if (previousCharacterLink) {
+      const previousCharacter = await dsGetCharacterById(previousCharacterLink.target.id);
+      if (previousCharacter) {
       }
     }
-    if (character.accountId !== accountId) {
-      await upsertCharacter(
-        {
-          ...character,
-          accountId,
-          updatedAt: now,
-        },
-        { skipWorkflowEffects: true, skipLinkEffects: true }
-      );
-      character = (await dsGetCharacterById(characterId))!;
-    }
-
-    account.characterId = characterId;
     account.updatedAt = toUTCISOString(now);
     await kvSet(buildAccountKey(accountId), account);
 
@@ -618,8 +594,6 @@ export class IAMService {
   /**
    * Resolve the Game Data-Store character for an IAM account.
    * Canonical path: ACCOUNT_CHARACTER Link → Character.
-   * Compatibility fallback: account.characterId → direct DS lookup, followed
-   * by Link repair for legacy records.
    */
   async resolveCharacterForAccount(accountId: string): Promise<GameCharacter | null> {
     const account = await this.getAccountById(accountId);
@@ -635,43 +609,21 @@ export class IAMService {
     if (acLink) {
       const char = await dsGetCharacterById(acLink.target.id);
       if (!char) return null;
-      if (account.characterId !== char.id) {
-        account.characterId = char.id;
-        account.updatedAt = toUTCISOString(getUTCNow());
-        await kvSet(buildAccountKey(accountId), account);
-      }
-      if (char.accountId !== accountId) {
-        await upsertCharacter(
-          { ...char, accountId, updatedAt: getUTCNow() },
-          { skipWorkflowEffects: true, skipLinkEffects: true }
-        );
-      }
-      return (await dsGetCharacterById(char.id))!;
+      return char;
     }
 
-    // Legacy fallback: repair the missing canonical Link when the old pointer
-    // still resolves to a real Character.
-    if (account.characterId) {
-      const char = await dsGetCharacterById(account.characterId);
-      if (char) {
-        await rosettaCreateLink({
-          id: uuidv4(),
-          linkType: LinkType.ACCOUNT_CHARACTER,
-          source: { type: EntityType.ACCOUNT, id: accountId },
-          target: { type: EntityType.CHARACTER, id: char.id },
-          relationship: 'primary',
-          createdAt: getUTCNow(),
-        }, { skipValidation: true });
-        if (char.accountId !== accountId) {
-          await upsertCharacter(
-            { ...char, accountId, updatedAt: getUTCNow() },
-            { skipWorkflowEffects: true, skipLinkEffects: true }
-          );
-        }
-        return (await dsGetCharacterById(char.id))!;
-      }
-    }
     return null;
+  }
+
+  /** Resolve an Account through the canonical ACCOUNT_CHARACTER Link. */
+  async getAccountByCharacterId(characterId: string): Promise<IamAccountRecord | null> {
+    const links = await getLinksFor({ type: EntityType.CHARACTER, id: characterId });
+    const accountLink = links.find((link) =>
+      link.linkType === LinkType.ACCOUNT_CHARACTER &&
+      link.source.type === EntityType.ACCOUNT &&
+      link.target.type === EntityType.CHARACTER
+    );
+    return accountLink ? this.getAccountById(accountLink.source.id) : null;
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -739,7 +691,7 @@ export class IAMService {
       return { success: false, error: 'Invalid passphrase' };
     }
 
-    let account: Account | null = null;
+    let account: IamAccountRecord | null = null;
     if (founderEmail) {
       account = await this.getAccountByEmail(founderEmail);
     }

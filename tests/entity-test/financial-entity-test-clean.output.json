@@ -13,13 +13,13 @@
     "minorUnits": "0",
     "currency": "USD"
   },
-  "status": "done",
-  "createdAt": "2026-08-20T23:50:47.692Z",
-  "updatedAt": "2026-08-20T23:50:47.692Z",
-  "schemaVersion": 1,
-  "version": 0,
   "netCashflow": {
     "minorUnits": "-1000",
     "currency": "USD"
-  }
+  },
+  "status": "done",
+  "createdAt": "2026-08-21T19:39:17.164Z",
+  "updatedAt": "2026-08-21T19:39:17.164Z",
+  "schemaVersion": 1,
+  "version": 0
 }

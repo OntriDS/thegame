@@ -306,12 +306,19 @@ function FinancesPageContent() {
       const isUUID = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
       if (accountIdCandidate && isUUID(accountIdCandidate)) {
         try {
-          const account = await ClientAPI.getAccount(accountIdCandidate);
-          if (account?.playerId) {
-            currentPlayerId = account.playerId;
+          const characterId = authUser?.characterId;
+          if (characterId) {
+            const characterLinks = await ClientAPI.getLinksFor({ type: 'character', id: characterId });
+            const characterPlayerLink = characterLinks.find((link: any) =>
+              link.linkType === 'CHARACTER_PLAYER' &&
+              link.source?.type === 'character' &&
+              link.source?.id === characterId &&
+              link.target?.type === 'player'
+            );
+            currentPlayerId = characterPlayerLink?.target?.id || null;
           }
         } catch (error) {
-          console.error('Failed to resolve account for player lookup:', error);
+          console.error('Failed to resolve Character → Player link:', error);
         }
       }
 

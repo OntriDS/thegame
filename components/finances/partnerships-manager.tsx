@@ -1,12 +1,13 @@
 'use strict';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FileText, ShieldCheck } from 'lucide-react';
 import { Business, Contract, Character, Site } from '@/types/entities';
-import { ContractStatus } from '@/types/enums';
+import { ContractStatus, EntityType, LinkType } from '@/types/enums';
+import { ClientAPI } from '@/lib/client-api';
 import { PartnershipSubmodal } from '@/components/modals/submodals/partnership-submodal';
 import { ContractSubmodal } from '@/components/modals/submodals/contract-submodal';
 
@@ -32,9 +33,37 @@ export function PartnershipsManager({
     const [isContractModalOpen, setIsContractModalOpen] = useState(false);
     const [isPartnershipModalOpen, setIsPartnershipModalOpen] = useState(false);
     const [selectedContract, setSelectedContract] = useState<Contract | undefined>(undefined);
+    const [contractParties, setContractParties] = useState<Record<string, { owner?: string; counterparty?: string }>>({});
+    const [businessCharacters, setBusinessCharacters] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        let cancelled = false;
+        Promise.all([
+            ...businesses.map(async (business) => {
+                const links = await ClientAPI.getLinksFor({ type: EntityType.BUSINESS, id: business.id });
+                const link = links.find((candidate: any) => candidate.linkType === LinkType.CHARACTER_BUSINESS && candidate.source?.type === EntityType.CHARACTER && candidate.target?.id === business.id);
+                return link ? [business.id, link.source.id] as const : null;
+            }),
+        ]).then((entries) => {
+            if (!cancelled) setBusinessCharacters(Object.fromEntries(entries.filter(Boolean) as Array<readonly [string, string]>));
+        }).catch(() => undefined);
+        Promise.all(contracts.map(async (contract) => {
+            const links = await ClientAPI.getLinksFor({ type: EntityType.CONTRACT, id: contract.id });
+            const parties: { owner?: string; counterparty?: string } = {};
+            links.filter((link: any) => link.linkType === LinkType.CHARACTER_CONTRACT).forEach((link: any) => {
+                if (link.relationship === 'owner') parties.owner = link.source?.id;
+                if (link.relationship === 'counterparty') parties.counterparty = link.source?.id;
+            });
+            return [contract.id, parties] as const;
+        })).then((entries) => {
+            if (!cancelled) setContractParties(Object.fromEntries(entries));
+        }).catch(() => undefined);
+        return () => { cancelled = true; };
+    }, [businesses, contracts]);
 
     // Helpers to resolve names
-    const getEntityName = (id: string) => {
+    const getEntityName = (id?: string) => {
+        if (!id) return 'Unknown Entity';
         const bus = businesses.find((e: Business) => e.id === id);
         if (bus) return bus.name;
 
@@ -43,6 +72,9 @@ export function PartnershipsManager({
 
         return 'Unknown Entity';
     };
+
+    const getPartyBusinessId = (characterId?: string) =>
+        characterId ? Object.entries(businessCharacters).find(([, id]) => id === characterId)?.[0] : undefined;
 
     return (
         <div className="space-y-6">
@@ -84,10 +116,10 @@ export function PartnershipsManager({
                                             <ShieldCheck className="h-4 w-4 text-emerald-500" />
                                         </div>
                                         <CardTitle className="text-lg flex items-center gap-2 mt-2 group-hover:text-primary transition-colors">
-                                            {getEntityName(contract.counterpartyBusinessId)}
+                                            {getEntityName(contractParties[contract.id]?.counterparty || getPartyBusinessId(contractParties[contract.id]?.counterparty))}
                                         </CardTitle>
                                         <div className="text-xs text-muted-foreground">
-                                            With: {getEntityName(contract.principalBusinessId)}
+                                            With: {getEntityName(contractParties[contract.id]?.owner || getPartyBusinessId(contractParties[contract.id]?.owner))}
                                         </div>
                                     </CardHeader>
                                     <CardContent>

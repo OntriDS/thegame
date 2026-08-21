@@ -18,7 +18,7 @@ type IAMConsoleAccount = {
   name?: string;
   isActive?: boolean;
   roles: CharacterRole[];
-  characterId?: string;
+  character?: { id: string; roles?: CharacterRole[]; name?: string } | null;
 };
 
 type IAMSystemIdentity = {
@@ -45,10 +45,8 @@ export default function IAMConsole() {
     const accounts = (data?.accounts || []) as Array<IAMConsoleAccount>;
     const systems = (data?.systems || []) as Array<IAMSystemIdentity>;
     const characters = (data?.characters || []) as Array<{ id: string; roles?: CharacterRole[]; name?: string }>;
-    const charactersById = new Map(characters.map((character) => [character.id, character]));
-
     const resolvedAccounts = accounts.map((account) => {
-      const character = account?.characterId ? charactersById.get(account.characterId) : undefined;
+      const character = account.character || undefined;
       const roles = filterRolesToSpecialOnly(character?.roles);
 
       return {

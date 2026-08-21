@@ -49,6 +49,8 @@ import {
   SaleStatus,
   CharacterRole,
   PaymentMethod,
+  EntityType,
+  LinkType,
 } from "@/types/enums";
 import { SalesStation } from "@/lib/storage/taxonomy";
 import {
@@ -69,6 +71,7 @@ import { formatForDisplay } from '@/lib/utils/date-display-utils';;
 import { buildAutoSaleName } from "@/lib/utils/sale-auto-name-utils";
 import SaleItemsSubModal from "./submodals/sale-items-submodal";
 import ConfirmationModal from "./submodals/confirmation-submodal";
+import { ClientAPI } from "@/lib/client-api";
 
 // ============================================================================
 // Types
@@ -218,6 +221,51 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
 
     // UI Toggles
     const [showItemPicker, setShowItemPicker] = useState(false);
+    const [businessCharacterIds, setBusinessCharacterIds] = useState<Record<string, string>>({});
+    const [contractCharacterIds, setContractCharacterIds] = useState<Record<string, { owner?: string; counterparty?: string }>>({});
+
+    useEffect(() => {
+      let cancelled = false;
+      Promise.all(businesses.map(async (business) => {
+        const links = await ClientAPI.getLinksFor({ type: EntityType.BUSINESS, id: business.id });
+        const owner = links.find((link: any) =>
+          link.linkType === LinkType.CHARACTER_BUSINESS &&
+          link.source?.type === EntityType.CHARACTER &&
+          link.target?.type === EntityType.BUSINESS &&
+          link.target.id === business.id
+        );
+        return owner ? [business.id, owner.source.id] as const : null;
+      })).then((entries) => {
+        if (!cancelled) setBusinessCharacterIds(Object.fromEntries(entries.filter(Boolean) as Array<readonly [string, string]>));
+      }).catch(() => {
+        if (!cancelled) setBusinessCharacterIds({});
+      });
+      return () => { cancelled = true; };
+    }, [businesses]);
+
+    useEffect(() => {
+      let cancelled = false;
+      Promise.all(contracts.map(async (contract) => {
+        const links = await ClientAPI.getLinksFor({ type: EntityType.CONTRACT, id: contract.id });
+        const result: { id: string; value: { owner?: string; counterparty?: string } } = {
+          id: contract.id,
+          value: {},
+        };
+        links.filter((link: any) => link.linkType === LinkType.CHARACTER_CONTRACT).forEach((link: any) => {
+          if (link.relationship === 'owner') result.value.owner = link.source?.id;
+          if (link.relationship === 'counterparty') result.value.counterparty = link.source?.id;
+        });
+        return result;
+      })).then((entries) => {
+        if (!cancelled) setContractCharacterIds(Object.fromEntries(entries.map((entry) => [entry.id, entry.value])));
+      }).catch(() => {
+        if (!cancelled) setContractCharacterIds({});
+      });
+      return () => { cancelled = true; };
+    }, [contracts]);
+
+    const businessIdForCharacter = (characterId?: string) =>
+      characterId ? Object.entries(businessCharacterIds).find(([, id]) => id === characterId)?.[0] : undefined;
     // State for Single Contract (Global for this sale)
     const [selectedContractId, setSelectedContractId] = useState<string>(() => {
       const boothContext = getBoothContext(sale);
@@ -233,7 +281,6 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         const boothContext = getBoothContext(sale);
         return (
           boothContext.principalBusinessId ||
-          contracts.find((contract) => contract.id === sale?.context?.contractId)?.principalBusinessId ||
           ""
         );
       });
@@ -243,9 +290,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       const boothContext = getBoothContext(sale);
       // 1. Try modern metadata first
       if (boothContext.counterpartyBusinessId) return boothContext.counterpartyBusinessId;
-      const contractCounterparty = contracts.find(
-        (contract) => contract.id === sale?.context?.contractId,
-      )?.counterpartyBusinessId;
+      const contractCounterpartyCharacter = contractCharacterIds[sale?.context?.contractId || ""]?.counterparty;
+      const contractCounterparty = businessIdForCharacter(contractCounterpartyCharacter);
       if (contractCounterparty && businesses.some((business) => business.id === contractCounterparty)) {
         return contractCounterparty;
       }
@@ -257,13 +303,11 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
           return charId;
         }
         // Otherwise map Character ID to linked Business ID
-        const linkedBusiness = businesses.find(
-          (b) => b.linkedCharacterId === charId,
-        );
+        const linkedBusiness = businesses.find((b) => businessCharacterIds[b.id] === charId);
         if (linkedBusiness) return linkedBusiness.id;
       }
       return "";
-    }); // Business ID
+    }); // Business ID used only by the booth UI; Contract identity is Character-linked.
 
     // View Mode: 'Partner' | 'Off'
     const [viewMode, setViewMode] = useState<"Partner" | "Off">(() => {
@@ -396,9 +440,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         } else {
           // Otherwise find first founder business
           const founderBusiness = businesses.find((b) => {
-            const linkedChar = characters.find(
-              (c) => c.id === b.linkedCharacterId,
-            );
+            const linkedChar = characters.find((c) => c.id === businessCharacterIds[b.id]);
             return (
               linkedChar && linkedChar.roles.includes(CharacterRole.FOUNDER)
             );
@@ -435,7 +477,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         );
         if (maria) {
           const mariaBusiness = businesses.find(
-            (b) => b.linkedCharacterId === maria.id,
+            (b) => businessCharacterIds[b.id] === maria.id,
           );
           if (mariaBusiness) setSelectedPartnerId(mariaBusiness.id);
         }
@@ -471,18 +513,19 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       const partnerBusiness = businesses.find(
         (b) => b.id === selectedPartnerId,
       );
-      const linkedCharId = partnerBusiness?.linkedCharacterId;
+      const linkedCharId = partnerBusiness ? businessCharacterIds[partnerBusiness.id] : undefined;
 
       // 1. Try Strict Match (ID matches both selected Principal and Counterparty business or linked character for older contracts)
       let match = contracts.find(
         (c) =>
           c.status === ContractStatus.ACTIVE &&
-          ((c.principalBusinessId === selectedFounderBusinessId &&
-            (c.counterpartyBusinessId === selectedPartnerId ||
-              c.counterpartyBusinessId === linkedCharId)) ||
-            (c.counterpartyBusinessId === selectedFounderBusinessId &&
-              (c.principalBusinessId === selectedPartnerId ||
-                c.principalBusinessId === linkedCharId))),
+          (() => {
+            const party = contractCharacterIds[c.id] || {};
+            const ownerBusinessId = businessIdForCharacter(party.owner);
+            const counterpartyBusinessId = businessIdForCharacter(party.counterparty);
+            return (ownerBusinessId === selectedFounderBusinessId && counterpartyBusinessId === selectedPartnerId) ||
+              (counterpartyBusinessId === selectedFounderBusinessId && ownerBusinessId === selectedPartnerId);
+          })(),
       );
 
       if (match) {
@@ -497,6 +540,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       contracts,
       sale,
       businesses,
+      contractCharacterIds,
     ]);
     // ============================================================================
 
@@ -1178,7 +1222,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                                     return false; // Explicitly blacklist Founder Business
 
                                   const linkedChar = characters.find(
-                                    (c) => c.id === b.linkedCharacterId,
+                                    (c) => c.id === businessCharacterIds[b.id],
                                   );
                                   if (
                                     linkedChar &&
@@ -1188,14 +1232,14 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                                   )
                                     return true;
                                   return contracts.some(
-                                    (c) =>
-                                      c.status === ContractStatus.ACTIVE &&
-                                      ((c.principalBusinessId ===
-                                        selectedFounderBusinessId &&
-                                        c.counterpartyBusinessId === b.id) ||
-                                        (c.counterpartyBusinessId ===
-                                          selectedFounderBusinessId &&
-                                          c.principalBusinessId === b.id)),
+                                    (c) => {
+                                      if (c.status !== ContractStatus.ACTIVE) return false;
+                                      const party = contractCharacterIds[c.id] || {};
+                                      const ownerBusinessId = businessIdForCharacter(party.owner);
+                                      const counterpartyBusinessId = businessIdForCharacter(party.counterparty);
+                                      return (ownerBusinessId === selectedFounderBusinessId && counterpartyBusinessId === b.id) ||
+                                        (counterpartyBusinessId === selectedFounderBusinessId && ownerBusinessId === b.id);
+                                    },
                                   );
                                 })
                                 .map((b) => (
@@ -1242,22 +1286,11 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                                     const partnerBusiness = businesses.find(
                                       (b) => b.id === selectedPartnerId,
                                     );
-                                    const linkedCharId =
-                                      partnerBusiness?.linkedCharacterId;
-                                    return (
-                                      (c.principalBusinessId ===
-                                        selectedFounderBusinessId &&
-                                        (c.counterpartyBusinessId ===
-                                          selectedPartnerId ||
-                                          c.counterpartyBusinessId ===
-                                            linkedCharId)) ||
-                                      (c.counterpartyBusinessId ===
-                                        selectedFounderBusinessId &&
-                                        (c.principalBusinessId ===
-                                          selectedPartnerId ||
-                                          c.principalBusinessId ===
-                                            linkedCharId))
-                                    );
+                                    const party = contractCharacterIds[c.id] || {};
+                                    const ownerBusinessId = businessIdForCharacter(party.owner);
+                                    const counterpartyBusinessId = businessIdForCharacter(party.counterparty);
+                                    return (ownerBusinessId === selectedFounderBusinessId && counterpartyBusinessId === selectedPartnerId) ||
+                                      (counterpartyBusinessId === selectedFounderBusinessId && ownerBusinessId === selectedPartnerId);
                                   })
                                   .map((c) => (
                                     <option key={c.id} value={c.id}>
@@ -1554,7 +1587,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                           {businesses
                             .filter((b) => {
                               const linkedChar = characters.find(
-                                (c) => c.id === b.linkedCharacterId,
+                                (c) => c.id === businessCharacterIds[b.id],
                               );
                               return (
                                 linkedChar &&
@@ -1573,7 +1606,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                           {/* Fallback if no founder-linked businesses */}
                           {!businesses.some((b) =>
                             characters
-                              .find((c) => c.id === b.linkedCharacterId)
+                              .find((c) => c.id === businessCharacterIds[b.id])
                               ?.roles.includes(CharacterRole.FOUNDER),
                           ) &&
                             businesses.map((b) => (

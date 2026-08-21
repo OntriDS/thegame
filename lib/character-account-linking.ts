@@ -135,10 +135,9 @@ async function isCharacterAlreadyLinked(characterId: string): Promise<boolean> {
 async function isCharacterAvailableForProvisioning(character: Character): Promise<boolean> {
   if (character.isActive === false) return false;
   if (character.allowAccountLinking === false) return false;
-  // ACCOUNT_CHARACTER is authoritative. accountId is only a legacy fallback
-  // while the final pointer-removal migration is still pending.
+  // ACCOUNT_CHARACTER is the only relationship authority.
   if (await isCharacterAlreadyLinked(character.id)) return false;
-  return !character.accountId;
+  return true;
 }
 
 type CandidateMatchProbe = {

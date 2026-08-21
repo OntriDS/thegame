@@ -13,7 +13,6 @@ async function toUiAccount(iamAccount: NonNullable<Awaited<ReturnType<typeof iam
       id: char.id,
       name: char.name,
       roles: char.roles,
-      accountId: char.accountId,
       playerId: char.playerId,
     };
   }
@@ -31,8 +30,7 @@ async function toUiAccount(iamAccount: NonNullable<Awaited<ReturnType<typeof iam
     resetToken: undefined,
     resetTokenExpiry: undefined,
     privacySettings: { showEmail: false, showPhone: false, showRealName: true },
-    characterId: iamAccount.characterId || character?.id || '',
-    playerId: iamAccount.playerId || character?.playerId || '',
+    characterId: character?.id || '',
     lastActiveAt: new Date(iamAccount.updatedAt || Date.now()),
     character,
     type: undefined,

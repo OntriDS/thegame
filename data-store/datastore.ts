@@ -2,7 +2,7 @@
 // data-store/datastore.ts
 // Orchestration layer: repositories → workflows → links → logging
 
-import type { Task, Item, FinancialRecord, FinancialRecordRelationInput, Sale, Character, Player, PlayerAchievement, Site, Settlement, Region, Account, Business, Contract, Agent } from '@/types/entities';
+import type { Task, Item, FinancialRecord, FinancialRecordRuntime, FinancialRecordRelationInput, Sale, Character, Player, PlayerAchievement, Site, Settlement, Region, Account, Business, Contract, Agent } from '@/types/entities';
 import { getSaleFinancialConsistencyIssues, roundSaleTotals } from '@/lib/utils/financial-utils';
 import { ensureItemSaleLineIds, normalizeSale } from '@/lib/utils/sale-lines-normalize';
 import type { TaskSnapshot, ItemSnapshot, SaleSnapshot, FinancialSnapshot } from '@/types/archive';
@@ -68,12 +68,6 @@ import {
   getPlayerById as repoGetPlayerById,
   deletePlayer as repoDeletePlayer
 } from './repositories/player.repo';
-import {
-  upsertAccount as repoUpsertAccount,
-  getAllAccounts as repoGetAllAccounts,
-  getAccountById as repoGetAccountById,
-  deleteAccount as repoDeleteAccount
-} from './repositories/account.repo';
 // duplicate imports removed
 import {
   upsertSite as repoUpsertSite,
@@ -130,14 +124,11 @@ import type { PlayerArchiveRow } from '@/types/archive';
 import {
   normalizeItemTaxonomyFields,
   normalizeTaskOutputTaxonomy,
-  normalizeFinancialOutputTaxonomy,
-  normalizeFinancialRecordFields,
   normalizeSaleOutputTaxonomy,
 } from '@/lib/item-taxonomy-normalize';
 
 type EcosystemCharacterSnapshot = {
   id: string;
-  accountId: string;
   name: string;
   roles: CharacterRole[];
   profile: Record<string, any>;
@@ -152,7 +143,16 @@ const toIsoTimestamp = (value?: Date | string | null): string | null => {
 };
 
 const syncEcosystemCharacterSnapshot = async (character: Character): Promise<void> => {
-  if (!character.id || !character.accountId) return;
+  if (!character.id) return;
+  const { getLinksFor } = await import('@/links/link-registry');
+  const accountLink = (await getLinksFor({ type: EntityType.CHARACTER, id: character.id }))
+    .find((link) =>
+      link.linkType === LinkType.ACCOUNT_CHARACTER &&
+      link.source.type === EntityType.ACCOUNT &&
+      link.target.type === EntityType.CHARACTER &&
+      link.target.id === character.id
+    );
+  if (!accountLink) return;
 
   const now = new Date();
   const snapshotKey = `iam:character:${character.id}`;
@@ -160,7 +160,6 @@ const syncEcosystemCharacterSnapshot = async (character: Character): Promise<voi
 
   const snapshot: EcosystemCharacterSnapshot = {
     id: character.id,
-    accountId: character.accountId,
     name: (character.name || 'Customer').trim(),
     roles: character.roles,
     profile: existing?.profile || {},
@@ -1097,22 +1096,42 @@ export async function removeItem(id: string): Promise<void> {
 }
 
 // FINANCIALS
-export async function upsertFinancial(financial: FinancialRecord, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean }): Promise<FinancialRecord> {
-  const financialNorm = normalizeFinancialRecordFields(normalizeFinancialOutputTaxonomy(financial));
-  const previous = await repoGetFinancialById(financialNorm.id);
+export async function upsertFinancial(financial: FinancialRecordRuntime, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean }): Promise<FinancialRecord> {
   const rawFinancial = financial as any;
   const suppliedRelations = rawFinancial.__financialRelations || {};
-  const relationKeys = ['siteId', 'targetSiteId', 'characterId', 'playerCharacterId', 'sourceTaskId', 'sourceSaleId', 'characterRelationship'];
-  const relationsProvided = Boolean(rawFinancial.__financialRelations) ||
-    relationKeys.some((key) => Object.prototype.hasOwnProperty.call(rawFinancial, key));
+  const legacyRootKeys = [
+    'siteId', 'targetSiteId', 'characterId', 'playerCharacterId', 'sourceTaskId', 'sourceSaleId',
+    'doneAt', 'collectedAt', 'jungleCoins', 'rewards', 'customerCharacterRole',
+  ];
+  const legacyRootKey = legacyRootKeys.find((key) => Object.prototype.hasOwnProperty.call(rawFinancial, key));
+  if (legacyRootKey) {
+    throw new Error(`FINANCIAL_CANONICAL_WRITE_REJECTED: ${legacyRootKey} must be supplied through __financialRelations and canonical Links, not the FinancialRecord entity.`);
+  }
+  if (rawFinancial.context?.counterparty || rawFinancial.context?.paymentObservation) {
+    throw new Error('FINANCIAL_CANONICAL_WRITE_REJECTED: counterparty and paymentObservation are compatibility facets; use __financialRelations and lifecycle/status.');
+  }
+
+  // The runtime relation command is deliberately removed before persistence.
+  // It is command metadata for link reconciliation, not entity state.
+  const { __financialRelations: _relations, __financialRelationsProvided: _provided, ...entityData } = rawFinancial;
+  // Canonical writers must already provide the entity schema. There is no
+  // compatibility normalizer on this write path; legacy migration/import
+  // code must convert its input before calling upsertFinancial.
+  const financialNorm = {
+    ...entityData,
+    schemaVersion: entityData.schemaVersion ?? EntitySchemaVersion.V1,
+    version: entityData.version ?? 0,
+  } as FinancialRecord;
+  const previous = await repoGetFinancialById(financialNorm.id);
+  const relationsProvided = Boolean(rawFinancial.__financialRelations);
   const relations: FinancialRecordRelationInput = {
-    siteId: suppliedRelations.siteId ?? rawFinancial.siteId ?? null,
-    targetSiteId: suppliedRelations.targetSiteId ?? rawFinancial.targetSiteId ?? null,
-    characterId: suppliedRelations.characterId ?? rawFinancial.characterId ?? rawFinancial.context?.counterparty?.counterpartyId ?? null,
-    playerCharacterId: suppliedRelations.playerCharacterId ?? rawFinancial.playerCharacterId ?? null,
-    sourceTaskId: suppliedRelations.sourceTaskId ?? rawFinancial.sourceTaskId ?? null,
-    sourceSaleId: suppliedRelations.sourceSaleId ?? rawFinancial.sourceSaleId ?? null,
-    characterRelationship: suppliedRelations.characterRelationship ?? rawFinancial.context?.counterparty?.role ?? null,
+    siteId: suppliedRelations.siteId ?? null,
+    targetSiteId: suppliedRelations.targetSiteId ?? null,
+    characterId: suppliedRelations.characterId ?? null,
+    playerCharacterId: suppliedRelations.playerCharacterId ?? null,
+    sourceTaskId: suppliedRelations.sourceTaskId ?? null,
+    sourceSaleId: suppliedRelations.sourceSaleId ?? null,
+    characterRelationship: suppliedRelations.characterRelationship ?? null,
   };
 
   // Identity Shield: Time-Window Deduplication (2 minutes)
@@ -1696,40 +1715,6 @@ export async function removePlayer(id: string): Promise<void> {
     // Call player deletion workflow for cleanup
     const { removePlayerEffectsOnDelete } = await import('@/workflows/entities-workflows/player.workflow');
     await removePlayerEffectsOnDelete(id);
-  }
-}
-
-// ACCOUNTS
-export async function upsertAccount(account: Account, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Account> {
-  const previous = await repoGetAccountById(account.id);
-  const saved = await repoUpsertAccount(account);
-
-  if (!options?.skipWorkflowEffects) {
-    const { onAccountUpsert } = await import('@/workflows/entities-workflows/account.workflow');
-    await onAccountUpsert(saved, previous || undefined);
-  }
-
-  if (!options?.skipLinkEffects) {
-    await processLinkEntity(saved, EntityType.ACCOUNT);
-  }
-
-  return saved;
-}
-
-export async function getAllAccounts(): Promise<Account[]> {
-  return await repoGetAllAccounts();
-}
-
-export async function getAccountById(id: string): Promise<Account | null> {
-  return await repoGetAccountById(id);
-}
-
-export async function removeAccount(id: string): Promise<void> {
-  const existing = await repoGetAccountById(id);
-  await repoDeleteAccount(id);
-  if (existing) {
-    const { removeAccountEffectsOnDelete } = await import('@/workflows/entities-workflows/account.workflow');
-    await removeAccountEffectsOnDelete(id);
   }
 }
 

@@ -19,11 +19,13 @@ export async function GET(req: NextRequest) {
     const enriched = await Promise.all(
       accounts.map(async (account) => {
         const character = await iamService.resolveCharacterForAccount(account.id);
+        const { passwordHash: _passwordHash, resetToken: _resetToken, verificationToken: _verificationToken, ...safeAccount } = account;
         return {
-          ...account,
+          ...safeAccount,
           name: character?.name || account.name,
+          characterId: character?.id || null,
           character: character
-            ? { id: character.id, name: character.name, roles: character.roles, accountId: character.accountId }
+            ? { id: character.id, name: character.name, roles: character.roles }
             : null,
         };
       })
@@ -82,7 +84,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      account: { ...account, characterId },
+      account: { id: account.id, name: account.name, email: account.email, isActive: account.isActive, isVerified: account.isVerified, characterId },
       character: { id: dsChar.id, name: dsChar.name, roles: dsChar.roles },
     });
   } catch (error: any) {
