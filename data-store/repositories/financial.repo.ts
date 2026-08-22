@@ -19,8 +19,25 @@ export async function getAllFinancials(): Promise<FinancialRecord[]> {
   if (ids.length === 0) return [];
 
   const keys = ids.map(id => buildDataKey(ENTITY, id));
-  const financials = await kvMGet<FinancialRecord>(keys);
-  return financials.filter((financial): financial is FinancialRecord => financial !== null && financial !== undefined);
+  const financials: FinancialRecord[] = [];
+  for (let i = 0; i < keys.length; i += 500) {
+    const chunk = keys.slice(i, i + 500);
+    const chunkResults = await kvMGet<FinancialRecord>(chunk);
+    financials.push(...chunkResults.filter((f): f is FinancialRecord => f !== null && f !== undefined));
+  }
+  return financials;
+}
+
+export async function getFinancialsByIds(ids: string[]): Promise<FinancialRecord[]> {
+  if (ids.length === 0) return [];
+  const keys = ids.map(id => buildDataKey(ENTITY, id));
+  const financials: FinancialRecord[] = [];
+  for (let i = 0; i < keys.length; i += 500) {
+    const chunk = keys.slice(i, i + 500);
+    const chunkResults = await kvMGet<FinancialRecord>(chunk);
+    financials.push(...chunkResults.filter((f): f is FinancialRecord => f !== null && f !== undefined));
+  }
+  return financials;
 }
 
 export async function getFinancialById(id: string): Promise<FinancialRecord | null> {
@@ -38,8 +55,25 @@ export async function getFinancialsBySourceTaskId(sourceTaskId: string): Promise
   if (ids.length === 0) return [];
 
   const keys = ids.map(id => buildDataKey(ENTITY, id));
-  const financials = await kvMGet<FinancialRecord>(keys);
-  return financials.filter((financial): financial is FinancialRecord => financial !== null && financial !== undefined);
+  const financials: FinancialRecord[] = [];
+  for (let i = 0; i < keys.length; i += 500) {
+    const chunk = keys.slice(i, i + 500);
+    const chunkResults = await kvMGet<FinancialRecord>(chunk);
+    financials.push(...chunkResults.filter((f): f is FinancialRecord => f !== null && f !== undefined));
+  }
+  return financials;
+}
+
+export async function getFinancialsByIds(ids: string[]): Promise<FinancialRecord[]> {
+  if (ids.length === 0) return [];
+  const keys = ids.map(id => buildDataKey(ENTITY, id));
+  const financials: FinancialRecord[] = [];
+  for (let i = 0; i < keys.length; i += 500) {
+    const chunk = keys.slice(i, i + 500);
+    const chunkResults = await kvMGet<FinancialRecord>(chunk);
+    financials.push(...chunkResults.filter((f): f is FinancialRecord => f !== null && f !== undefined));
+  }
+  return financials;
 }
 
 /**
@@ -52,8 +86,25 @@ export async function getFinancialsBySourceSaleId(sourceSaleId: string): Promise
   if (ids.length === 0) return [];
 
   const keys = ids.map(id => buildDataKey(ENTITY, id));
-  const financials = await kvMGet<FinancialRecord>(keys);
-  return financials.filter((financial): financial is FinancialRecord => financial !== null && financial !== undefined);
+  const financials: FinancialRecord[] = [];
+  for (let i = 0; i < keys.length; i += 500) {
+    const chunk = keys.slice(i, i + 500);
+    const chunkResults = await kvMGet<FinancialRecord>(chunk);
+    financials.push(...chunkResults.filter((f): f is FinancialRecord => f !== null && f !== undefined));
+  }
+  return financials;
+}
+
+export async function getFinancialsByIds(ids: string[]): Promise<FinancialRecord[]> {
+  if (ids.length === 0) return [];
+  const keys = ids.map(id => buildDataKey(ENTITY, id));
+  const financials: FinancialRecord[] = [];
+  for (let i = 0; i < keys.length; i += 500) {
+    const chunk = keys.slice(i, i + 500);
+    const chunkResults = await kvMGet<FinancialRecord>(chunk);
+    financials.push(...chunkResults.filter((f): f is FinancialRecord => f !== null && f !== undefined));
+  }
+  return financials;
 }
 
 export async function upsertFinancial(financial: FinancialRecord, relations?: FinancialRecordRelationInput): Promise<FinancialRecord> {
@@ -134,3 +185,4 @@ export async function deleteContract(id: string): Promise<void> {
   await kvDel(key);
   await kvSRem(indexKey, id);
 }
+

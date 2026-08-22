@@ -1330,6 +1330,11 @@ export async function getFinancialById(id: string): Promise<FinancialRecord | nu
   return await repoGetFinancialById(id);
 }
 
+export async function getFinancialsByIds(ids: string[]): Promise<FinancialRecord[]> {
+  const { getFinancialsByIds: repoGetFinancialsByIds } = await import('./repositories/financial.repo');
+  return await repoGetFinancialsByIds(ids);
+}
+
 // OPTIMIZED: Indexed queries - only load financials created by specific tasks
 export async function getFinancialsBySourceTaskId(taskId: string): Promise<FinancialRecord[]> {
   const { getLinksFor } = await import('@/links/link-registry');
@@ -2314,4 +2319,5 @@ export async function deleteAgent(id: string): Promise<void> {
     // Additional deletion effects if any
   }
 }
+
 
