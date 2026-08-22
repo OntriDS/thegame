@@ -266,6 +266,11 @@ export type SaleFinRecLinkV1 = LinkEnvelopeV1<
   { relationship: 'sale-record' }
 >;
 
+export type SalePlayerLinkV1 = LinkEnvelopeV1<
+  CanonicalLinkType.SALE_PLAYER,
+  { relationship: 'points-earned' }
+>;
+
 export type SaleCharacterLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.SALE_CHARACTER,
   { relationship: 'customer' | 'owner' | 'partner' }
@@ -330,6 +335,7 @@ export type CanonicalLink =
   | SaleItemLinkV1
   | SaleTaskLinkV1
   | SaleFinRecLinkV1
+  | SalePlayerLinkV1
   | SaleCharacterLinkV1
   | SaleSiteLinkV1
   | SiteSettlementLinkV1

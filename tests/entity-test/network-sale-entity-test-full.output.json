@@ -43,8 +43,8 @@
       }
     },
     "lifecycle": {
-      "chargedAt": "2026-08-21T00:08:10.940Z",
-      "doneAt": "2026-08-21T00:08:10.940Z"
+      "chargedAt": "2026-08-22T01:33:28.194Z",
+      "doneAt": "2026-08-22T01:33:28.194Z"
     },
     "context": {
       "rewardIntent": {
@@ -56,8 +56,8 @@
         }
       }
     },
-    "createdAt": "2026-08-21T00:08:10.940Z",
-    "updatedAt": "2026-08-21T00:08:10.940Z"
+    "createdAt": "2026-08-22T01:33:28.194Z",
+    "updatedAt": "2026-08-22T01:33:28.194Z"
   },
   "item": {
     "id": "entity-test-item-network-full",
@@ -87,19 +87,21 @@
       "restockToTarget": true,
       "targetAmount": 3
     },
-    "createdAt": "2026-08-21T00:08:10.940Z",
-    "updatedAt": "2026-08-21T00:08:23.785Z",
+    "createdAt": "2026-08-22T01:33:28.194Z",
+    "updatedAt": "2026-08-22T01:33:41.852Z",
     "schemaVersion": 1,
     "version": 1
   },
   "financials": [
     {
       "id": "finrec-entity-test-sale-network-full",
-      "name": "network sale • HQ • 20-08-26",
+      "name": "network sale • HQ • 21-08-26",
+      "description": "Sale-sourced financial · entity-test-sale-network-full",
       "year": 2026,
       "month": 8,
       "station": "network",
       "type": "company",
+      "salesChannel": "network",
       "cost": {
         "minorUnits": "500",
         "currency": "USD"
@@ -108,81 +110,22 @@
         "minorUnits": "5000",
         "currency": "USD"
       },
-      "createdAt": "2026-08-21T00:08:26.643Z",
-      "updatedAt": "2026-08-21T00:08:26.643Z",
-      "schemaVersion": 1,
-      "version": 0,
       "netCashflow": {
         "minorUnits": "4500",
         "currency": "USD"
       },
-      "status": "done",
-      "description": "Sale-sourced financial · entity-test-sale-network-full",
-      "salesChannel": "network",
       "lifecycle": {
-        "doneAt": "2026-08-21T00:08:10.940Z"
-      }
+        "doneAt": "2026-08-22T01:33:28.194Z"
+      },
+      "createdAt": "2026-08-22T01:33:43.687Z",
+      "updatedAt": "2026-08-22T01:33:43.687Z",
+      "schemaVersion": 1,
+      "version": 0
     }
   ],
   "links": [
     {
-      "id": "360dfe84-5901-4b9a-a37a-49a859547b66",
-      "linkType": "SALE_SITE",
-      "source": {
-        "type": "sale",
-        "id": "entity-test-sale-network-full"
-      },
-      "target": {
-        "type": "site",
-        "id": "hq"
-      },
-      "relationship": "sold-at",
-      "createdAt": "2026-08-21T00:08:16.401Z"
-    },
-    {
-      "id": "3678de30-5770-4bee-9b1f-ee2d5a3b8622",
-      "linkType": "SALE_CHARACTER",
-      "source": {
-        "type": "sale",
-        "id": "entity-test-sale-network-full"
-      },
-      "target": {
-        "type": "character",
-        "id": "character-1775889257983-6pkhdapnl"
-      },
-      "relationship": "customer",
-      "createdAt": "2026-08-21T00:08:17.702Z"
-    },
-    {
-      "id": "f3d471b1-72e3-46ff-9bc4-6dc333d1d40e",
-      "linkType": "SALE_CHARACTER",
-      "source": {
-        "type": "sale",
-        "id": "entity-test-sale-network-full"
-      },
-      "target": {
-        "type": "character",
-        "id": "character-1775889257983-6pkhdapnl"
-      },
-      "relationship": "owner",
-      "createdAt": "2026-08-21T00:08:19.371Z"
-    },
-    {
-      "id": "00824b00-065b-4c11-b637-fe4490da1b4c",
-      "linkType": "SALE_FINREC",
-      "source": {
-        "type": "sale",
-        "id": "entity-test-sale-network-full"
-      },
-      "target": {
-        "type": "financial",
-        "id": "finrec-entity-test-sale-network-full"
-      },
-      "relationship": "sale-record",
-      "createdAt": "2026-08-21T00:08:34.837Z"
-    },
-    {
-      "id": "6f060580-7d6a-442e-99b9-55276c43171d",
+      "id": "b9e731d5-b284-40b3-98be-e10d6f603f1f",
       "linkType": "SALE_ITEM",
       "source": {
         "type": "sale",
@@ -193,7 +136,63 @@
         "id": "entity-test-item-network-full-sold-network-line-full"
       },
       "relationship": "sold-item",
-      "createdAt": "2026-08-21T00:08:37.438Z"
+      "createdAt": "2026-08-22T01:33:54.223Z"
+    },
+    {
+      "id": "4850d85d-2ce9-49bc-a265-dfea06c89d83",
+      "linkType": "SALE_SITE",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-network-full"
+      },
+      "target": {
+        "type": "site",
+        "id": "hq"
+      },
+      "relationship": "sold-at",
+      "createdAt": "2026-08-22T01:33:34.670Z"
+    },
+    {
+      "id": "c6b0c028-fe36-4f90-8115-3ab984e8b809",
+      "linkType": "SALE_CHARACTER",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-network-full"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1766452268320-fzg64q5np"
+      },
+      "relationship": "customer",
+      "createdAt": "2026-08-22T01:33:35.929Z"
+    },
+    {
+      "id": "25ecd754-7f7a-44dc-95c4-c069392c2236",
+      "linkType": "SALE_CHARACTER",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-network-full"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1766452268320-fzg64q5np"
+      },
+      "relationship": "owner",
+      "createdAt": "2026-08-22T01:33:37.656Z"
+    },
+    {
+      "id": "831665ac-28cd-4153-b585-ce74a5b95b62",
+      "linkType": "SALE_FINREC",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-network-full"
+      },
+      "target": {
+        "type": "financial",
+        "id": "finrec-entity-test-sale-network-full"
+      },
+      "relationship": "sale-record",
+      "createdAt": "2026-08-22T01:33:50.648Z"
     }
   ],
   "soldItems": [
@@ -228,15 +227,15 @@
         "year": 2026,
         "restockToTarget": true,
         "targetAmount": 3,
-        "soldAt": "2026-08-21T00:08:10.940Z"
+        "soldAt": "2026-08-22T01:33:28.194Z"
       },
-      "createdAt": "2026-08-21T00:08:10.940Z",
-      "updatedAt": "2026-08-21T00:08:38.818Z",
+      "createdAt": "2026-08-22T01:33:28.194Z",
+      "updatedAt": "2026-08-22T01:33:54.440Z",
       "schemaVersion": 1,
       "version": 2,
       "quantitySold": 1,
       "sourceRecordId": "entity-test-sale-network-full",
-      "description": "Sold in Gastón • Tagua Cafe (21-08-2026)"
+      "description": "Sold in Shawnna Altieri • Osa de Rio (22-08-2026)"
     }
   ]
 }

@@ -55,8 +55,8 @@
       }
     },
     "lifecycle": {
-      "chargedAt": "2026-08-21T00:04:39.132Z",
-      "doneAt": "2026-08-21T00:04:39.132Z"
+      "chargedAt": "2026-08-22T02:24:29.496Z",
+      "doneAt": "2026-08-22T02:24:29.496Z"
     },
     "context": {
       "rewardIntent": {
@@ -68,17 +68,19 @@
         }
       }
     },
-    "createdAt": "2026-08-21T00:04:39.132Z",
-    "updatedAt": "2026-08-21T00:04:39.132Z"
+    "createdAt": "2026-08-22T02:24:29.496Z",
+    "updatedAt": "2026-08-22T02:24:29.496Z"
   },
   "financials": [
     {
       "id": "finrec-entity-test-sale-direct-product-full",
-      "name": "direct sale • HQ • 20-08-26",
+      "name": "direct sale • HQ • 21-08-26",
+      "description": "Sale-sourced financial · entity-test-sale-direct-product-full",
       "year": 2026,
       "month": 8,
       "station": "direct-sales",
       "type": "company",
+      "salesChannel": "direct-sales",
       "cost": {
         "minorUnits": "100",
         "currency": "USD"
@@ -87,25 +89,36 @@
         "minorUnits": "1080",
         "currency": "USD"
       },
-      "createdAt": "2026-08-21T00:04:54.767Z",
-      "updatedAt": "2026-08-21T00:04:54.767Z",
-      "schemaVersion": 1,
-      "version": 0,
       "netCashflow": {
         "minorUnits": "980",
         "currency": "USD"
       },
-      "status": "done",
-      "description": "Sale-sourced financial · entity-test-sale-direct-product-full",
-      "salesChannel": "direct-sales",
       "lifecycle": {
-        "doneAt": "2026-08-21T00:04:39.132Z"
-      }
+        "doneAt": "2026-08-22T02:24:29.496Z"
+      },
+      "createdAt": "2026-08-22T02:24:50.076Z",
+      "updatedAt": "2026-08-22T02:24:50.076Z",
+      "schemaVersion": 1,
+      "version": 0
     }
   ],
   "links": [
     {
-      "id": "aa70979e-467a-4eb1-96b0-e75d3c84e38d",
+      "id": "8e6f8279-f6d7-4ab5-badf-84357a4c7043",
+      "linkType": "SALE_PLAYER",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-direct-product-full"
+      },
+      "target": {
+        "type": "player",
+        "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
+      },
+      "relationship": "points-earned",
+      "createdAt": "2026-08-22T02:25:15.064Z"
+    },
+    {
+      "id": "c087f76d-a3bb-4a17-8da6-34a782d96cf3",
       "linkType": "SALE_SITE",
       "source": {
         "type": "sale",
@@ -116,10 +129,10 @@
         "id": "hq"
       },
       "relationship": "sold-at",
-      "createdAt": "2026-08-21T00:04:44.070Z"
+      "createdAt": "2026-08-22T02:24:38.614Z"
     },
     {
-      "id": "66d98014-dd8f-41af-ac91-10c988fc5003",
+      "id": "9d2f60e9-efe3-4ad6-b77b-a7f2a9a2727f",
       "linkType": "SALE_CHARACTER",
       "source": {
         "type": "sale",
@@ -127,13 +140,13 @@
       },
       "target": {
         "type": "character",
-        "id": "character-1775889257983-6pkhdapnl"
+        "id": "3010446f-9ec8-44de-b635-f0c5917e6aa2"
       },
       "relationship": "customer",
-      "createdAt": "2026-08-21T00:04:45.653Z"
+      "createdAt": "2026-08-22T02:24:40.556Z"
     },
     {
-      "id": "079ef060-fb28-4abf-93ae-9c3063ca6337",
+      "id": "e432c165-2eeb-4f0d-9770-2b5e84ad38c6",
       "linkType": "SALE_CHARACTER",
       "source": {
         "type": "sale",
@@ -141,13 +154,13 @@
       },
       "target": {
         "type": "character",
-        "id": "character-1775889257983-6pkhdapnl"
+        "id": "3010446f-9ec8-44de-b635-f0c5917e6aa2"
       },
       "relationship": "owner",
-      "createdAt": "2026-08-21T00:04:47.606Z"
+      "createdAt": "2026-08-22T02:24:42.607Z"
     },
     {
-      "id": "e468c4a0-e84c-4ee5-b9e2-7b8e6ef9858b",
+      "id": "bf3124d3-a153-4ca8-b3a4-7f3574631aec",
       "linkType": "SALE_ITEM",
       "source": {
         "type": "sale",
@@ -158,10 +171,10 @@
         "id": "entity-test-item-direct-sale-full-sold-product-line-full"
       },
       "relationship": "sold-item",
-      "createdAt": "2026-08-21T00:04:59.450Z"
+      "createdAt": "2026-08-22T02:24:57.659Z"
     },
     {
-      "id": "405b0139-1ce2-491e-9103-64811007187e",
+      "id": "944a478f-04e9-49b9-b96f-e44d09e2f799",
       "linkType": "SALE_FINREC",
       "source": {
         "type": "sale",
@@ -172,7 +185,7 @@
         "id": "finrec-entity-test-sale-direct-product-full"
       },
       "relationship": "sale-record",
-      "createdAt": "2026-08-21T00:05:01.252Z"
+      "createdAt": "2026-08-22T02:24:59.406Z"
     }
   ],
   "soldItems": [
@@ -205,15 +218,15 @@
       "context": {
         "collection": "no-collection",
         "year": 2026,
-        "soldAt": "2026-08-21T00:04:39.132Z"
+        "soldAt": "2026-08-22T02:24:29.496Z"
       },
-      "createdAt": "2026-08-21T00:04:39.132Z",
-      "updatedAt": "2026-08-21T00:04:55.178Z",
+      "createdAt": "2026-08-22T02:24:29.496Z",
+      "updatedAt": "2026-08-22T02:24:51.574Z",
       "schemaVersion": 1,
       "version": 0,
       "quantitySold": 1,
       "sourceRecordId": "entity-test-sale-direct-product-full",
-      "description": "Sold in Existing test Character (21-08-2026)"
+      "description": "Sold in Existing test Character (22-08-2026)"
     }
   ]
 }

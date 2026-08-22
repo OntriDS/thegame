@@ -18,6 +18,16 @@ export async function resolveTaskOwnerPlayerId(task: Task): Promise<string | nul
   const directPlayer = await getPlayerById(ownerCharacterId);
   if (directPlayer) return directPlayer.id;
 
+  const characterPlayerLinks = await getLinksFor({ type: EntityType.CHARACTER, id: ownerCharacterId });
+  const playerLink = characterPlayerLinks.find(link =>
+    link.linkType === LinkType.CHARACTER_PLAYER &&
+    link.relationship === 'primary' &&
+    link.target.type === EntityType.PLAYER &&
+    Boolean(link.target.id)
+  );
+  if (playerLink?.target.id) return playerLink.target.id;
+
   const ownerCharacter = await getCharacterById(ownerCharacterId);
+  // Read-only migration fallback for legacy Characters not linked yet.
   return ownerCharacter?.playerId || null;
 }

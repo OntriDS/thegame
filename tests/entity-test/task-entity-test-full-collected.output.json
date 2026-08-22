@@ -10,11 +10,11 @@
       "percentage": 100
     },
     "schedule": {
-      "dueDate": "2026-08-28T19:03:34.219Z"
+      "dueDate": "2026-08-29T01:58:29.478Z"
     },
     "order": 1000,
     "siteId": "hq",
-    "parentId": "355e20c6-7de9-4039-9a1d-fe6cc89b76b0",
+    "parentId": "25592a34-f492-41ad-9051-4fd0e585371b",
     "context": {
       "financialIntent": {
         "costIntent": {
@@ -52,58 +52,16 @@
         "isSold": false
       }
     },
-    "createdAt": "2026-08-21T19:03:34.219Z",
-    "updatedAt": "2026-08-21T19:04:35.894Z",
+    "createdAt": "2026-08-22T01:58:29.478Z",
+    "updatedAt": "2026-08-22T01:59:39.627Z",
     "schemaVersion": 1,
     "version": 2,
-    "doneAt": "2026-08-21T19:03:49.646Z",
-    "collectedAt": "2026-08-21T19:04:35.894Z"
+    "doneAt": "2026-08-22T01:58:44.974Z",
+    "collectedAt": "2026-08-22T01:59:39.627Z"
   },
   "links": [
     {
-      "id": "44a94d79-72b2-48a9-93c5-4ad7147ef683",
-      "linkType": "TASK_PLAYER",
-      "source": {
-        "type": "task",
-        "id": "entity-test-task-full-collected"
-      },
-      "target": {
-        "type": "player",
-        "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
-      },
-      "relationship": "points-earned",
-      "createdAt": "2026-08-21T19:04:01.591Z"
-    },
-    {
-      "id": "2defb7e2-cb4f-4a63-a600-58ae5ea49053",
-      "linkType": "TASK_FINREC",
-      "source": {
-        "type": "task",
-        "id": "entity-test-task-full-collected"
-      },
-      "target": {
-        "type": "financial",
-        "id": "finrec-entity-test-task-full-collected"
-      },
-      "relationship": "task-record",
-      "createdAt": "2026-08-21T19:04:17.470Z"
-    },
-    {
-      "id": "bec9cb04-9653-43fa-b070-c90b1081949a",
-      "linkType": "TASK_ITEM",
-      "source": {
-        "type": "task",
-        "id": "entity-test-task-full-collected"
-      },
-      "target": {
-        "type": "item",
-        "id": "item-entity-test-task-full-collected-1787339060028"
-      },
-      "relationship": "produced",
-      "createdAt": "2026-08-21T19:04:33.890Z"
-    },
-    {
-      "id": "883f1b94-60be-4e9f-805b-0e3715bbec89",
+      "id": "8311e1eb-f798-4552-b4a3-57ee04e9512a",
       "linkType": "TASK_SITE",
       "source": {
         "type": "task",
@@ -114,10 +72,10 @@
         "id": "hq"
       },
       "relationship": "performed-at",
-      "createdAt": "2026-08-21T19:03:35.169Z"
+      "createdAt": "2026-08-22T01:58:30.605Z"
     },
     {
-      "id": "fac21862-082a-42ab-90b7-97c82730b375",
+      "id": "fc7543ea-f358-4d5b-85b4-bfe01ebce1f5",
       "linkType": "TASK_CHARACTER",
       "source": {
         "type": "task",
@@ -125,13 +83,13 @@
       },
       "target": {
         "type": "character",
-        "id": "character-1775889257983-6pkhdapnl"
+        "id": "character-1762706537139-1ewtmjczv"
       },
       "relationship": "beneficiary",
-      "createdAt": "2026-08-21T19:04:56.185Z"
+      "createdAt": "2026-08-22T02:00:01.822Z"
     },
     {
-      "id": "c9d87135-03e9-4163-bc17-5d62b4b14f9b",
+      "id": "a78cb4f3-4f4e-4483-a280-8f41b2ef198d",
       "linkType": "TASK_CHARACTER",
       "source": {
         "type": "task",
@@ -139,15 +97,235 @@
       },
       "target": {
         "type": "character",
-        "id": "character-1775889257983-6pkhdapnl"
+        "id": "character-1762706537139-1ewtmjczv"
       },
       "relationship": "owner",
-      "createdAt": "2026-08-21T19:04:57.786Z"
+      "createdAt": "2026-08-22T02:00:03.397Z"
+    },
+    {
+      "id": "74f5fe0d-38ab-4a6a-b60b-c4a4447e4efb",
+      "linkType": "TASK_PLAYER",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-collected"
+      },
+      "target": {
+        "type": "player",
+        "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
+      },
+      "relationship": "points-earned",
+      "createdAt": "2026-08-22T01:59:01.948Z"
+    },
+    {
+      "id": "e6326521-2729-4ae3-9842-7ba50997f104",
+      "linkType": "TASK_FINREC",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-collected"
+      },
+      "target": {
+        "type": "financial",
+        "id": "finrec-entity-test-task-full-collected"
+      },
+      "relationship": "task-record",
+      "createdAt": "2026-08-22T01:59:19.350Z"
+    },
+    {
+      "id": "b8b72fee-60f3-451f-a03e-4d7b295b689e",
+      "linkType": "TASK_ITEM",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-collected"
+      },
+      "target": {
+        "type": "item",
+        "id": "item-entity-test-task-full-collected-1787363963343"
+      },
+      "relationship": "produced",
+      "createdAt": "2026-08-22T01:59:38.108Z"
+    }
+  ],
+  "characterLinks": [
+    {
+      "id": "c8c8e4e3-2d42-4493-a397-cf911be03767",
+      "linkType": "ITEM_CHARACTER",
+      "source": {
+        "type": "item",
+        "id": "imported-1762140802806-236-sold-c4cac3a5-6aff-4745-97a9-9f5ddb637368"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1762706537139-1ewtmjczv"
+      },
+      "context": {
+        "kind": "item-character"
+      },
+      "createdAt": "2026-03-27T21:14:47.250Z"
+    },
+    {
+      "id": "e9d23a18-529a-442a-a035-c84849ad330a",
+      "linkType": "TASK_CHARACTER",
+      "source": {
+        "type": "task",
+        "id": "97286455-c83e-45a6-af10-d6cf8844b677"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1762706537139-1ewtmjczv"
+      },
+      "relationship": "owner",
+      "createdAt": "2026-08-16T22:49:15.981Z"
+    },
+    {
+      "id": "5be90cf3-c663-472c-8af8-bc102a3902bf",
+      "linkType": "CHARACTER_PLAYER",
+      "source": {
+        "type": "character",
+        "id": "character-1762706537139-1ewtmjczv"
+      },
+      "target": {
+        "type": "player",
+        "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
+      },
+      "relationship": "primary",
+      "createdAt": "2026-08-19T03:11:48.649Z"
+    },
+    {
+      "id": "78f48588-db8c-41f2-b04e-0cf2d8e87d0a",
+      "linkType": "TASK_CHARACTER",
+      "source": {
+        "type": "task",
+        "id": "9107189a-1736-46c9-91b9-4035c19d224a"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1762706537139-1ewtmjczv"
+      },
+      "relationship": "owner",
+      "createdAt": "2026-08-18T02:09:01.549Z"
+    },
+    {
+      "id": "cb8b7255-8f65-4d27-a39a-79cf5c9b2ef6",
+      "linkType": "ITEM_CHARACTER",
+      "source": {
+        "type": "item",
+        "id": "imported-1762140802806-235-sold-4460243e-21f1-4122-9912-40006a1a7371"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1762706537139-1ewtmjczv"
+      },
+      "context": {
+        "kind": "item-character"
+      },
+      "createdAt": "2026-03-27T21:14:43.478Z"
+    },
+    {
+      "id": "fc7543ea-f358-4d5b-85b4-bfe01ebce1f5",
+      "linkType": "TASK_CHARACTER",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-collected"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1762706537139-1ewtmjczv"
+      },
+      "relationship": "beneficiary",
+      "createdAt": "2026-08-22T02:00:01.822Z"
+    },
+    {
+      "id": "a78cb4f3-4f4e-4483-a280-8f41b2ef198d",
+      "linkType": "TASK_CHARACTER",
+      "source": {
+        "type": "task",
+        "id": "entity-test-task-full-collected"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1762706537139-1ewtmjczv"
+      },
+      "relationship": "owner",
+      "createdAt": "2026-08-22T02:00:03.397Z"
+    },
+    {
+      "id": "40a6aebb-4a76-4857-ba1e-4b8a70744b79",
+      "linkType": "TASK_CHARACTER",
+      "source": {
+        "type": "task",
+        "id": "9107189a-1736-46c9-91b9-4035c19d224a"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1762706537139-1ewtmjczv"
+      },
+      "relationship": "beneficiary",
+      "createdAt": "2026-08-18T02:08:59.388Z"
+    },
+    {
+      "id": "669db29e-4c67-4124-b6f4-e38d3004db9d",
+      "linkType": "CHARACTER_SITE",
+      "source": {
+        "type": "character",
+        "id": "character-1762706537139-1ewtmjczv"
+      },
+      "target": {
+        "type": "site",
+        "id": "site-jungle-matt"
+      },
+      "context": null,
+      "createdAt": "2026-04-21T18:14:04.444Z"
+    },
+    {
+      "id": "a2bb7866-6886-4047-8c4c-b3e424e1b6a4",
+      "linkType": "ITEM_CHARACTER",
+      "source": {
+        "type": "item",
+        "id": "imported-1762140802805-37-sold-22f446f2-7c56-4c7d-85c2-75cf14f414a2"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1762706537139-1ewtmjczv"
+      },
+      "context": {
+        "kind": "item-character"
+      },
+      "createdAt": "2026-03-27T21:14:39.683Z"
+    },
+    {
+      "id": "ab6caabc-9cc0-4954-bed2-613dec403405",
+      "linkType": "SALE_CHARACTER",
+      "source": {
+        "type": "sale",
+        "id": "ad5fd259-ab2c-486e-bcbf-2283beeaf106"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1762706537139-1ewtmjczv"
+      },
+      "context": {
+        "kind": "sale-character"
+      },
+      "createdAt": "2025-11-09T17:13:06.533Z"
+    },
+    {
+      "id": "bec09ed7-5a70-4c5d-a001-9379b53b16a1",
+      "linkType": "FINREC_CHARACTER",
+      "source": {
+        "type": "financial",
+        "id": "finrec-ad5fd259-ab2c-486e-bcbf-2283beeaf106"
+      },
+      "target": {
+        "type": "character",
+        "id": "character-1762706537139-1ewtmjczv"
+      },
+      "createdAt": "2026-04-11T06:38:55.443Z",
+      "relationship": "customer"
     }
   ],
   "items": [
     {
-      "id": "item-entity-test-task-full-collected-1787339060028",
+      "id": "item-entity-test-task-full-collected-1787363963343",
       "schemaVersion": 1,
       "version": 0,
       "name": "testing-full-collected-output",
@@ -166,8 +344,8 @@
         }
       },
       "sourceTaskId": "entity-test-task-full-collected",
-      "createdAt": "2026-08-21T19:04:20.028Z",
-      "updatedAt": "2026-08-21T19:04:20.028Z",
+      "createdAt": "2026-08-22T01:59:23.343Z",
+      "updatedAt": "2026-08-22T01:59:23.343Z",
       "context": {
         "year": 2026
       },
@@ -185,6 +363,7 @@
       "schemaVersion": 1,
       "version": 0,
       "name": "testing-task-full-collected",
+      "description": "Financial record from task: testing-task-full-collected",
       "year": 2026,
       "month": 8,
       "station": "strategy",
@@ -197,11 +376,16 @@
         "minorUnits": "10000",
         "currency": "USD"
       },
+      "netCashflow": {
+        "minorUnits": "5000",
+        "currency": "USD"
+      },
       "status": "done",
       "lifecycle": {
-        "doneAt": "2026-08-21T19:03:49.646Z"
+        "doneAt": "2026-08-22T01:58:44.974Z"
       },
       "context": {
+        "jungleCoins": 0,
         "productionPlan": {
           "outputItemType": "bundle",
           "outputItemSubType": "sticker",
@@ -220,18 +404,13 @@
           "isSold": false
         }
       },
-      "createdAt": "2026-08-21T19:04:03.752Z",
-      "updatedAt": "2026-08-21T19:04:03.752Z",
-      "netCashflow": {
-        "minorUnits": "5000",
-        "currency": "USD"
-      },
-      "description": "Financial record from task: testing-task-full-collected"
+      "createdAt": "2026-08-22T01:59:04.501Z",
+      "updatedAt": "2026-08-22T01:59:04.501Z"
     }
   ],
   "pointEvidence": [
     {
-      "id": "44a94d79-72b2-48a9-93c5-4ad7147ef683",
+      "id": "74f5fe0d-38ab-4a6a-b60b-c4a4447e4efb",
       "linkType": "TASK_PLAYER",
       "source": {
         "type": "task",
@@ -242,7 +421,7 @@
         "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
       },
       "relationship": "points-earned",
-      "createdAt": "2026-08-21T19:04:01.591Z"
+      "createdAt": "2026-08-22T01:59:01.948Z"
     }
   ],
   "playerBefore": {
@@ -251,7 +430,7 @@
     "name": "Akiles",
     "description": "Player One",
     "createdAt": "2025-11-03T01:14:48.514Z",
-    "updatedAt": "2026-08-21T19:01:43.580Z",
+    "updatedAt": "2026-08-22T01:54:42.289Z",
     "version": 1,
     "level": 0,
     "lastActiveAt": "2025-11-03T01:14:48.514Z",
@@ -260,9 +439,9 @@
       "points": {
         "pending": {
           "hp": 1,
-          "fp": 80,
-          "rp": 291,
-          "xp": 338
+          "fp": 86,
+          "rp": 314,
+          "xp": 395
         },
         "vested": {
           "hp": 1,
@@ -272,8 +451,8 @@
         },
         "current": {
           "hp": 0,
-          "fp": 11,
-          "rp": 14,
+          "fp": 6,
+          "rp": 0,
           "xp": 0
         },
         "exchanged": {
@@ -284,9 +463,9 @@
         },
         "historic": {
           "hp": 2,
-          "fp": 129,
-          "rp": 516,
-          "xp": 408
+          "fp": 135,
+          "rp": 539,
+          "xp": 465
         }
       },
       "achievements": [],
@@ -309,7 +488,7 @@
     "name": "Akiles",
     "description": "Player One",
     "createdAt": "2025-11-03T01:14:48.514Z",
-    "updatedAt": "2026-08-21T19:04:00.632Z",
+    "updatedAt": "2026-08-22T01:59:00.829Z",
     "version": 1,
     "level": 0,
     "lastActiveAt": "2025-11-03T01:14:48.514Z",
@@ -318,9 +497,9 @@
       "points": {
         "pending": {
           "hp": 1,
-          "fp": 81,
-          "rp": 293,
-          "xp": 343
+          "fp": 87,
+          "rp": 316,
+          "xp": 400
         },
         "vested": {
           "hp": 1,
@@ -330,8 +509,8 @@
         },
         "current": {
           "hp": 0,
-          "fp": 11,
-          "rp": 14,
+          "fp": 6,
+          "rp": 0,
           "xp": 0
         },
         "exchanged": {
@@ -342,9 +521,9 @@
         },
         "historic": {
           "hp": 2,
-          "fp": 130,
-          "rp": 518,
-          "xp": 413
+          "fp": 136,
+          "rp": 541,
+          "xp": 470
         }
       },
       "achievements": [],
@@ -367,7 +546,7 @@
     "name": "Akiles",
     "description": "Player One",
     "createdAt": "2025-11-03T01:14:48.514Z",
-    "updatedAt": "2026-08-21T19:04:47.881Z",
+    "updatedAt": "2026-08-22T01:59:51.214Z",
     "version": 1,
     "level": 0,
     "lastActiveAt": "2025-11-03T01:14:48.514Z",
@@ -376,9 +555,9 @@
       "points": {
         "pending": {
           "hp": 1,
-          "fp": 80,
-          "rp": 291,
-          "xp": 338
+          "fp": 86,
+          "rp": 314,
+          "xp": 395
         },
         "vested": {
           "hp": 1,
@@ -388,8 +567,8 @@
         },
         "current": {
           "hp": 0,
-          "fp": 12,
-          "rp": 16,
+          "fp": 7,
+          "rp": 2,
           "xp": 5
         },
         "exchanged": {
@@ -400,9 +579,9 @@
         },
         "historic": {
           "hp": 2,
-          "fp": 130,
-          "rp": 518,
-          "xp": 413
+          "fp": 136,
+          "rp": 541,
+          "xp": 470
         }
       },
       "achievements": [],
@@ -425,7 +604,7 @@
     "name": "Akiles",
     "description": "Player One",
     "createdAt": "2025-11-03T01:14:48.514Z",
-    "updatedAt": "2026-08-21T19:05:34.492Z",
+    "updatedAt": "2026-08-22T02:00:45.273Z",
     "version": 1,
     "level": 0,
     "lastActiveAt": "2025-11-03T01:14:48.514Z",
@@ -434,9 +613,9 @@
       "points": {
         "pending": {
           "hp": 1,
-          "fp": 80,
-          "rp": 291,
-          "xp": 338
+          "fp": 86,
+          "rp": 314,
+          "xp": 395
         },
         "vested": {
           "hp": 1,
@@ -446,8 +625,8 @@
         },
         "current": {
           "hp": 0,
-          "fp": 11,
-          "rp": 14,
+          "fp": 6,
+          "rp": 0,
           "xp": 0
         },
         "exchanged": {
@@ -458,9 +637,9 @@
         },
         "historic": {
           "hp": 2,
-          "fp": 129,
-          "rp": 516,
-          "xp": 408
+          "fp": 135,
+          "rp": 539,
+          "xp": 465
         }
       },
       "achievements": [],

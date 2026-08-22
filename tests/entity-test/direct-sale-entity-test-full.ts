@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -88,6 +88,31 @@ async function expectSaleRewardEvidence(saleId: string, playerId: string, before
     expect(after[bucket]).toEqual(before[bucket]);
   }
 
+  await waitFor(async () => {
+    const links = await getLinksFor({ type: EntityType.SALE, id: saleId });
+    return links.some(link =>
+      link.linkType === 'SALE_PLAYER' &&
+      link.relationship === 'points-earned' &&
+      link.target.type === EntityType.PLAYER &&
+      link.target.id === playerId
+    );
+  });
+
+}
+
+async function findCharacterPlayer(): Promise<{ character: any; playerId: string } | null> {
+  const players = await getAllPlayers();
+  for (const character of await getAllCharacters()) {
+    const links = await getLinksFor({ type: EntityType.CHARACTER, id: character.id });
+    const link = links.find(candidate =>
+      candidate.linkType === 'CHARACTER_PLAYER' &&
+      candidate.relationship === 'primary' &&
+      candidate.target?.type === EntityType.PLAYER &&
+      players.some(player => player.id === candidate.target.id)
+    );
+    if (link?.target?.id) return { character, playerId: link.target.id };
+  }
+  return null;
 }
 
 describe('entity-test: full Direct Sale', () => {
@@ -96,7 +121,11 @@ describe('entity-test: full Direct Sale', () => {
   const productItemId = 'entity-test-item-direct-sale-full';
   const serviceTaskId = 'entity-test-task-direct-sale-full';
 
-  beforeEach(async () => {
+  // Remove leftovers once before the suite. Repeating the full production
+  // deletion workflow before every case caused the second case to spend up to
+  // two minutes deleting records that the previous afterEach had already
+  // removed.
+  beforeAll(async () => {
     for (const saleId of [productSaleId, serviceSaleId]) {
       const financials = await getFinancialsBySourceSaleId(saleId);
       for (const financial of financials) await removeFinancial(financial.id);
@@ -137,20 +166,36 @@ describe('entity-test: full Direct Sale', () => {
     expect(await getSaleById(serviceSaleId)).toBeNull();
     expect(await getFinancialsBySourceSaleId(productSaleId)).toHaveLength(0);
     expect(await getFinancialsBySourceSaleId(serviceSaleId)).toHaveLength(0);
-    await waitFor(async () => (await getTaskById(serviceTaskId)) === null, 10_000);
-    expect(await getItemById(productItemId)).toBeNull();
-    await waitFor(async () => (await getItemById(`${productItemId}-sold-product-line-full`)) === null, 10_000);
-    await waitFor(async () => (await getLinksFor({ type: EntityType.SALE, id: productSaleId })).length === 0, 10_000);
-    await waitFor(async () => (await getLinksFor({ type: EntityType.SALE, id: serviceSaleId })).length === 0, 10_000);
+    // These are independent eventual-cleanup checks. Running them serially can
+    // add up to 40 seconds when a remote KV write is still settling.
+    await Promise.all([
+      waitFor(async () => (await getTaskById(serviceTaskId)) === null, 10_000),
+      (async () => expect(await getItemById(productItemId)).toBeNull())(),
+      waitFor(async () => (await getItemById(`${productItemId}-sold-product-line-full`)) === null, 10_000),
+      waitFor(async () => (await getLinksFor({ type: EntityType.SALE, id: productSaleId })).length === 0, 10_000),
+      waitFor(async () => (await getLinksFor({ type: EntityType.SALE, id: serviceSaleId })).length === 0, 10_000),
+    ]);
+  });
+
+  afterAll(async () => {
+    // Keep a final safety cleanup if a test aborts before its afterEach hook.
+    for (const saleId of [productSaleId, serviceSaleId]) {
+      const financials = await getFinancialsBySourceSaleId(saleId);
+      for (const financial of financials) await removeFinancial(financial.id);
+    }
+    await removeSale(productSaleId);
+    await removeSale(serviceSaleId);
+    await removeTask(serviceTaskId);
+    await removeItem(productItemId);
   });
 
   it('runs the full direct product Sale workflow', async () => {
     const now = getUTCNow();
     const timestamp = toUTCISOString(now);
-    const players = await getAllPlayers();
-    const character = (await getAllCharacters()).find(candidate => candidate.playerId && players.some(player => player.id === candidate.playerId));
-    if (!character || !character.playerId) throw new Error('Cannot run full Direct product Sale test: a Player-linked Character is required.');
-    const playerBefore = await getPlayerById(character.playerId);
+    const owner = await findCharacterPlayer();
+    if (!owner) throw new Error('Cannot run full Direct product Sale test: a Character with a canonical CHARACTER_PLAYER link is required.');
+    const { character, playerId } = owner;
+    const playerBefore = await getPlayerById(playerId);
     if (!playerBefore) throw new Error('Cannot run full Direct product Sale test: linked Player could not be loaded.');
     const pointsBefore = pointSnapshot(playerBefore);
 
@@ -210,8 +255,9 @@ describe('entity-test: full Direct Sale', () => {
       const links = await getLinksFor({ type: EntityType.SALE, id: productSaleId });
       return links.some(link => link.linkType === 'SALE_SITE') &&
         links.some(link => link.linkType === 'SALE_ITEM') &&
-        links.some(link => link.linkType === 'SALE_CHARACTER');
-    });
+        links.some(link => link.linkType === 'SALE_CHARACTER') &&
+        links.some(link => link.linkType === 'SALE_FINREC');
+    }, 120_000);
 
     const saved = await getSaleById(productSaleId);
     const persisted = await getPersistedSaleById(productSaleId);
@@ -229,7 +275,7 @@ describe('entity-test: full Direct Sale', () => {
     expect(persisted).not.toHaveProperty('playerCharacterId');
     expect(persisted).not.toHaveProperty('counterpartyName');
     expect(saved.siteId).toBe('hq');
-    expect(links).toEqual(expect.arrayContaining([
+    expect(await getLinksFor({ type: EntityType.SALE, id: productSaleId })).toEqual(expect.arrayContaining([
       expect.objectContaining({ linkType: 'SALE_SITE', relationship: 'sold-at', target: { type: EntityType.SITE, id: 'hq' } }),
       expect.objectContaining({ linkType: 'SALE_ITEM', relationship: 'sold-item' }),
       expect.objectContaining({ linkType: 'SALE_CHARACTER', relationship: 'customer', target: { type: EntityType.CHARACTER, id: character.id } }),
@@ -254,17 +300,23 @@ describe('entity-test: full Direct Sale', () => {
     expect(persisted.totals?.totalCost).toEqual(money('100'));
     expect(persisted.lifecycle?.chargedAt).toBe(timestamp);
     expect(persisted.lines?.[0]?.lineId).toBe('product-line-full');
-    expect(links.some(link => String(link.linkType) === 'SALE_PLAYER')).toBe(false);
-    await expectSaleRewardEvidence(productSaleId, character.playerId, pointsBefore, { xp: 5, rp: 2, fp: 1, hp: 0 });
-  });
+    await expectSaleRewardEvidence(productSaleId, playerId, pointsBefore, { xp: 5, rp: 2, fp: 1, hp: 0 });
+    expect(await getLinksFor({ type: EntityType.SALE, id: productSaleId })).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        linkType: 'SALE_PLAYER',
+        relationship: 'points-earned',
+        target: { type: EntityType.PLAYER, id: playerId },
+      }),
+    ]));
+  }, 300_000);
 
   it('runs the full direct service Sale workflow and creates its Task link', async () => {
     const now = getUTCNow();
     const timestamp = toUTCISOString(now);
-    const players = await getAllPlayers();
-    const character = (await getAllCharacters()).find(candidate => candidate.playerId && players.some(player => player.id === candidate.playerId));
-    if (!character || !character.playerId) throw new Error('Cannot run full Direct service Sale test: a Player-linked Character is required.');
-    const playerBefore = await getPlayerById(character.playerId);
+    const owner = await findCharacterPlayer();
+    if (!owner) throw new Error('Cannot run full Direct service Sale test: a Character with a canonical CHARACTER_PLAYER link is required.');
+    const { character, playerId } = owner;
+    const playerBefore = await getPlayerById(playerId);
     if (!playerBefore) throw new Error('Cannot run full Direct service Sale test: linked Player could not be loaded.');
     const pointsBefore = pointSnapshot(playerBefore);
 
@@ -300,13 +352,14 @@ describe('entity-test: full Direct Sale', () => {
       const links = await getLinksFor({ type: EntityType.SALE, id: serviceSaleId });
       return links.some(link => link.linkType === 'SALE_SITE') &&
         links.some(link => link.linkType === 'SALE_TASK') &&
-        links.some(link => link.linkType === 'SALE_CHARACTER');
-    });
+        links.some(link => link.linkType === 'SALE_CHARACTER') &&
+        links.some(link => link.linkType === 'SALE_FINREC');
+    }, 120_000);
 
     const saved = await getSaleById(serviceSaleId);
     const persisted = await getPersistedSaleById(serviceSaleId);
     const task = await getTaskById(serviceTaskId);
-    const links = await getLinksFor({ type: EntityType.SALE, id: serviceSaleId });
+    let links = await getLinksFor({ type: EntityType.SALE, id: serviceSaleId });
     if (!saved || !persisted || !task) throw new Error('Full Direct service Sale or generated Task was not persisted.');
 
     const output = { sale: JSON.parse(JSON.stringify(persisted)), task: JSON.parse(JSON.stringify(task)), links };
@@ -329,8 +382,15 @@ describe('entity-test: full Direct Sale', () => {
     expect(persisted.context).not.toHaveProperty('paymentBreakdown');
     expect(persisted.lifecycle?.chargedAt).toBe(timestamp);
     expect(persisted.lines?.[0]?.lineId).toBe('service-line-full');
-    expect(links.some(link => String(link.linkType) === 'SALE_PLAYER')).toBe(false);
-    await expectSaleRewardEvidence(serviceSaleId, character.playerId, pointsBefore, { xp: 3, rp: 1, fp: 0, hp: 0 });
+    await expectSaleRewardEvidence(serviceSaleId, playerId, pointsBefore, { xp: 3, rp: 1, fp: 0, hp: 0 });
+    links = await getLinksFor({ type: EntityType.SALE, id: serviceSaleId });
+    expect(links).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        linkType: 'SALE_PLAYER',
+        relationship: 'points-earned',
+        target: { type: EntityType.PLAYER, id: playerId },
+      }),
+    ]));
     expect(links).toEqual(expect.arrayContaining([
       expect.objectContaining({ linkType: 'SALE_SITE', relationship: 'sold-at', target: { type: EntityType.SITE, id: 'hq' } }),
       expect.objectContaining({ linkType: 'SALE_TASK', relationship: 'sold-service', target: { type: EntityType.TASK, id: serviceTaskId } }),
@@ -343,5 +403,5 @@ describe('entity-test: full Direct Sale', () => {
     expect(serviceFinrecLinks).toEqual(expect.arrayContaining([
       expect.objectContaining({ linkType: 'FINREC_SITE', relationship: 'source-site', target: { type: EntityType.SITE, id: 'hq' } }),
     ]));
-  });
+  }, 300_000);
 });

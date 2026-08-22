@@ -44,8 +44,8 @@
       }
     },
     "lifecycle": {
-      "chargedAt": "2026-08-21T00:06:23.654Z",
-      "doneAt": "2026-08-21T00:06:23.654Z"
+      "chargedAt": "2026-08-22T02:26:41.185Z",
+      "doneAt": "2026-08-22T02:26:41.185Z"
     },
     "context": {
       "rewardIntent": {
@@ -57,8 +57,8 @@
         }
       }
     },
-    "createdAt": "2026-08-21T00:06:23.654Z",
-    "updatedAt": "2026-08-21T00:06:23.654Z"
+    "createdAt": "2026-08-22T02:26:41.185Z",
+    "updatedAt": "2026-08-22T02:26:41.185Z"
   },
   "task": {
     "id": "entity-test-task-direct-sale-full",
@@ -72,8 +72,8 @@
       "percentage": 0
     },
     "order": 1000,
-    "createdAt": "2026-08-21T00:06:46.636Z",
-    "updatedAt": "2026-08-21T00:06:46.636Z",
+    "createdAt": "2026-08-22T02:27:13.329Z",
+    "updatedAt": "2026-08-22T02:27:13.329Z",
     "siteId": "hq",
     "context": {},
     "schemaVersion": 1,
@@ -81,7 +81,7 @@
   },
   "links": [
     {
-      "id": "5306cd7c-04b9-422e-9c87-3bfe2ca31af4",
+      "id": "fcff5ffb-7204-440b-85f6-be7a4b06062f",
       "linkType": "SALE_CHARACTER",
       "source": {
         "type": "sale",
@@ -89,13 +89,13 @@
       },
       "target": {
         "type": "character",
-        "id": "character-1775889257983-6pkhdapnl"
+        "id": "d8863d48-3ec0-40f2-b548-66bbaee9ca8a"
       },
       "relationship": "owner",
-      "createdAt": "2026-08-21T00:06:31.538Z"
+      "createdAt": "2026-08-22T02:26:49.070Z"
     },
     {
-      "id": "0f48acff-8c68-4f47-a602-54e59032d938",
+      "id": "03849fea-2b84-438b-a2c6-665e470b4bf8",
       "linkType": "SALE_FINREC",
       "source": {
         "type": "sale",
@@ -106,10 +106,10 @@
         "id": "finrec-entity-test-sale-direct-service-full"
       },
       "relationship": "sale-record",
-      "createdAt": "2026-08-21T00:06:43.931Z"
+      "createdAt": "2026-08-22T02:27:10.383Z"
     },
     {
-      "id": "1aa84991-781d-448b-975b-9b9afec45738",
+      "id": "26d01071-c80d-4ddb-9aec-c8e5f46a3064",
       "linkType": "SALE_TASK",
       "source": {
         "type": "sale",
@@ -120,10 +120,10 @@
         "id": "entity-test-task-direct-sale-full"
       },
       "relationship": "sold-service",
-      "createdAt": "2026-08-21T00:06:52.647Z"
+      "createdAt": "2026-08-22T02:27:20.868Z"
     },
     {
-      "id": "b1c3cd3c-0b0d-4144-b2c8-96f3011d117b",
+      "id": "138c0706-79e0-4662-9a4e-45e6b4f97989",
       "linkType": "SALE_SITE",
       "source": {
         "type": "sale",
@@ -134,10 +134,10 @@
         "id": "hq"
       },
       "relationship": "sold-at",
-      "createdAt": "2026-08-21T00:06:28.226Z"
+      "createdAt": "2026-08-22T02:26:45.382Z"
     },
     {
-      "id": "eff7a294-34a4-455a-8809-b9f5585f0315",
+      "id": "80dbd3dc-5f8e-43cc-98e7-6388c8981d25",
       "linkType": "SALE_CHARACTER",
       "source": {
         "type": "sale",
@@ -145,10 +145,10 @@
       },
       "target": {
         "type": "character",
-        "id": "character-1775889257983-6pkhdapnl"
+        "id": "d8863d48-3ec0-40f2-b548-66bbaee9ca8a"
       },
       "relationship": "customer",
-      "createdAt": "2026-08-21T00:06:29.593Z"
+      "createdAt": "2026-08-22T02:26:46.818Z"
     }
   ]
 }

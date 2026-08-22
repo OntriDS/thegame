@@ -632,6 +632,7 @@ export enum LinkType {
   SALE_TASK = 'SALE_TASK',      // Sale created Task
   SALE_ITEM = 'SALE_ITEM',      // Sale sold Item
   SALE_FINREC = 'SALE_FINREC',    // Sale linked to Financial Record
+  SALE_PLAYER = 'SALE_PLAYER',    // Sale earned Player points
   SALE_CHARACTER = 'SALE_CHARACTER', // Sale customer/owner Character
   SALE_BUSINESS = 'SALE_BUSINESS',   // Sale counterparty is a Business
   SALE_SITE = 'SALE_SITE',      // Sale is performed at a Site
@@ -899,6 +900,7 @@ export enum CanonicalLinkType {
   SALE_ITEM = 'SALE_ITEM',
   SALE_TASK = 'SALE_TASK',
   SALE_FINREC = 'SALE_FINREC',
+  SALE_PLAYER = 'SALE_PLAYER',
 
   FINREC_SITE = 'FINREC_SITE',
   FINREC_CHARACTER = 'FINREC_CHARACTER',

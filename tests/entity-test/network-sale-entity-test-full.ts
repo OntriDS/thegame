@@ -45,6 +45,21 @@ async function expectNetworkRewards(playerId: string, before: ReturnType<typeof 
   });
 }
 
+async function findCharacterPlayer(): Promise<{ character: any; playerId: string } | null> {
+  const players = await getAllPlayers();
+  for (const character of await getAllCharacters()) {
+    const links = await getLinksFor({ type: EntityType.CHARACTER, id: character.id });
+    const link = links.find(candidate =>
+      candidate.linkType === 'CHARACTER_PLAYER' &&
+      candidate.relationship === 'primary' &&
+      candidate.target?.type === EntityType.PLAYER &&
+      players.some(player => player.id === candidate.target.id)
+    );
+    if (link?.target?.id) return { character, playerId: link.target.id };
+  }
+  return null;
+}
+
 describe('entity-test: full Network Sale', () => {
   const saleId = 'entity-test-sale-network-full';
   const itemId = 'entity-test-item-network-full';
@@ -76,10 +91,10 @@ describe('entity-test: full Network Sale', () => {
   it('runs the full Network product workflow, including restock-to-target', async () => {
     const now = getUTCNow();
     const timestamp = toUTCISOString(now);
-    const players = await getAllPlayers();
-    const character = (await getAllCharacters()).find(candidate => candidate.playerId && players.some(player => player.id === candidate.playerId));
-    if (!character || !character.playerId) throw new Error('Cannot run full Network Sale test: a Player-linked Character is required.');
-    const playerBefore = await getPlayerById(character.playerId);
+    const owner = await findCharacterPlayer();
+    if (!owner) throw new Error('Cannot run full Network Sale test: a Character with a canonical CHARACTER_PLAYER link is required.');
+    const { character, playerId } = owner;
+    const playerBefore = await getPlayerById(playerId);
     if (!playerBefore) throw new Error('Cannot run full Network Sale test: linked Player could not be loaded.');
     const pointsBefore = pointSnapshot(playerBefore);
 
@@ -153,14 +168,27 @@ describe('entity-test: full Network Sale', () => {
       expect(financialLinks.some(link => link.linkType === 'FINREC_ITEM')).toBe(false);
     }
     expect(soldItems.length).toBeGreaterThan(0);
-    expect(links.some(link => String(link.linkType) === 'SALE_PLAYER')).toBe(false);
+    await waitFor(async () => (await getLinksFor({ type: EntityType.SALE, id: saleId })).some(link =>
+      link.linkType === 'SALE_PLAYER' &&
+      link.relationship === 'points-earned' &&
+      link.target.type === EntityType.PLAYER &&
+      link.target.id === playerId
+    ));
+    const linksAfterRewards = await getLinksFor({ type: EntityType.SALE, id: saleId });
+    expect(linksAfterRewards).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        linkType: 'SALE_PLAYER',
+        relationship: 'points-earned',
+        target: { type: EntityType.PLAYER, id: playerId },
+      }),
+    ]));
     expect(links).toEqual(expect.arrayContaining([
       expect.objectContaining({ linkType: 'SALE_SITE', relationship: 'sold-at', target: { type: EntityType.SITE, id: 'hq' } }),
       expect.objectContaining({ linkType: 'SALE_ITEM', relationship: 'sold-item' }),
       expect.objectContaining({ linkType: 'SALE_CHARACTER', relationship: 'customer', target: { type: EntityType.CHARACTER, id: character.id } }),
       expect.objectContaining({ linkType: 'SALE_CHARACTER', relationship: 'owner', target: { type: EntityType.CHARACTER, id: character.id } }),
     ]));
-    expect(await getLinksFor({ type: EntityType.SALE, id: saleId })).not.toEqual(expect.arrayContaining([expect.objectContaining({ linkType: 'SALE_TASK' })]));
-    await expectNetworkRewards(character.playerId, pointsBefore, { xp: 4, rp: 2, fp: 0, hp: 0 });
+    expect(linksAfterRewards).not.toEqual(expect.arrayContaining([expect.objectContaining({ linkType: 'SALE_TASK' })]));
+    await expectNetworkRewards(playerId, pointsBefore, { xp: 4, rp: 2, fp: 0, hp: 0 });
   });
 });

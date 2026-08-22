@@ -2,7 +2,7 @@
 import type { Player, PlayerRewardsV1, PointAmountV1, Rewards } from '@/types/entities';
 import { getPlayerById, getCharacterById, upsertPlayer } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
-import { createLink } from '@/links/link-registry';
+import { createLink, getLinksFor } from '@/links/link-registry';
 import { LinkType, EntityType, FOUNDER_PLAYER_ID } from '@/types/enums';
 import { appendPlayerPointsLog } from './entities-logging';
 import { getUTCNow } from '@/lib/utils/utc-utils';
@@ -97,7 +97,7 @@ function assertCanConsumePoints(
 /**
  * Resolve a candidate id (playerId or characterId) to a valid playerId.
  * - If it's already a player id, return as-is.
- * - Else, if it's a character id, return character.playerId.
+ * - Else, if it's a character id, resolve the canonical CHARACTER_PLAYER link.
  * - Otherwise return null; callers must handle an unresolved recipient.
  */
 export async function resolveToPlayerIdMaybeCharacter(candidateId?: string | null): Promise<string | null> {
@@ -106,7 +106,18 @@ export async function resolveToPlayerIdMaybeCharacter(candidateId?: string | nul
       const asPlayer = await getPlayerById(candidateId);
       if (asPlayer) return candidateId;
       const asCharacter = await getCharacterById(candidateId);
-      if (asCharacter?.playerId) return asCharacter.playerId;
+      if (asCharacter) {
+        const links = await getLinksFor({ type: EntityType.CHARACTER, id: asCharacter.id });
+        const playerLink = links.find(link =>
+          link.linkType === LinkType.CHARACTER_PLAYER &&
+          link.relationship === 'primary' &&
+          link.target.type === EntityType.PLAYER &&
+          Boolean(link.target.id)
+        );
+        if (playerLink?.target.id) return playerLink.target.id;
+        // Read-only migration fallback for legacy Characters not linked yet.
+        if (asCharacter.playerId) return asCharacter.playerId;
+      }
     }
   } catch (e) {
     console.warn('[resolveToPlayerIdMaybeCharacter] Resolution error:', e);
@@ -129,6 +140,7 @@ export async function awardPointsToPlayer(
   customTimestamp?: string | Date
 ): Promise<void> {
   try {
+    const normalizedSourceType = String(sourceType).toLowerCase();
     if (!points) return;
 
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(playerId);
@@ -167,7 +179,7 @@ export async function awardPointsToPlayer(
     let linkType: LinkType;
     let sourceEntityType: EntityType;
 
-    switch (sourceType) {
+    switch (normalizedSourceType) {
       case 'task':
         linkType = LinkType.TASK_PLAYER;
         sourceEntityType = EntityType.TASK;
@@ -177,10 +189,9 @@ export async function awardPointsToPlayer(
         sourceEntityType = EntityType.FINANCIAL;
         break;
       case 'sale':
-        // Sale rewards are attributed through SALE_CHARACTER(owner) -> CHARACTER_PLAYER.
-        // Sale rewards are attributed through SALE_CHARACTER(owner) -> CHARACTER_PLAYER.
-        await appendPlayerPointsLog(resolvedPlayerId, points, sourceId, sourceType, customTimestamp);
-        return;
+        linkType = LinkType.SALE_PLAYER;
+        sourceEntityType = EntityType.SALE;
+        break;
       case 'item':
         linkType = LinkType.ITEM_PLAYER;
         sourceEntityType = EntityType.ITEM;
@@ -198,7 +209,7 @@ export async function awardPointsToPlayer(
     );
 
     await createLink(link);
-    await appendPlayerPointsLog(resolvedPlayerId, points, sourceId, sourceType, customTimestamp);
+    await appendPlayerPointsLog(resolvedPlayerId, points, sourceId, normalizedSourceType, customTimestamp);
   } catch (error) {
     console.error(`[awardPointsToPlayer] ❌ Failed to award points:`, error);
     throw error;
@@ -218,6 +229,7 @@ export async function stagePointsForPlayer(
   customTimestamp?: string | Date
 ): Promise<boolean> {
   try {
+    const normalizedSourceType = String(sourceType).toLowerCase();
     if (!points) return false;
 
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(playerId);
@@ -248,10 +260,10 @@ export async function stagePointsForPlayer(
     // Record the resolved recipient as soon as Task points enter pending state.
     // The link is idempotent and remains the source evidence when the points
     // later vest on collection.
-    if (sourceType === 'task') {
+    if (normalizedSourceType === 'task' || normalizedSourceType === 'sale') {
       await createLink(makeLink(
-        LinkType.TASK_PLAYER,
-        { type: EntityType.TASK, id: sourceId },
+        normalizedSourceType === 'task' ? LinkType.TASK_PLAYER : LinkType.SALE_PLAYER,
+        { type: normalizedSourceType === 'task' ? EntityType.TASK : EntityType.SALE, id: sourceId },
         { type: EntityType.PLAYER, id: resolvedPlayerId },
         'points-earned'
       ));
@@ -370,6 +382,7 @@ export async function rewardPointsToPlayer(
   customTimestamp?: string | Date
 ): Promise<void> {
   try {
+    const normalizedSourceType = String(sourceEntityType).toLowerCase();
     if (!points) return;
 
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(characterId);
@@ -404,14 +417,10 @@ export async function rewardPointsToPlayer(
     let linkType: LinkType;
     let resolvedSourceEntityType: EntityType;
 
-    switch (sourceEntityType) {
+    switch (normalizedSourceType) {
       case 'task': linkType = LinkType.TASK_PLAYER; resolvedSourceEntityType = EntityType.TASK; break;
       case 'financial': linkType = LinkType.FINREC_PLAYER; resolvedSourceEntityType = EntityType.FINANCIAL; break;
-      case 'sale':
-        // Sale rewards are attributed through SALE_CHARACTER(owner) -> CHARACTER_PLAYER.
-        // Sale rewards are attributed through SALE_CHARACTER(owner) -> CHARACTER_PLAYER.
-        await appendPlayerPointsLog(resolvedPlayerId, points, sourceEntityId, sourceEntityType, customTimestamp);
-        return;
+      case 'sale': linkType = LinkType.SALE_PLAYER; resolvedSourceEntityType = EntityType.SALE; break;
       case 'item': linkType = LinkType.ITEM_PLAYER; resolvedSourceEntityType = EntityType.ITEM; break;
       default: linkType = LinkType.TASK_PLAYER; resolvedSourceEntityType = EntityType.TASK; break;
     }
@@ -424,7 +433,7 @@ export async function rewardPointsToPlayer(
     );
 
     await createLink(link);
-    await appendPlayerPointsLog(resolvedPlayerId, points, sourceEntityId, sourceEntityType, customTimestamp);
+    await appendPlayerPointsLog(resolvedPlayerId, points, sourceEntityId, normalizedSourceType, customTimestamp);
 
 
   } catch (error) {
