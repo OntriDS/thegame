@@ -158,6 +158,13 @@ describe('entity-test: full Task collected', () => {
     const characterLinks = await getLinksFor({ type: EntityType.CHARACTER, id: linkedOwner.id });
     const items = await getItemsBySourceTaskId(TEST_TASK_ID);
     const financials = await getFinancialsBySourceTaskId(TEST_TASK_ID);
+    const taskCharacterLinks = links.filter(link => link.linkType === 'TASK_CHARACTER');
+    const characterPlayerLink = characterLinks.find(link =>
+      link.linkType === 'CHARACTER_PLAYER' &&
+      link.relationship === 'primary' &&
+      link.target.type === EntityType.PLAYER &&
+      link.target.id === ownerPlayerId
+    );
     const pointEvidence = links.filter(link => link.linkType === 'TASK_PLAYER' && link.relationship === 'points-earned');
     const playerAfterCollected = await getPlayerById(ownerPlayerId);
     if (!playerAfterCollected) throw new Error('Collected entity-test Player disappeared after collection.');
@@ -189,7 +196,8 @@ describe('entity-test: full Task collected', () => {
     const output = {
       task,
       links,
-      characterLinks,
+      characterPlayerLink,
+      taskCharacterLinks,
       items,
       financials,
       pointEvidence,
@@ -212,14 +220,20 @@ describe('entity-test: full Task collected', () => {
     expect(financials.length).toBeGreaterThanOrEqual(1);
     expect(pointEvidence).toHaveLength(1);
     expect(pointEvidence[0].target).toEqual({ type: EntityType.PLAYER, id: ownerPlayerId });
-    expect(characterLinks).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        linkType: 'CHARACTER_PLAYER',
-        relationship: 'primary',
-        target: { type: EntityType.PLAYER, id: ownerPlayerId },
-      }),
-    ]));
+    expect(characterPlayerLink).toEqual(expect.objectContaining({
+      linkType: 'CHARACTER_PLAYER',
+      relationship: 'primary',
+      target: { type: EntityType.PLAYER, id: ownerPlayerId },
+    }));
+    expect(taskCharacterLinks.filter(link => link.relationship === 'customer')).toHaveLength(0);
+    expect(taskCharacterLinks.filter(link => link.relationship === 'beneficiary')).toHaveLength(1);
+    expect(taskCharacterLinks.filter(link => link.relationship === 'owner')).toHaveLength(1);
     expect(links).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        linkType: 'TASK_TASK',
+        relationship: 'parent',
+        target: { type: EntityType.TASK, id: parent.id },
+      }),
       expect.objectContaining({ linkType: 'TASK_CHARACTER', relationship: 'owner', target: { type: EntityType.CHARACTER, id: linkedOwner.id } }),
       expect.objectContaining({ linkType: 'TASK_CHARACTER', relationship: 'beneficiary', target: { type: EntityType.CHARACTER, id: linkedOwner.id } }),
       expect.objectContaining({ linkType: 'TASK_ITEM' }),

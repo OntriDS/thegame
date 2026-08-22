@@ -609,6 +609,7 @@ export enum CommColor {
 /** Link types (Rosetta Stone / Links system) — each value names one kind of link between two entities. */
 export enum LinkType {
   // TASK relationships
+  TASK_TASK = 'TASK_TASK',      // Child Task points to its parent Task
   TASK_ITEM = 'TASK_ITEM',      // Task created Item
   TASK_FINREC = 'TASK_FINREC',    // Task linked to Financial Record
 
@@ -881,7 +882,7 @@ export enum CanonicalLinkType {
   ACCOUNT_CHARACTER = 'ACCOUNT_CHARACTER',
   CHARACTER_PLAYER = 'CHARACTER_PLAYER',
 
-  TASK_PARENT = 'TASK_PARENT',
+  TASK_TASK = 'TASK_TASK',
   TASK_SITE = 'TASK_SITE',
   TASK_CHARACTER = 'TASK_CHARACTER',
   TASK_PLAYER = 'TASK_PLAYER',

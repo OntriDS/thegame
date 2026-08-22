@@ -116,6 +116,7 @@ export function validateLinkTypeCompatibility(
   // Define valid link type combinations for all 39 link types
   const validCombinations: Record<LinkType, { source: EntityType[], target: EntityType[] }> = {
     // TASK relationships (7)
+    'TASK_TASK': { source: [EntityType.TASK], target: [EntityType.TASK] },
     'TASK_ITEM': { source: [EntityType.TASK], target: [EntityType.ITEM] },
     'TASK_FINREC': { source: [EntityType.TASK], target: [EntityType.FINANCIAL] },
 
@@ -249,6 +250,7 @@ async function checkReverseDuplicate(
 ): Promise<LinkValidationResult> {
   // Define canonical link types and their reverse pairs
   const canonicalPairs: Record<LinkType, LinkType | null> = {
+    [LinkType.TASK_TASK]: null,
     // Ownership: canonical is ITEM_CHARACTER, reverse is CHARACTER_ITEM
     [LinkType.ITEM_CHARACTER]: null, // Canonical - no reverse check needed
     [LinkType.CHARACTER_ITEM]: LinkType.ITEM_CHARACTER, // Reverse - check if canonical exists

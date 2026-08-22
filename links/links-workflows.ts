@@ -125,6 +125,25 @@ export async function syncTaskCharacterCounterpartyLinks(task: Task): Promise<vo
 }
 
 export async function processTaskEffects(task: Task): Promise<void> {
+  // Task hierarchy is a Task -> Task relationship. Keep parentId as a
+  // transitional compatibility field for the existing parent-child index,
+  // but make TASK_TASK the canonical relationship authority.
+  const existingTaskLinks = await getLinksFor({ type: EntityType.TASK, id: task.id });
+  const existingParentLinks = existingTaskLinks.filter((link) => link.linkType === LinkType.TASK_TASK);
+  for (const link of existingParentLinks) {
+    if (!task.parentId || link.target?.type !== EntityType.TASK || link.target.id !== task.parentId) {
+      await removeLink(link.id);
+    }
+  }
+  if (task.parentId) {
+    await createLink(makeLink(
+      LinkType.TASK_TASK,
+      { type: EntityType.TASK, id: task.id },
+      { type: EntityType.TASK, id: task.parentId },
+      'parent'
+    ));
+  }
+
   if (task.siteId) {
     const l = makeLink(LinkType.TASK_SITE, { type: EntityType.TASK, id: task.id }, { type: EntityType.SITE, id: task.siteId }, 'performed-at');
     await createLink(l);

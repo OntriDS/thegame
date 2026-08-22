@@ -28,5 +28,6 @@ All links are validated via `validateLink()` before creation in `link-registry.t
 ## Notes
 
 - Links are created by `processLinkEntity()` — the universal entry point
+- Task hierarchy uses `TASK_TASK`: the child Task points to its parent Task with relationship `parent`.
 - Business logic utils should be pure and not create links directly
 - Historical monthly KV lists under `thegame:logs:links:*` are obsolete; if any remain in Redis, delete them during DB cleanup (they are not read by the app anymore)

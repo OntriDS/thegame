@@ -221,9 +221,9 @@ export type CharacterSiteLinkV1 = LinkEnvelopeV1<
   { relationship: 'owns' }
 >;
 
-export type TaskParentLinkV1 = LinkEnvelopeV1<
-  CanonicalLinkType.TASK_PARENT,
-  { relationship: 'subtask' | 'recurrent-instance' }
+export type TaskTaskLinkV1 = LinkEnvelopeV1<
+  CanonicalLinkType.TASK_TASK,
+  { relationship: 'parent' }
 >;
 
 export type TaskSiteLinkV1 = LinkEnvelopeV1<
@@ -326,7 +326,7 @@ export type CanonicalLink =
   | AccountCharacterLinkV1
   | CharacterPlayerLinkV1
   | CharacterSiteLinkV1
-  | TaskParentLinkV1
+  | TaskTaskLinkV1
   | TaskSiteLinkV1
   | TaskCharacterLinkV1
   | TaskPlayerLinkV1
@@ -585,7 +585,7 @@ export interface Item extends EntityEnvelope {
  * - RECURRENT: Repeating tasks (templates + instances)
  * 
  * Key Concepts:
- * - Ambassador Fields: siteId, targetSiteId, parentId link to other entities
+ * - Transitional routing fields: siteId, targetSiteId, parentId; canonical relationships are Links
  * - Item Output DNA: outputItem* fields create TASK_ITEM links when completed
  * - Rewards: Only points (Player) - J$ earned via Points Exchange
  * - Links System: TASK_SITE, TASK_ITEM, TASK_CHARACTER, TASK_PLAYER
