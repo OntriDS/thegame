@@ -4,7 +4,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { getLinksFor } from '@/links/link-registry';
-import { getFinancialById } from '@/data-store/datastore';
+import { getFinancialById, getFinancialsByIds } from '@/data-store/datastore';
 import { EntityType, LinkType } from '@/types/enums';
 
 // Force dynamic rendering - this route accesses cookies
@@ -46,9 +46,7 @@ export async function GET(
     }
     
     // Fetch all FinancialRecords in parallel
-    const financialRecords = await Promise.all(
-      finrecIds.map(id => getFinancialById(id))
-    );
+    const financialRecords = await getFinancialsByIds(finrecIds);
     
     // Filter out null records and only include PERSONAL records (company records are for buyback tracking)
     const validRecords = financialRecords.filter((record): record is NonNullable<typeof record> => record !== null);

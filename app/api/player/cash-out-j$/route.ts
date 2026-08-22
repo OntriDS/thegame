@@ -5,7 +5,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { createFinancialRecordFromJ$CashOut } from '@/workflows/financial-record-utils';
 import { getLinksFor } from '@/links/link-registry';
-import { getFinancialById } from '@/data-store/datastore';
+import { getFinancialById, getFinancialsByIds } from '@/data-store/datastore';
 import { EntityType, LinkType } from '@/types/enums';
 
 // Force dynamic rendering - this route accesses cookies
@@ -23,9 +23,7 @@ async function getPlayerJ$Balance(playerId: string): Promise<number> {
     return 0;
   }
   
-  const financialRecords = await Promise.all(
-    finrecIds.map(id => getFinancialById(id))
-  );
+  const financialRecords = await getFinancialsByIds(finrecIds);
   
   const validRecords = financialRecords.filter((record): record is NonNullable<typeof record> => record !== null);
   // Only sum personal records (company records are for buyback tracking)

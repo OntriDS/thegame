@@ -4,7 +4,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { getLinksFor } from '@/links/link-registry';
-import { getFinancialById } from '@/data-store/datastore';
+import { getFinancialById, getFinancialsByIds } from '@/data-store/datastore';
 import { EntityType, LinkType } from '@/types/enums';
 import type { FinancialRecord } from '@/types/entities';
 
@@ -39,9 +39,7 @@ export async function GET(
     }
     
     // Fetch all FinancialRecords in parallel
-    const financialRecords = await Promise.all(
-      finrecIds.map(id => getFinancialById(id))
-    );
+    const financialRecords = await getFinancialsByIds(finrecIds);
     
     // Filter out null records and only include PERSONAL records (player's J$ transactions)
     const validRecords = financialRecords.filter((record): record is FinancialRecord => record !== null);
