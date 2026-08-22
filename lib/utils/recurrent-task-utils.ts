@@ -235,7 +235,7 @@ export async function spawnNextRecurrentInstance(
 
   // 7. Spawn the instance
   const formattedDate = formatDayMonthYear(nextDateLocal);
-  const counterparty = await getTemplateCounterpartyCommand(template);
+  const refs = await getTemplateLinkReferences(template);
   const instance: Task = {
     ...getCanonicalSpawnBase(template),
     id: uuid(),
@@ -247,8 +247,10 @@ export async function spawnNextRecurrentInstance(
       ...(scheduledEnd ? { scheduledEnd: toRecurrentUTC(scheduledEnd) } : {}),
     },
     parentId: template.id,
-    ownerIds: template.ownerIds || [],
-    ...(counterparty ? { __counterparty: counterparty } : {}),
+    ownerIds: refs.owners.length > 0 ? refs.owners : (template.ownerIds || []),
+    ...(refs.siteId ? { siteId: refs.siteId } : {}),
+    ...(refs.targetSiteId ? { targetSiteId: refs.targetSiteId } : {}),
+    ...(refs.counterparty ? { __counterparty: refs.counterparty } : {}),
     context: buildCanonicalInstanceContext(template, template.id),
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -815,36 +817,46 @@ export async function validateSpawnOperation(template: Task): Promise<Validation
   return { isValid: true };
 }
 
-/** Resolve the template's canonical TASK_CHARACTER counterparty for spawning. */
-async function getTemplateCounterpartyCommand(
-  template: Task
-): Promise<{ id: string; role: 'customer' | 'beneficiary' } | null> {
+/** Resolve the template's canonical links (counterparty, owners, sites) for spawning. */
+async function getTemplateLinkReferences(template: Task) {
   const links = await getLinksFor({ type: EntityType.TASK, id: template.id });
-  const link = links.find((candidate: any) =>
+  
+  const owners = links
+    .filter((l: any) => l.linkType === LinkType.TASK_CHARACTER && l.relationship === 'owner')
+    .map((l: any) => l.target.id);
+    
+  const siteLink = links.find((l: any) => l.linkType === LinkType.TASK_SITE && l.relationship === 'performed-at');
+  const targetSiteLink = links.find((l: any) => l.linkType === LinkType.TASK_SITE && l.relationship === 'target-location');
+  
+  const counterpartyLink = links.find((candidate: any) =>
     candidate.linkType === LinkType.TASK_CHARACTER &&
     String(candidate.target?.type || '').toLowerCase() === String(EntityType.CHARACTER).toLowerCase() &&
     ['customer', 'beneficiary'].includes(String(candidate.relationship || '').toLowerCase()) &&
     Boolean(candidate.target?.id)
   );
 
-  if (link?.target?.id) {
-    return {
-      id: link.target.id,
-      role: String(link.relationship).toLowerCase() === 'beneficiary' ? 'beneficiary' : 'customer',
+  let counterparty = null;
+  if (counterpartyLink?.target?.id) {
+    counterparty = {
+      id: counterpartyLink.target.id,
+      role: String(counterpartyLink.relationship).toLowerCase() === 'beneficiary' ? 'beneficiary' : 'customer',
     };
+  } else {
+    const legacy = (template as any).context?.counterparty;
+    if (legacy?.counterpartyId || legacy?.id) {
+      counterparty = {
+        id: legacy.counterpartyId || legacy.id,
+        role: String(legacy.role || '').toLowerCase() === 'beneficiary' ? 'beneficiary' : 'customer',
+      };
+    }
   }
 
-  // Read-only compatibility for templates created before TASK_CHARACTER was
-  // canonical. New instances still materialize the link through __counterparty.
-  const legacy = (template as any).context?.counterparty;
-  if (legacy?.counterpartyId || legacy?.id) {
-    return {
-      id: legacy.counterpartyId || legacy.id,
-      role: String(legacy.role || '').toLowerCase() === 'beneficiary' ? 'beneficiary' : 'customer',
-    };
-  }
-
-  return null;
+  return {
+    owners,
+    siteId: siteLink?.target?.id || null,
+    targetSiteId: targetSiteLink?.target?.id || null,
+    counterparty
+  };
 }
 
 function buildCanonicalInstanceContext(template: Task, originTemplateId: string) {
