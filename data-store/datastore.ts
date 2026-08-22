@@ -211,6 +211,10 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
     schemaVersion: normalizedTask.schemaVersion ?? EntitySchemaVersion.V1,
     version: previous ? ((previous.version ?? 0) + 1) : (normalizedTask.version ?? 0),
   } as Task;
+  // Capture legacy fields for link creation before stripping them from persistence
+  const { siteId, targetSiteId } = persistedTask as any;
+  delete (persistedTask as any).siteId;
+  delete (persistedTask as any).targetSiteId;
   delete (persistedTask as any).ownerIds;
   delete (persistedTask as any).__counterparty;
   const saved = await repoUpsertTask(persistedTask);
@@ -278,6 +282,8 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
   if (!options?.skipLinkEffects) {
     const linkInput = {
       ...saved,
+      ...(siteId ? { siteId } : {}),
+      ...(targetSiteId ? { targetSiteId } : {}),
       ...(hasOwnerSelection ? { ownerIds: requestedOwnerIds } : {}),
       ...(taskCounterparty ? { __counterparty: taskCounterparty } : {}),
     };
@@ -300,10 +306,17 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
     const linkInput = latest
       ? {
           ...latest,
+          ...(siteId ? { siteId } : {}),
+          ...(targetSiteId ? { targetSiteId } : {}),
           ...(hasOwnerSelection ? { ownerIds: requestedOwnerIds } : {}),
           ...(taskCounterparty ? { __counterparty: taskCounterparty } : {}),
         }
-      : (taskCounterparty ? { ...saved, __counterparty: taskCounterparty } : saved);
+      : {
+          ...saved,
+          ...(siteId ? { siteId } : {}),
+          ...(targetSiteId ? { targetSiteId } : {}),
+          ...(taskCounterparty ? { __counterparty: taskCounterparty } : {}),
+        };
     await processLinkEntity(linkInput, EntityType.TASK);
   }
 

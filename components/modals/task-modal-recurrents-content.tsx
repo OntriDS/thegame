@@ -388,6 +388,16 @@ export default function RecurrentTreeModalContent({
         setIsNewCustomer(false);
         setNewCustomerName('');
       }
+      const siteLinks = links.filter((link: any) => link.linkType === 'TASK_SITE' && link.target?.type === 'site');
+      const siteId = siteLinks.find((l: any) => l.relationship === 'performed-at')?.target.id;
+      const targetSiteId = siteLinks.find((l: any) => l.relationship === 'target')?.target.id;
+      if (siteId || targetSiteId) {
+        setFormData(prev => ({
+          ...prev,
+          ...(siteId ? { site: siteId } : {}),
+          ...(targetSiteId ? { targetSite: targetSiteId } : {})
+        }));
+      }
     }).catch(() => undefined);
     return () => { cancelled = true; };
   }, [open, task?.id, task?.updatedAt]);
