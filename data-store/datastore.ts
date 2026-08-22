@@ -330,11 +330,29 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
 
 export async function hydrateTaskCompatibility(task: Task): Promise<Task> {
   const { getLinksFor } = await import('@/links/link-registry');
+  const { CharacterRole } = await import('@/types/enums');
   const links = await getLinksFor({ type: EntityType.TASK, id: task.id });
-  const parentLink = links.find(l => l.linkType === 'TASK_TASK' && l.source.type === EntityType.TASK && l.source.id === task.id);
+  
+  const sourceLinks = links.filter(l => l.source.type === EntityType.TASK && l.source.id === task.id);
+  
+  const parentLink = sourceLinks.find(l => l.linkType === 'TASK_TASK' && l.relationship === 'parent');
+  const ownerLinks = sourceLinks.filter(l => l.linkType === 'TASK_CHARACTER' && l.relationship === 'owner');
+  const siteLink = sourceLinks.find(l => l.linkType === 'TASK_SITE' && l.relationship === 'performed-at');
+  const targetSiteLink = sourceLinks.find(l => l.linkType === 'TASK_SITE' && l.relationship === 'target-location');
+  const counterpartyLink = sourceLinks.find(l => l.linkType === 'TASK_CHARACTER' && (l.relationship === 'beneficiary' || l.relationship === 'customer'));
+  
   return {
     ...task,
-    ...(parentLink ? { parentId: parentLink.target.id } : { parentId: null })
+    ...(parentLink ? { parentId: parentLink.target.id } : { parentId: task.parentId || null }),
+    ...(ownerLinks.length > 0 ? { ownerIds: ownerLinks.map(l => l.target.id) } : { ownerIds: task.ownerIds || [] }),
+    ...(siteLink ? { siteId: siteLink.target.id } : { siteId: (task as any).siteId || null }),
+    ...(targetSiteLink ? { targetSiteId: targetSiteLink.target.id } : { targetSiteId: (task as any).targetSiteId || null }),
+    ...(counterpartyLink ? {
+      __counterparty: {
+        role: counterpartyLink.relationship === 'beneficiary' ? CharacterRole.BENEFICIARY : CharacterRole.CUSTOMER,
+        id: counterpartyLink.target.id
+      }
+    } : { __counterparty: (task as any).__counterparty || undefined })
   };
 }
 
