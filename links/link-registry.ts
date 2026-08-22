@@ -65,6 +65,7 @@ export async function createLink(link: Link, options?: { skipValidation?: boolea
   
   await kvSAdd(buildLinksIndexKey(link.source.type, link.source.id), link.id);
   await kvSAdd(buildLinksIndexKey(link.target.type, link.target.id), link.id);
+  await kvSAdd(buildLinksGlobalIndexKey(), link.id);
   
   return true; // Link was created
 }
