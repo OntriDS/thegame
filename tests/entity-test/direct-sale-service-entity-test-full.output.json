@@ -44,8 +44,8 @@
       }
     },
     "lifecycle": {
-      "chargedAt": "2026-08-22T02:26:41.185Z",
-      "doneAt": "2026-08-22T02:26:41.185Z"
+      "chargedAt": "2026-08-22T16:44:48.815Z",
+      "doneAt": "2026-08-22T16:44:48.815Z"
     },
     "context": {
       "rewardIntent": {
@@ -57,8 +57,8 @@
         }
       }
     },
-    "createdAt": "2026-08-22T02:26:41.185Z",
-    "updatedAt": "2026-08-22T02:26:41.185Z"
+    "createdAt": "2026-08-22T16:44:48.815Z",
+    "updatedAt": "2026-08-22T16:44:48.815Z"
   },
   "task": {
     "id": "entity-test-task-direct-sale-full",
@@ -72,58 +72,16 @@
       "percentage": 0
     },
     "order": 1000,
-    "createdAt": "2026-08-22T02:27:13.329Z",
-    "updatedAt": "2026-08-22T02:27:13.329Z",
-    "siteId": "hq",
+    "createdAt": "2026-08-22T16:45:10.287Z",
+    "updatedAt": "2026-08-22T16:45:10.287Z",
     "context": {},
     "schemaVersion": 1,
-    "version": 0
+    "version": 0,
+    "parentId": null
   },
   "links": [
     {
-      "id": "fcff5ffb-7204-440b-85f6-be7a4b06062f",
-      "linkType": "SALE_CHARACTER",
-      "source": {
-        "type": "sale",
-        "id": "entity-test-sale-direct-service-full"
-      },
-      "target": {
-        "type": "character",
-        "id": "d8863d48-3ec0-40f2-b548-66bbaee9ca8a"
-      },
-      "relationship": "owner",
-      "createdAt": "2026-08-22T02:26:49.070Z"
-    },
-    {
-      "id": "03849fea-2b84-438b-a2c6-665e470b4bf8",
-      "linkType": "SALE_FINREC",
-      "source": {
-        "type": "sale",
-        "id": "entity-test-sale-direct-service-full"
-      },
-      "target": {
-        "type": "financial",
-        "id": "finrec-entity-test-sale-direct-service-full"
-      },
-      "relationship": "sale-record",
-      "createdAt": "2026-08-22T02:27:10.383Z"
-    },
-    {
-      "id": "26d01071-c80d-4ddb-9aec-c8e5f46a3064",
-      "linkType": "SALE_TASK",
-      "source": {
-        "type": "sale",
-        "id": "entity-test-sale-direct-service-full"
-      },
-      "target": {
-        "type": "task",
-        "id": "entity-test-task-direct-sale-full"
-      },
-      "relationship": "sold-service",
-      "createdAt": "2026-08-22T02:27:20.868Z"
-    },
-    {
-      "id": "138c0706-79e0-4662-9a4e-45e6b4f97989",
+      "id": "cee86018-040a-45b7-83d0-1cea143ddab4",
       "linkType": "SALE_SITE",
       "source": {
         "type": "sale",
@@ -134,10 +92,10 @@
         "id": "hq"
       },
       "relationship": "sold-at",
-      "createdAt": "2026-08-22T02:26:45.382Z"
+      "createdAt": "2026-08-22T16:44:51.984Z"
     },
     {
-      "id": "80dbd3dc-5f8e-43cc-98e7-6388c8981d25",
+      "id": "3da14334-e3dc-41e8-94ce-b21c62ce7437",
       "linkType": "SALE_CHARACTER",
       "source": {
         "type": "sale",
@@ -145,10 +103,52 @@
       },
       "target": {
         "type": "character",
-        "id": "d8863d48-3ec0-40f2-b548-66bbaee9ca8a"
+        "id": "045911e4-2c26-428a-9757-5cea3032ceb3"
       },
       "relationship": "customer",
-      "createdAt": "2026-08-22T02:26:46.818Z"
+      "createdAt": "2026-08-22T16:44:53.322Z"
+    },
+    {
+      "id": "ef0881a7-0159-409d-900f-cd4097f04f53",
+      "linkType": "SALE_CHARACTER",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-direct-service-full"
+      },
+      "target": {
+        "type": "character",
+        "id": "045911e4-2c26-428a-9757-5cea3032ceb3"
+      },
+      "relationship": "owner",
+      "createdAt": "2026-08-22T16:44:55.091Z"
+    },
+    {
+      "id": "8f8f8381-37e8-4988-83cc-45e53f98aaeb",
+      "linkType": "SALE_FINREC",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-direct-service-full"
+      },
+      "target": {
+        "type": "financial",
+        "id": "finrec-entity-test-sale-direct-service-full"
+      },
+      "relationship": "sale-record",
+      "createdAt": "2026-08-22T16:45:07.608Z"
+    },
+    {
+      "id": "f423fd40-16ef-4047-ad31-9c2a725bcda0",
+      "linkType": "SALE_TASK",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-direct-service-full"
+      },
+      "target": {
+        "type": "task",
+        "id": "entity-test-task-direct-sale-full"
+      },
+      "relationship": "sold-service",
+      "createdAt": "2026-08-22T16:45:17.282Z"
     }
   ]
 }

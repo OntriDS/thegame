@@ -25,8 +25,8 @@
       "collection": "no-collection",
       "year": 2026
     },
-    "createdAt": "2026-08-20T22:56:14.842Z",
-    "updatedAt": "2026-08-20T22:56:14.842Z",
+    "createdAt": "2026-08-22T16:42:28.449Z",
+    "updatedAt": "2026-08-22T16:42:28.449Z",
     "schemaVersion": 1,
     "version": 0
   },
@@ -56,13 +56,13 @@
       "collection": "no-collection",
       "year": 2026
     },
-    "createdAt": "2026-08-20T22:56:14.842Z",
-    "updatedAt": "2026-08-20T22:56:27.569Z",
+    "createdAt": "2026-08-22T16:42:28.449Z",
+    "updatedAt": "2026-08-22T16:42:41.952Z",
     "schemaVersion": 1,
     "version": 2
   },
   "soldClone": {
-    "id": "entity-test-item-manual-sold-manualsold-1787266583214",
+    "id": "entity-test-item-manual-sold-manualsold-1787416957486",
     "name": "testing-manual-sold-item",
     "type": "bundle",
     "subItemType": "sticker",
@@ -86,10 +86,10 @@
     "context": {
       "collection": "no-collection",
       "year": 2026,
-      "soldAt": "2026-08-20T22:56:23.214Z"
+      "soldAt": "2026-08-22T16:42:37.486Z"
     },
-    "createdAt": "2026-08-20T22:56:14.842Z",
-    "updatedAt": "2026-08-20T22:56:23.214Z",
+    "createdAt": "2026-08-22T16:42:28.449Z",
+    "updatedAt": "2026-08-22T16:42:37.486Z",
     "schemaVersion": 1,
     "version": 0,
     "quantitySold": 1,
@@ -121,8 +121,8 @@
       "collection": "no-collection",
       "year": 2026
     },
-    "createdAt": "2026-08-20T22:56:14.842Z",
-    "updatedAt": "2026-08-20T22:56:37.154Z",
+    "createdAt": "2026-08-22T16:42:28.449Z",
+    "updatedAt": "2026-08-22T16:42:51.922Z",
     "schemaVersion": 1,
     "version": 3
   },

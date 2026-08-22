@@ -9,7 +9,7 @@
     {
       "lineId": "online-line-1",
       "kind": "item",
-      "itemId": "67ccebd6-681e-4791-8ed6-28332de66e8b",
+      "itemId": "imported-1762140802805-97",
       "quantity": 1,
       "unitPrice": {
         "minorUnits": "5000",
@@ -28,6 +28,6 @@
     }
   },
   "lifecycle": {},
-  "createdAt": "2026-08-20T20:10:16.032Z",
-  "updatedAt": "2026-08-20T20:10:16.032Z"
+  "createdAt": "2026-08-22T16:42:49.774Z",
+  "updatedAt": "2026-08-22T16:42:49.774Z"
 }

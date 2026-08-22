@@ -1,28 +1,28 @@
 {
   "account": {
-    "id": "6a1ad333-26eb-4038-b31e-9949d4bb549b",
+    "id": "cc02a69b-7fdb-4820-a4e7-befbc6d37343",
     "name": "testing-account",
     "email": "entity-test-account-clean@example.test",
     "isActive": true,
     "isVerified": false,
     "characterId": "entity-test-account-character-clean",
-    "createdAt": "2026-08-21T16:05:16.757Z",
-    "updatedAt": "2026-08-21T16:05:17.570Z"
+    "createdAt": "2026-08-22T16:42:55.393Z",
+    "updatedAt": "2026-08-22T16:42:56.403Z"
   },
   "links": [
     {
-      "id": "a733e306-dc48-4742-b726-9208437fdda3",
+      "id": "ae976323-6eaa-4244-a979-6910fe10d4da",
       "linkType": "ACCOUNT_CHARACTER",
       "source": {
         "type": "account",
-        "id": "6a1ad333-26eb-4038-b31e-9949d4bb549b"
+        "id": "cc02a69b-7fdb-4820-a4e7-befbc6d37343"
       },
       "target": {
         "type": "character",
         "id": "entity-test-account-character-clean"
       },
       "relationship": "primary",
-      "createdAt": "2026-08-21T16:05:17.570Z"
+      "createdAt": "2026-08-22T16:42:56.403Z"
     }
   ]
 }

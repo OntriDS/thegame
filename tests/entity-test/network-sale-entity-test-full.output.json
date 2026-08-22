@@ -43,8 +43,8 @@
       }
     },
     "lifecycle": {
-      "chargedAt": "2026-08-22T01:33:28.194Z",
-      "doneAt": "2026-08-22T01:33:28.194Z"
+      "chargedAt": "2026-08-22T16:43:16.065Z",
+      "doneAt": "2026-08-22T16:43:16.065Z"
     },
     "context": {
       "rewardIntent": {
@@ -56,8 +56,8 @@
         }
       }
     },
-    "createdAt": "2026-08-22T01:33:28.194Z",
-    "updatedAt": "2026-08-22T01:33:28.194Z"
+    "createdAt": "2026-08-22T16:43:16.065Z",
+    "updatedAt": "2026-08-22T16:43:16.065Z"
   },
   "item": {
     "id": "entity-test-item-network-full",
@@ -87,15 +87,15 @@
       "restockToTarget": true,
       "targetAmount": 3
     },
-    "createdAt": "2026-08-22T01:33:28.194Z",
-    "updatedAt": "2026-08-22T01:33:41.852Z",
+    "createdAt": "2026-08-22T16:43:16.065Z",
+    "updatedAt": "2026-08-22T16:43:28.320Z",
     "schemaVersion": 1,
     "version": 1
   },
   "financials": [
     {
       "id": "finrec-entity-test-sale-network-full",
-      "name": "network sale • HQ • 21-08-26",
+      "name": "network sale • HQ • 22-08-26",
       "description": "Sale-sourced financial · entity-test-sale-network-full",
       "year": 2026,
       "month": 8,
@@ -115,31 +115,17 @@
         "currency": "USD"
       },
       "lifecycle": {
-        "doneAt": "2026-08-22T01:33:28.194Z"
+        "doneAt": "2026-08-22T16:43:16.065Z"
       },
-      "createdAt": "2026-08-22T01:33:43.687Z",
-      "updatedAt": "2026-08-22T01:33:43.687Z",
+      "createdAt": "2026-08-22T16:43:29.776Z",
+      "updatedAt": "2026-08-22T16:43:29.776Z",
       "schemaVersion": 1,
       "version": 0
     }
   ],
   "links": [
     {
-      "id": "b9e731d5-b284-40b3-98be-e10d6f603f1f",
-      "linkType": "SALE_ITEM",
-      "source": {
-        "type": "sale",
-        "id": "entity-test-sale-network-full"
-      },
-      "target": {
-        "type": "item",
-        "id": "entity-test-item-network-full-sold-network-line-full"
-      },
-      "relationship": "sold-item",
-      "createdAt": "2026-08-22T01:33:54.223Z"
-    },
-    {
-      "id": "4850d85d-2ce9-49bc-a265-dfea06c89d83",
+      "id": "d4f2821b-89d6-4be4-b1fe-38b6e33bc221",
       "linkType": "SALE_SITE",
       "source": {
         "type": "sale",
@@ -150,10 +136,10 @@
         "id": "hq"
       },
       "relationship": "sold-at",
-      "createdAt": "2026-08-22T01:33:34.670Z"
+      "createdAt": "2026-08-22T16:43:22.003Z"
     },
     {
-      "id": "c6b0c028-fe36-4f90-8115-3ab984e8b809",
+      "id": "aca4098a-208f-4f97-8d20-b52aa1c95c89",
       "linkType": "SALE_CHARACTER",
       "source": {
         "type": "sale",
@@ -161,13 +147,13 @@
       },
       "target": {
         "type": "character",
-        "id": "character-1766452268320-fzg64q5np"
+        "id": "fb1a4ad6-0656-4ba2-9675-0acce8e4df20"
       },
       "relationship": "customer",
-      "createdAt": "2026-08-22T01:33:35.929Z"
+      "createdAt": "2026-08-22T16:43:23.303Z"
     },
     {
-      "id": "25ecd754-7f7a-44dc-95c4-c069392c2236",
+      "id": "016fee89-a2e1-4557-95b2-98922060313a",
       "linkType": "SALE_CHARACTER",
       "source": {
         "type": "sale",
@@ -175,13 +161,27 @@
       },
       "target": {
         "type": "character",
-        "id": "character-1766452268320-fzg64q5np"
+        "id": "fb1a4ad6-0656-4ba2-9675-0acce8e4df20"
       },
       "relationship": "owner",
-      "createdAt": "2026-08-22T01:33:37.656Z"
+      "createdAt": "2026-08-22T16:43:24.948Z"
     },
     {
-      "id": "831665ac-28cd-4153-b585-ce74a5b95b62",
+      "id": "b2ed4c8b-c473-46d7-a4ce-2b77d2b994b2",
+      "linkType": "SALE_PLAYER",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-network-full"
+      },
+      "target": {
+        "type": "player",
+        "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
+      },
+      "relationship": "points-earned",
+      "createdAt": "2026-08-22T16:43:55.175Z"
+    },
+    {
+      "id": "3bf306c6-30e7-4a08-96c9-751afc42d2af",
       "linkType": "SALE_FINREC",
       "source": {
         "type": "sale",
@@ -192,7 +192,21 @@
         "id": "finrec-entity-test-sale-network-full"
       },
       "relationship": "sale-record",
-      "createdAt": "2026-08-22T01:33:50.648Z"
+      "createdAt": "2026-08-22T16:43:36.388Z"
+    },
+    {
+      "id": "f3247d1f-23c9-4266-859d-09dd9dcb809a",
+      "linkType": "SALE_ITEM",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-network-full"
+      },
+      "target": {
+        "type": "item",
+        "id": "entity-test-item-network-full-sold-network-line-full"
+      },
+      "relationship": "sold-item",
+      "createdAt": "2026-08-22T16:43:40.550Z"
     }
   ],
   "soldItems": [
@@ -227,15 +241,15 @@
         "year": 2026,
         "restockToTarget": true,
         "targetAmount": 3,
-        "soldAt": "2026-08-22T01:33:28.194Z"
+        "soldAt": "2026-08-22T16:43:16.065Z"
       },
-      "createdAt": "2026-08-22T01:33:28.194Z",
-      "updatedAt": "2026-08-22T01:33:54.440Z",
+      "createdAt": "2026-08-22T16:43:16.065Z",
+      "updatedAt": "2026-08-22T16:43:40.147Z",
       "schemaVersion": 1,
       "version": 2,
       "quantitySold": 1,
       "sourceRecordId": "entity-test-sale-network-full",
-      "description": "Sold in Shawnna Altieri • Osa de Rio (22-08-2026)"
+      "description": "Sold in Tian (22-08-2026)"
     }
   ]
 }

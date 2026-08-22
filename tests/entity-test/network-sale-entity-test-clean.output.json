@@ -9,7 +9,7 @@
     {
       "lineId": "network-line-1",
       "kind": "item",
-      "itemId": "imported-1762140802806-252",
+      "itemId": "ecbfec26-9367-492d-aaa9-8754f9eea7f1",
       "quantity": 1,
       "unitPrice": {
         "minorUnits": "5000",
@@ -28,6 +28,6 @@
     }
   },
   "lifecycle": {},
-  "createdAt": "2026-08-20T20:13:14.456Z",
-  "updatedAt": "2026-08-20T20:13:14.456Z"
+  "createdAt": "2026-08-22T16:42:16.881Z",
+  "updatedAt": "2026-08-22T16:42:16.881Z"
 }

@@ -43,8 +43,8 @@
       }
     },
     "lifecycle": {
-      "chargedAt": "2026-08-21T00:00:30.983Z",
-      "doneAt": "2026-08-21T00:00:30.983Z"
+      "chargedAt": "2026-08-22T16:37:35.473Z",
+      "doneAt": "2026-08-22T16:37:35.473Z"
     },
     "context": {
       "source": "akiles-ecosystem",
@@ -65,17 +65,19 @@
         }
       }
     },
-    "createdAt": "2026-08-21T00:00:30.983Z",
-    "updatedAt": "2026-08-21T00:00:30.983Z"
+    "createdAt": "2026-08-22T16:37:35.473Z",
+    "updatedAt": "2026-08-22T16:37:35.473Z"
   },
   "financials": [
     {
       "id": "finrec-entity-test-sale-online-full",
-      "name": "online sale • HQ • 20-08-26",
+      "name": "online sale • HQ • 22-08-26",
+      "description": "Sale-sourced financial · entity-test-sale-online-full",
       "year": 2026,
       "month": 8,
       "station": "online-sales",
       "type": "company",
+      "salesChannel": "online-sales",
       "cost": {
         "minorUnits": "300",
         "currency": "USD"
@@ -84,67 +86,22 @@
         "minorUnits": "6125",
         "currency": "USD"
       },
-      "createdAt": "2026-08-21T00:00:42.831Z",
-      "updatedAt": "2026-08-21T00:00:42.831Z",
-      "schemaVersion": 1,
-      "version": 0,
       "netCashflow": {
         "minorUnits": "5825",
         "currency": "USD"
       },
-      "status": "done",
-      "description": "Sale-sourced financial · entity-test-sale-online-full",
-      "salesChannel": "online-sales",
       "lifecycle": {
-        "doneAt": "2026-08-21T00:00:30.983Z"
-      }
+        "doneAt": "2026-08-22T16:37:35.473Z"
+      },
+      "createdAt": "2026-08-22T16:37:46.812Z",
+      "updatedAt": "2026-08-22T16:37:46.812Z",
+      "schemaVersion": 1,
+      "version": 0
     }
   ],
   "links": [
     {
-      "id": "289cfd11-6dc7-4da8-a114-5f444fcf8533",
-      "linkType": "SALE_CHARACTER",
-      "source": {
-        "type": "sale",
-        "id": "entity-test-sale-online-full"
-      },
-      "target": {
-        "type": "character",
-        "id": "fd409c60-a316-4b23-a68a-d9e14903e42f"
-      },
-      "relationship": "customer",
-      "createdAt": "2026-08-21T00:00:36.953Z"
-    },
-    {
-      "id": "b51eb19b-f6f2-4cdb-90a9-4c2bf638336c",
-      "linkType": "SALE_ITEM",
-      "source": {
-        "type": "sale",
-        "id": "entity-test-sale-online-full"
-      },
-      "target": {
-        "type": "item",
-        "id": "entity-test-item-online-full"
-      },
-      "relationship": "sold-item",
-      "createdAt": "2026-08-21T00:00:42.238Z"
-    },
-    {
-      "id": "86bd4da7-ae19-4732-bd21-6d3f344a3f1f",
-      "linkType": "SALE_FINREC",
-      "source": {
-        "type": "sale",
-        "id": "entity-test-sale-online-full"
-      },
-      "target": {
-        "type": "financial",
-        "id": "finrec-entity-test-sale-online-full"
-      },
-      "relationship": "sale-record",
-      "createdAt": "2026-08-21T00:00:49.763Z"
-    },
-    {
-      "id": "a8065d34-2fb0-467f-98b1-b184d64d772c",
+      "id": "bbda2ba8-00d0-499b-ab37-7c1aa70d8520",
       "linkType": "SALE_ITEM",
       "source": {
         "type": "sale",
@@ -155,10 +112,10 @@
         "id": "entity-test-item-online-full-sold-online-line-full"
       },
       "relationship": "sold-item",
-      "createdAt": "2026-08-21T00:00:57.829Z"
+      "createdAt": "2026-08-22T16:38:02.032Z"
     },
     {
-      "id": "5e31ea0d-e25d-4073-8a6c-dca2db96f427",
+      "id": "5d91747f-bc6f-48d2-95c4-d22f81ee22be",
       "linkType": "SALE_SITE",
       "source": {
         "type": "sale",
@@ -169,7 +126,49 @@
         "id": "hq"
       },
       "relationship": "sold-at",
-      "createdAt": "2026-08-21T00:00:35.600Z"
+      "createdAt": "2026-08-22T16:37:40.162Z"
+    },
+    {
+      "id": "7c5293df-82a0-4db0-8e04-a96b7f9b26f3",
+      "linkType": "SALE_CHARACTER",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-online-full"
+      },
+      "target": {
+        "type": "character",
+        "id": "45ab6bf0-d5ed-408a-bbf3-202e927e0373"
+      },
+      "relationship": "customer",
+      "createdAt": "2026-08-22T16:37:41.440Z"
+    },
+    {
+      "id": "d512f5f3-f120-4c6b-8b6a-0da745e81a05",
+      "linkType": "SALE_ITEM",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-online-full"
+      },
+      "target": {
+        "type": "item",
+        "id": "entity-test-item-online-full"
+      },
+      "relationship": "sold-item",
+      "createdAt": "2026-08-22T16:37:46.412Z"
+    },
+    {
+      "id": "56ddf16a-baf0-4ef8-8456-11ec6df37c66",
+      "linkType": "SALE_FINREC",
+      "source": {
+        "type": "sale",
+        "id": "entity-test-sale-online-full"
+      },
+      "target": {
+        "type": "financial",
+        "id": "finrec-entity-test-sale-online-full"
+      },
+      "relationship": "sale-record",
+      "createdAt": "2026-08-22T16:37:53.494Z"
     }
   ],
   "soldItems": [
@@ -203,15 +202,15 @@
         "collection": "no-collection",
         "year": 2026,
         "restockToTarget": false,
-        "soldAt": "2026-08-21T00:00:30.983Z"
+        "soldAt": "2026-08-22T16:37:35.473Z"
       },
-      "createdAt": "2026-08-21T00:00:30.983Z",
-      "updatedAt": "2026-08-21T00:00:53.566Z",
+      "createdAt": "2026-08-22T16:37:35.473Z",
+      "updatedAt": "2026-08-22T16:37:57.564Z",
       "schemaVersion": 1,
       "version": 0,
       "quantitySold": 1,
       "sourceRecordId": "entity-test-sale-online-full",
-      "description": "Sold in Cristina • Coquette's Armoire (21-08-2026)"
+      "description": "Sold in Pagadito (22-08-2026)"
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "task": {
-    "id": "9830c56a-7af3-43bf-8c59-08e161ac8ec9",
+    "id": "a4e56f8b-751b-47fd-b5dc-f973fc8685d5",
     "name": "testing-task-full",
     "status": "created",
     "priority": "normal",
@@ -10,11 +10,9 @@
       "percentage": 0
     },
     "schedule": {
-      "dueDate": "2026-08-28T19:00:49.841Z"
+      "dueDate": "2026-08-29T16:42:52.609Z"
     },
     "order": 1000,
-    "siteId": "hq",
-    "parentId": "809ef08a-a064-4375-8313-b232b9ee1cea",
     "context": {
       "financialIntent": {
         "costIntent": {
@@ -52,53 +50,68 @@
         "isSold": false
       }
     },
-    "createdAt": "2026-08-21T19:00:49.841Z",
-    "updatedAt": "2026-08-21T19:00:49.841Z",
+    "createdAt": "2026-08-22T16:42:52.609Z",
+    "updatedAt": "2026-08-22T16:42:52.609Z",
     "schemaVersion": 1,
-    "version": 0
+    "version": 0,
+    "parentId": "08b6db6e-5382-4d84-be52-3ba2de34881f"
   },
   "links": [
     {
-      "id": "93678ee1-ce90-4314-944d-5135fe5db1fe",
-      "linkType": "TASK_CHARACTER",
+      "id": "c635d305-4d7e-45fa-bc26-83c22996ca12",
+      "linkType": "TASK_TASK",
       "source": {
         "type": "task",
-        "id": "9830c56a-7af3-43bf-8c59-08e161ac8ec9"
+        "id": "a4e56f8b-751b-47fd-b5dc-f973fc8685d5"
       },
       "target": {
-        "type": "character",
-        "id": "6034b0f3-cda5-48d1-b884-579a72cef864"
+        "type": "task",
+        "id": "08b6db6e-5382-4d84-be52-3ba2de34881f"
       },
-      "relationship": "owner",
-      "createdAt": "2026-08-21T19:01:01.410Z"
+      "relationship": "parent",
+      "createdAt": "2026-08-22T16:42:54.023Z"
     },
     {
-      "id": "d90fd116-908e-45ef-be44-09a308849216",
+      "id": "e53d141f-6c66-45ae-abe6-aa688c4b2c18",
       "linkType": "TASK_SITE",
       "source": {
         "type": "task",
-        "id": "9830c56a-7af3-43bf-8c59-08e161ac8ec9"
+        "id": "a4e56f8b-751b-47fd-b5dc-f973fc8685d5"
       },
       "target": {
         "type": "site",
         "id": "hq"
       },
       "relationship": "performed-at",
-      "createdAt": "2026-08-21T19:00:50.777Z"
+      "createdAt": "2026-08-22T16:42:54.996Z"
     },
     {
-      "id": "7ff27f1f-ac64-4e4e-bdae-e062db060cfa",
+      "id": "f8deca34-d6c9-4a7f-ac16-c381b38ddc4b",
       "linkType": "TASK_CHARACTER",
       "source": {
         "type": "task",
-        "id": "9830c56a-7af3-43bf-8c59-08e161ac8ec9"
+        "id": "a4e56f8b-751b-47fd-b5dc-f973fc8685d5"
       },
       "target": {
         "type": "character",
         "id": "6034b0f3-cda5-48d1-b884-579a72cef864"
       },
       "relationship": "beneficiary",
-      "createdAt": "2026-08-21T19:00:59.965Z"
+      "createdAt": "2026-08-22T16:43:06.542Z"
+    },
+    {
+      "id": "ca862419-f792-441b-8e46-c30b277b83c4",
+      "linkType": "TASK_CHARACTER",
+      "source": {
+        "type": "task",
+        "id": "a4e56f8b-751b-47fd-b5dc-f973fc8685d5"
+      },
+      "target": {
+        "type": "character",
+        "id": "6034b0f3-cda5-48d1-b884-579a72cef864"
+      },
+      "relationship": "owner",
+      "createdAt": "2026-08-22T16:43:08.318Z"
     }
   ],
   "items": [],

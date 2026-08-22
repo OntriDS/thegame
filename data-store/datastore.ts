@@ -212,9 +212,10 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
     version: previous ? ((previous.version ?? 0) + 1) : (normalizedTask.version ?? 0),
   } as Task;
   // Capture legacy fields for link creation before stripping them from persistence
-  const { siteId, targetSiteId } = persistedTask as any;
+  const { siteId, targetSiteId, parentId } = persistedTask as any;
   delete (persistedTask as any).siteId;
   delete (persistedTask as any).targetSiteId;
+  delete (persistedTask as any).parentId;
   delete (persistedTask as any).ownerIds;
   delete (persistedTask as any).__counterparty;
   const saved = await repoUpsertTask(persistedTask);
@@ -250,7 +251,7 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
       if (
         saved.type === TaskType.RECURRENT_INSTANCE &&
         existing.type === TaskType.RECURRENT_INSTANCE &&
-        saved.parentId === existing.parentId
+        parentId === existing.parentId // use captured parentId for deduplication
       ) {
         // If scheduledStart differs, they are distinct instances (e.g. Daily Task for Monday vs Tuesday)
         const savedStart = saved.scheduledStart ? new Date(saved.scheduledStart).getTime() : 0;
@@ -284,6 +285,7 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
       ...saved,
       ...(siteId ? { siteId } : {}),
       ...(targetSiteId ? { targetSiteId } : {}),
+      ...(parentId ? { parentId } : {}),
       ...(hasOwnerSelection ? { ownerIds: requestedOwnerIds } : {}),
       ...(taskCounterparty ? { __counterparty: taskCounterparty } : {}),
     };
@@ -293,7 +295,7 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
   if (!options?.skipWorkflowEffects) {
     const { onTaskUpsert } = await import('@/workflows/entities-workflows/task.workflow');
     await onTaskUpsert(
-      taskCounterparty ? ({ ...saved, __counterparty: taskCounterparty } as Task) : saved,
+      taskCounterparty ? ({ ...saved, parentId, __counterparty: taskCounterparty } as Task) : ({ ...saved, parentId } as Task),
       previous || undefined
     );
   }
@@ -323,9 +325,38 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
   return saved;
 }
 
+export async function hydrateTaskCompatibility(task: Task): Promise<Task> {
+  const { getLinksFor } = await import('@/links/link-registry');
+  const links = await getLinksFor({ type: EntityType.TASK, id: task.id });
+  const parentLink = links.find(l => l.linkType === 'TASK_TASK' && l.source.type === EntityType.TASK && l.source.id === task.id);
+  return {
+    ...task,
+    ...(parentLink ? { parentId: parentLink.target.id } : { parentId: null })
+  };
+}
+
+async function hydrateTasksCompatibilityBulk(tasks: Task[]): Promise<Task[]> {
+  if (tasks.length === 0) return [];
+  const { getAllLinks } = await import('@/links/link-registry');
+  const links = await getAllLinks();
+  const parentMap = new Map<string, string>();
+  for (const link of links) {
+    if (link.linkType === 'TASK_TASK' && link.target.type === EntityType.TASK && link.source.type === EntityType.TASK) {
+      parentMap.set(link.source.id, link.target.id);
+    }
+  }
+  return tasks.map(task => {
+    const parentId = parentMap.get(task.id);
+    return {
+      ...task,
+      ...(parentId ? { parentId } : { parentId: null })
+    };
+  });
+}
+
 export async function getAllTasks(): Promise<Task[]> {
   const tasks = await repoGetAllTasks();
-  return reviveDates(tasks);
+  return hydrateTasksCompatibilityBulk(reviveDates(tasks));
 }
 
 /**
@@ -364,7 +395,7 @@ export async function getActiveTasks(): Promise<Task[]> {
     tasks.push(...chunkResults.filter((t): t is Task => t !== null));
   }
   // Drop stale index members (e.g. collected but not yet removed from set)
-  return reviveDates(tasks.filter(isTaskActive));
+  return hydrateTasksCompatibilityBulk(reviveDates(tasks.filter(isTaskActive)));
 }
 
 const REPAIR_ACTIVE_INDEX_LIST_CAP = 200;
@@ -835,7 +866,9 @@ export async function getTasksForMonth(year: number, month: number): Promise<Tas
 }
 
 export async function getTaskById(id: string): Promise<Task | null> {
-  return await repoGetTaskById(id);
+  const raw = await repoGetTaskById(id);
+  if (!raw) return null;
+  return hydrateTaskCompatibility(raw);
 }
 
 export type RemoveTaskOptions = {
@@ -1494,7 +1527,7 @@ export async function getTasksFromMonthIndex(mmyy: string): Promise<Task[]> {
     tasks.push(...chunkResults.filter((t): t is Task => t !== null));
   }
 
-  return reviveDates(tasks);
+  return hydrateTasksCompatibilityBulk(reviveDates(tasks));
 }
 
 export async function getFinancialsFromMonthIndex(mmyy: string): Promise<FinancialRecord[]> {

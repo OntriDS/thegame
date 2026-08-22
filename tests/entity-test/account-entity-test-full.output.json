@@ -1,48 +1,48 @@
 {
   "account": {
-    "id": "8b8e3430-c378-4f4d-ac38-8579c98085c3",
+    "id": "9097c2f6-92ae-4fba-9cc8-982fca6bfe93",
     "name": "testing-account-full",
     "email": "entity-test-account-full@example.test",
     "passwordHash": null,
     "passphraseFlag": false,
     "isActive": true,
     "isVerified": false,
-    "createdAt": "2026-08-21T16:05:40.990Z",
-    "updatedAt": "2026-08-21T16:05:41.921Z"
+    "createdAt": "2026-08-22T16:42:23.215Z",
+    "updatedAt": "2026-08-22T16:42:25.440Z"
   },
   "links": [
     {
-      "id": "98d7bb6c-06dd-4158-8776-e4e73a535f66",
+      "id": "4bdae19d-872a-43c2-9d38-d80795fbdf17",
       "linkType": "ACCOUNT_CHARACTER",
       "source": {
         "type": "account",
-        "id": "8b8e3430-c378-4f4d-ac38-8579c98085c3"
+        "id": "9097c2f6-92ae-4fba-9cc8-982fca6bfe93"
       },
       "target": {
         "type": "character",
         "id": "entity-test-account-character-full"
       },
       "relationship": "primary",
-      "createdAt": "2026-08-21T16:05:41.921Z"
+      "createdAt": "2026-08-22T16:42:25.440Z"
     }
   ],
   "characterLinks": [
     {
-      "id": "98d7bb6c-06dd-4158-8776-e4e73a535f66",
+      "id": "4bdae19d-872a-43c2-9d38-d80795fbdf17",
       "linkType": "ACCOUNT_CHARACTER",
       "source": {
         "type": "account",
-        "id": "8b8e3430-c378-4f4d-ac38-8579c98085c3"
+        "id": "9097c2f6-92ae-4fba-9cc8-982fca6bfe93"
       },
       "target": {
         "type": "character",
         "id": "entity-test-account-character-full"
       },
       "relationship": "primary",
-      "createdAt": "2026-08-21T16:05:41.921Z"
+      "createdAt": "2026-08-22T16:42:25.440Z"
     },
     {
-      "id": "8ef2b582-37be-41ec-8a43-d488fd8c9d2b",
+      "id": "d4eb2696-e53f-4923-8d0f-28fc174bf2d5",
       "linkType": "CHARACTER_PLAYER",
       "source": {
         "type": "character",
@@ -53,12 +53,12 @@
         "id": "entity-test-account-player-full"
       },
       "relationship": "primary",
-      "createdAt": "2026-08-21T16:05:46.012Z"
+      "createdAt": "2026-08-22T16:42:30.979Z"
     }
   ],
   "playerLinks": [
     {
-      "id": "8ef2b582-37be-41ec-8a43-d488fd8c9d2b",
+      "id": "d4eb2696-e53f-4923-8d0f-28fc174bf2d5",
       "linkType": "CHARACTER_PLAYER",
       "source": {
         "type": "character",
@@ -69,7 +69,7 @@
         "id": "entity-test-account-player-full"
       },
       "relationship": "primary",
-      "createdAt": "2026-08-21T16:05:46.012Z"
+      "createdAt": "2026-08-22T16:42:30.979Z"
     }
   ],
   "player": {
@@ -114,9 +114,9 @@
       "achievements": [],
       "badges": []
     },
-    "lastActiveAt": "2026-08-21T16:05:39.281Z",
+    "lastActiveAt": "2026-08-22T16:42:21.460Z",
     "isActive": true,
-    "createdAt": "2026-08-21T16:05:39.281Z",
-    "updatedAt": "2026-08-21T16:05:39.281Z"
+    "createdAt": "2026-08-22T16:42:21.460Z",
+    "updatedAt": "2026-08-22T16:42:21.460Z"
   }
 }

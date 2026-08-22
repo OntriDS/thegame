@@ -72,10 +72,11 @@ export async function syncTaskCharacterCounterpartyLinks(task: Task): Promise<vo
   const taskCharacterLinks = existingLinks.filter((l) => l.linkType === LinkType.TASK_CHARACTER);
   const reconcileOwners = Object.prototype.hasOwnProperty.call(task, 'ownerIds');
 
+  const promises: Promise<any>[] = [];
   for (const link of taskCharacterLinks) {
     const isOwnerLink = String(link.relationship || '').toLowerCase() === 'owner';
     if (reconcileOwners || !isOwnerLink) {
-      await removeLink(link.id);
+      promises.push(removeLink(link.id));
     }
   }
 
@@ -108,45 +109,47 @@ export async function syncTaskCharacterCounterpartyLinks(task: Task): Promise<vo
       { type: EntityType.CHARACTER, id: desired.id },
       desired.relationship
     );
-    const wasCreated = await createLink(l);
-
-    if (wasCreated && desired.relationship !== 'owner') {
-      const character = await getCharacterById(desired.id);
-      await appendEntityLog(EntityType.CHARACTER, desired.id, LogEventType.REQUESTED_TASK, {
-        name: character?.name || 'Unknown Character',
-        roles: character?.roles || [],
-        taskId: task.id,
-        taskName: task.name,
-        taskType: task.type,
-        station: task.station
-      });
-    }
+    promises.push(createLink(l).then(async (wasCreated) => {
+      if (wasCreated && desired.relationship !== 'owner') {
+        const character = await getCharacterById(desired.id);
+        await appendEntityLog(EntityType.CHARACTER, desired.id, LogEventType.REQUESTED_TASK, {
+          name: character?.name || 'Unknown Character',
+          roles: character?.roles || [],
+          taskId: task.id,
+          taskName: task.name,
+          taskType: task.type,
+          station: task.station
+        });
+      }
+    }));
   }
+  await Promise.all(promises);
 }
 
 export async function processTaskEffects(task: Task): Promise<void> {
   // Task hierarchy is a Task -> Task relationship. Keep parentId as a
   // transitional compatibility field for the existing parent-child index,
   // but make TASK_TASK the canonical relationship authority.
+  const promises: Promise<any>[] = [];
   const existingTaskLinks = await getLinksFor({ type: EntityType.TASK, id: task.id });
-  const existingParentLinks = existingTaskLinks.filter((link) => link.linkType === LinkType.TASK_TASK);
+  const existingParentLinks = existingTaskLinks.filter((link) => link.linkType === LinkType.TASK_TASK && link.source.id === task.id);
   for (const link of existingParentLinks) {
     if (!task.parentId || link.target?.type !== EntityType.TASK || link.target.id !== task.parentId) {
-      await removeLink(link.id);
+      promises.push(removeLink(link.id));
     }
   }
   if (task.parentId) {
-    await createLink(makeLink(
+    promises.push(createLink(makeLink(
       LinkType.TASK_TASK,
       { type: EntityType.TASK, id: task.id },
       { type: EntityType.TASK, id: task.parentId },
       'parent'
-    ));
+    )));
   }
 
   if (task.siteId) {
     const l = makeLink(LinkType.TASK_SITE, { type: EntityType.TASK, id: task.id }, { type: EntityType.SITE, id: task.siteId }, 'performed-at');
-    await createLink(l);
+    promises.push(createLink(l));
   }
   if (task.outputItemId) {
     const l = makeLink(
@@ -155,7 +158,7 @@ export async function processTaskEffects(task: Task): Promise<void> {
       { type: EntityType.ITEM, id: task.outputItemId },
       'requested'
     );
-    await createLink(l);
+    promises.push(createLink(l));
   }
   
   // SALE_TASK link (Task created from Sale)
@@ -167,12 +170,12 @@ export async function processTaskEffects(task: Task): Promise<void> {
       { type: EntityType.TASK, id: task.id },
       'sold-service'
     );
-    await createLink(l);
+    promises.push(createLink(l));
   }
 
   // TASK_CHARACTER: reconcile with counterparty (heals missing links after counterparty-only edits)
   // NOTE: playerCharacterId is internal assignment, not logged as a character action
-  await syncTaskCharacterCounterpartyLinks(task);
+  promises.push(syncTaskCharacterCounterpartyLinks(task));
 
   // Create TASK_ITEM link for items created from the canonical production plan.
   // Existing flat fields remain read-only compatibility for pre-migration tasks.
@@ -190,10 +193,11 @@ export async function processTaskEffects(task: Task): Promise<void> {
         { type: EntityType.ITEM, id: createdItem.id },
         'produced'
       );
-      await createLink(l);
+      promises.push(createLink(l));
     }
   }
 
+  await Promise.all(promises);
   // Note: TASK_PLAYER handled by points-rewards-utils.ts ✅
   // Note: TASK_FINREC handled by financial-record-utils.ts ✅
 }
@@ -202,19 +206,20 @@ export async function processItemEffects(item: Item): Promise<void> {
   // Get existing links for cleanup
   const existingLinks = await getLinksFor({ type: EntityType.ITEM, id: item.id });
   const validSiteIds = new Set((await getAllSites()).map(site => site.id));
+  const promises: Promise<any>[] = [];
 
   // ITEM_TASK links are no longer created here to follow original direction (Task -> Item).
   // Clean up any stray ITEM_TASK links if needed, but TASK_ITEM is the canonical link.
   const oldTaskLinks = existingLinks.filter(l => l.linkType === LinkType.ITEM_TASK);
   for (const oldLink of oldTaskLinks) {
-    await removeLink(oldLink.id);
+    promises.push(removeLink(oldLink.id));
   }
 
   // ITEM_SITE links (for stock locations)
   // Remove all old ITEM_SITE links, then create new ones
   const oldSiteLinks = existingLinks.filter(l => l.linkType === LinkType.ITEM_SITE);
   for (const oldLink of oldSiteLinks) {
-    await removeLink(oldLink.id);
+    promises.push(removeLink(oldLink.id));
   }
 
   // Create fresh ITEM_SITE links for current stock
@@ -222,7 +227,7 @@ export async function processItemEffects(item: Item): Promise<void> {
     const normalizedSiteId = String(s.siteId || '').trim();
     if (normalizedSiteId && validSiteIds.has(normalizedSiteId)) {
       const l = makeLink(LinkType.ITEM_SITE, { type: EntityType.ITEM, id: item.id }, { type: EntityType.SITE, id: normalizedSiteId }, 'stored-at');
-      await createLink(l);
+      promises.push(createLink(l));
     } else if (normalizedSiteId) {
       console.warn(
         `[processItemEffects] Skipping ITEM_SITE link for invalid site "${normalizedSiteId}" on item ${item.id}.`
@@ -239,31 +244,31 @@ export async function processItemEffects(item: Item): Promise<void> {
       { type: EntityType.CHARACTER, id: itemCharacterId },
       'owned-by'
     );
-    const wasCreated = await createLink(l);
+    promises.push(createLink(l).then(async (wasCreated) => {
+      if (wasCreated) {
+        const character = await getCharacterById(itemCharacterId);
+        let sourceTaskName: string | undefined;
 
-    if (wasCreated) {
-      const character = await getCharacterById(itemCharacterId);
-      let sourceTaskName: string | undefined;
-
-      // Get source task name if available
-      if (item.sourceTaskId) {
-        const sourceTask = await getTaskById(item.sourceTaskId);
-        if (sourceTask) {
-          sourceTaskName = sourceTask.name;
+        // Get source task name if available
+        if (item.sourceTaskId) {
+          const sourceTask = await getTaskById(item.sourceTaskId);
+          if (sourceTask) {
+            sourceTaskName = sourceTask.name;
+          }
         }
-      }
 
-      // Log in character log (customer owns item)
-      await appendEntityLog(EntityType.CHARACTER, itemCharacterId, LogEventType.OWNS_ITEM, {
-        name: character?.name || 'Unknown Character',
-        roles: character?.roles || [],
-        itemId: item.id,
-        itemName: item.name,
-        itemType: item.type,
-        sourceTaskId: item.sourceTaskId,
-        sourceTaskName: sourceTaskName
-      });
-    }
+        // Log in character log (customer owns item)
+        await appendEntityLog(EntityType.CHARACTER, itemCharacterId, LogEventType.OWNS_ITEM, {
+          name: character?.name || 'Unknown Character',
+          roles: character?.roles || [],
+          itemId: item.id,
+          itemName: item.name,
+          itemType: item.type,
+          sourceTaskId: item.sourceTaskId,
+          sourceTaskName: sourceTaskName
+        });
+      }
+    }));
   } else {
     // Canonical ownership is link-owned. Do not remove an existing ownership
     // link merely because the compatibility root characterId is absent.
@@ -271,6 +276,7 @@ export async function processItemEffects(item: Item): Promise<void> {
   }
 
   // Note: ITEM_SALE links handled in processSaleEffects (from sale.lines)
+  await Promise.all(promises);
 }
 
 export async function processSaleEffects(sale: Sale): Promise<void> {
@@ -288,6 +294,8 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     return null;
   };
 
+  const promises: Promise<any>[] = [];
+
   // --- SALE_ITEM cleanup ---
   const allowedSaleItemIds = new Set<string>();
   for (const line of sale.lines || []) {
@@ -301,23 +309,24 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
       l.target.type === EntityType.ITEM &&
       !allowedSaleItemIds.has(l.target.id)
     ) {
-      await removeLink(l.id);
+      promises.push(removeLink(l.id));
     }
   }
 
   // --- SALE_FINREC cleanup ---
   for (const l of existingLinks) {
     if (l.linkType !== LinkType.SALE_FINREC || l.target.type !== EntityType.FINANCIAL) continue;
-    const fin = await getFinancialById(l.target.id);
-    if (!fin) { await removeLink(l.id); continue; }
-    // The SALE_FINREC link itself is now the source-of-truth relationship;
-    // FinancialRecord no longer persists sourceSaleId.
+    promises.push(getFinancialById(l.target.id).then(fin => {
+      if (!fin) { return removeLink(l.id); }
+      // The SALE_FINREC link itself is now the source-of-truth relationship;
+      // FinancialRecord no longer persists sourceSaleId.
+    }));
   }
 
   // --- SALE_BUSINESS legacy cleanup (always purge — migrated to SALE_CHARACTER) ---
   for (const l of existingLinks) {
     if (l.linkType === LinkType.SALE_BUSINESS) {
-      await removeLink(l.id);
+      promises.push(removeLink(l.id));
     }
   }
 
@@ -338,14 +347,14 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
         (l.relationship === 'owner' && l.target.id !== saleOwnerCharId) ||
         ((!l.relationship || l.relationship === 'customer') && l.target.id !== saleCounterpartyCharId))
     ) {
-      await removeLink(l.id);
+      promises.push(removeLink(l.id));
     }
   }
 
   // --- SALE_SITE ---
   if (sale.siteId) {
     const l = makeLink(LinkType.SALE_SITE, { type: EntityType.SALE, id: sale.id }, { type: EntityType.SITE, id: sale.siteId }, 'sold-at');
-    await createLink(l);
+    promises.push(createLink(l));
   }
 
   // --- SALE_CHARACTER for customer / counterparty character ---
@@ -356,18 +365,19 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
       { type: EntityType.CHARACTER, id: saleCounterpartyCharId },
       'customer'
     );
-    const wasCreated = await createLink(l);
-    if (wasCreated) {
-      const character = await getCharacterById(saleCounterpartyCharId);
-      await appendEntityLog(EntityType.CHARACTER, saleCounterpartyCharId, LogEventType.PURCHASED, {
-        name: character?.name || 'Unknown Character',
-        roles: character?.roles || [],
-        saleId: sale.id,
-        saleName: sale.counterpartyName || sale.name,
-        saleType: sale.type,
-        totalRevenue: sale.totals.totalRevenue
-      });
-    }
+    promises.push(createLink(l).then(async (wasCreated) => {
+      if (wasCreated) {
+        const character = await getCharacterById(saleCounterpartyCharId);
+        await appendEntityLog(EntityType.CHARACTER, saleCounterpartyCharId, LogEventType.PURCHASED, {
+          name: character?.name || 'Unknown Character',
+          roles: character?.roles || [],
+          saleId: sale.id,
+          saleName: sale.counterpartyName || sale.name,
+          saleType: sale.type,
+          totalRevenue: sale.totals.totalRevenue
+        });
+      }
+    }));
   }
 
   // --- SALE_CHARACTER for the Character who made/owns the sale ---
@@ -378,7 +388,7 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
       { type: EntityType.CHARACTER, id: saleOwnerCharId },
       'owner'
     );
-    await createLink(l);
+    promises.push(createLink(l));
   }
 
   // --- SALE_CHARACTER for partnerId (resolves Business → linkedCharacterId) ---
@@ -391,7 +401,7 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
         { type: EntityType.CHARACTER, id: charId },
         'partner'
       );
-      await createLink(l);
+      promises.push(createLink(l));
     } else {
       console.warn(
         `[processSaleEffects] Partner ID ${sale.partnerId} not found as Character or Business with linkedCharacterId. Skipping link.`
@@ -417,12 +427,12 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
           { type: EntityType.ITEM, id: line.itemId },
           'sold-item'
         );
-        await createLink(l);
+        promises.push(createLink(l));
       }
     }
   }
 
-
+  await Promise.all(promises);
 }
 
 export async function processFinancialEffects(fin: FinancialRecord): Promise<void> {
@@ -432,25 +442,27 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
   // Get existing links for cleanup
   const existingLinks = await getLinksFor({ type: EntityType.FINANCIAL, id: fin.id });
 
+  const promises: Promise<any>[] = [];
+
   // Replace old role-less FINREC_CHARACTER links with the canonical
   // relationship-bearing form.
   if (relationsProvided) {
     for (const link of existingLinks.filter((l) => l.linkType === LinkType.FINREC_CHARACTER)) {
-      await removeLink(link.id);
+      promises.push(removeLink(link.id));
     }
 
     for (const link of existingLinks.filter((l) => l.linkType === LinkType.FINREC_SITE)) {
-      await removeLink(link.id);
+      promises.push(removeLink(link.id));
     }
   }
 
   if (relationsProvided && relations.siteId) {
     const l = makeLink(LinkType.FINREC_SITE, { type: EntityType.FINANCIAL, id: fin.id }, { type: EntityType.SITE, id: relations.siteId }, 'source-site');
-    await createLink(l);
+    promises.push(createLink(l));
   }
   if (relationsProvided && relations.targetSiteId && relations.targetSiteId !== relations.siteId) {
     const l = makeLink(LinkType.FINREC_SITE, { type: EntityType.FINANCIAL, id: fin.id }, { type: EntityType.SITE, id: relations.targetSiteId }, 'target-site');
-    await createLink(l);
+    promises.push(createLink(l));
   }
 
   // FINREC_CHARACTER link
@@ -461,22 +473,22 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
       { type: EntityType.CHARACTER, id: financialCounterpartyId },
       getFinancialCounterpartyRole(fin) === 'beneficiary' ? 'beneficiary' : 'customer'
     );
-    const wasCreated = await createLink(l);
+    promises.push(createLink(l).then(async (wasCreated) => {
+      if (wasCreated) {
+        const character = await getCharacterById(financialCounterpartyId);
 
-    if (wasCreated) {
-      const character = await getCharacterById(financialCounterpartyId);
-
-      // Log in character log (customer transacted)
-      await appendEntityLog(EntityType.CHARACTER, financialCounterpartyId, LogEventType.TRANSACTED, {
-        name: character?.name || 'Unknown Character',
-        roles: character?.roles || [],
-        financialId: fin.id,
-        financialName: fin.name,
-        type: fin.type,
-        cost: fin.cost,
-        revenue: fin.revenue
-      });
-    }
+        // Log in character log (customer transacted)
+        await appendEntityLog(EntityType.CHARACTER, financialCounterpartyId, LogEventType.TRANSACTED, {
+          name: character?.name || 'Unknown Character',
+          roles: character?.roles || [],
+          financialId: fin.id,
+          financialName: fin.name,
+          type: fin.type,
+          cost: fin.cost,
+          revenue: fin.revenue
+        });
+      }
+    }));
   }
 
   // Create FINREC_ITEM link for items created from the canonical financial
@@ -486,7 +498,7 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
     // Remove previous FINREC_ITEM links to avoid duplicates when switching items
     const existingItemLinks = existingLinks.filter(link => link.linkType === LinkType.FINREC_ITEM);
     for (const link of existingItemLinks) {
-      await removeLink(link.id);
+      promises.push(removeLink(link.id));
     }
 
     let createdItem: Item | undefined;
@@ -503,7 +515,7 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
         { type: EntityType.ITEM, id: createdItem.id },
         'item-bought'
       );
-      await createLink(l);
+      promises.push(createLink(l));
     }
   }
 
@@ -516,22 +528,26 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
   // createLink is idempotent, so this is a no-op when the link already exists.
   const sourceTaskId = relations.sourceTaskId;
   if (sourceTaskId) {
-    const sourceTask = await getTaskById(sourceTaskId);
-    if (sourceTask) {
-      const l = makeLink(
-        LinkType.TASK_FINREC,
-        { type: EntityType.TASK, id: sourceTask.id },
-        { type: EntityType.FINANCIAL, id: fin.id },
-        'task-record'
-      );
-      await createLink(l);
-    }
+    promises.push(getTaskById(sourceTaskId).then(sourceTask => {
+      if (sourceTask) {
+        const l = makeLink(
+          LinkType.TASK_FINREC,
+          { type: EntityType.TASK, id: sourceTask.id },
+          { type: EntityType.FINANCIAL, id: fin.id },
+          'task-record'
+        );
+        return createLink(l);
+      }
+    }));
   }
+
+  await Promise.all(promises);
 
   // FINREC_PLAYER: only created by shared points helpers if something awards with sourceType `financial` — `onFinancialUpsert` does not award points.
 }
 
 export async function processCharacterEffects(character: Character): Promise<void> {
+  const promises: Promise<any>[] = [];
   // CHARACTER_PLAYER is canonical: every Character may exist without a Player,
   // but only some Characters point to a Player.
   const existingPlayerLinks = (await getLinksFor({ type: EntityType.CHARACTER, id: character.id }))
@@ -539,39 +555,44 @@ export async function processCharacterEffects(character: Character): Promise<voi
       (link.linkType === LinkType.CHARACTER_PLAYER) ||
       (link.linkType === LinkType.PLAYER_CHARACTER && link.target.type === EntityType.CHARACTER)
     );
-  for (const link of existingPlayerLinks) await removeLink(link.id);
+  for (const link of existingPlayerLinks) promises.push(removeLink(link.id));
 
   if (character.playerId) {
-    const player = await getPlayerById(character.playerId);
-    if (!player) {
-      throw new Error(`Cannot link Character ${character.id} to missing Player ${character.playerId}.`);
-    }
-    const link = makeLink(
-      LinkType.CHARACTER_PLAYER,
-      { type: EntityType.CHARACTER, id: character.id },
-      { type: EntityType.PLAYER, id: character.playerId },
-      'primary'
-    );
-    await createLink(link);
+    promises.push(getPlayerById(character.playerId).then(player => {
+      if (!player) {
+        throw new Error(`Cannot link Character ${character.id} to missing Player ${character.playerId}.`);
+      }
+      const link = makeLink(
+        LinkType.CHARACTER_PLAYER,
+        { type: EntityType.CHARACTER, id: character.id },
+        { type: EntityType.PLAYER, id: character.playerId },
+        'primary'
+      );
+      return createLink(link);
+    }));
   }
 
   // CHARACTER_SITE link (if character has home site)
   if (character.siteId) {
-    const site = await getSiteById(character.siteId);
-    if (!site) {
-      throw new Error(`Cannot link Character ${character.id} to missing Site ${character.siteId}.`);
-    }
-    const link = makeLink(
-      LinkType.CHARACTER_SITE,
-      { type: EntityType.CHARACTER, id: character.id },
-      { type: EntityType.SITE, id: character.siteId },
-      'owns'
-    );
-    await createLink(link);
+    promises.push(getSiteById(character.siteId).then(site => {
+      if (!site) {
+        throw new Error(`Cannot link Character ${character.id} to missing Site ${character.siteId}.`);
+      }
+      const link = makeLink(
+        LinkType.CHARACTER_SITE,
+        { type: EntityType.CHARACTER, id: character.id },
+        { type: EntityType.SITE, id: character.siteId },
+        'owns'
+      );
+      return createLink(link);
+    }));
   }
+
+  await Promise.all(promises);
 }
 
 export async function processPlayerEffects(player: Player): Promise<void> {
+  const promises: Promise<any>[] = [];
   // Player.characterId is compatibility input; persist the canonical
   // Character -> Player relationship so the sparse Character side owns it.
   const characterId = typeof player.characterId === 'string' ? player.characterId.trim() : '';
@@ -585,7 +606,7 @@ export async function processPlayerEffects(player: Player): Promise<void> {
       if (
         (link.linkType === LinkType.CHARACTER_PLAYER && link.target.id === player.id) ||
         (link.linkType === LinkType.PLAYER_CHARACTER && link.source.id === player.id)
-      ) await removeLink(link.id);
+      ) promises.push(removeLink(link.id));
     }
     const link = makeLink(
       LinkType.CHARACTER_PLAYER,
@@ -593,8 +614,10 @@ export async function processPlayerEffects(player: Player): Promise<void> {
       { type: EntityType.PLAYER, id: player.id },
       'primary'
     );
-    await createLink(link);
+    promises.push(createLink(link));
   }
+
+  await Promise.all(promises);
 
   // Note: PLAYER_SITE links not implemented - Player doesn't have siteId field
 }

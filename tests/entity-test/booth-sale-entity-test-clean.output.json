@@ -9,7 +9,7 @@
     {
       "lineId": "booth-line-1",
       "kind": "item",
-      "itemId": "imported-1762140802806-245",
+      "itemId": "imported-1762140802805-113",
       "quantity": 1,
       "unitPrice": {
         "minorUnits": "5000",
@@ -28,6 +28,6 @@
     }
   },
   "lifecycle": {},
-  "createdAt": "2026-08-21T02:50:04.864Z",
-  "updatedAt": "2026-08-21T02:50:04.864Z"
+  "createdAt": "2026-08-22T16:42:23.121Z",
+  "updatedAt": "2026-08-22T16:42:23.121Z"
 }

@@ -96,7 +96,7 @@ export default function DatesSubmodal({
                         <div className="space-y-2">
                             <Label className="text-xs font-semibold">Entity ID</Label>
                             <div className="text-sm font-mono text-muted-foreground bg-secondary/10 p-2 rounded-md border select-all">
-                                {entityId}
+                                {entityId?.startsWith('thegame:') ? entityId : `thegame:${entityId}`}
                             </div>
                             <p className="text-[10px] text-muted-foreground">Database identifier for CLI debugging.</p>
                         </div>

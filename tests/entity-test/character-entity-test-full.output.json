@@ -25,17 +25,17 @@
         "id": "qualification-game-demo",
         "name": "Designed a videogame demo",
         "description": "Evidence used for role progression.",
-        "createdAt": "2026-08-20T18:40:13.126Z"
+        "createdAt": "2026-08-21T16:43:06.392Z"
       }
     ],
-    "lastActiveAt": "2026-08-21T18:40:13.126Z",
+    "lastActiveAt": "2026-08-22T16:43:06.392Z",
     "isActive": true,
-    "createdAt": "2026-08-21T18:40:13.126Z",
-    "updatedAt": "2026-08-21T18:40:13.126Z"
+    "createdAt": "2026-08-22T16:43:06.392Z",
+    "updatedAt": "2026-08-22T16:43:06.392Z"
   },
   "links": [
     {
-      "id": "886e1359-f1a0-4117-a2b6-27f8f4ec83ec",
+      "id": "80a02606-4fe6-4081-8312-7e18f55b1f13",
       "linkType": "CHARACTER_PLAYER",
       "source": {
         "type": "character",
@@ -46,10 +46,10 @@
         "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
       },
       "relationship": "primary",
-      "createdAt": "2026-08-21T18:40:18.573Z"
+      "createdAt": "2026-08-22T16:43:11.357Z"
     },
     {
-      "id": "ba6bf689-1954-4349-bf61-f062eb4e1f1f",
+      "id": "a8dec7fe-4e3b-41e9-b5fb-e8761c971d4b",
       "linkType": "CHARACTER_SITE",
       "source": {
         "type": "character",
@@ -60,12 +60,12 @@
         "id": "hq"
       },
       "relationship": "owns",
-      "createdAt": "2026-08-21T18:40:19.966Z"
+      "createdAt": "2026-08-22T16:43:13.140Z"
     }
   ],
   "playerLinks": [
     {
-      "id": "886e1359-f1a0-4117-a2b6-27f8f4ec83ec",
+      "id": "80a02606-4fe6-4081-8312-7e18f55b1f13",
       "linkType": "CHARACTER_PLAYER",
       "source": {
         "type": "character",
@@ -76,12 +76,12 @@
         "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
       },
       "relationship": "primary",
-      "createdAt": "2026-08-21T18:40:18.573Z"
+      "createdAt": "2026-08-22T16:43:11.357Z"
     }
   ],
   "siteLinks": [
     {
-      "id": "ba6bf689-1954-4349-bf61-f062eb4e1f1f",
+      "id": "a8dec7fe-4e3b-41e9-b5fb-e8761c971d4b",
       "linkType": "CHARACTER_SITE",
       "source": {
         "type": "character",
@@ -92,7 +92,7 @@
         "id": "hq"
       },
       "relationship": "owns",
-      "createdAt": "2026-08-21T18:40:19.966Z"
+      "createdAt": "2026-08-22T16:43:13.140Z"
     }
   ]
 }

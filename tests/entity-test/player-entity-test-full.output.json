@@ -43,7 +43,7 @@
           "id": "player-achievement-full",
           "name": "Completed Player Full Test",
           "description": "Canonical Player achievement coverage.",
-          "createdAt": "2026-08-18T00:50:57.832Z"
+          "createdAt": "2026-08-21T16:42:20.787Z"
         }
       ],
       "badges": [
@@ -54,14 +54,14 @@
           "requiredRoles": [
             "gamer"
           ],
-          "createdAt": "2026-08-18T00:50:57.832Z"
+          "createdAt": "2026-08-21T16:42:20.787Z"
         }
       ]
     },
-    "lastActiveAt": "2026-08-19T00:50:57.832Z",
+    "lastActiveAt": "2026-08-22T16:42:20.787Z",
     "isActive": true,
-    "createdAt": "2026-08-19T00:50:57.832Z",
-    "updatedAt": "2026-08-19T00:50:57.832Z"
+    "createdAt": "2026-08-22T16:42:20.787Z",
+    "updatedAt": "2026-08-22T16:42:20.787Z"
   },
   "afterStage": {
     "pending": {
@@ -161,18 +161,18 @@
   },
   "playerLinks": [
     {
-      "id": "814a7eb5-c98f-48e9-87ab-d39349b5aa23",
+      "id": "d9432adf-f831-4fad-b74c-68574cf7101a",
       "linkType": "TASK_PLAYER",
       "source": {
         "type": "task",
-        "id": "6a8bfa88-eea7-46b2-9459-a614fef3e54e"
+        "id": "0eec9b43-05f3-4d61-a638-3ef6734815b7"
       },
       "target": {
         "type": "player",
         "id": "entity-test-player-full"
       },
       "relationship": "points-earned",
-      "createdAt": "2026-08-19T00:51:05.025Z"
+      "createdAt": "2026-08-22T16:42:28.282Z"
     }
   ]
 }

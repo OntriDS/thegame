@@ -24,8 +24,8 @@
     },
     "status": "collected",
     "lifecycle": {
-      "doneAt": "2026-08-21T19:38:19.061Z",
-      "collectedAt": "2026-08-21T19:39:19.061Z"
+      "doneAt": "2026-08-22T16:41:18.627Z",
+      "collectedAt": "2026-08-22T16:42:18.627Z"
     },
     "context": {
       "jungleCoins": 1,
@@ -51,54 +51,12 @@
       "newCustomerName": "Testing Customer",
       "notes": "Full context facet coverage"
     },
-    "createdAt": "2026-08-21T19:38:19.061Z",
-    "updatedAt": "2026-08-21T19:39:19.061Z"
+    "createdAt": "2026-08-22T16:41:18.627Z",
+    "updatedAt": "2026-08-22T16:42:18.627Z"
   },
   "links": [
     {
-      "id": "1265e4aa-aaf0-45ac-aeb3-5ae816e806b2",
-      "linkType": "FINREC_SITE",
-      "source": {
-        "type": "financial",
-        "id": "entity-test-financial-full"
-      },
-      "target": {
-        "type": "site",
-        "id": "site-world"
-      },
-      "relationship": "target-site",
-      "createdAt": "2026-08-21T19:39:30.853Z"
-    },
-    {
-      "id": "c23ff4b7-6861-43dd-82dc-b891dd85f1e9",
-      "linkType": "FINREC_CHARACTER",
-      "source": {
-        "type": "financial",
-        "id": "entity-test-financial-full"
-      },
-      "target": {
-        "type": "character",
-        "id": "6034b0f3-cda5-48d1-b884-579a72cef864"
-      },
-      "relationship": "beneficiary",
-      "createdAt": "2026-08-21T19:39:31.990Z"
-    },
-    {
-      "id": "887c2d21-a0c5-4122-96c9-45c188bcdae8",
-      "linkType": "FINREC_ITEM",
-      "source": {
-        "type": "financial",
-        "id": "entity-test-financial-full"
-      },
-      "target": {
-        "type": "item",
-        "id": "item-entity-test-financial-full-1787341162560"
-      },
-      "relationship": "item-bought",
-      "createdAt": "2026-08-21T19:39:33.702Z"
-    },
-    {
-      "id": "d8dc5e45-e26e-4d10-90ea-a81194d48a6b",
+      "id": "82d1a7e5-3aaa-48be-a865-f37608173a2d",
       "linkType": "FINREC_SITE",
       "source": {
         "type": "financial",
@@ -109,12 +67,54 @@
         "id": "hq"
       },
       "relationship": "source-site",
-      "createdAt": "2026-08-21T19:39:29.906Z"
+      "createdAt": "2026-08-22T16:42:33.006Z"
+    },
+    {
+      "id": "43f5000c-4c08-4748-b3f1-856b13cc4076",
+      "linkType": "FINREC_SITE",
+      "source": {
+        "type": "financial",
+        "id": "entity-test-financial-full"
+      },
+      "target": {
+        "type": "site",
+        "id": "site-world"
+      },
+      "relationship": "target-site",
+      "createdAt": "2026-08-22T16:42:34.440Z"
+    },
+    {
+      "id": "69b662c6-c2f6-4138-ae12-bd0fe4e0c769",
+      "linkType": "FINREC_CHARACTER",
+      "source": {
+        "type": "financial",
+        "id": "entity-test-financial-full"
+      },
+      "target": {
+        "type": "character",
+        "id": "6034b0f3-cda5-48d1-b884-579a72cef864"
+      },
+      "relationship": "beneficiary",
+      "createdAt": "2026-08-22T16:42:35.612Z"
+    },
+    {
+      "id": "93344f86-28f6-446b-8bb2-e0645d91da97",
+      "linkType": "FINREC_ITEM",
+      "source": {
+        "type": "financial",
+        "id": "entity-test-financial-full"
+      },
+      "target": {
+        "type": "item",
+        "id": "item-entity-test-financial-full-1787416942701"
+      },
+      "relationship": "item-bought",
+      "createdAt": "2026-08-22T16:42:37.484Z"
     }
   ],
   "items": [
     {
-      "id": "item-entity-test-financial-full-1787341162560",
+      "id": "item-entity-test-financial-full-1787416942701",
       "schemaVersion": 1,
       "version": 0,
       "name": "testing-financial-output",
@@ -133,8 +133,8 @@
         }
       },
       "sourceRecordId": "entity-test-financial-full",
-      "createdAt": "2026-08-21T19:39:22.560Z",
-      "updatedAt": "2026-08-21T19:39:22.560Z",
+      "createdAt": "2026-08-22T16:42:22.701Z",
+      "updatedAt": "2026-08-22T16:42:22.701Z",
       "context": {
         "year": 2026
       },

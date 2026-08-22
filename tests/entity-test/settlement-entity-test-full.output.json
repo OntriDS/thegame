@@ -18,8 +18,8 @@
       "radius": 250
     },
     "isUnlocked": true,
-    "createdAt": "2026-08-21T18:33:38.598Z",
-    "updatedAt": "2026-08-21T18:33:38.598Z"
+    "createdAt": "2026-08-22T16:43:08.769Z",
+    "updatedAt": "2026-08-22T16:43:08.769Z"
   },
   "links": [
     {
@@ -34,7 +34,7 @@
         "id": "entity-test-settlement-full"
       },
       "relationship": "located-in",
-      "createdAt": "2026-08-21T18:33:38.598Z"
+      "createdAt": "2026-08-22T16:43:08.769Z"
     }
   ]
 }

@@ -17,24 +17,10 @@
       }
     ],
     "isExclusive": true,
-    "createdAt": "2026-08-21T18:22:34.710Z",
-    "updatedAt": "2026-08-21T18:22:34.710Z"
+    "createdAt": "2026-08-22T16:42:41.420Z",
+    "updatedAt": "2026-08-22T16:42:41.420Z"
   },
   "links": [
-    {
-      "id": "entity-test-contract-owner-link-full",
-      "linkType": "CHARACTER_CONTRACT",
-      "source": {
-        "type": "character",
-        "id": "entity-test-contract-principal-character-full"
-      },
-      "target": {
-        "type": "contract",
-        "id": "entity-test-contract-full"
-      },
-      "relationship": "owner",
-      "createdAt": "2026-08-21T18:22:34.710Z"
-    },
     {
       "id": "entity-test-contract-counterparty-link-full",
       "linkType": "CHARACTER_CONTRACT",
@@ -47,7 +33,21 @@
         "id": "entity-test-contract-full"
       },
       "relationship": "counterparty",
-      "createdAt": "2026-08-21T18:22:34.710Z"
+      "createdAt": "2026-08-22T16:41:40.085Z"
+    },
+    {
+      "id": "entity-test-contract-owner-link-full",
+      "linkType": "CHARACTER_CONTRACT",
+      "source": {
+        "type": "character",
+        "id": "entity-test-contract-principal-character-full"
+      },
+      "target": {
+        "type": "contract",
+        "id": "entity-test-contract-full"
+      },
+      "relationship": "owner",
+      "createdAt": "2026-08-22T16:42:41.420Z"
     }
   ]
 }

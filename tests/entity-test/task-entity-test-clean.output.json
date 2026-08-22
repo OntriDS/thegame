@@ -1,5 +1,5 @@
 {
-  "id": "cf62f61b-8132-447e-b424-ded1ac4524d0",
+  "id": "e5d840c5-6e04-497f-bcdf-59758dd0e84e",
   "name": "testing-task",
   "status": "created",
   "priority": "normal",
@@ -9,8 +9,9 @@
     "percentage": 0
   },
   "order": 1000,
-  "createdAt": "2026-08-21T19:00:28.599Z",
-  "updatedAt": "2026-08-21T19:00:28.599Z",
+  "createdAt": "2026-08-22T16:43:15.662Z",
+  "updatedAt": "2026-08-22T16:43:15.662Z",
   "schemaVersion": 1,
-  "version": 0
+  "version": 0,
+  "parentId": null
 }

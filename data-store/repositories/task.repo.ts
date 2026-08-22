@@ -53,14 +53,18 @@ export async function getAllTasks(): Promise<Task[]> {
 }
 
 /**
- * Get tasks by parent ID using the parent-child index
+ * Get tasks by parent ID using the canonical TASK_TASK links
  */
 export async function getTasksByParentId(parentId: string): Promise<Task[]> {
-  const indexKey = buildTaskChildrenKey(parentId);
-  const ids = await kvSMembers(indexKey);
-  if (ids.length === 0) return [];
+  const { getLinksFor } = await import('@/links/link-registry');
+  const links = await getLinksFor({ type: EntityType.TASK, id: parentId });
+  const childIds = links
+    .filter(l => l.linkType === 'TASK_TASK' && l.target.type === EntityType.TASK && l.target.id === parentId)
+    .map(l => l.source.id);
 
-  const keys = ids.map(id => buildDataKey(ENTITY, id));
+  if (childIds.length === 0) return [];
+
+  const keys = childIds.map(id => buildDataKey(ENTITY, id));
   const tasks = await kvMGet<Task | string>(keys);
   
   return tasks
@@ -86,15 +90,8 @@ export async function upsertTask(task: Task): Promise<Task> {
   await kvSet(key, task);
   await kvSAdd(buildIndexKey(ENTITY), task.id);
 
-  // Maintain parent-child index
-  if (task.parentId) {
-    await kvSAdd(buildTaskChildrenKey(task.parentId), task.id);
-  }
-
-  // Handle parent change: remove from old parent's index
-  if (previous && previous.parentId && previous.parentId !== task.parentId) {
-    await kvSRem(buildTaskChildrenKey(previous.parentId), task.id);
-  }
+  // The legacy task:children:parentId index is no longer maintained here.
+  // TASK_TASK links are the canonical source of truth for hierarchy.
 
   const activeKey = buildTaskActiveIndexKey();
   if (isTaskActive(task)) {
@@ -124,9 +121,7 @@ export async function deleteTask(id: string): Promise<void> {
   const indexKey = buildIndexKey(ENTITY);
   
   const existing = await kvGet<Task>(key);
-  if (existing && existing.parentId) {
-    await kvSRem(buildTaskChildrenKey(existing.parentId), id);
-  }
+  // TASK_TASK links cleanup happens in datastore/workflows.
   
   await kvDel(key);
   await kvSRem(indexKey, id);

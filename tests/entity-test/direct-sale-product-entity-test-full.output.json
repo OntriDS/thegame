@@ -55,8 +55,8 @@
       }
     },
     "lifecycle": {
-      "chargedAt": "2026-08-22T02:24:29.496Z",
-      "doneAt": "2026-08-22T02:24:29.496Z"
+      "chargedAt": "2026-08-22T16:42:54.180Z",
+      "doneAt": "2026-08-22T16:42:54.180Z"
     },
     "context": {
       "rewardIntent": {
@@ -68,13 +68,13 @@
         }
       }
     },
-    "createdAt": "2026-08-22T02:24:29.496Z",
-    "updatedAt": "2026-08-22T02:24:29.496Z"
+    "createdAt": "2026-08-22T16:42:54.180Z",
+    "updatedAt": "2026-08-22T16:42:54.180Z"
   },
   "financials": [
     {
       "id": "finrec-entity-test-sale-direct-product-full",
-      "name": "direct sale • HQ • 21-08-26",
+      "name": "direct sale • HQ • 22-08-26",
       "description": "Sale-sourced financial · entity-test-sale-direct-product-full",
       "year": 2026,
       "month": 8,
@@ -94,31 +94,17 @@
         "currency": "USD"
       },
       "lifecycle": {
-        "doneAt": "2026-08-22T02:24:29.496Z"
+        "doneAt": "2026-08-22T16:42:54.180Z"
       },
-      "createdAt": "2026-08-22T02:24:50.076Z",
-      "updatedAt": "2026-08-22T02:24:50.076Z",
+      "createdAt": "2026-08-22T16:43:09.395Z",
+      "updatedAt": "2026-08-22T16:43:09.395Z",
       "schemaVersion": 1,
       "version": 0
     }
   ],
   "links": [
     {
-      "id": "8e6f8279-f6d7-4ab5-badf-84357a4c7043",
-      "linkType": "SALE_PLAYER",
-      "source": {
-        "type": "sale",
-        "id": "entity-test-sale-direct-product-full"
-      },
-      "target": {
-        "type": "player",
-        "id": "c83b2249-60a1-4b09-9874-5612f95c5da2"
-      },
-      "relationship": "points-earned",
-      "createdAt": "2026-08-22T02:25:15.064Z"
-    },
-    {
-      "id": "c087f76d-a3bb-4a17-8da6-34a782d96cf3",
+      "id": "b10b1162-8efc-465c-8156-555068813fd8",
       "linkType": "SALE_SITE",
       "source": {
         "type": "sale",
@@ -129,10 +115,10 @@
         "id": "hq"
       },
       "relationship": "sold-at",
-      "createdAt": "2026-08-22T02:24:38.614Z"
+      "createdAt": "2026-08-22T16:43:00.858Z"
     },
     {
-      "id": "9d2f60e9-efe3-4ad6-b77b-a7f2a9a2727f",
+      "id": "f4393f7e-ce4c-4a03-88d5-811be4665789",
       "linkType": "SALE_CHARACTER",
       "source": {
         "type": "sale",
@@ -140,13 +126,13 @@
       },
       "target": {
         "type": "character",
-        "id": "3010446f-9ec8-44de-b635-f0c5917e6aa2"
+        "id": "character-1775764725059-ojocp4ua1"
       },
       "relationship": "customer",
-      "createdAt": "2026-08-22T02:24:40.556Z"
+      "createdAt": "2026-08-22T16:43:02.149Z"
     },
     {
-      "id": "e432c165-2eeb-4f0d-9770-2b5e84ad38c6",
+      "id": "cd440f12-94d1-4337-90ab-b51c7179b059",
       "linkType": "SALE_CHARACTER",
       "source": {
         "type": "sale",
@@ -154,13 +140,13 @@
       },
       "target": {
         "type": "character",
-        "id": "3010446f-9ec8-44de-b635-f0c5917e6aa2"
+        "id": "character-1775764725059-ojocp4ua1"
       },
       "relationship": "owner",
-      "createdAt": "2026-08-22T02:24:42.607Z"
+      "createdAt": "2026-08-22T16:43:03.769Z"
     },
     {
-      "id": "bf3124d3-a153-4ca8-b3a4-7f3574631aec",
+      "id": "85961eb6-21f7-41eb-b6be-6c5944cd43e3",
       "linkType": "SALE_ITEM",
       "source": {
         "type": "sale",
@@ -171,10 +157,10 @@
         "id": "entity-test-item-direct-sale-full-sold-product-line-full"
       },
       "relationship": "sold-item",
-      "createdAt": "2026-08-22T02:24:57.659Z"
+      "createdAt": "2026-08-22T16:43:14.010Z"
     },
     {
-      "id": "944a478f-04e9-49b9-b96f-e44d09e2f799",
+      "id": "96bd181e-2eff-4e7f-940c-5a4ee3087892",
       "linkType": "SALE_FINREC",
       "source": {
         "type": "sale",
@@ -185,7 +171,7 @@
         "id": "finrec-entity-test-sale-direct-product-full"
       },
       "relationship": "sale-record",
-      "createdAt": "2026-08-22T02:24:59.406Z"
+      "createdAt": "2026-08-22T16:43:28.015Z"
     }
   ],
   "soldItems": [
@@ -218,10 +204,10 @@
       "context": {
         "collection": "no-collection",
         "year": 2026,
-        "soldAt": "2026-08-22T02:24:29.496Z"
+        "soldAt": "2026-08-22T16:42:54.180Z"
       },
-      "createdAt": "2026-08-22T02:24:29.496Z",
-      "updatedAt": "2026-08-22T02:24:51.574Z",
+      "createdAt": "2026-08-22T16:42:54.180Z",
+      "updatedAt": "2026-08-22T16:43:09.093Z",
       "schemaVersion": 1,
       "version": 0,
       "quantitySold": 1,
