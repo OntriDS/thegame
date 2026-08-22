@@ -341,18 +341,50 @@ export async function hydrateTaskCompatibility(task: Task): Promise<Task> {
 async function hydrateTasksCompatibilityBulk(tasks: Task[]): Promise<Task[]> {
   if (tasks.length === 0) return [];
   const { getAllLinks } = await import('@/links/link-registry');
+  const { CharacterRole } = await import('@/types/enums');
   const links = await getAllLinks();
+  
   const parentMap = new Map<string, string>();
+  const ownerMap = new Map<string, string[]>();
+  const siteMap = new Map<string, string>();
+  const targetSiteMap = new Map<string, string>();
+  const counterpartyMap = new Map<string, { role: any, id: string }>();
+
   for (const link of links) {
-    if (link.linkType === 'TASK_TASK' && link.target.type === EntityType.TASK && link.source.type === EntityType.TASK) {
-      parentMap.set(link.source.id, link.target.id);
+    if (link.source.type === EntityType.TASK) {
+      if (link.linkType === 'TASK_TASK' && link.relationship === 'parent') {
+        parentMap.set(link.source.id, link.target.id);
+      } else if (link.linkType === 'TASK_CHARACTER' && link.relationship === 'owner') {
+        const arr = ownerMap.get(link.source.id) || [];
+        arr.push(link.target.id);
+        ownerMap.set(link.source.id, arr);
+      } else if (link.linkType === 'TASK_SITE' && link.relationship === 'performed-at') {
+        siteMap.set(link.source.id, link.target.id);
+      } else if (link.linkType === 'TASK_SITE' && link.relationship === 'target-location') {
+        targetSiteMap.set(link.source.id, link.target.id);
+      } else if (link.linkType === 'TASK_CHARACTER' && (link.relationship === 'beneficiary' || link.relationship === 'customer')) {
+        counterpartyMap.set(link.source.id, {
+          role: link.relationship === 'beneficiary' ? CharacterRole.BENEFICIARY : CharacterRole.CUSTOMER,
+          id: link.target.id
+        });
+      }
     }
   }
+
   return tasks.map(task => {
     const parentId = parentMap.get(task.id);
+    const ownerIds = ownerMap.get(task.id);
+    const siteId = siteMap.get(task.id);
+    const targetSiteId = targetSiteMap.get(task.id);
+    const counterparty = counterpartyMap.get(task.id);
+
     return {
       ...task,
-      ...(parentId ? { parentId } : { parentId: task.parentId || null })
+      ...(parentId ? { parentId } : { parentId: task.parentId || null }),
+      ...(ownerIds && ownerIds.length > 0 ? { ownerIds } : { ownerIds: task.ownerIds || [] }),
+      ...(siteId ? { siteId } : { siteId: task.siteId || null }),
+      ...(targetSiteId ? { targetSiteId } : { targetSiteId: task.targetSiteId || null }),
+      ...(counterparty ? { __counterparty: counterparty } : { __counterparty: task.__counterparty || undefined })
     };
   });
 }
