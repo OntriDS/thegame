@@ -211,13 +211,14 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
     schemaVersion: normalizedTask.schemaVersion ?? EntitySchemaVersion.V1,
     version: previous ? ((previous.version ?? 0) + 1) : (normalizedTask.version ?? 0),
   } as Task;
-  // Capture legacy fields for link creation before stripping them from persistence
+  // Capture legacy fields for link creation
   const { siteId, targetSiteId, parentId } = persistedTask as any;
   delete (persistedTask as any).siteId;
   delete (persistedTask as any).targetSiteId;
   delete (persistedTask as any).parentId;
   delete (persistedTask as any).ownerIds;
   delete (persistedTask as any).__counterparty;
+  
   const saved = await repoUpsertTask(persistedTask);
 
   // Identity Shield: Time-Window Deduplication (30 seconds)
@@ -310,6 +311,7 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
           ...latest,
           ...(siteId ? { siteId } : {}),
           ...(targetSiteId ? { targetSiteId } : {}),
+          ...(parentId ? { parentId } : {}),
           ...(hasOwnerSelection ? { ownerIds: requestedOwnerIds } : {}),
           ...(taskCounterparty ? { __counterparty: taskCounterparty } : {}),
         }
@@ -317,6 +319,7 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
           ...saved,
           ...(siteId ? { siteId } : {}),
           ...(targetSiteId ? { targetSiteId } : {}),
+          ...(parentId ? { parentId } : {}),
           ...(taskCounterparty ? { __counterparty: taskCounterparty } : {}),
         };
     await processLinkEntity(linkInput, EntityType.TASK);
