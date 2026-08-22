@@ -349,7 +349,7 @@ async function hydrateTasksCompatibilityBulk(tasks: Task[]): Promise<Task[]> {
     const parentId = parentMap.get(task.id);
     return {
       ...task,
-      ...(parentId ? { parentId } : { parentId: null })
+      ...(parentId ? { parentId } : { parentId: task.parentId || null })
     };
   });
 }
@@ -836,7 +836,7 @@ export async function repairTaskCompletedIndex(options?: {
 
 export async function getTasksByParentId(parentId: string): Promise<Task[]> {
   const tasks = await repoGetTasksByParentId(parentId);
-  return reviveDates(tasks);
+  return hydrateTasksCompatibilityBulk(reviveDates(tasks));
 }
 
 // Phase 4: Unified & Optimized Tasks fetching (Active + Archive)
@@ -862,7 +862,7 @@ export async function getTasksForMonth(year: number, month: number): Promise<Tas
     tasks.push(...chunkResults.filter((t): t is Task => t !== null));
   }
 
-  return reviveDates(tasks);
+  return hydrateTasksCompatibilityBulk(reviveDates(tasks));
 }
 
 export async function getTaskById(id: string): Promise<Task | null> {
