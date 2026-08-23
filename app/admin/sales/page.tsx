@@ -206,7 +206,7 @@ function SalesPageContent() {
   };
 
   const getSaleFinancials = useCallback((sale: Sale) => {
-    const grossRevenue = extractMoneyValue(sale.totals.totalRevenue);
+    let grossRevenue = extractMoneyValue(sale.totals.totalRevenue);
     let cost = 0;
     let netProfit = 0;
 
@@ -225,6 +225,7 @@ function SalesPageContent() {
         (record) => saleFinRecIds.includes(record.id) && !record.id.includes('payout'),
       );
       if (coreRecord) {
+        grossRevenue = extractMoneyValue(coreRecord.revenue);
         cost = extractMoneyValue(coreRecord.cost);
         netProfit = extractMoneyValue(coreRecord.netCashflow);
       }

@@ -94,18 +94,21 @@ export class SummaryService {
 
     const newItemsSold = this.sumPhysicalUnitsFromSales([newSale]);
     const oldItemsSold = oldSale ? this.sumPhysicalUnitsFromSales([oldSale]) : 0;
+    
+    const newSaleRevenue = this.extractSaleBusinessRevenue(newSale);
+    const oldSaleRevenue = oldSale ? this.extractSaleBusinessRevenue(oldSale) : 0;
 
     if (!wasCountable && isNowCountable) {
       salesVolumeDelta = 1;
-      salesRevenueDelta = extractMoneyValue(newSale.totals.totalRevenue);
+      salesRevenueDelta = newSaleRevenue;
       itemsSoldDelta = newItemsSold;
     } else if (wasCountable && !isNowCountable) {
       salesVolumeDelta = -1;
-      salesRevenueDelta = -extractMoneyValue(oldSale?.totals.totalRevenue);
+      salesRevenueDelta = -oldSaleRevenue;
       itemsSoldDelta = -oldItemsSold;
     } else if (wasCountable && isNowCountable) {
       salesVolumeDelta = 0; // Count stays the same
-      salesRevenueDelta = extractMoneyValue(newSale.totals.totalRevenue) - extractMoneyValue(oldSale?.totals.totalRevenue);
+      salesRevenueDelta = newSaleRevenue - oldSaleRevenue;
       itemsSoldDelta = newItemsSold - oldItemsSold;
     }
 
@@ -175,7 +178,7 @@ export class SummaryService {
     await SummaryRepository.updateCounters({
       monthYear: formatArchiveMonthKeyUTC(new Date(date)),
       salesVolumeDelta: -1,
-      salesRevenueDelta: -extractMoneyValue(sale.totals.totalRevenue),
+      salesRevenueDelta: -this.extractSaleBusinessRevenue(sale),
       itemsSoldDelta: -this.sumPhysicalUnitsFromSales([sale])
     });
   }
@@ -203,11 +206,44 @@ export class SummaryService {
     for (const sale of sales) {
       for (const line of sale.lines || []) {
         if (line.kind === 'item') {
-          total += Math.max(0, (line as ItemSaleLine).quantity || 0);
+          const isPartner = sale.type === 'booth' && (
+            line.settlement?.partnerId || 
+            String((line as any).station || '').includes('partner') || 
+            line.description?.includes('[Partner:')
+          );
+          if (!isPartner) {
+            total += Math.max(0, (line as ItemSaleLine).quantity || 0);
+          }
         }
       }
     }
     return total;
+  }
+
+  /**
+   * Helper to accurately calculate business revenue for Booth sales
+   * avoiding the need to mutate or augment schema totals just for summaries.
+   */
+  private static extractSaleBusinessRevenue(sale: Sale): number {
+    if (sale.type !== 'booth') {
+      return extractMoneyValue(sale.totals.totalRevenue);
+    }
+    
+    let myGross = 0;
+    for (const line of sale.lines || []) {
+      const isPartner = line.settlement?.partnerId || 
+                        String((line as any).station || '').includes('partner') || 
+                        line.description?.includes('[Partner:');
+      
+      if (!isPartner) {
+        // Fallbacks for older lines before settlement schema
+        const lineRev = (line as any).settlement?.totalUSD 
+          || extractMoneyValue((line as any).revenue) 
+          || (extractMoneyValue((line as any).unitPrice) * ((line as any).quantity || 1));
+        myGross += lineRev;
+      }
+    }
+    return myGross;
   }
 
   /**

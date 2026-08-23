@@ -435,6 +435,7 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
       ? extractMoneyValue(legacyContext.boothFee) / rate
       : Number(legacyContext?.boothSaleContext?.boothCost || 0) / rate;
 
+
   const dateToUse = coerceSaleFinrecDate(sale, getUTCNow());
 
   // Default shares

@@ -290,6 +290,9 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
     const [selectedPartnerId, setSelectedPartnerId] = useState<string>(() => {
       const boothContext = getBoothContext(sale);
       if (sale?.partnerId) return sale.partnerId;
+      // Extract from lines if present
+      const partnerLine = sale?.lines?.find(l => l.settlement?.partnerId);
+      if (partnerLine?.settlement?.partnerId) return partnerLine.settlement.partnerId;
       // 1. Try modern metadata first
       if (boothContext.counterpartyBusinessId) {
         // Will be resolved by useEffect if it's a business ID
@@ -300,6 +303,12 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
     // View Mode: 'Partner' | 'Off'
     const [viewMode, setViewMode] = useState<"Partner" | "Off">(() => {
       if (sale?.partnerId) return "Partner";
+      const hasPartnerLines = sale?.lines?.some(l => 
+        l.settlement?.partnerId || 
+        String((l as any).station).includes('partner') || 
+        l.description?.includes("[Partner:")
+      );
+      if (hasPartnerLines) return "Partner";
       return "Off";
     });
 
@@ -898,6 +907,19 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         sites,
       );
 
+      let activeContractId = selectedContractId;
+      if (!activeContractId && viewMode === "Partner" && selectedPartnerId) {
+        const match = contracts.find((c) => {
+          if (!["Active", "ACTIVE", "active"].includes(c.status)) return false;
+          const party = contractCharacterIds[c.id] || {};
+          return (
+            (party.owner === selectedFounderCharacterId && party.counterparty === selectedPartnerId) ||
+            (party.counterparty === selectedFounderCharacterId && party.owner === selectedPartnerId)
+          );
+        });
+        if (match) activeContractId = match.id;
+      }
+
       const fullSale: Sale = {
         id: saleId,
         name: saleName,
@@ -926,7 +948,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
           ...saleContextWithoutLegacyPayments,
           // The UI collects the booth cost in CRC; persist it only when used.
           ...(boothCostUSD > 0 ? { boothCost: toMoney(boothCostUSD, "USD") } : {}),
-          contractId: selectedContractId || null,
+          contractId: activeContractId || null,
         },
 
         // Canonical lifecycle state
