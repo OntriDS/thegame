@@ -19,6 +19,7 @@ import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 import { getTaskPlayerCharacterId } from '@/lib/compatibility/task-selectors';
 import { resolveTaskOwnerPlayerId } from './task-player-resolution';
 import { resolveSaleOwnerId } from '@/lib/sale-relationship-selectors';
+import { getTaskCollectedAt, getTaskDoneAt } from '@/lib/utils/task-lifecycle-utils';
 
 const normalizeDate = (value: Date | string | null | undefined): Date => {
   const parsed = parseDateOrNull(value);
@@ -124,7 +125,7 @@ export async function updateFinancialRecordsFromTask(
         let year = record.year;
         let month = record.month;
         if (statePropsChanged) {
-          const dateToUse = task.collectedAt || task.doneAt || record.createdAt;
+          const dateToUse = getTaskCollectedAt(task) || getTaskDoneAt(task) || record.createdAt;
           const safeDate = normalizeDate(dateToUse);
           year = safeDate.getFullYear();
           month = safeDate.getMonth() + 1;
@@ -320,7 +321,7 @@ export async function updateItemsCreatedByTask(
         if (outputPropsChanged || statePropsChanged) {
           let year = item.context?.year;
           if (statePropsChanged) {
-            const dateToUse = normalizeDate(task.collectedAt || task.doneAt || item.createdAt);
+            const dateToUse = normalizeDate(getTaskCollectedAt(task) || getTaskDoneAt(task) || item.createdAt);
             year = dateToUse.getFullYear();
           }
 
@@ -724,10 +725,10 @@ export async function updatePlayerPointsFromSource(
     if (sourceType === EntityType.TASK) {
       const wasCompleted =
         (oldSource?.status === TaskStatus.DONE || oldSource?.status === TaskStatus.COLLECTED) &&
-        !!oldSource?.doneAt;
+        !!getTaskDoneAt(oldSource as Task);
       const isCompleted =
         (newSource?.status === TaskStatus.DONE || newSource?.status === TaskStatus.COLLECTED) &&
-        !!newSource?.doneAt;
+        !!getTaskDoneAt(newSource as Task);
       if (!wasCompleted || !isCompleted) {
         console.log('[updatePlayerPointsFromSource] Task not completed in both versions, skipping delta');
         return;
@@ -846,8 +847,8 @@ export async function updatePlayerPointsFromSource(
 export function hasStatePropsChanged(newEntity: any, oldEntity: any): boolean {
   return (
     newEntity.status !== oldEntity.status ||
-    toDateTimestamp(newEntity.doneAt) !== toDateTimestamp(oldEntity.doneAt) ||
-    toDateTimestamp(newEntity.collectedAt) !== toDateTimestamp(oldEntity.collectedAt) ||
+    toDateTimestamp(getTaskDoneAt(newEntity as Task)) !== toDateTimestamp(getTaskDoneAt(oldEntity as Task)) ||
+    toDateTimestamp(getTaskCollectedAt(newEntity as Task)) !== toDateTimestamp(getTaskCollectedAt(oldEntity as Task)) ||
     toDateTimestamp(newEntity.createdAt) !== toDateTimestamp(oldEntity.createdAt)
   );
 }

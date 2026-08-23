@@ -83,19 +83,22 @@ function formatTaskHistoryDate(value: unknown): string {
     return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP');
 }
 
+const taskDoneAt = (task: Task | EnrichedTask) => (task as any).lifecycle?.doneAt ?? (task as any).doneAt;
+const taskCollectedAt = (task: Task | EnrichedTask) => (task as any).lifecycle?.collectedAt ?? (task as any).collectedAt;
+
 /** Timeline line for History rows: Done + Collected, or Failed (no collection). */
 function TaskHistoryDoneCollectedLine({ task }: { task: Task | EnrichedTask }) {
     const t = task as any;
     if (t.status === TaskStatus.FAILED) {
-        const failedLabel = formatTaskHistoryDate(t.doneAt);
+        const failedLabel = formatTaskHistoryDate(taskDoneAt(task));
         return (
             <div className="flex items-center gap-1.5 font-medium whitespace-nowrap text-red-600 dark:text-red-400/80">
                 <span>Failed: {failedLabel}</span>
             </div>
         );
     }
-    const doneLabel = formatTaskHistoryDate(t.doneAt);
-    const collectedLabel = formatTaskHistoryDate(t.collectedAt);
+    const doneLabel = formatTaskHistoryDate(taskDoneAt(task));
+    const collectedLabel = formatTaskHistoryDate(taskCollectedAt(task));
     const tone =
         t.status === TaskStatus.COLLECTED
             ? 'text-emerald-600 dark:text-emerald-400/80'
@@ -121,8 +124,8 @@ const sortOrphanTasks = (tasks: EnrichedTask[], sortOption: TaskHistorySort): En
     const sortedTasks = [...tasks];
     if (sortOption === 'done-date') {
         return sortedTasks.sort((a, b) => {
-            const dateA = new Date((a as any).doneAt || 0).getTime();
-            const dateB = new Date((b as any).doneAt || 0).getTime();
+            const dateA = new Date(taskDoneAt(a) || 0).getTime();
+            const dateB = new Date(taskDoneAt(b) || 0).getTime();
             return dateB - dateA; // Newest first
         });
     } else {
@@ -142,14 +145,14 @@ const sortGroupedTasks = (groupedTasks: Map<string, EnrichedTask[]>, sortOption:
     if (sortOption === 'done-date') {
         // Sort by parent done date (use first child's done date as proxy for parent)
         return entries.sort(([parentNameA, childTasksA], [parentNameB, childTasksB]) => {
-            const doneDateA = childTasksA.length > 0 ? new Date((childTasksA[0] as any).doneAt || 0).getTime() : 0;
-            const doneDateB = childTasksB.length > 0 ? new Date((childTasksB[0] as any).doneAt || 0).getTime() : 0;
+            const doneDateA = childTasksA.length > 0 ? new Date(taskDoneAt(childTasksA[0]) || 0).getTime() : 0;
+            const doneDateB = childTasksB.length > 0 ? new Date(taskDoneAt(childTasksB[0]) || 0).getTime() : 0;
             return doneDateB - doneDateA; // Newest parent first
         }).map(([parentName, childTasks]) => {
             // Sort child tasks within each parent group by done date
             const sortedChildren = [...childTasks].sort((a, b) => {
-                const doneDateA = new Date((a as any).doneAt || 0).getTime();
-                const doneDateB = new Date((b as any).doneAt || 0).getTime();
+                const doneDateA = new Date(taskDoneAt(a) || 0).getTime();
+                const doneDateB = new Date(taskDoneAt(b) || 0).getTime();
                 return doneDateB - doneDateA; // Newest first
             });
             return [parentName, sortedChildren];

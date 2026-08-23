@@ -85,8 +85,9 @@ export async function GET(request: NextRequest) {
         const progressVal = typeof task.progress === 'object' ? task.progress?.percentage : task.progress;
         if (progressVal !== undefined && Number(progressVal) < 100) return;
 
-        if (!task.doneAt) return;
-        const doneDate = new Date(task.doneAt);
+        const taskDoneAt = task.lifecycle?.doneAt ?? task.doneAt;
+        if (!taskDoneAt) return;
+        const doneDate = new Date(taskDoneAt);
         if (!Number.isFinite(doneDate.getTime())) return;
         if (Number.isNaN(doneDate.getTime())) return;
 
@@ -274,21 +275,21 @@ export async function PATCH(request: NextRequest) {
 
     const preserveDoneAt =
       !status
-        ? task.doneAt
+        ? (task.lifecycle?.doneAt ?? task.doneAt)
         : isRevertingFromTerminal
           ? undefined
           : isTerminalStatus(nextStatus)
-            ? (task.doneAt ?? getUTCNow())
-            : task.doneAt;
+            ? (task.lifecycle?.doneAt ?? task.doneAt ?? getUTCNow())
+            : (task.lifecycle?.doneAt ?? task.doneAt);
 
     const preserveCollectedAt =
       !status
-        ? task.collectedAt
+        ? (task.lifecycle?.collectedAt ?? task.collectedAt)
         : isRevertingFromTerminal
           ? undefined
           : nextStatus === TaskStatus.COLLECTED
-            ? (task.collectedAt ?? (task.doneAt ? endOfMonthUTC(task.doneAt) : getUTCNow()))
-            : task.collectedAt;
+            ? (task.lifecycle?.collectedAt ?? task.collectedAt ?? ((task.lifecycle?.doneAt ?? task.doneAt) ? endOfMonthUTC(task.lifecycle?.doneAt ?? task.doneAt) : getUTCNow()))
+            : (task.lifecycle?.collectedAt ?? task.collectedAt);
 
     const incomingDoneAt = explicitDoneAt;
     const incomingCollectedAt = explicitCollectedAt;
@@ -317,8 +318,11 @@ export async function PATCH(request: NextRequest) {
       ...(siteId !== undefined ? { siteId } : {}),
       ...(priority !== undefined ? { priority } : {}),
       context: updatedContext,
-      ...(rawDoneAt !== undefined || status ? { doneAt: nextDoneAt } : {}),
-      ...(rawCollectedAt !== undefined || status ? { collectedAt: nextCollectedAt } : {}),
+      lifecycle: {
+        ...(task.lifecycle || {}),
+        ...(rawDoneAt !== undefined || status ? { doneAt: nextDoneAt } : {}),
+        ...(rawCollectedAt !== undefined || status ? { collectedAt: nextCollectedAt } : {}),
+      },
       updatedAt: new Date(),
     };
 

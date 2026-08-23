@@ -136,7 +136,7 @@ export class SummaryService {
     newTask: Task,
     oldTask?: Task
   ): Promise<void> {
-    const date = (newTask as any).collectedAt || (newTask as any).doneAt || newTask.updatedAt || new Date();
+    const date = (newTask as any).lifecycle?.collectedAt || (newTask as any).lifecycle?.doneAt || (newTask as any).collectedAt || (newTask as any).doneAt || newTask.updatedAt || new Date();
     const monthYear = formatArchiveMonthKeyUTC(new Date(date));
     let taskCountDelta = 0;
 
@@ -190,7 +190,7 @@ export class SummaryService {
   }
 
   static async handleTaskDeletion(task: Task) {
-    const date = (task as any).collectedAt || (task as any).doneAt || new Date();
+    const date = (task as any).lifecycle?.collectedAt || (task as any).lifecycle?.doneAt || (task as any).collectedAt || (task as any).doneAt || new Date();
     await SummaryRepository.updateCounters({
       monthYear: formatArchiveMonthKeyUTC(new Date(date)),
       taskCountDelta: -1

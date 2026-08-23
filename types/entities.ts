@@ -648,6 +648,12 @@ export interface TaskScheduleV1 {
   scheduledEnd?: UtcIsoString;
 }
 
+/** Canonical operational timestamps for executable Tasks. */
+export interface TaskLifecycleV1 {
+  doneAt?: UtcIsoString;
+  collectedAt?: UtcIsoString;
+}
+
 type StructuralTaskType =
   | TaskType.MISSION_GROUP
   | TaskType.RECURRENT_GROUP;
@@ -683,7 +689,9 @@ export interface ExecutableTaskV1 extends TaskBaseV1 {
   progress: ProgressV1;
   schedule?: TaskScheduleV1;
 
-  // Lifecycle History
+  lifecycle?: TaskLifecycleV1;
+
+  // Transitional runtime aliases. Canonical persisted rows use lifecycle.
   doneAt?: UtcIsoString;
   collectedAt?: UtcIsoString;
 

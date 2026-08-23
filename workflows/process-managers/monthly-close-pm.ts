@@ -139,7 +139,7 @@ export class MonthlyCloseProcessManager {
 
       try {
         // Collect task (DONE → COLLECTED)
-        const done = (task as any).doneAt;
+        const done = (task as any).lifecycle?.doneAt ?? (task as any).doneAt;
         const collectedAt = endOfMonthUTC(
           done ? (done instanceof Date ? done : new Date(done)) : (getUTCNow() as Date)
         );
@@ -147,7 +147,7 @@ export class MonthlyCloseProcessManager {
         const updatedTask = {
           ...task,
           status: TaskStatus.COLLECTED,
-          collectedAt,
+          lifecycle: { ...((task as any).lifecycle || {}), collectedAt },
           updatedAt: getUTCNow(),
         } as Task;
 

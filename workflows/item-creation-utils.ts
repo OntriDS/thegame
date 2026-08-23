@@ -16,6 +16,7 @@ import { getFinancialCounterpartyId } from '@/lib/financial-record-counterparty-
 import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
+import { getTaskCollectedAt, getTaskDoneAt } from '@/lib/utils/task-lifecycle-utils';
 
 /**
  * Determines the default item status based on item type and sale status
@@ -148,7 +149,7 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
         ...(plan?.outputItemCollection ?? task.outputItemCollection
           ? { collection: plan?.outputItemCollection ?? task.outputItemCollection }
           : {}),
-        year: new Date(task.collectedAt || task.doneAt || now).getUTCFullYear(),
+        year: new Date(getTaskCollectedAt(task) || getTaskDoneAt(task) || now).getUTCFullYear(),
         sourceFileUrl: undefined,
       },
       stock: [

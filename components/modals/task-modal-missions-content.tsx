@@ -489,11 +489,13 @@ export default function MissionTreeModalContent({
       type,
       station,
       progress,
-      doneAt:
-        finalStatus === TaskStatus.DONE || finalStatus === TaskStatus.FAILED || finalStatus === TaskStatus.COLLECTED
-          ? localDoneAt
-          : undefined,
-      collectedAt: finalStatus === TaskStatus.COLLECTED ? localCollectedAt : undefined,
+      lifecycle: {
+        ...((task as any)?.lifecycle || {}),
+        ...(finalStatus === TaskStatus.DONE || finalStatus === TaskStatus.FAILED || finalStatus === TaskStatus.COLLECTED
+          ? { doneAt: localDoneAt }
+          : { doneAt: null }),
+        ...(finalStatus === TaskStatus.COLLECTED ? { collectedAt: localCollectedAt } : { collectedAt: null }),
+      },
       schedule: dueDate || finalScheduledStart || finalScheduledEnd
         ? {
             ...(dueDate ? { dueDate: dueDate.toISOString() } : {}),

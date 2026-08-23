@@ -175,6 +175,37 @@ const syncEcosystemCharacterSnapshot = async (character: Character): Promise<voi
 };
 
 // TASKS
+// Root dates are accepted while callers transition, but they never persist on
+// canonical Task rows. This helper keeps older callers operational while each
+// task workflow moves to the lifecycle facet.
+const withTaskLifecycleCompatibility = (task: Task): Task => {
+  const lifecycle = (task as any).lifecycle;
+  if (!lifecycle || typeof lifecycle !== 'object') return task;
+  return {
+    ...task,
+    ...(lifecycle.doneAt !== undefined ? { doneAt: lifecycle.doneAt } : {}),
+    ...(lifecycle.collectedAt !== undefined ? { collectedAt: lifecycle.collectedAt } : {}),
+  } as Task;
+};
+
+const taskLifecycleForPersistence = (task: Task): Record<string, unknown> | undefined => {
+  const hasCanonicalLifecycle = Boolean((task as any).lifecycle && typeof (task as any).lifecycle === 'object');
+  const lifecycle = { ...(hasCanonicalLifecycle ? (task as any).lifecycle : {}) };
+  // Explicit lifecycle data is authoritative. Root dates are accepted only for
+  // legacy callers that have not supplied the canonical facet at all.
+  if (!hasCanonicalLifecycle && Object.prototype.hasOwnProperty.call(task, 'doneAt')) {
+    if ((task as any).doneAt == null) delete lifecycle.doneAt;
+    else lifecycle.doneAt = (task as any).doneAt;
+  }
+  if (!hasCanonicalLifecycle && Object.prototype.hasOwnProperty.call(task, 'collectedAt')) {
+    if ((task as any).collectedAt == null) delete lifecycle.collectedAt;
+    else lifecycle.collectedAt = (task as any).collectedAt;
+  }
+  if (lifecycle.doneAt == null) delete lifecycle.doneAt;
+  if (lifecycle.collectedAt == null) delete lifecycle.collectedAt;
+  return Object.keys(lifecycle).length ? lifecycle : undefined;
+};
+
 export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; skipDuplicateCheck?: boolean }): Promise<Task> {
   // Explicitly block self-referential parent assignment (circular reference)
   if (task.parentId && task.parentId === task.id) {
@@ -182,7 +213,8 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
     task.parentId = null;
   }
 
-  const previous = await repoGetTaskById(task.id);
+  const previousRaw = await repoGetTaskById(task.id);
+  const previous = previousRaw ? withTaskLifecycleCompatibility(previousRaw) : null;
   const hasOwnerSelection = Object.prototype.hasOwnProperty.call(task, 'ownerIds');
   const requestedOwnerIds = hasOwnerSelection ? [...(task.ownerIds || [])] : undefined;
   let normalizedTask =
@@ -211,6 +243,10 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
     schemaVersion: normalizedTask.schemaVersion ?? EntitySchemaVersion.V1,
     version: previous ? ((previous.version ?? 0) + 1) : (normalizedTask.version ?? 0),
   } as Task;
+  const lifecycle = taskLifecycleForPersistence(normalizedTask);
+  if (lifecycle) (persistedTask as any).lifecycle = lifecycle;
+  delete (persistedTask as any).doneAt;
+  delete (persistedTask as any).collectedAt;
   // Capture legacy fields for link creation
   const { siteId, targetSiteId, parentId } = persistedTask as any;
   delete (persistedTask as any).siteId;
@@ -220,6 +256,7 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
   delete (persistedTask as any).__counterparty;
   
   const saved = await repoUpsertTask(persistedTask);
+  const runtimeSaved = withTaskLifecycleCompatibility(saved);
 
   // Identity Shield: Time-Window Deduplication (30 seconds)
   // Only apply to NEW tasks (no previous record found) to allow updates
@@ -276,14 +313,14 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
   }
 
   // Phase 2: Rolling Summary Update
-  await SummaryService.updateTaskCounters(saved, previous || undefined);
+  await SummaryService.updateTaskCounters(runtimeSaved, previous || undefined);
 
   // Task completion effects resolve the owner through TASK_CHARACTER Links.
   // Create/reconcile those Links before running the workflow so point staging
   // never races the relationship materialization.
   if (!options?.skipLinkEffects) {
     const linkInput = {
-      ...saved,
+      ...runtimeSaved,
       ...(siteId ? { siteId } : {}),
       ...(targetSiteId ? { targetSiteId } : {}),
       ...(parentId ? { parentId } : {}),
@@ -296,7 +333,7 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
   if (!options?.skipWorkflowEffects) {
     const { onTaskUpsert } = await import('@/workflows/entities-workflows/task.workflow');
     await onTaskUpsert(
-      taskCounterparty ? ({ ...saved, parentId, __counterparty: taskCounterparty } as Task) : ({ ...saved, parentId } as Task),
+      taskCounterparty ? ({ ...runtimeSaved, parentId, __counterparty: taskCounterparty } as Task) : ({ ...runtimeSaved, parentId } as Task),
       previous || undefined
     );
   }
@@ -316,7 +353,7 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
           ...(taskCounterparty ? { __counterparty: taskCounterparty } : {}),
         }
       : {
-          ...saved,
+          ...runtimeSaved,
           ...(siteId ? { siteId } : {}),
           ...(targetSiteId ? { targetSiteId } : {}),
           ...(parentId ? { parentId } : {}),
@@ -325,7 +362,7 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
     await processLinkEntity(linkInput, EntityType.TASK);
   }
 
-  return saved;
+  return runtimeSaved;
 }
 
 export async function hydrateTaskCompatibility(task: Task): Promise<Task> {
@@ -342,7 +379,7 @@ export async function hydrateTaskCompatibility(task: Task): Promise<Task> {
   const counterpartyLink = sourceLinks.find(l => l.linkType === 'TASK_CHARACTER' && (l.relationship === 'beneficiary' || l.relationship === 'customer'));
   
   return {
-    ...task,
+    ...withTaskLifecycleCompatibility(task),
     ...(parentLink ? { parentId: parentLink.target.id } : { parentId: task.parentId || null }),
     ...(ownerLinks.length > 0 ? { ownerIds: ownerLinks.map(l => l.target.id) } : { ownerIds: task.ownerIds || [] }),
     ...(siteLink ? { siteId: siteLink.target.id } : { siteId: (task as any).siteId || null }),
@@ -397,7 +434,7 @@ async function hydrateTasksCompatibilityBulk(tasks: Task[]): Promise<Task[]> {
     const counterparty = counterpartyMap.get(task.id);
 
     return {
-      ...task,
+      ...withTaskLifecycleCompatibility(task),
       ...(parentId ? { parentId } : { parentId: task.parentId || null }),
       ...(ownerIds && ownerIds.length > 0 ? { ownerIds } : { ownerIds: task.ownerIds || [] }),
       ...(siteId ? { siteId } : { siteId: task.siteId || null }),

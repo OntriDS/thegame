@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 type ArchiveTabKey = "tasks" | "sales" | "financials" | "items";
 
 function getTaskCollectedAt(task: Task) {
-  return 'collectedAt' in task ? task.collectedAt : undefined;
+  return (task as any).lifecycle?.collectedAt ?? ('collectedAt' in task ? task.collectedAt : undefined);
 }
 
 interface MonthBoxTabsProps {

@@ -3,6 +3,7 @@ import type { Task } from '@/types/entities';
 import { TaskStatus } from '@/types/enums';
 import { parseDateToUTC } from '@/lib/utils/date-parsers';
 import { formatArchiveMonthKeyUTC, getUTCNow } from '@/lib/utils/utc-utils';
+import { getTaskCollectedAt, getTaskDoneAt } from '@/lib/utils/task-lifecycle-utils';
 
 /**
  * Month bucket `MM-yy` for reactive task archive indexing — must match
@@ -15,9 +16,9 @@ import { formatArchiveMonthKeyUTC, getUTCNow } from '@/lib/utils/utc-utils';
 export function getTaskArchiveMonthKeyUTC(task: Task): string | null {
   let raw: Date | string | undefined;
   if (task.status === TaskStatus.COLLECTED) {
-    raw = task.doneAt || task.collectedAt || task.createdAt;
+    raw = getTaskDoneAt(task) || getTaskCollectedAt(task) || task.createdAt;
   } else {
-    raw = task.doneAt || task.createdAt;
+    raw = getTaskDoneAt(task) || task.createdAt;
   }
   if (raw == null) return null;
   const date = raw instanceof Date ? raw : parseDateToUTC(raw as string | number);
@@ -32,8 +33,10 @@ export function getTaskArchiveMonthKeyUTC(task: Task): string | null {
  */
 export function fallbackTaskCompletedArchiveMonthKeyUTC(task: Task): string {
   let date: Date | null = null;
-  if (task.collectedAt) date = new Date(task.collectedAt);
-  else if (task.doneAt) date = new Date(task.doneAt);
+  const collectedAt = getTaskCollectedAt(task);
+  const doneAt = getTaskDoneAt(task);
+  if (collectedAt) date = new Date(collectedAt);
+  else if (doneAt) date = new Date(doneAt);
   else if (task.dueDate) date = new Date(task.dueDate);
   else if (task.scheduledStart) date = new Date(task.scheduledStart);
   else if (task.updatedAt) date = new Date(task.updatedAt);

@@ -28,6 +28,7 @@ import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync
 import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
 import { kvSRem } from '@/lib/utils/kv';
 import { getTaskPlayerCharacterId } from '@/lib/compatibility/task-selectors';
+import { getTaskCollectedAt, getTaskDoneAt, withTaskLifecycle } from '@/lib/utils/task-lifecycle-utils';
 import { resolveTaskOwnerPlayerId } from '../task-player-resolution';
 import { deleteEffectClaim } from '@/lib/domain/effects/effect-claim-store';
 
@@ -173,16 +174,13 @@ async function cleanUpIntermediateStatusTransitions(
  * Does not run when task was already Failed (idempotent re-save).
  */
 async function normalizeTaskFailedState(task: Task, previousTask?: Task): Promise<Task> {
-  const doneAtRaw = task.doneAt || previousTask?.doneAt || getUTCNow();
+  const doneAtRaw = getTaskDoneAt(task) || getTaskDoneAt(previousTask) || getUTCNow();
   const doneAt = doneAtRaw instanceof Date ? doneAtRaw : parseDateToUTC(doneAtRaw as string | number);
 
-  const merged: Task = {
+  const merged: Task = withTaskLifecycle({
     ...task,
     status: TaskStatus.FAILED,
-    
-    collectedAt: undefined,
-    doneAt,
-  };
+  }, { collectedAt: null, doneAt });
 
   if (previousTask) {
     const wasCollected =
@@ -321,7 +319,8 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   }
 
   // Log DONE event - either when status changes to Done OR when creating a task that's already Done
-  if (outputsTask.status === TaskStatus.DONE && outputsTask.doneAt) {
+  const outputsDoneAt = getTaskDoneAt(outputsTask);
+  if (outputsTask.status === TaskStatus.DONE && outputsDoneAt) {
     // Use prior *status*, not doneAt: instances spawned from a completed template could carry a stray
     // template doneAt while still active, which incorrectly suppressed DONE logs and downstream effects.
     const wasAlreadyTerminalDoneLike =
@@ -333,11 +332,11 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         name: getSafeTaskNameForLogging(outputsTask),
         taskType: outputsTask.type,
         station: outputsTask.station
-      }, outputsTask.doneAt);
+      }, outputsDoneAt);
 
       // --- Shadow Workflow Coordinator ---
       const execution: WorkflowExecutionV1 = {
-        workflowId: `task-done-${outputsTask.id}-${new Date(outputsTask.doneAt).getTime()}`,
+        workflowId: `task-done-${outputsTask.id}-${new Date(outputsDoneAt).getTime()}`,
         workflowType: 'task-completion',
         rootCommandId: `cmd-done-${outputsTask.id}`,
         state: WorkflowStatus.RUNNING,
@@ -362,7 +361,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     false /* legacy removed */;
 
   if (outputsTask.status !== TaskStatus.FAILED && (statusBecameCollected || flagBecameCollected)) {
-    let collectedAtRaw = outputsTask.collectedAt;
+    let collectedAtRaw = getTaskCollectedAt(outputsTask);
     if (collectedAtRaw) {
       const collectedAtCandidate = collectedAtRaw instanceof Date ? collectedAtRaw : new Date(collectedAtRaw);
       collectedAtRaw = Number.isFinite(collectedAtCandidate.getTime()) ? collectedAtCandidate : undefined;
@@ -370,30 +369,27 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     if (!collectedAtRaw) {
       // Collection belongs to the task's completion month. This keeps direct
       // DONE -> COLLECTED transitions consistent with monthly close.
-      collectedAtRaw = outputsTask.doneAt
-        ? endOfMonthUTC(outputsTask.doneAt instanceof Date ? outputsTask.doneAt : new Date(outputsTask.doneAt as string))
+      const doneAt = getTaskDoneAt(outputsTask);
+      collectedAtRaw = doneAt
+        ? endOfMonthUTC(doneAt instanceof Date ? doneAt : new Date(doneAt as string))
         : getUTCNow();
       await upsertTask(
-        { ...outputsTask,  collectedAt: collectedAtRaw, status: TaskStatus.COLLECTED },
+        withTaskLifecycle({ ...outputsTask, status: TaskStatus.COLLECTED }, { collectedAt: collectedAtRaw }),
         { skipWorkflowEffects: true }
       );
     }
     const collectedAt = collectedAtRaw;
 
     if (outputsTask.status !== TaskStatus.COLLECTED) {
-      const repaired: Task = {
+      const repaired: Task = withTaskLifecycle({
         ...outputsTask,
         status: TaskStatus.COLLECTED,
-        
-        collectedAt,
-      };
+      }, { collectedAt });
       await upsertTask(repaired, { skipWorkflowEffects: true });
-      taskForCounterparty = {
+      taskForCounterparty = withTaskLifecycle({
         ...taskForCounterparty,
         status: TaskStatus.COLLECTED,
-        
-        collectedAt,
-      };
+      }, { collectedAt });
     }
 
     const pointsRewardedEffectKey = EffectKeys.sideEffect('task', outputsTask.id, 'pointsRewarded');
@@ -669,8 +665,8 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
       task.status === TaskStatus.COLLECTED
     ) {
       try {
-        let snapshotDate = task.doneAt;
-        if (!snapshotDate && task.collectedAt) snapshotDate = task.collectedAt;
+        let snapshotDate = getTaskDoneAt(task);
+        if (!snapshotDate && getTaskCollectedAt(task)) snapshotDate = getTaskCollectedAt(task);
         if (!snapshotDate && task.createdAt) snapshotDate = task.createdAt;
 
         if (snapshotDate) {
@@ -771,7 +767,7 @@ export async function uncompleteTask(taskId: string, previousTerminalTask?: Task
     // Persisted row may already have cleared doneAt when the user picked a pre-done status; use
     // previousTerminalTask from the workflow when we know we left a terminal state.
     if (!leftDoneOrCollected && !leftFailed) {
-      if (!task.doneAt && !task.collectedAt) return;
+      if (!getTaskDoneAt(task) && !getTaskCollectedAt(task)) return;
     }
 
     const productionPlan = task.context?.productionPlan;
@@ -834,9 +830,9 @@ export async function uncompleteTask(taskId: string, previousTerminalTask?: Task
     try {
       const snapshotRaw =
         (previousTerminalTask &&
-          (previousTerminalTask.collectedAt || previousTerminalTask.doneAt)) ||
-        task.collectedAt ||
-        task.doneAt ||
+          (getTaskCollectedAt(previousTerminalTask) || getTaskDoneAt(previousTerminalTask))) ||
+        getTaskCollectedAt(task) ||
+        getTaskDoneAt(task) ||
         task.createdAt ||
         getUTCNow();
       const snapshotDate =
@@ -979,7 +975,8 @@ export async function ensureTaskDoneLog(taskId: string): Promise<{
   if (!isDoneLike) {
     return { success: false, error: 'Task is not Done or Collected.' };
   }
-  if (!task.doneAt) {
+  const doneAt = getTaskDoneAt(task);
+  if (!doneAt) {
     return { success: false, error: 'Task has no doneAt; set completion date first.' };
   }
   if (await taskHasLifecycleEvent(taskId, 'done')) {
@@ -994,7 +991,7 @@ export async function ensureTaskDoneLog(taskId: string): Promise<{
       taskType: task.type,
       station: task.station,
     },
-    task.doneAt
+    doneAt
   );
   return { success: true };
 }
@@ -1014,7 +1011,8 @@ export async function ensureTaskCollectedLog(taskId: string): Promise<{
   if (await taskHasLifecycleEvent(taskId, 'collected')) {
     return { success: true, noop: true };
   }
-  const collectedAt = task.collectedAt ? new Date(task.collectedAt) : getUTCNow();
+  const taskCollectedAt = getTaskCollectedAt(task);
+  const collectedAt = taskCollectedAt ? new Date(taskCollectedAt) : getUTCNow();
   await appendEntityLog(
     EntityType.TASK,
     task.id,

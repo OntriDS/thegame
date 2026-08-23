@@ -247,8 +247,11 @@ export async function POST(req: NextRequest) {
       schedule: taskBody.schedule || (taskBody.dueDate
         ? { dueDate: parseDateToUTC(taskBody.dueDate) }
         : undefined),
-      doneAt: nextDoneAt,
-      collectedAt: nextCollectedAt,
+      lifecycle: {
+        ...(taskBody.lifecycle || existingTask?.lifecycle || {}),
+        ...(requestedDoneAt !== undefined || requestedStatus ? { doneAt: nextDoneAt ?? null } : {}),
+        ...(requestedCollectedAt !== undefined || requestedStatus ? { collectedAt: nextCollectedAt ?? null } : {}),
+      },
       progress: { percentage: Number.isFinite(nextProgress) ? nextProgress : 0 },
       context: Object.keys({
         ...normalizedContext,

@@ -12,6 +12,7 @@ import { TaskStatus, SaleStatus, EntityType } from '@/types/enums';
 import { getUTCNow, endOfMonthUTC, formatArchiveMonthKeyUTCFromParts } from '@/lib/utils/utc-utils';
 import { kvSAdd } from '@/lib/utils/kv';
 import { buildArchiveMonthsKey } from '@/data-store/keys';
+import { getTaskDoneAt, withTaskLifecycle } from '@/lib/utils/task-lifecycle-utils';
 
 /**
  * Monthly collection: tasks and sales only. Points vest on those entities in their workflows.
@@ -24,13 +25,12 @@ export const CollectionService = {
 
         let count = 0;
         for (const task of toCollect) {
-            const updatedTask = {
+            const doneAt = getTaskDoneAt(task);
+            const updatedTask = withTaskLifecycle({
                 ...task,
                 status: TaskStatus.COLLECTED,
-                
-                collectedAt: endOfMonthUTC(task.doneAt ? (task.doneAt instanceof Date ? task.doneAt : new Date(task.doneAt as string)) : getUTCNow()),
                 updatedAt: getUTCNow()
-            };
+            }, { collectedAt: endOfMonthUTC(doneAt ? (doneAt instanceof Date ? doneAt : new Date(doneAt as string)) : getUTCNow()) });
 
             await upsertTask(updatedTask);
             count++;

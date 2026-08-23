@@ -205,7 +205,7 @@ function applyTaskCommand(
       updatedTask = {
         ...currentTask,
         status: TaskStatus.DONE,
-        doneAt: payload.completedAt,
+        lifecycle: { ...((currentTask as any).lifecycle || {}), doneAt: payload.completedAt },
         version: newVersion,
         updatedAt: occurredAt,
       } as Task;
@@ -217,7 +217,7 @@ function applyTaskCommand(
       updatedTask = {
         ...currentTask,
         status: TaskStatus.COLLECTED,
-        collectedAt: payload.collectedAt,
+        lifecycle: { ...((currentTask as any).lifecycle || {}), collectedAt: payload.collectedAt },
         version: newVersion,
         updatedAt: occurredAt,
       } as Task;

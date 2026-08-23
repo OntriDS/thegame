@@ -32,6 +32,7 @@ import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution'
 import { getSaleCharacterId } from '@/lib/sale-character-id';
 import { resolveSaleCharacterId, resolveSaleOwnerId } from '@/lib/sale-relationship-selectors';
 import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
+import { getTaskCollectedAt, getTaskDoneAt } from '@/lib/utils/task-lifecycle-utils';
 
 const getTaskMoneyValue = (task: Task, field: 'costIntent' | 'revenueIntent'): number => {
   const money = task.context?.financialIntent?.[field];
@@ -177,7 +178,9 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
     console.log(`[createFinancialRecordFromTask] Creating new financial record (Effect Registry confirmed no existing record)`);
 
     const currentDate = getUTCNow();
-    const rawDate = task.collectedAt || task.doneAt || currentDate;
+    const taskCollectedAt = getTaskCollectedAt(task);
+    const taskDoneAt = getTaskDoneAt(task);
+    const rawDate = taskCollectedAt || taskDoneAt || currentDate;
     const dateToUse =
       rawDate instanceof Date ? rawDate : parseDateToUTC(rawDate as string | number);
     const cost = taskCost;
@@ -202,8 +205,8 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
           ? FinancialStatus.DONE
           : FinancialStatus.PENDING,
       lifecycle: {
-        ...(task.status !== TaskStatus.PENDING ? { doneAt: task.doneAt || dateToUse } : {}),
-        ...(task.status === TaskStatus.COLLECTED && task.collectedAt ? { collectedAt: task.collectedAt } : {}),
+        ...(task.status !== TaskStatus.PENDING ? { doneAt: taskDoneAt || dateToUse } : {}),
+        ...(task.status === TaskStatus.COLLECTED && taskCollectedAt ? { collectedAt: taskCollectedAt } : {}),
       },
       context: {
         jungleCoins: 0,
@@ -296,8 +299,8 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
       },
       lifecycle: {
         ...(existingFinrec.lifecycle || {}),
-        ...((task.doneAt || task.collectedAt) ? { doneAt: existingFinrec.lifecycle?.doneAt || task.doneAt || task.collectedAt } : {}),
-        ...(task.collectedAt ? { collectedAt: task.collectedAt } : {}),
+        ...((getTaskDoneAt(task) || getTaskCollectedAt(task)) ? { doneAt: existingFinrec.lifecycle?.doneAt || getTaskDoneAt(task) || getTaskCollectedAt(task) } : {}),
+        ...(getTaskCollectedAt(task) ? { collectedAt: getTaskCollectedAt(task) } : {}),
       },
       updatedAt: getUTCNow()
     }, {
