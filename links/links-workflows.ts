@@ -285,12 +285,23 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
   const existingLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
 
   // Helper: resolve an ID to a Character ID.
-  // If the ID is a Business, follow Business.linkedCharacterId.
+  // A Business resolves through its canonical Character→Business Link; its
+  // former linkedCharacterId field is not relationship authority.
   const resolveToCharacterId = async (id: string): Promise<string | null> => {
     const character = await getCharacterById(id);
     if (character) return id;
     const business = await getBusinessById(id);
-    if (business?.linkedCharacterId) return business.linkedCharacterId;
+    if (business) {
+      const businessLinks = await getLinksFor({ type: EntityType.BUSINESS, id: business.id });
+      const characterLink = businessLinks.find((link) =>
+        link.linkType === LinkType.CHARACTER_BUSINESS &&
+        link.source.type === EntityType.CHARACTER &&
+        link.target.type === EntityType.BUSINESS &&
+        link.target.id === business.id &&
+        (link.relationship === 'owns' || link.relationship === 'represents')
+      );
+      return characterLink?.source.id || null;
+    }
     return null;
   };
 
@@ -332,7 +343,7 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
 
   // --- SALE_CHARACTER cleanup ---
   // Build the full set of allowed character target IDs,
-  // resolving any business IDs to their linkedCharacterId.
+  // resolving any business IDs through CHARACTER_BUSINESS.
   const allowedCharacterIds = new Set<string>();
   if (saleCounterpartyCharId) allowedCharacterIds.add(saleCounterpartyCharId);
   if (saleOwnerCharId) allowedCharacterIds.add(saleOwnerCharId);
@@ -391,7 +402,7 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     promises.push(createLink(l));
   }
 
-  // --- SALE_CHARACTER for partnerId (resolves Business → linkedCharacterId) ---
+  // --- SALE_CHARACTER for partnerId (resolves Business → CHARACTER_BUSINESS) ---
   if (sale.partnerId) {
     const charId = await resolveToCharacterId(sale.partnerId);
     if (charId) {
@@ -404,7 +415,7 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
       promises.push(createLink(l));
     } else {
       console.warn(
-        `[processSaleEffects] Partner ID ${sale.partnerId} not found as Character or Business with linkedCharacterId. Skipping link.`
+        `[processSaleEffects] Partner ID ${sale.partnerId} not found as Character or Business with a canonical CHARACTER_BUSINESS Link. Skipping link.`
       );
     }
   }

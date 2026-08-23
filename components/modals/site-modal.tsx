@@ -63,7 +63,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
   const [regions, setRegions] = useState<Region[]>([]);
   const [businessType, setBusinessType] = useState<PhysicalBusinessType>(PhysicalBusinessType.STORAGE);
   const [googleMapsAddress, setGoogleMapsAddress] = useState('');
-  const [coordinates, setCoordinates] = useState<{lat: number; lng: number} | null>(null);
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
 
   // Digital site fields
   const [digitalUrl, setDigitalUrl] = useState('');
@@ -151,7 +151,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
           setSystemPurpose(site.subtype as SystemSiteType || SystemSiteType.UNIVERSAL_TRACKING);
           setDigitalUrl('');
         }
-        
+
         didInitRef.current = false;
       }
     } else if (!didInitRef.current) {
@@ -481,10 +481,10 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="googleMaps" className="text-xs">Location (Google Maps URL or Address)</Label>
-                    <Button 
-                      type="button" 
-                      size="sm" 
-                      variant="outline" 
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
                       className="h-7 text-xs bg-primary/10 hover:bg-primary/20 text-primary border-primary/20"
                       onClick={requestPickCoordsFromMap}
                     >
@@ -515,7 +515,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                     Paste a full Google Maps link (e.g. google.com/maps/.../@lat,lng) to automatically set the map pin, or use the Pick on Map button.
                   </p>
                 </div>
-                
+
                 {/* Coordinates */}
                 <div className="space-y-2 pt-2 border-t border-border/50">
                   <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">

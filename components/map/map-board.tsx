@@ -27,7 +27,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, ChevronUp, ChevronDown, RefreshCw } from 'lucide-react';
 
 const maxPolygonVertices = 8;
 
@@ -784,8 +784,11 @@ export default function MapBoard({
   const [showHudLegend, setShowHudLegend] = useState(() =>
     readAdminMapBoolPref(adminMapLocalStorageKeys.showHudLegend, true)
   );
-  const [showZoomControls, setShowZoomControls] = useState(() =>
+  const [showZoomControls, setShowZoomControls] = useState<boolean>(() =>
     readAdminMapBoolPref(adminMapLocalStorageKeys.showZoomControls, true)
+  );
+  const [showFooterPanel, setShowFooterPanel] = useState<boolean>(() =>
+    readAdminMapBoolPref(adminMapLocalStorageKeys.showFooterPanel, true)
   );
 
   const tileUrl = process.env.NEXT_PUBLIC_MAP_TILE_URL || DEFAULT_TILE_URL;
@@ -1330,8 +1333,35 @@ export default function MapBoard({
       <div className="shrink-0 border-t border-border pt-4">
         <section className="space-y-3 rounded-md border border-border bg-muted/30 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Map</h3>
-            <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !showFooterPanel;
+                  setShowFooterPanel(next);
+                  writeAdminMapBoolPref(adminMapLocalStorageKeys.showFooterPanel, next);
+                }}
+                className="rounded p-1 hover:bg-muted/50 text-muted-foreground transition-colors"
+                title={showFooterPanel ? 'Hide map tools' : 'Show map tools'}
+              >
+                {showFooterPanel ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+              </button>
+              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Map</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  ClientAPI.getMap({ forceRefresh: true }).then(() => {
+                    window.dispatchEvent(new Event('mapDataRefreshNeeded'));
+                  }).catch(console.error);
+                }}
+                className="rounded p-1 hover:bg-muted/50 text-muted-foreground transition-colors"
+                title="Refresh Map Data"
+              >
+                <RefreshCw className="h-3 w-3" />
+              </button>
+            </div>
+            {showFooterPanel && (
+              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
               <label className="flex cursor-pointer items-center gap-1.5">
                 <input
                   type="checkbox"
@@ -1373,9 +1403,12 @@ export default function MapBoard({
                 Zoom bar
               </label>
             </div>
+            )}
           </div>
 
-          <div className="max-w-md">
+          {showFooterPanel && (
+            <>
+              <div className="max-w-md">
             <label htmlFor="map-region-select" className="mb-1 block text-xs text-muted-foreground">
               Region (saved in this browser)
             </label>
@@ -1533,6 +1566,8 @@ export default function MapBoard({
               </>
             )}
           </div>
+          </>
+          )}
         </section>
       </div>
     </div>

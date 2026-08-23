@@ -17,6 +17,8 @@ export const adminMapLocalStorageKeys = {
   showHudLegend: 'thegame:admin-map:show-hud-legend',
   /** '1' / '0' — zoom +/- and scroll-wheel toggle on the map */
   showZoomControls: 'thegame:admin-map:show-zoom-controls',
+  /** '1' / '0' — toggle the tools/footer panel at the bottom of the map */
+  showFooterPanel: 'thegame:admin-map:show-footer-panel',
 } as const;
 
 export function readAdminMapBoolPref(key: string, defaultValue: boolean): boolean {

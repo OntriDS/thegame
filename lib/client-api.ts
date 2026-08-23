@@ -730,8 +730,9 @@ export const ClientAPI = {
   // ============================================================================
   // MAP READ MODEL
   // ============================================================================
-  getMap: async (): Promise<MapReadModel> => {
-    const res = await request('/api/map');
+  getMap: async (options?: { forceRefresh?: boolean }): Promise<MapReadModel> => {
+    const url = options?.forceRefresh ? '/api/map?refresh=1' : '/api/map';
+    const res = await request(url);
     if (!res.ok) throw new Error('Failed to fetch map data');
     return await res.json();
   },

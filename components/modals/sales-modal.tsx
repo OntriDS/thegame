@@ -186,7 +186,9 @@ export default function SalesModal({
   const [showPaymentsSubModal, setShowPaymentsSubModal] = useState(false);
   const [showDatesModal, setShowDatesModal] = useState(false);
   const [localDoneAt, setLocalDoneAt] = useState<Date | undefined>(
-    sale?.lifecycle?.doneAt ? new Date(sale.lifecycle.doneAt) : undefined
+    sale?.lifecycle?.doneAt 
+      ? new Date(sale.lifecycle.doneAt) 
+      : (sale?.lifecycle?.chargedAt ? new Date(sale.lifecycle.chargedAt) : undefined)
   );
   const [localCollectedAt, setLocalCollectedAt] = useState<Date | undefined>(
     sale?.lifecycle?.collectedAt ? new Date(sale.lifecycle.collectedAt) : undefined

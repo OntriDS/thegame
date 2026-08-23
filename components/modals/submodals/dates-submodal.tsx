@@ -115,7 +115,7 @@ export default function DatesSubmodal({
                     <div className="space-y-2">
                         <div className="flex justify-between items-center">
                             <Label className="text-xs font-semibold">
-                                {isItem ? 'Sold At' : 'Done / Executed At'}
+                                {isItem ? 'Sold At' : isSale ? 'Charged / Done At' : 'Done / Executed At'}
                             </Label>
                             {localDoneAt && (
                                 <Button variant="ghost" size="sm" onClick={handleClearDoneAt} className="h-5 px-1 text-[10px] text-destructive">

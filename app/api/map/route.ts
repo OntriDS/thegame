@@ -21,10 +21,14 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const forceRefresh = req.nextUrl.searchParams.get('refresh') === '1';
     const cacheKey = buildMapReadModelKey();
-    const cached = await kvGet<MapReadModel>(cacheKey);
-    if (cached && Array.isArray(cached.regions) && Array.isArray(cached.settlements) && Array.isArray(cached.markers)) {
-      return NextResponse.json(cached);
+    
+    if (!forceRefresh) {
+      const cached = await kvGet<MapReadModel>(cacheKey);
+      if (cached && Array.isArray(cached.regions) && Array.isArray(cached.settlements) && Array.isArray(cached.markers)) {
+        return NextResponse.json(cached);
+      }
     }
 
     const [regions, settlements, sites] = await Promise.all([
