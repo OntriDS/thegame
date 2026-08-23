@@ -281,7 +281,9 @@ export async function processItemEffects(item: Item): Promise<void> {
 
 export async function processSaleEffects(sale: Sale): Promise<void> {
   const saleCounterpartyCharId = await resolveSaleCharacterId(sale);
-  const saleOwnerCharId = sale.ownerId || null;
+  // Online orders are owned by their customer journey, not by the admin who
+  // processes them. This also removes any historical accidental owner link.
+  const saleOwnerCharId = sale.type === SaleType.ONLINE ? null : sale.ownerId || null;
   const existingLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
 
   // Helper: resolve an ID to a Character ID.

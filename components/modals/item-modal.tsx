@@ -780,6 +780,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
       setOwnerId(getItemCharacterId(item) || null);
       setOwnerCharacterName('');
+      setLocalSoldAt(item.context?.soldAt ? new Date(item.context.soldAt) : undefined);
     }
   }, [item, defaultItemType, initialSiteId]);
 

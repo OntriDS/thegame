@@ -111,11 +111,11 @@ export default function DatesSubmodal({
                         <p className="text-[10px] text-muted-foreground">Original creation timestamp.</p>
                     </div>
 
-                    {/* Sold At (items) / Done At (tasks) */}
+                    {/* Sold At (items) / Done At (tasks/financials) / Charged At (sales) */}
                     <div className="space-y-2">
                         <div className="flex justify-between items-center">
                             <Label className="text-xs font-semibold">
-                                {isItem ? 'Sold At' : isSale ? 'Charged / Done At' : 'Done / Executed At'}
+                                {isItem ? 'Sold At' : isSale ? 'Charged At' : 'Done At'}
                             </Label>
                             {localDoneAt && (
                                 <Button variant="ghost" size="sm" onClick={handleClearDoneAt} className="h-5 px-1 text-[10px] text-destructive">
@@ -151,11 +151,11 @@ export default function DatesSubmodal({
                         )}
                     </div>
 
-                    {/* Collected At — tasks only */}
+                    {/* Collected At — tasks and sales only */}
                     {showCollectedSection && (
                         <div className="space-y-2">
                             <div className="flex justify-between items-center">
-                                <Label className="text-xs font-semibold">Collected / Rewarded At</Label>
+                                <Label className="text-xs font-semibold">Collected At</Label>
                                 {localCollectedAt && (
                                     <Button variant="ghost" size="sm" onClick={handleClearCollectedAt} className="h-5 px-1 text-[10px] text-destructive">
                                         Clear
@@ -176,7 +176,7 @@ export default function DatesSubmodal({
                                 </p>
                             ) : (
                                 <p className="text-[10px] text-muted-foreground">
-                                    {isSale ? 'When the sale was collected (used for monthly log placement).' : 'When points were rewarded to the player.'}
+                                    {isSale ? 'When the sale was collected (used for monthly log placement).' : 'When the points are collected from them.'}
                                 </p>
                             )}
                         </div>

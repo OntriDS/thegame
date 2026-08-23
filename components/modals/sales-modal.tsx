@@ -41,6 +41,7 @@ import SalesModalNetworkContent from './sales-modal-network-content';
 import SalesModalOnlineContent from './sales-modal-online-content';
 import SalesModalBoothContent, { type BoothSalesViewHandle as SalesModalBoothContentHandle } from './sales-modal-booth-content';
 import DatesSubmodal from './submodals/dates-submodal';
+import OwnerSelectorModal from './submodals/owner-selector-submodal';
 import { ensureCounterpartyRole as syncCounterpartyRole } from '@/lib/utils/character-role-sync';
 import { getSaleCharacterId } from '@/lib/sale-character-id';
 import { getLinkedCharacterId, getLinkedSiteId } from '@/lib/utils/entity-link-selectors';
@@ -149,6 +150,7 @@ export default function SalesModal({
 
   const [characterId, setCharacterId] = useState<string | null>('');
   const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [showOwnerSelector, setShowOwnerSelector] = useState(false);
 
   useEffect(() => {
     if (!open || sale || ownerId || !authUser?.characterId) return;
@@ -1050,7 +1052,9 @@ export default function SalesModal({
       siteId: effectiveSiteId,
       counterpartyName: counterpartyName.trim() || undefined,
       ...(isNewCustomer || !characterId ? {} : { characterId }), // Existing customer only when selected
-      ...(ownerId ? { ownerId } : {}),
+      // Online orders are created by customers through the Ecosystem, never
+      // owned by the signed-in admin who happens to open this modal.
+      ...(ownerId && type !== SaleType.ONLINE ? { ownerId } : {}),
       lines: effectiveLines,
       payments: effectivePayments,
       totals: {
@@ -1586,14 +1590,16 @@ export default function SalesModal({
                 </Button>
               </>
             )}
-            <Button
-              variant="outline"
-              onClick={() => authUser?.characterId && setOwnerId(authUser.characterId)}
-              className="h-8 text-xs"
-            >
-              <User className="w-3 h-3 mr-1" />
-              Owner
-            </Button>
+            {type !== SaleType.ONLINE && type !== SaleType.BOOTH && (
+              <Button
+                variant="outline"
+                onClick={() => setShowOwnerSelector(true)}
+                className="h-8 text-xs"
+              >
+                <User className="w-3 h-3 mr-1" />
+                Owner
+              </Button>
+            )}
             {/* Rewards toggle - show for all modes */}
             <Button
               variant="outline"
@@ -1845,6 +1851,14 @@ export default function SalesModal({
         collectedAt={localCollectedAt}
         currentStatus={status}
         onDatesChange={handleDatesUpdate}
+      />
+
+      <OwnerSelectorModal
+        open={showOwnerSelector}
+        onOpenChange={setShowOwnerSelector}
+        onMultiSelect={(ownerIds) => setOwnerId(ownerIds[0] || null)}
+        multiSelect={false}
+        currentOwnerIds={ownerId ? [ownerId] : []}
       />
 
       {/* Archive Collection Confirmation Modal for status selector */}

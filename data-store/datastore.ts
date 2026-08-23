@@ -1426,7 +1426,11 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
   const previous = await getSaleById(sale.id);
   const transientSiteId = sale.siteId ?? previous?.siteId;
   const transientCharacterId = sale.characterId ?? previous?.characterId;
-  const transientOwnerId = sale.ownerId ?? previous?.ownerId;
+  // An Online sale is customer-originated. Never carry an admin owner from a
+  // compatibility projection or generic form submission into its Links.
+  const transientOwnerId = sale.type === SaleType.ONLINE
+    ? undefined
+    : sale.ownerId ?? previous?.ownerId;
   const transientCounterpartyName = sale.counterpartyName ?? previous?.counterpartyName;
 
   // Identity Shield: Time-Window Deduplication (2 minutes)
