@@ -929,6 +929,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         status: status,
         siteId: siteId,
         characterId: null,
+        // Booth saves bypass the parent SalesModal payload. Persist the
+        // selected Founder here so the sale workflow creates SALE_CHARACTER
+        // with relationship "owner".
+        ownerId: selectedFounderCharacterId || undefined,
         partnerId:
           viewMode === "Partner" && selectedPartnerId
             ? selectedPartnerId

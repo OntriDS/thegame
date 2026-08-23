@@ -1347,21 +1347,9 @@ export default function MapBoard({
                 {showFooterPanel ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
               </button>
               <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Map</h3>
-              <button
-                type="button"
-                onClick={() => {
-                  ClientAPI.getMap({ forceRefresh: true }).then(() => {
-                    window.dispatchEvent(new Event('mapDataRefreshNeeded'));
-                  }).catch(console.error);
-                }}
-                className="rounded p-1 hover:bg-muted/50 text-muted-foreground transition-colors"
-                title="Refresh Map Data"
-              >
-                <RefreshCw className="h-3 w-3" />
-              </button>
             </div>
             {showFooterPanel && (
-              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <label className="flex cursor-pointer items-center gap-1.5">
                 <input
                   type="checkbox"
@@ -1402,6 +1390,22 @@ export default function MapBoard({
                 />
                 Zoom bar
               </label>
+              
+              <div className="ml-2 h-4 border-l border-border"></div>
+              
+              <button
+                type="button"
+                onClick={() => {
+                  ClientAPI.getMap({ forceRefresh: true }).then(() => {
+                    window.dispatchEvent(new Event('mapDataRefreshNeeded'));
+                  }).catch(console.error);
+                }}
+                className="flex items-center gap-1.5 rounded text-muted-foreground hover:text-foreground transition-colors"
+                title="Force refresh map cache"
+              >
+                <RefreshCw className="h-3 w-3" />
+                <span>Refresh Cache</span>
+              </button>
             </div>
             )}
           </div>
