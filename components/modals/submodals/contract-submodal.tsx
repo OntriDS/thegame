@@ -265,6 +265,16 @@ export function ContractSubmodal({
                 },
             ];
             const existingLinks = await ClientAPI.getLinksFor({ type: EntityType.CONTRACT, id: contract.id });
+            const linksToDelete = existingLinks.filter((existing: any) => 
+                existing.linkType === LinkType.CHARACTER_CONTRACT &&
+                (existing.relationship === 'owner' || existing.relationship === 'counterparty') &&
+                !contractLinks.some(l => l.relationship === existing.relationship && l.source.id === existing.source?.id)
+            );
+            
+            for (const link of linksToDelete) {
+                await ClientAPI.removeLink(link.id);
+            }
+
             for (const link of contractLinks) {
                 const alreadyExists = existingLinks.some((existing: any) =>
                     existing.linkType === LinkType.CHARACTER_CONTRACT &&
@@ -291,7 +301,8 @@ export function ContractSubmodal({
     };
 
     return (
-        <Dialog open={open} onOpenChange={(val) => !val && !isSaving && onClose()}>
+        <>
+            <Dialog open={open} onOpenChange={(val) => !val && !isSaving && onClose()}>
             <DialogContent
                 className="sm:max-w-[700px] h-[700px] flex flex-col p-0 gap-0 overflow-hidden"
                 zIndexLayer="SUB_MODALS"
@@ -335,9 +346,8 @@ export function ContractSubmodal({
                         <div className="space-y-6 max-w-3xl mx-auto">
 
                             {/* 1. PRINCIPAL SELECTOR (ME) */}
-                            {!initialData && (
-                                <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-900/20 rounded-lg border border-indigo-100 dark:border-indigo-900/20">
-                                    <Label className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Principal (Me)</Label>
+                            <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-900/20 rounded-lg border border-indigo-100 dark:border-indigo-900/20">
+                                <Label className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Principal (Me)</Label>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1">
                                             <Label className="text-[10px] text-muted-foreground">My Character</Label>
@@ -360,7 +370,6 @@ export function ContractSubmodal({
                                         </div>
                                     </div>
                                 </div>
-                            )}
 
                             {/* 2. CONTRACT TITLE */}
                             <div className="space-y-2">
@@ -374,7 +383,7 @@ export function ContractSubmodal({
                             </div>
 
                             {/* 3. COUNTERPARTY SELECTOR (THEM) */}
-                            {!counterpartyEntity && !initialData && (
+                            {!counterpartyEntity && (
                                 <div className="space-y-3">
                                     <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Counterparty Character</Label>
 
@@ -394,9 +403,7 @@ export function ContractSubmodal({
                             )}
 
                             {/* 4. CONTRACT ROLE */}
-                            {!initialData && (
-                                <div className="text-xs text-muted-foreground">Contract role is fixed to Partner for this flow.</div>
-                            )}
+                            <div className="text-xs text-muted-foreground">Contract role is fixed to Partner for this flow.</div>
 
                             {/* 5. CLAUSES */}
                             <div className="space-y-3">
@@ -497,6 +504,7 @@ export function ContractSubmodal({
                     </div>
                 </DialogFooter>
             </DialogContent>
+        </Dialog>
             
             {/* Links Relationships Modal */}
             {initialData && (
@@ -519,6 +527,6 @@ export function ContractSubmodal({
                     setShowOwnerSelector(false);
                 }}
             />
-        </Dialog>
+        </>
     );
 }

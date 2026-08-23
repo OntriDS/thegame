@@ -76,7 +76,7 @@ export default function OwnerSelectorModal({
       setSelectedId(currentOwnerId || null);
       setSelectedIds(currentOwnerIds || []);
     }
-  }, [open, currentOwnerId, currentOwnerIds]);
+  }, [open, currentOwnerId, JSON.stringify(currentOwnerIds)]);
 
   const loadCharacters = async () => {
     try {
