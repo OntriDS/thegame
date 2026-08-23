@@ -120,7 +120,10 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
-      if (!isUsableCoordinates(settlement.coordinates)) {
+      const hasSiteCoords = isUsableCoordinates(site.coordinates);
+      const hasSettlementCoords = isUsableCoordinates(settlement.coordinates);
+
+      if (!hasSiteCoords && !hasSettlementCoords) {
         if (!missingCoordinateSet.has(settlement.id)) {
           missingCoordinateSet.add(settlement.id);
           missingCoordinatesSettlementIds.push(settlement.id);
@@ -129,8 +132,8 @@ export async function GET(req: NextRequest) {
       }
 
       // Use precise site coordinates if available, otherwise fall back to settlement coordinates
-      const siteLat = site.coordinates?.lat ?? settlement.coordinates.lat;
-      const siteLng = site.coordinates?.lng ?? settlement.coordinates.lng;
+      const siteLat = hasSiteCoords ? site.coordinates!.lat : settlement.coordinates!.lat;
+      const siteLng = hasSiteCoords ? site.coordinates!.lng : settlement.coordinates!.lng;
 
       markers.push({
         siteId: site.id,

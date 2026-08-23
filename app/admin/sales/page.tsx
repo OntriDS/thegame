@@ -33,6 +33,7 @@ function SalesPageContent() {
   const [financialRecords, setFinancialRecords] = useState<FinancialRecord[]>([]);
   const [sites, setSites] = useState<any[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [links, setLinks] = useState<any[]>([]);
   const [filteredSales, setFilteredSales] = useState<Sale[]>([]);
   const [selectedType, setSelectedType] = useState<SaleType | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<SaleStatus | 'all'>('all');
@@ -135,7 +136,7 @@ function SalesPageContent() {
 
       // Fetch Full Detailed Sales (O(N) - BACKGROUND)
       setIsLoading(true);
-      const [salesData, sitesData, ratesData, charactersData, financialData] = await Promise.all([
+      const [salesData, sitesData, ratesData, charactersData, financialData, linksData] = await Promise.all([
         ClientAPI.getSales(
           monthNum,
           yearNum
@@ -144,11 +145,13 @@ function SalesPageContent() {
         ClientAPI.getFinancialConversionRates(),
         ClientAPI.getCharacters(),
         ClientAPI.getFinancialRecords(monthNum, yearNum),
+        ClientAPI.getAllLinks(),
       ]);
       setSales(salesData);
       setFinancialRecords(financialData);
       setSites(sitesData);
       setCharacters(charactersData);
+      setLinks(linksData);
       const safeRates = ratesData && typeof ratesData.colonesToUsd === 'number'
         ? { ...DEFAULT_CURRENCY_EXCHANGE_RATES, ...ratesData }
         : DEFAULT_CURRENCY_EXCHANGE_RATES;
@@ -208,11 +211,18 @@ function SalesPageContent() {
     let netProfit = 0;
 
     if (sale.type === SaleType.BOOTH) {
+      const saleFinRecIds = links
+        .filter(l => l.linkType === 'SALE_FINREC' && (
+          (l.source.type === 'sale' && l.source.id === sale.id) || 
+          (l.target.type === 'sale' && l.target.id === sale.id)
+        ))
+        .map(l => l.source.type === 'financial' ? l.source.id : l.target.id);
+
       // The Booth financial workflow creates two records. The sales page
       // displays the core performance record; the partner-impact record stays
       // separate and is not folded into this value.
       const coreRecord = financialRecords.find(
-        (record) => record.sourceSaleId === sale.id && !record.id.includes('payout'),
+        (record) => saleFinRecIds.includes(record.id) && !record.id.includes('payout'),
       );
       if (coreRecord) {
         cost = extractMoneyValue(coreRecord.cost);
@@ -231,7 +241,7 @@ function SalesPageContent() {
     }
 
     return { grossRevenue, cost, netProfit };
-  }, [financialRecords]);
+  }, [financialRecords, links]);
 
   useEffect(() => {
     const nextMonthlySalesProfit = sales
