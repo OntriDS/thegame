@@ -297,6 +297,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       boothCostForComparison(sale) !== boothCostForComparison(previousSale) ||
       sale.partnerId !== previousSale.partnerId ||
       saleCharacterId !== previousSaleCharacterId ||
+      sale.context?.contractId !== previousSale.context?.contractId ||
       sale.name !== previousSale.name ||
       sale.siteId !== previousSale.siteId ||
       saleFinrecTimeKey(sale.lifecycle?.doneAt) !== saleFinrecTimeKey(previousSale.doneAt) ||
