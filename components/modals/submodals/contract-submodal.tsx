@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { NumericInput } from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import { Trash2, Plus, FileText, PenTool, Network } from 'lucide-react';
+import { Trash2, Plus, FileText, PenTool, Network, User } from 'lucide-react';
 import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
 import { Contract, Business, ContractClause, Character } from '@/types/entities';
 import { ContractStatus, ContractClauseType, LinkType, EntityType, CharacterRole } from '@/types/enums';
@@ -17,6 +17,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ClientAPI } from '@/lib/client-api';
 import { ensureCharacterHasRole } from '@/lib/utils/character-role-sync';
 import LinksRelationshipsModal from './links-relationships-submodal';
+import OwnerSelectorModal from './owner-selector-submodal';
+import { useAuth } from '@/lib/hooks/use-auth';
 
 interface ContractSubmodalProps {
     open: boolean;
@@ -57,7 +59,10 @@ export function ContractSubmodal({
     const [selectedCounterpartyId, setSelectedCounterpartyId] = useState<string>('');
     const [isSaving, setIsSaving] = useState(false);
     const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
+    const [showOwnerSelector, setShowOwnerSelector] = useState(false);
     const [businessCharacterIds, setBusinessCharacterIds] = useState<Record<string, string>>({});
+    
+    const { user: authUser } = useAuth();
 
     useEffect(() => {
         let cancelled = false;
@@ -78,7 +83,6 @@ export function ContractSubmodal({
         return () => { cancelled = true; };
     }, [availableBusinesses]);
 
-    // Filtered Options
     // Filtered Options
     const principalCharacters = React.useMemo(() =>
         availableCharacters.filter(c => c.roles.includes(CharacterRole.FOUNDER) || c.roles.includes(CharacterRole.PLAYER)),
@@ -119,13 +123,17 @@ export function ContractSubmodal({
                 }
 
                 // Try to smart-default the Principal Character (if only 1 Founder/Player)
-                const defaultPrincipal = principalCharacters[0];
-                if (defaultPrincipal) {
-                    setPrincipalCharacterId(defaultPrincipal.id);
+                if (authUser?.characterId) {
+                    setPrincipalCharacterId(authUser.characterId);
+                } else {
+                    const defaultPrincipal = principalCharacters[0];
+                    if (defaultPrincipal) {
+                        setPrincipalCharacterId(defaultPrincipal.id);
+                    }
                 }
             }
         }
-    }, [open, initialData, counterpartyEntity, availableBusinesses, principalCharacters, businessCharacterIds]); // Minimal deps to avoid loops
+    }, [open, initialData, counterpartyEntity, availableBusinesses, principalCharacters, businessCharacterIds, authUser]); 
 
     // Name Auto-Generator
     useEffect(() => {
@@ -145,14 +153,11 @@ export function ContractSubmodal({
                 if (c) cName = c.name;
             }
 
-            // Only update if user hasn't typed a custom name (starts with 'Me' or contains 'Agreement')
-            // Simple check to avoid overwriting user changes too aggressively
             if (!name || name.includes('Agreement')) {
                 setName(`${pName} ↔ ${cName} Agreement`);
             }
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [principalCharacterId, selectedCounterpartyId, open]);
+    }, [principalCharacterId, selectedCounterpartyId, open, initialData, counterpartyEntity, availableCharacters, name]);
 
 
     const addClause = (type: ContractClauseType) => {
@@ -164,17 +169,16 @@ export function ContractSubmodal({
             partnerShare: 0
         };
 
-        // Preset Intelligent Defaults (The "Templates")
         switch (type) {
             case ContractClauseType.SALES_COMMISSION:
                 newClause.description = 'My Items sold by Partner';
-                newClause.companyShare = 0.75; // I keep stock, I keep 75%
-                newClause.partnerShare = 0.25; // They get 25% commission
+                newClause.companyShare = 0.75;
+                newClause.partnerShare = 0.25;
                 break;
             case ContractClauseType.SALES_SERVICE:
                 newClause.description = 'Partner Items sold by Me';
-                newClause.companyShare = 0.25; // I take 25% Service Fee
-                newClause.partnerShare = 0.75; // They keep 75%
+                newClause.companyShare = 0.25;
+                newClause.partnerShare = 0.75;
                 break;
             case ContractClauseType.EXPENSE_SHARING:
                 newClause.description = 'Shared Booth/Event Costs';
@@ -198,7 +202,6 @@ export function ContractSubmodal({
         setClauses(clauses.map(c => {
             if (c.id !== id) return c;
 
-            // Auto-balance shares logic
             if (field === 'companyShare') {
                 const compShare = Math.min(Math.max(Number(value), 0), 1);
                 return { ...c, companyShare: compShare, partnerShare: parseFloat((1 - compShare).toFixed(2)) };
@@ -215,12 +218,11 @@ export function ContractSubmodal({
     const handleSave = async () => {
         if (!name) return;
 
-        // Contract party identity is canonical through Character→Contract links.
         const finalPrincipalCharacterId = principalCharacterId ||
             (principalEntity?.type === 'character' ? principalEntity.id : businessCharacterIds[principalEntity?.id || '']);
         if (!finalPrincipalCharacterId) {
             console.error("Issuer Character is required");
-            return; // TODO: Show error UI
+            return;
         }
 
         const finalCounterpartyCharacterId = selectedCounterpartyId ||
@@ -339,14 +341,22 @@ export function ContractSubmodal({
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1">
                                             <Label className="text-[10px] text-muted-foreground">My Character</Label>
-                                            <SearchableSelect
-                                                value={principalCharacterId}
-                                                onValueChange={(val) => {
-                                                    setPrincipalCharacterId(val);
-                                                }}
-                                                placeholder="Who are you?"
-                                                options={principalCharacters.map(c => ({ value: c.id, label: c.name, category: c.roles[0] }))}
-                                            />
+                                            <Button 
+                                                variant="outline" 
+                                                className="w-full justify-start h-10 px-3 font-normal bg-white dark:bg-slate-900 border-indigo-200 dark:border-indigo-900/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                                                onClick={() => setShowOwnerSelector(true)}
+                                            >
+                                                {principalCharacterId ? (
+                                                    <div className="flex items-center gap-2 truncate">
+                                                        <div className="h-5 w-5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center shrink-0">
+                                                            <User className="h-3 w-3 text-indigo-600 dark:text-indigo-400" />
+                                                        </div>
+                                                        <span className="truncate">{availableCharacters.find(c => c.id === principalCharacterId)?.name || 'Unknown'}</span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-muted-foreground">Select owner...</span>
+                                                )}
+                                            </Button>
                                         </div>
                                     </div>
                                 </div>
@@ -487,6 +497,8 @@ export function ContractSubmodal({
                     </div>
                 </DialogFooter>
             </DialogContent>
+            
+            {/* Links Relationships Modal */}
             {initialData && (
                 <LinksRelationshipsModal
                     entity={{ type: EntityType.CONTRACT, id: initialData.id, name: initialData.name }}
@@ -494,6 +506,19 @@ export function ContractSubmodal({
                     onClose={() => setShowRelationshipsModal(false)}
                 />
             )}
+            
+            {/* Owner Selector Modal */}
+            <OwnerSelectorModal
+                open={showOwnerSelector}
+                onOpenChange={setShowOwnerSelector}
+                currentOwnerId={principalCharacterId}
+                onSelect={(id) => {
+                    if (id) {
+                        setPrincipalCharacterId(id);
+                    }
+                    setShowOwnerSelector(false);
+                }}
+            />
         </Dialog>
     );
 }

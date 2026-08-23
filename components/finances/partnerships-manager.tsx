@@ -8,7 +8,6 @@ import { FileText, ShieldCheck } from 'lucide-react';
 import { Business, Contract, Character, Site } from '@/types/entities';
 import { ContractStatus, EntityType, LinkType } from '@/types/enums';
 import { ClientAPI } from '@/lib/client-api';
-import { PartnershipSubmodal } from '@/components/modals/submodals/partnership-submodal';
 import { ContractSubmodal } from '@/components/modals/submodals/contract-submodal';
 
 interface PartnershipsManagerProps {
@@ -31,7 +30,6 @@ export function PartnershipsManager({
     onDeleteContract
 }: PartnershipsManagerProps) {
     const [isContractModalOpen, setIsContractModalOpen] = useState(false);
-    const [isPartnershipModalOpen, setIsPartnershipModalOpen] = useState(false);
     const [selectedContract, setSelectedContract] = useState<Contract | undefined>(undefined);
     const [contractParties, setContractParties] = useState<Record<string, { owner?: string; counterparty?: string }>>({});
     const [businessCharacters, setBusinessCharacters] = useState<Record<string, string>>({});
@@ -87,9 +85,6 @@ export function PartnershipsManager({
                             <CardDescription>Manage active contracts and agreements.</CardDescription>
                         </div>
                         <div className="flex gap-2">
-                            <Button variant="outline" onClick={() => setIsPartnershipModalOpen(true)}>
-                                Contracts Manager
-                            </Button>
                             <Button onClick={() => { setSelectedContract(undefined); setIsContractModalOpen(true); }}>
                                 <FileText className="mr-2 h-4 w-4" />
                                 New Contract
@@ -157,17 +152,6 @@ export function PartnershipsManager({
                 initialData={selectedContract}
                 availableCharacters={characters}
                 availableBusinesses={businesses}
-            />
-
-            <PartnershipSubmodal
-                open={isPartnershipModalOpen}
-                onClose={() => setIsPartnershipModalOpen(false)}
-                onSave={(data) => {
-                    console.log("Partnership saved", data);
-                    setIsPartnershipModalOpen(false);
-                }}
-                businesses={businesses}
-                characters={characters}
             />
         </div>
     );
