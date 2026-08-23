@@ -288,7 +288,7 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                         <div>
                             <DialogTitle className="text-lg flex items-center gap-2">
                                 <Handshake className="h-5 w-5 text-indigo-500" />
-                                Business Relationships Manager
+                                Contracts Manager
                             </DialogTitle>
                         </div>
                         {viewMode === 'list' && (
@@ -421,7 +421,7 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                                         />
                                     </div>
 
-                                    <div className="text-xs text-muted-foreground">New business relationships are Partner-only. This will open contract creation for the selected counterparty.</div>
+                                    <div className="text-xs text-muted-foreground">New contracts are Partner-only. This will open contract creation for the selected counterparty.</div>
 
                                 </div>
                             </div>

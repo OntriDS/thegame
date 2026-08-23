@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { NumericInput } from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import { Trash2, Plus, FileText, PenTool } from 'lucide-react';
+import { Trash2, Plus, FileText, PenTool, Network } from 'lucide-react';
 import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
 import { Contract, Business, ContractClause, Character } from '@/types/entities';
 import { ContractStatus, ContractClauseType, LinkType, EntityType, CharacterRole } from '@/types/enums';
@@ -16,6 +16,7 @@ import { v4 as uuid } from 'uuid';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ClientAPI } from '@/lib/client-api';
 import { ensureCharacterHasRole } from '@/lib/utils/character-role-sync';
+import LinksRelationshipsModal from './links-relationships-submodal';
 
 interface ContractSubmodalProps {
     open: boolean;
@@ -55,6 +56,7 @@ export function ContractSubmodal({
     // Counterparty State (Them)
     const [selectedCounterpartyId, setSelectedCounterpartyId] = useState<string>('');
     const [isSaving, setIsSaving] = useState(false);
+    const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
     const [businessCharacterIds, setBusinessCharacterIds] = useState<Record<string, string>>({});
 
     useEffect(() => {
@@ -470,6 +472,12 @@ export function ContractSubmodal({
                                 Delete Contract
                             </Button>
                         )}
+                        {initialData && (
+                            <Button variant="outline" size="sm" onClick={() => setShowRelationshipsModal(true)}>
+                                <Network className="h-4 w-4 mr-2 text-indigo-500" />
+                                Links
+                            </Button>
+                        )}
                     </div>
                     <div className="flex gap-2">
                         <Button variant="outline" onClick={onClose}>Cancel</Button>
@@ -479,6 +487,13 @@ export function ContractSubmodal({
                     </div>
                 </DialogFooter>
             </DialogContent>
+            {initialData && (
+                <LinksRelationshipsModal
+                    entity={{ type: EntityType.CONTRACT, id: initialData.id, name: initialData.name }}
+                    open={showRelationshipsModal}
+                    onClose={() => setShowRelationshipsModal(false)}
+                />
+            )}
         </Dialog>
     );
 }

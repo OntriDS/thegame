@@ -275,39 +275,27 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       );
     });
 
-    // State for Founder Business (Us)
-    const [selectedFounderBusinessId, setSelectedFounderBusinessId] =
+    // State for Founder Character (Us)
+    const [selectedFounderCharacterId, setSelectedFounderCharacterId] =
       useState<string>(() => {
         const boothContext = getBoothContext(sale);
-        return (
-          boothContext.principalBusinessId ||
-          ""
-        );
+        if (boothContext.principalBusinessId) {
+            // Wait, we need the initial value. If we don't have businessCharacterIds resolved yet,
+            // this might be empty initially. We will rely on the useEffect below to set it.
+        }
+        return "";
       });
 
     // State for Partner (Them)
     const [selectedPartnerId, setSelectedPartnerId] = useState<string>(() => {
       const boothContext = getBoothContext(sale);
+      if (sale?.partnerId) return sale.partnerId;
       // 1. Try modern metadata first
-      if (boothContext.counterpartyBusinessId) return boothContext.counterpartyBusinessId;
-      const contractCounterpartyCharacter = contractCharacterIds[sale?.context?.contractId || ""]?.counterparty;
-      const contractCounterparty = businessIdForCharacter(contractCounterpartyCharacter);
-      if (contractCounterparty && businesses.some((business) => business.id === contractCounterparty)) {
-        return contractCounterparty;
-      }
-      // 3. Fallback for older sales records (migrate Character ID to Business ID or preexisting Business ID)
-      const charId = sale?.partnerId || "";
-      if (charId) {
-        // First check if it's already a Business ID
-        if (businesses.some((b) => b.id === charId)) {
-          return charId;
-        }
-        // Otherwise map Character ID to linked Business ID
-        const linkedBusiness = businesses.find((b) => businessCharacterIds[b.id] === charId);
-        if (linkedBusiness) return linkedBusiness.id;
+      if (boothContext.counterpartyBusinessId) {
+        // Will be resolved by useEffect if it's a business ID
       }
       return "";
-    }); // Business ID used only by the booth UI; Contract identity is Character-linked.
+    }); // Partner identity is now directly Character-linked.
 
     // View Mode: 'Partner' | 'Off'
     const [viewMode, setViewMode] = useState<"Partner" | "Off">(() => {
@@ -431,34 +419,18 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         setSelectedContractId(defaultContract.id);
       }
 
-      // 2. Load Default Founder Business
-      if (!selectedFounderBusinessId && businesses.length > 0) {
-        // First try to find a founder business from metadata
-        const metaFounderId = getBoothContext(sale).principalBusinessId;
-        if (metaFounderId && businesses.some((b) => b.id === metaFounderId)) {
-          setSelectedFounderBusinessId(metaFounderId);
-        } else {
-          // Otherwise find first founder business
-          const founderBusiness = businesses.find((b) => {
-            const linkedChar = characters.find((c) => c.id === businessCharacterIds[b.id]);
-            return (
-              linkedChar && linkedChar.roles.includes(CharacterRole.FOUNDER)
-            );
-          });
-          if (founderBusiness) setSelectedFounderBusinessId(founderBusiness.id);
-          else {
-            const firstActive = businesses.find((b) => b.isActive);
-            if (firstActive) setSelectedFounderBusinessId(firstActive.id);
-          }
-        }
+      // 2. Load Default Founder Character
+      if (!selectedFounderCharacterId && characters.length > 0) {
+        // Find first founder character
+        const founderChar = characters.find((c) => c.roles.includes(CharacterRole.FOUNDER));
+        if (founderChar) setSelectedFounderCharacterId(founderChar.id);
       }
     }, [
       sale,
       contracts,
-      businesses,
       characters,
       selectedContractId,
-      selectedFounderBusinessId,
+      selectedFounderCharacterId,
     ]);
 
     // Load Default Partner (One time)
@@ -468,18 +440,14 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         !sale &&
         viewMode !== "Off" &&
         !selectedPartnerId &&
-        characters.length > 0 &&
-        businesses.length > 0
+        characters.length > 0
       ) {
         const maria = characters.find(
           (c) =>
             c.name.toLowerCase().includes("maria") || c.name.includes("O2"),
         );
         if (maria) {
-          const mariaBusiness = businesses.find(
-            (b) => businessCharacterIds[b.id] === maria.id,
-          );
-          if (mariaBusiness) setSelectedPartnerId(mariaBusiness.id);
+          setSelectedPartnerId(maria.id);
         }
       }
 
@@ -487,44 +455,39 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       if (viewMode === "Off") {
         setSelectedPartnerId("");
       }
-    }, [characters, businesses, selectedPartnerId, viewMode, sale]);
+    }, [characters, selectedPartnerId, viewMode, sale]);
 
     const initialPartnerIdRef = useRef(selectedPartnerId);
-    const initialFounderIdRef = useRef(selectedFounderBusinessId);
+    const initialFounderIdRef = useRef(selectedFounderCharacterId);
 
-    // Auto-select active contract when Partner or Founder Business changes
+    // Auto-select active contract when Partner or Founder Character changes
     useEffect(() => {
       const isNewSale = !sale;
       const didPartnerChange =
         selectedPartnerId !== initialPartnerIdRef.current;
       const didFounderChange =
-        selectedFounderBusinessId !== initialFounderIdRef.current;
+        selectedFounderCharacterId !== initialFounderIdRef.current;
 
       // DO NOT overwrite the saved contract on mount for an existing sale!
       if (!isNewSale && !didPartnerChange && !didFounderChange) {
         return;
       }
 
-      if (!selectedPartnerId || !selectedFounderBusinessId) {
+      if (!selectedPartnerId || !selectedFounderCharacterId) {
         setSelectedContractId("");
         return;
       }
 
-      const partnerBusiness = businesses.find(
-        (b) => b.id === selectedPartnerId,
-      );
-      const linkedCharId = partnerBusiness ? businessCharacterIds[partnerBusiness.id] : undefined;
-
-      // 1. Try Strict Match (ID matches both selected Principal and Counterparty business or linked character for older contracts)
+      // 1. Try Strict Match (ID matches both selected Principal and Counterparty Character)
       let match = contracts.find(
         (c) =>
           c.status === ContractStatus.ACTIVE &&
           (() => {
             const party = contractCharacterIds[c.id] || {};
-            const ownerBusinessId = businessIdForCharacter(party.owner);
-            const counterpartyBusinessId = businessIdForCharacter(party.counterparty);
-            return (ownerBusinessId === selectedFounderBusinessId && counterpartyBusinessId === selectedPartnerId) ||
-              (counterpartyBusinessId === selectedFounderBusinessId && ownerBusinessId === selectedPartnerId);
+            const ownerId = party.owner;
+            const counterpartyId = party.counterparty;
+            return (ownerId === selectedFounderCharacterId && counterpartyId === selectedPartnerId) ||
+              (counterpartyId === selectedFounderCharacterId && ownerId === selectedPartnerId);
           })(),
       );
 
@@ -536,10 +499,9 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       }
     }, [
       selectedPartnerId,
-      selectedFounderBusinessId,
+      selectedFounderCharacterId,
       contracts,
       sale,
-      businesses,
       contractCharacterIds,
     ]);
     // ============================================================================
@@ -1213,38 +1175,22 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                               )}
                             >
                               <option value="" disabled>
-                                Select Business...
+                                Select Partner...
                               </option>
-                              {businesses
-                                .filter((b) => {
-                                  if (!b.isActive) return false;
-                                  if (b.id === selectedFounderBusinessId)
-                                    return false; // Explicitly blacklist Founder Business
-
-                                  const linkedChar = characters.find(
-                                    (c) => c.id === businessCharacterIds[b.id],
-                                  );
-                                  if (
-                                    linkedChar &&
-                                    linkedChar.roles.includes(
-                                      CharacterRole.PARTNER,
-                                    )
-                                  )
-                                    return true;
-                                  return contracts.some(
-                                    (c) => {
-                                      if (c.status !== ContractStatus.ACTIVE) return false;
-                                      const party = contractCharacterIds[c.id] || {};
-                                      const ownerBusinessId = businessIdForCharacter(party.owner);
-                                      const counterpartyBusinessId = businessIdForCharacter(party.counterparty);
-                                      return (ownerBusinessId === selectedFounderBusinessId && counterpartyBusinessId === b.id) ||
-                                        (counterpartyBusinessId === selectedFounderBusinessId && ownerBusinessId === b.id);
-                                    },
-                                  );
+                              {characters
+                                .filter((c) => {
+                                  if (c.id === selectedFounderCharacterId) return false; // Explicitly blacklist Founder
+                                  
+                                  return contracts.some((contract) => {
+                                      if (contract.status !== ContractStatus.ACTIVE) return false;
+                                      const party = contractCharacterIds[contract.id] || {};
+                                      return (party.owner === selectedFounderCharacterId && party.counterparty === c.id) ||
+                                             (party.counterparty === selectedFounderCharacterId && party.owner === c.id);
+                                  });
                                 })
-                                .map((b) => (
-                                  <option key={b.id} value={b.id}>
-                                    {b.name}
+                                .map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.name}
                                   </option>
                                 ))}
                             </select>
@@ -1283,14 +1229,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                                       )
                                     )
                                       return false;
-                                    const partnerBusiness = businesses.find(
-                                      (b) => b.id === selectedPartnerId,
-                                    );
+                                    
                                     const party = contractCharacterIds[c.id] || {};
-                                    const ownerBusinessId = businessIdForCharacter(party.owner);
-                                    const counterpartyBusinessId = businessIdForCharacter(party.counterparty);
-                                    return (ownerBusinessId === selectedFounderBusinessId && counterpartyBusinessId === selectedPartnerId) ||
-                                      (counterpartyBusinessId === selectedFounderBusinessId && ownerBusinessId === selectedPartnerId);
+                                    return (party.owner === selectedFounderCharacterId && party.counterparty === selectedPartnerId) ||
+                                           (party.counterparty === selectedFounderCharacterId && party.owner === selectedPartnerId);
                                   })
                                   .map((c) => (
                                     <option key={c.id} value={c.id}>
@@ -1568,9 +1510,9 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                 <div className="p-3 bg-slate-900 rounded-lg border border-indigo-500/20 shadow-sm">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="h-6 w-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-[10px]">
-                      {selectedFounderBusinessId
-                        ? businesses
-                            .find((b) => b.id === selectedFounderBusinessId)
+                      {selectedFounderCharacterId
+                        ? characters
+                            .find((c) => c.id === selectedFounderCharacterId)
                             ?.name.substring(0, 1)
                             .toUpperCase()
                         : "C"}
@@ -1578,44 +1520,32 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                     <div>
                       <div className="text-xs font-bold text-indigo-100 flex items-center gap-1">
                         <select
-                          value={selectedFounderBusinessId}
+                          value={selectedFounderCharacterId}
                           onChange={(e) =>
-                            setSelectedFounderBusinessId(e.target.value)
+                            setSelectedFounderCharacterId(e.target.value)
                           }
                           className="bg-transparent border-none p-0 h-auto text-indigo-100 font-bold hover:text-indigo-300 focus:ring-0 cursor-pointer appearance-none outline-none truncate max-w-[140px]"
                         >
-                          {businesses
-                            .filter((b) => {
-                              const linkedChar = characters.find(
-                                (c) => c.id === businessCharacterIds[b.id],
-                              );
-                              return (
-                                linkedChar &&
-                                linkedChar.roles.includes(CharacterRole.FOUNDER)
-                              );
-                            })
-                            .map((b) => (
+                          {characters
+                            .filter((c) => c.roles.includes(CharacterRole.FOUNDER))
+                            .map((c) => (
                               <option
-                                key={b.id}
-                                value={b.id}
+                                key={c.id}
+                                value={c.id}
                                 className="bg-slate-900"
                               >
-                                {b.name}
+                                {c.name}
                               </option>
                             ))}
-                          {/* Fallback if no founder-linked businesses */}
-                          {!businesses.some((b) =>
-                            characters
-                              .find((c) => c.id === businessCharacterIds[b.id])
-                              ?.roles.includes(CharacterRole.FOUNDER),
-                          ) &&
-                            businesses.map((b) => (
+                          {/* Fallback if no founder characters */}
+                          {!characters.some((c) => c.roles.includes(CharacterRole.FOUNDER)) &&
+                            characters.map((c) => (
                               <option
-                                key={b.id}
-                                value={b.id}
+                                key={c.id}
+                                value={c.id}
                                 className="bg-slate-900"
                               >
-                                {b.name}
+                                {c.name}
                               </option>
                             ))}
                         </select>

@@ -649,7 +649,7 @@ function FinancesPageContent() {
           <TabsTrigger value="company">Company</TabsTrigger>
           <TabsTrigger value="personal">Personal</TabsTrigger>
           <TabsTrigger value="treasury">J$ Treasury</TabsTrigger>
-          <TabsTrigger value="partnerships">Business Relationships</TabsTrigger>
+          <TabsTrigger value="partnerships">Contracts</TabsTrigger>
         </TabsList>
 
         {/* Assets Tab - Now First and Main */}

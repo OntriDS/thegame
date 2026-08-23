@@ -88,7 +88,7 @@ export function PartnershipsManager({
                         </div>
                         <div className="flex gap-2">
                             <Button variant="outline" onClick={() => setIsPartnershipModalOpen(true)}>
-                                Business Relationships Manager
+                                Contracts Manager
                             </Button>
                             <Button onClick={() => { setSelectedContract(undefined); setIsContractModalOpen(true); }}>
                                 <FileText className="mr-2 h-4 w-4" />
