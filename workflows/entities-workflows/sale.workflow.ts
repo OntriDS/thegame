@@ -494,18 +494,7 @@ export async function removeSaleEffectsOnDelete(saleId: string, saleSnapshot?: S
     // 1. Remove player points that were awarded by this sale (if points were badly given)
     await removePlayerPointsFromSale(saleId, sale ?? undefined);
 
-    // 2. Remove all Links related to this sale
-    const saleLinks = await getLinksFor({ type: EntityType.SALE, id: saleId });
-
-    for (const link of saleLinks) {
-      try {
-        await removeLink(link.id);
-      } catch (error) {
-        console.error(`[removeSaleEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
-      }
-    }
-
-    // 2.5 Remove counterparty Financial Records
+    // 2. Remove counterparty Financial Records first (while Links still exist!)
     const financialRecords = await getFinancialsBySourceSaleId(saleId);
 
     for (const record of financialRecords) {
@@ -516,7 +505,18 @@ export async function removeSaleEffectsOnDelete(saleId: string, saleSnapshot?: S
       }
     }
 
-    // 3. Clear effects registry
+    // 3. Remove all Links related to this sale
+    const saleLinks = await getLinksFor({ type: EntityType.SALE, id: saleId });
+
+    for (const link of saleLinks) {
+      try {
+        await removeLink(link.id);
+      } catch (error) {
+        console.error(`[removeSaleEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
+      }
+    }
+
+    // 4. Clear effects registry
     await clearEffectsByPrefix(EntityType.SALE, saleId, 'sale:');
     await clearEffectsByPrefix(EntityType.SALE, saleId, 'pointsAwarded:');
 

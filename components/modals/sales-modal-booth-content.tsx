@@ -327,14 +327,18 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       return serviceLines.map((sl) => {
         // Safely cast to 'any' to dynamically extract either ServiceLine or ItemSaleLine values
         const line = sl as any;
-        // New Booth writes keep the canonical line revenue only. Legacy
-        // original amounts remain readable so old sales can still be edited.
-        const amountUSD =
-          line.revenue !== undefined
+        
+        let amountUSD = line.settlement?.totalUSD || 0;
+        let amountCRC = line.settlement?.totalCRC || 0;
+        
+        // Legacy fallback for old records
+        if (!amountUSD && !amountCRC) {
+          const legacyRevenue = line.revenue !== undefined
             ? extractMoneyValue(line.revenue)
             : (line.quantity || 0) * extractMoneyValue(line.unitPrice);
-        const amountCRC =
-          line.settlement?.originalAmountCRC ?? amountUSD * (exchangeRate || 500);
+          amountUSD = legacyRevenue;
+        }
+
         const desc = line.description || "";
         const categoryMatch = desc.includes("] ") ? desc.split("] ")[1] : desc;
 
@@ -611,6 +615,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
           partnerSales: partnerItemsTotal_CRC,
           costMe: cost_Me,
           costPartner: cost_Partner,
+          netCommissionMe: revenuePartnerItems_Me - revenueMyItems_Partner,
+          netCommissionPartner: revenueMyItems_Partner - revenuePartnerItems_Me,
         },
       };
     }, [myItems, partnerEntries, boothCost, activeContract, exchangeRate]);
@@ -795,6 +801,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         settlement: {
           category: quickCat,
           partnerId: selectedPartnerId,
+          totalUSD: amountUSD,
+          totalCRC: amountCRC,
+          usdExpression: amountUSD ? amountUSD.toString() : "",
+          crcExpression: amountCRC ? amountCRC.toString() : "",
         },
       } as unknown as ServiceLine;
 
@@ -836,6 +846,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
               // Do not persist a calculated snapshot on the sale line.
               category: (line as any).settlement?.category,
               partnerId: (line as any).settlement?.partnerId ?? null,
+              totalUSD: (line as any).settlement?.totalUSD,
+              totalCRC: (line as any).settlement?.totalCRC,
+              usdExpression: (line as any).settlement?.usdExpression,
+              crcExpression: (line as any).settlement?.crcExpression,
             },
           };
         }
@@ -1573,14 +1587,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                             .reduce((s, r) => s + r.totalColones, 0)
                             .toLocaleString()}
                         </div>
-                        <div className="text-right font-mono">
-                          $
-                          {salesDistributionMatrix.akiles
-                            .reduce((s, r) => s + r.totalDollars, 0)
-                            .toLocaleString(undefined, {
-                              minimumFractionDigits: 0,
-                              maximumFractionDigits: 2,
-                            })}
+                        <div className="text-right font-mono text-slate-600/50">
+                          0
                         </div>
                       </div>
 
@@ -1591,40 +1599,44 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                           -₡{totals.breakdown.costMe.toLocaleString()}
                         </div>
                         <div className="text-right font-mono text-slate-600/50">
-                          -
+                          0
                         </div>
                       </div>
 
-                      {/* Row 3: Net Cash (Calculated) */}
+                      {/* Row 3: Commissions (Transfers) */}
+                      <div className="grid grid-cols-3 gap-2 text-xs text-indigo-300">
+                        <span>Commissions:</span>
+                        <div className="text-right font-mono">
+                          {totals.breakdown.netCommissionMe > 0 ? "+" : ""}
+                          ₡{totals.breakdown.netCommissionMe.toLocaleString()}
+                        </div>
+                        <div className="text-right font-mono text-slate-600/50">
+                          0
+                        </div>
+                      </div>
+
+                      {/* Row 4: Net Cash (Calculated) */}
                       <div className="grid grid-cols-3 gap-2 text-xs text-indigo-200 font-semibold border-t border-indigo-500/10 mt-1 pt-1">
                         <span>Net:</span>
                         <div className="text-right font-mono">
                           ₡
-                          {(
-                            salesDistributionMatrix.akiles.reduce(
-                              (s, r) => s + r.totalColones,
-                              0,
-                            ) - totals.breakdown.costMe
-                          ).toLocaleString()}
+                          {totals.myNet.toLocaleString()}
                         </div>
-                        <div className="text-right font-mono">
-                          $
-                          {salesDistributionMatrix.akiles
-                            .reduce((s, r) => s + r.totalDollars, 0)
-                            .toLocaleString(undefined, {
-                              minimumFractionDigits: 0,
-                              maximumFractionDigits: 2,
-                            })}
+                        <div className="text-right font-mono text-slate-600/50">
+                          0
                         </div>
                       </div>
                     </div>
 
                     {/* Final Total Row */}
-                    <div className="grid grid-cols-3 gap-2 text-sm font-bold border-t border-indigo-500/20 pt-2 mt-2 text-indigo-400 items-end">
-                      <span className="col-span-2 text-[10px] text-indigo-400/70 text-right uppercase tracking-wider pb-0.5">
-                        Total Eq ($):
+                    <div className="grid grid-cols-3 gap-2 text-xs font-bold border-t border-indigo-500/20 pt-2 mt-2 text-indigo-400 items-end">
+                      <span className="col-span-1 text-[10px] text-indigo-400/70 text-right uppercase pb-0.5">
+                        Total Eq:
                       </span>
-                      <span className="col-span-1 text-right text-base">
+                      <span className="col-span-1 text-right text-xs font-mono text-indigo-200/80">
+                        ₡{totals.myNet.toLocaleString()}
+                      </span>
+                      <span className="col-span-1 text-right text-xs font-mono">
                         $
                         {(totals.myNet / exchangeRate).toLocaleString(
                           undefined,
@@ -1672,14 +1684,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                               .reduce((s, r) => s + r.totalColones, 0)
                               .toLocaleString()}
                           </div>
-                          <div className="text-right font-mono">
-                            $
-                            {salesDistributionMatrix.partner
-                              .reduce((s, r) => s + r.totalDollars, 0)
-                              .toLocaleString(undefined, {
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 2,
-                              })}
+                          <div className="text-right font-mono text-slate-600/50">
+                            0
                           </div>
                         </div>
                         <div className="grid grid-cols-3 gap-2 text-xs text-red-400">
@@ -1688,7 +1694,19 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                             -₡{totals.breakdown.costPartner.toLocaleString()}
                           </div>
                           <div className="text-right font-mono text-slate-600/50">
-                            -
+                            0
+                          </div>
+                        </div>
+
+                        {/* Commissions Row */}
+                        <div className="grid grid-cols-3 gap-2 text-xs text-pink-300">
+                          <span>Commissions:</span>
+                          <div className="text-right font-mono">
+                            {totals.breakdown.netCommissionPartner > 0 ? "+" : ""}
+                            ₡{totals.breakdown.netCommissionPartner.toLocaleString()}
+                          </div>
+                          <div className="text-right font-mono text-slate-600/50">
+                            0
                           </div>
                         </div>
 
@@ -1697,31 +1715,23 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                           <span>Net:</span>
                           <div className="text-right font-mono">
                             ₡
-                            {(
-                              salesDistributionMatrix.partner.reduce(
-                                (s, r) => s + r.totalColones,
-                                0,
-                              ) - totals.breakdown.costPartner
-                            ).toLocaleString()}
+                            {totals.partnerNet.toLocaleString()}
                           </div>
-                          <div className="text-right font-mono">
-                            $
-                            {salesDistributionMatrix.partner
-                              .reduce((s, r) => s + r.totalDollars, 0)
-                              .toLocaleString(undefined, {
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 2,
-                              })}
+                          <div className="text-right font-mono text-slate-600/50">
+                            0
                           </div>
                         </div>
                       </div>
 
                       {/* Final Total Row */}
-                      <div className="grid grid-cols-3 gap-2 text-sm font-bold border-t border-pink-500/20 pt-2 mt-2 text-pink-400 items-end">
-                        <span className="col-span-2 text-[10px] text-pink-400/70 text-right uppercase tracking-wider pb-0.5">
-                          Total Eq ($):
+                      <div className="grid grid-cols-3 gap-2 text-xs font-bold border-t border-pink-500/20 pt-2 mt-2 text-pink-400 items-end">
+                        <span className="col-span-1 text-[10px] text-pink-400/70 text-right uppercase pb-0.5">
+                          Total Eq:
                         </span>
-                        <span className="col-span-1 text-right text-base">
+                        <span className="col-span-1 text-right text-xs font-mono text-pink-200/80">
+                          ₡{totals.partnerNet.toLocaleString()}
+                        </span>
+                        <span className="col-span-1 text-right text-xs font-mono">
                           $
                           {(totals.partnerNet / exchangeRate).toLocaleString(
                             undefined,
