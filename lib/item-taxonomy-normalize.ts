@@ -18,7 +18,7 @@ import type {
 const ITEM_TYPE_VALUES = new Set<string>(Object.values(ItemType));
 
 function normalizeItemSiteId(value: unknown): string {
-  return String(value ?? '')
+  const normalized = String(value ?? '')
     .trim()
     .toLowerCase()
     .normalize('NFD')
@@ -26,6 +26,7 @@ function normalizeItemSiteId(value: unknown): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '') || 'none';
+  return ({ hq: 'hq', home: 'hq', none: 'none', world: 'world', 'site-world': 'world' } as Record<string, string>)[normalized] ?? normalized;
 }
 
 export function normalizeItemTypeString(raw: string | undefined | null): ItemType | undefined {
@@ -55,6 +56,11 @@ export function normalizeSubItemTypeForItemType(
 
 export function normalizeItemTaxonomyFields(entity: Item): Item {
   const legacyEntity = entity as Item & { collection?: Collection };
+  const {
+    collection: legacyCollection,
+    quantitySold: _legacyQuantitySold,
+    ...entityWithoutLegacyRootFields
+  } = legacyEntity;
   const nextType = normalizeItemTypeString(entity.type as string) ?? entity.type;
   const typed = nextType as ItemType;
   const legacyContext = entity.context as ItemContextV1 & { subItemType?: SubItemType };
@@ -67,17 +73,29 @@ export function normalizeItemTaxonomyFields(entity: Item): Item {
     rawSub !== '' ? normalizeSubItemTypeForItemType(typed, rawSub) : undefined;
   const {
     schemaVersion: _contextSchemaVersion,
+    kind: _contextKind,
     subItemType: _legacySubItemType,
     ...contextWithoutSchemaVersion
-  } = (entity.context ?? {}) as ItemContextV1 & { schemaVersion?: number; subItemType?: SubItemType };
+  } = (entity.context ?? {}) as ItemContextV1 & { kind?: string; schemaVersion?: number; subItemType?: SubItemType };
+  const { additionalCost, ...pricingWithoutAdditionalCost } = entity.pricing ?? ({} as Item['pricing']);
+  const additionalCostMinorUnits = additionalCost && typeof additionalCost === 'object'
+    ? Number((additionalCost as { minorUnits?: unknown }).minorUnits)
+    : Number(additionalCost);
+  const keepAdditionalCost = additionalCost !== undefined && Number.isFinite(additionalCostMinorUnits) && additionalCostMinorUnits !== 0;
+  const keepSoldQuantity = entity.status === 'sold' && Number(entity.quantitySold) > 0;
   return {
-    ...entity,
+    ...entityWithoutLegacyRootFields,
     type: nextType as ItemType,
     subItemType: (nextSub ?? entity.subItemType ?? legacyContext.subItemType) as SubItemType,
+    ...(keepSoldQuantity ? { quantitySold: Number(entity.quantitySold) } : {}),
+    pricing: {
+      ...pricingWithoutAdditionalCost,
+      ...(keepAdditionalCost ? { additionalCost } : {}),
+    },
     context: {
       ...contextWithoutSchemaVersion,
-      ...(entity.context?.collection || legacyEntity.collection
-        ? { collection: entity.context?.collection ?? legacyEntity.collection }
+      ...(entity.context?.collection || legacyCollection
+        ? { collection: entity.context?.collection ?? legacyCollection }
         : {}),
     },
     stock: (entity.stock ?? []).map((point) => ({

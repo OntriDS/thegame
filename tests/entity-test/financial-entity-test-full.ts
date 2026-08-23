@@ -67,7 +67,7 @@ describe('entity-test: full FinancialRecord', () => {
       updatedAt: now,
       __financialRelations: {
         siteId: 'hq',
-        targetSiteId: 'site-world',
+        targetSiteId: 'world',
         characterId: owner.id,
         characterRelationship: 'beneficiary',
       },

@@ -272,6 +272,10 @@ function parseCatalogCreateBody(body: unknown) {
     throw new Error('price must be a non-negative number');
   }
 
+  if (typeof payload.subItemType !== 'string' || !payload.subItemType.trim()) {
+    throw new Error('subItemType is required');
+  }
+
   if (payload.description !== undefined && typeof payload.description !== 'string') {
     throw new Error('description must be a string');
   }
@@ -282,7 +286,7 @@ function parseCatalogCreateBody(body: unknown) {
     price: payload.price,
     description: payload.description as string | undefined,
     collection: typeof payload.collection === 'string' ? (payload.collection.trim() as Collection) : undefined,
-    subItemType: typeof payload.subItemType === 'string' ? (payload.subItemType.trim() as SubItemType) : undefined,
+    subItemType: payload.subItemType.trim() as SubItemType,
     year: typeof payload.year === 'number' ? payload.year : (typeof payload.year === 'string' ? parseInt(payload.year, 10) : undefined),
   } as {
     name: string;
@@ -301,29 +305,30 @@ function buildDraftItem(input: {
   price: number;
   description?: string;
   collection?: Collection;
-  subItemType?: SubItemType;
+  subItemType: SubItemType;
   year?: number;
 }): Item {
   const now = getUTCNow();
   return {
     id: crypto.randomUUID(),
+    schemaVersion: 1,
+    version: 0,
     name: input.name,
     type: input.type,
+    subItemType: input.subItemType,
     status: NEW_ITEM_STATUS,
     stock: [],
-    unitCost: 0,
-    additionalCost: 0,
-    price: input.price,
-    value: 0,
-    media: {
-      main: NEW_ITEM_MEDIA_PLACEHOLDER,
+    pricing: {
+      unitCost: { minorUnits: '0', currency: 'USD' },
+      targetPrice: { minorUnits: String(Math.round(input.price * 100)), currency: 'USD' },
+    },
+    context: {
+      ...(input.collection !== undefined ? { collection: input.collection } : {}),
+      ...(input.year !== undefined ? { year: input.year } : {}),
     },
     createdAt: now,
     updatedAt: now,
     ...(input.description !== undefined ? { description: input.description } : {}),
-    ...(input.collection !== undefined ? { collection: input.collection } : {}),
-    ...(input.subItemType !== undefined ? { subItemType: input.subItemType } : {}),
-    ...(input.year !== undefined ? { year: input.year } : {}),
   };
 }
 
@@ -542,19 +547,30 @@ export async function PATCH(request: NextRequest) {
         ? {
             ...(current.media || {}),
             ...mediaPayload,
-            ...(mediaPayload.gallery !== undefined ? { gallery: mediaPayload.gallery } : {}),
+            ...(mediaPayload.gallery !== undefined ? { galleryUrls: mediaPayload.gallery } : {}),
           }
         : undefined;
+
+    const nextContext = {
+      ...(current.context || {}),
+      ...(parsed.collection !== undefined ? { collection: parsed.collection as Collection } : {}),
+      ...(parsed.year !== undefined ? { year: parsed.year } : {}),
+    };
+    const nextPricing = {
+      ...(current.pricing || {}),
+      ...(parsed.price !== undefined
+        ? { targetPrice: { minorUnits: String(Math.round(parsed.price * 100)), currency: 'USD' } }
+        : {}),
+    };
 
     const updated = await updateItem(parsed.id, {
       ...(parsed.name !== undefined ? { name: parsed.name } : {}),
       ...(parsed.description !== undefined ? { description: parsed.description } : {}),
-      ...(parsed.price !== undefined ? { price: parsed.price } : {}),
       ...(parsed.status !== undefined ? { status: parsed.status } : {}),
-      ...(parsed.collection !== undefined ? { collection: parsed.collection as Collection } : {}),
       ...(parsed.type !== undefined ? { type: parsed.type } : {}),
       ...(parsed.subItemType !== undefined ? { subItemType: parsed.subItemType as SubItemType } : {}),
-      ...(parsed.year !== undefined ? { year: parsed.year } : {}),
+      context: nextContext,
+      pricing: nextPricing,
       ...(mergedMedia ? { media: mergedMedia } : {}),
     });
 

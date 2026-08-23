@@ -649,7 +649,7 @@ export class ResetDataWorkflow {
       const defaultSites = [
         {
           id: 'hq',
-          name: 'HQ',
+          name: 'hq',
           status: SiteStatus.ACTIVE,
           type: SiteType.PHYSICAL,
           subtype: PhysicalBusinessType.STORAGE,
@@ -660,7 +660,7 @@ export class ResetDataWorkflow {
         },
         {
           id: 'drive',
-          name: 'Drive',
+          name: 'drive',
           status: SiteStatus.ACTIVE,
           type: SiteType.DIGITAL_SITE,
           subtype: DigitalSiteType.REPOSITORY,
@@ -669,7 +669,7 @@ export class ResetDataWorkflow {
         },
         {
           id: 'none',
-          name: 'None',
+          name: 'none',
           status: SiteStatus.ACTIVE,
           type: SiteType.SYSTEM,
           subtype: SystemSiteType.UNIVERSAL_TRACKING,

@@ -1218,7 +1218,7 @@ export default function MapBoard({
   return (
     <>
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      <div className="relative min-h-[20rem] w-full shrink-0 rounded-lg border border-border bg-muted md:min-h-[28rem]">
+      <div className="relative min-h-[20rem] w-full flex-1 rounded-lg border border-border bg-muted">
         {coordinatePickSession && (
           <div className="pointer-events-none absolute inset-x-0 top-0 z-[500] flex justify-center px-2 pt-3">
             <div className="pointer-events-auto rounded-md border border-sky-500/50 bg-sky-950/90 px-3 py-2 text-center text-xs text-sky-100 shadow-lg">
@@ -1237,7 +1237,7 @@ export default function MapBoard({
         <MapContainer
           center={[activeRegion.center.lat, activeRegion.center.lng]}
           zoom={activeRegion.defaultZoom}
-          className="h-[20rem] w-full md:h-[28rem]"
+          className="h-full w-full"
           scrollWheelZoom={isScrollWheelZoomEnabled}
           maxBounds={activeRegion.maxBounds || WORLD_BOUNDS}
           maxBoundsViscosity={activeRegion.maxBounds ? 1.0 : 0}

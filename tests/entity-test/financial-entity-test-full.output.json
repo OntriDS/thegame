@@ -78,7 +78,7 @@
       },
       "target": {
         "type": "site",
-        "id": "site-world"
+        "id": "world"
       },
       "relationship": "target-site",
       "createdAt": "2026-08-22T16:42:34.440Z"
@@ -140,7 +140,7 @@
       },
       "stock": [
         {
-          "siteId": "site-world",
+          "siteId": "world",
           "quantity": 2
         }
       ]
