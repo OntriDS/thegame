@@ -9,4 +9,8 @@ The shared KV wrapper now provides the compatibility boundary for entity records
 - Deletes remove both representations.
 - Non-entity settings and operational keys are unaffected.
 
-The V1 shadow namespace was used only during promotion and has now been removed after canonical verification. The compatibility fallback remains intentionally available so any unconverted or legacy-shaped future write can be read safely while writers are being finalized.
+Live audit (2026-08-23): 40 V1 mirrors remain active (25 Character, 8
+FinancialRecord, 6 Item, 1 Player). Thirty-two differ materially from their
+base `thegame:data:*` copies, so the shadow namespace has **not** been removed.
+It remains the active read-preferred compatibility boundary until Increment 11
+reconciles the base records and retires this wrapper behavior.
