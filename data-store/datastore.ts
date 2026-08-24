@@ -236,6 +236,10 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
     delete persistedContext.counterparty;
     delete persistedContext.kind;
     delete persistedContext.schemaVersion;
+    if (persistedContext.recurrence) {
+      delete persistedContext.recurrence.isRecurrentGroup;
+      delete persistedContext.recurrence.isTemplate;
+    }
   }
   const persistedTask = {
     ...normalizedTask,

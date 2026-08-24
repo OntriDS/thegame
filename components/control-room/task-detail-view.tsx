@@ -288,8 +288,6 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
           ? computeNextSiblingOrder(allTasks, parent.id, prefillId)
           : ORDER_INCREMENT,
       parentId: parent.id,
-      isRecurrentGroup: false,
-      isTemplate: true,
       siteId: parent.siteId,
       targetSiteId: parent.targetSiteId,
       rewards: { points: { xp: 0, rp: 0, fp: 0, hp: 0 } },
@@ -358,8 +356,6 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
           ? computeNextSiblingOrder(allTasks, parent.id, prefillId)
           : ORDER_INCREMENT,
       parentId: parent.id,
-      isRecurrentGroup: false,
-      isTemplate: false,
       siteId: parent.siteId,
       targetSiteId: parent.targetSiteId,
       rewards: { points: { xp: 0, rp: 0, fp: 0, hp: 0 } },

@@ -591,8 +591,6 @@ export interface Item extends EntityEnvelope {
  * - Links System: TASK_SITE, TASK_ITEM, TASK_CHARACTER, TASK_PLAYER
  */
 export interface RecurrenceFacetV1 {
-  isRecurrentGroup?: boolean;
-  isTemplate?: boolean;
   frequencyConfig?: any;
   recurrenceStart?: UtcIsoString;
   recurrenceEnd?: UtcIsoString;

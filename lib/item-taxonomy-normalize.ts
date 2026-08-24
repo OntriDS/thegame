@@ -111,6 +111,19 @@ export function normalizeTaskOutputTaxonomy(task: Task): Task {
   if (!plan) return task;
 
   const rawType = plan.outputItemType;
+  const hasItemIntent = Boolean(
+    (rawType != null && String(rawType).trim()) ||
+    (plan.outputItemName != null && String(plan.outputItemName).trim()) ||
+    plan.outputItemId ||
+    (task as any).outputItemId,
+  );
+  // The task forms historically emitted a default-only plan even when “No
+  // Item Output” was selected. It is not an inventory instruction.
+  if (!hasItemIntent) {
+    const context = { ...task.context };
+    delete context.productionPlan;
+    return Object.keys(context).length ? { ...task, context } : ({ ...task, context: undefined } as Task);
+  }
   if (rawType == null || String(rawType).trim() === '') return task;
 
   const trimmed = String(rawType).trim();

@@ -359,8 +359,6 @@ export function createRecurrentGroup(
     progress: 0,
     order: 0,
     parentId: parentId || null,
-    isRecurrentGroup: true,
-    isTemplate: false,
     cost: 0,
     revenue: 0,
     rewards: { points: { xp: 0, rp: 0, fp: 0, hp: 0 } },
@@ -393,8 +391,6 @@ export function createRecurrentTemplate(
     parentId,
     context: {
       recurrence: {
-        isRecurrentGroup: false,
-        isTemplate: true,
         frequencyConfig,
       },
     },
@@ -864,8 +860,6 @@ function buildCanonicalInstanceContext(template: Task, originTemplateId: string)
   const context: any = {
     recurrence: {
       ...(source.recurrence || {}),
-      isRecurrentGroup: false,
-      isTemplate: false,
       frequencyConfig: undefined,
       originTemplateId,
     },
@@ -890,7 +884,7 @@ function buildCanonicalInstanceContext(template: Task, originTemplateId: string)
 function getCanonicalSpawnBase(template: Task): Record<string, unknown> {
   const raw = template as any;
   const {
-    characterId, links, isCollected, frequencyConfig, isRecurrentGroup, isTemplate,
+    characterId, links, isCollected, frequencyConfig,
     customerCharacterRole, newCustomerName, jungleCoins, rewards,
     outputItemType, outputItemSubType, outputQuantity, outputUnitCost,
     outputItemName, outputItemPrice, outputItemCollection, outputItemStatus,

@@ -1,5 +1,5 @@
 import { Task, TaskGroupV1, ExecutableTaskV1 } from '@/types/entities';
-import { TaskStatus } from '@/types/enums';
+import { TaskStatus, TaskType } from '@/types/enums';
 
 /**
  * COMPATIBILITY SELECTORS 
@@ -20,18 +20,11 @@ export function isExecutableTaskV1(task: Task): task is ExecutableTaskV1 {
 // -----------------------------------------------------------------------------
 
 export function getTaskIsRecurrentGroup(task: Task): boolean {
-  if (task.context?.recurrence?.isRecurrentGroup !== undefined) {
-    return task.context.recurrence.isRecurrentGroup;
-  }
-  // Fallback to legacy
-  return (task as any).isRecurrentGroup ?? false;
+  return task.type === TaskType.RECURRENT_GROUP;
 }
 
 export function getTaskIsTemplate(task: Task): boolean {
-  if (task.context?.recurrence?.isTemplate !== undefined) {
-    return task.context.recurrence.isTemplate;
-  }
-  return (task as any).isTemplate ?? false;
+  return task.type === TaskType.RECURRENT_TEMPLATE;
 }
 
 export function getTaskFrequencyConfig(task: Task): any {

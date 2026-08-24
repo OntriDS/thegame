@@ -497,8 +497,6 @@ export default function RecurrentTreeModalContent({
         ...(task as any)?.context,
         recurrence: {
           ...(task as any)?.context?.recurrence,
-          isRecurrentGroup: type === TaskType.RECURRENT_GROUP,
-          isTemplate: type === TaskType.RECURRENT_TEMPLATE,
           frequencyConfig: (
             type === TaskType.RECURRENT_GROUP ||
             type === TaskType.RECURRENT_TEMPLATE
