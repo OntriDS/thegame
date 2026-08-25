@@ -1,12 +1,13 @@
 // types/jungle-academy.ts
 
-export type SchoolClassType = 'spanish' | 'art';
+export type SchoolClassType = 'spanish' | 'art' | 'penalty';
 
 export interface JungleStudent {
   id: string;
   name: string;
   pointsSpa: number;
   pointsArt: number;
+  pointsPenalty: number;
   totalPoints: number;
 }
 

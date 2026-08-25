@@ -50,6 +50,8 @@ export async function POST(request: NextRequest) {
       student.pointsSpa = (student.pointsSpa || 0) + pointsNum;
     } else if (className === 'art') {
       student.pointsArt = (student.pointsArt || 0) + pointsNum;
+    } else if (className === 'penalty') {
+      student.pointsPenalty = (student.pointsPenalty || 0) + Math.abs(pointsNum);
     }
     student.totalPoints = (student.totalPoints || 0) + pointsNum;
     await kvSet(studentKey, student);

@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
         name,
         pointsSpa: 0,
         pointsArt: 0,
+        pointsPenalty: 0,
         totalPoints: 0,
       };
       await kvSAdd(getGroupKey(groupId), studentId);
