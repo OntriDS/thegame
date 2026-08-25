@@ -983,6 +983,15 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
 
     // 4. Render
     // ============================================================================
+    
+    // Calculate USD values for the summary breakdown
+    const akilesSalesUSD = salesDistributionMatrix.akiles.reduce((s, r) => s + r.totalDollars, 0);
+    const partnerSalesUSD = salesDistributionMatrix.partner.reduce((s, r) => s + r.totalDollars, 0);
+    const netCommissionMeUSD = partnerSalesUSD * (totals.breakdown.partnerSharePct_Me / 100) - akilesSalesUSD * (totals.breakdown.principalSharePct_Partner / 100);
+    const netCommissionPartnerUSD = akilesSalesUSD * (totals.breakdown.principalSharePct_Partner / 100) - partnerSalesUSD * (totals.breakdown.partnerSharePct_Me / 100);
+    const akilesNetUSD = akilesSalesUSD - 0 + netCommissionMeUSD; // Cost is 0 in USD
+    const partnerNetUSD = partnerSalesUSD - 0 + netCommissionPartnerUSD; // Cost is 0 in USD
+
     return (
       <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/50 -mx-4 -mt-4 -mb-2 p-4 pt-6 overflow-hidden">
         {/* Header / Setup Toolbar */}
@@ -1613,8 +1622,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                             .reduce((s, r) => s + r.totalColones, 0)
                             .toLocaleString()}
                         </div>
-                        <div className="text-right font-mono text-slate-600/50">
-                          0
+                        <div className="text-right font-mono text-indigo-200">
+                          ${akilesSalesUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                         </div>
                       </div>
 
@@ -1624,8 +1633,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                         <div className="text-right font-mono text-red-400">
                           -₡{totals.breakdown.costMe.toLocaleString()}
                         </div>
-                        <div className="text-right font-mono text-slate-600/50">
-                          0
+                        <div className="text-right font-mono text-red-400/50">
+                          -$0
                         </div>
                       </div>
 
@@ -1636,8 +1645,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                           {totals.breakdown.netCommissionMe > 0 ? "+" : ""}
                           ₡{totals.breakdown.netCommissionMe.toLocaleString()}
                         </div>
-                        <div className="text-right font-mono text-slate-600/50">
-                          0
+                        <div className="text-right font-mono text-indigo-300/80">
+                          {netCommissionMeUSD > 0 ? "+" : ""}
+                          {netCommissionMeUSD < 0 ? "-" : ""}$
+                          {Math.abs(netCommissionMeUSD).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                         </div>
                       </div>
 
@@ -1648,8 +1659,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                           ₡
                           {totals.myNet.toLocaleString()}
                         </div>
-                        <div className="text-right font-mono text-slate-600/50">
-                          0
+                        <div className="text-right font-mono text-indigo-200">
+                          ${akilesNetUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                         </div>
                       </div>
                     </div>
@@ -1710,8 +1721,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                               .reduce((s, r) => s + r.totalColones, 0)
                               .toLocaleString()}
                           </div>
-                          <div className="text-right font-mono text-slate-600/50">
-                            0
+                          <div className="text-right font-mono text-pink-200">
+                            ${partnerSalesUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                           </div>
                         </div>
                         <div className="grid grid-cols-3 gap-2 text-xs text-red-400">
@@ -1719,8 +1730,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                           <div className="text-right font-mono text-red-400">
                             -₡{totals.breakdown.costPartner.toLocaleString()}
                           </div>
-                          <div className="text-right font-mono text-slate-600/50">
-                            0
+                          <div className="text-right font-mono text-red-400/50">
+                            -$0
                           </div>
                         </div>
 
@@ -1731,8 +1742,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                             {totals.breakdown.netCommissionPartner > 0 ? "+" : ""}
                             ₡{totals.breakdown.netCommissionPartner.toLocaleString()}
                           </div>
-                          <div className="text-right font-mono text-slate-600/50">
-                            0
+                          <div className="text-right font-mono text-pink-300/80">
+                            {netCommissionPartnerUSD > 0 ? "+" : ""}
+                            {netCommissionPartnerUSD < 0 ? "-" : ""}$
+                            {Math.abs(netCommissionPartnerUSD).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                           </div>
                         </div>
 
@@ -1743,8 +1756,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
                             ₡
                             {totals.partnerNet.toLocaleString()}
                           </div>
-                          <div className="text-right font-mono text-slate-600/50">
-                            0
+                          <div className="text-right font-mono text-pink-200">
+                            ${partnerNetUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                           </div>
                         </div>
                       </div>
