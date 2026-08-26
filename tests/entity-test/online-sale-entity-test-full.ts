@@ -9,7 +9,7 @@ import {
   getSaleById, removeFinancial, removeItem, removeSale, upsertItem, upsertSale,
 } from '@/data-store/datastore';
 import { getLinksFor } from '@/links/link-registry';
-import { clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { acquireEffectClaim, resolveEffectClaim, deleteEffectClaim, deleteEffectClaimsByPrefix } from '@/lib/domain/effects/effect-claim-store';
 import { EffectKeys } from '@/data-store/keys';
 import { getSaleById as getPersistedSaleById } from '@/data-store/repositories/sale.repo';
 import { Collection, Currency, EntityType, ItemStatus, ItemType, PaymentMethod, SaleStatus, SaleType } from '@/types/enums';
@@ -35,10 +35,10 @@ describe('entity-test: full Online Sale', () => {
     const financials = await getFinancialsBySourceSaleId(saleId);
     for (const financial of financials) await removeFinancial(financial.id);
     await removeSale(saleId);
-    await clearEffectsByPrefix(EntityType.SALE, saleId, '');
-    await clearEffect(EffectKeys.created('sale', saleId));
+    await deleteEffectClaimsByPrefix(EffectKeys.sideEffect('sale', saleId, ''));
+    await deleteEffectClaim(EffectKeys.created('sale', saleId));
     for (const effect of ['financialRecordsSynced', 'financialCreated', 'inventoryProcessed', 'linesProcessed', 'soldItemEntity:online-line-full', 'soldItemEntity:bundle:online-line-full']) {
-      await clearEffect(EffectKeys.sideEffect('sale', saleId, effect));
+      await deleteEffectClaim(EffectKeys.sideEffect('sale', saleId, effect));
     }
     await removeItem(itemId);
   });

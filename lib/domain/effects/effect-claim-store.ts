@@ -23,6 +23,14 @@ export async function deleteEffectClaim(idempotencyKey: string): Promise<void> {
   await kvDel(`effect:${idempotencyKey}`);
 }
 
+export async function deleteEffectClaimsByPrefix(prefix: string): Promise<void> {
+  const { kv } = await import('@/lib/utils/kv');
+  const keys = await kv.keys(`${EFFECT_PREFIX}${prefix}*`);
+  if (keys.length > 0) {
+    await kv.del(keys[0], ...keys.slice(1));
+  }
+}
+
 // ─── Claim Acquisition ──────────────────────────────────────────────────────
 
 /**

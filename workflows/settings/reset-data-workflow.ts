@@ -6,7 +6,8 @@ import { getUTCNow } from '@/lib/utils/utc-utils';
 import { buildDataKey, buildIndexKey, buildLogKey, buildLinksGlobalIndexKey, buildLinksIndexKey, buildLogMonthKey, buildLogMonthsIndexKey } from '@/data-store/keys';
 import { EntityType, SiteType, SiteStatus, PhysicalBusinessType, DigitalSiteType, SystemSiteType } from '@/types/enums';
 import { TransactionManager } from './transaction-manager';
-import { clearAllEffects, clearProcessingStack } from '@/data-store/effects-registry';
+import { acquireEffectClaim, resolveEffectClaim, deleteEffectClaim, deleteEffectClaimsByPrefix } from '@/lib/domain/effects/effect-claim-store';
+
 
 // Centralized list of entity types for reset operations
 const RESETTABLE_ENTITY_TYPES = [
@@ -212,8 +213,10 @@ export class ResetDataWorkflow {
         try {
           checkTimeoutAndProgress('Clearing Effects Registry');
           console.log('[ResetDataWorkflow] 🧹 Clearing Effects Registry and Processing Stack...');
-          await clearAllEffects();
-          await clearProcessingStack();
+          const { kv } = await import('@/lib/utils/kv');
+      const keys = await kv.keys('thegame:effect:*');
+      if (keys.length > 0) await kv.del(keys[0], ...keys.slice(1));
+          /* processing stack no longer exists */
           results.push('Cleared Effects Registry and Processing Stack');
           console.log('[ResetDataWorkflow] ✅ Cleared Effects Registry and Processing Stack');
         } catch (error) {

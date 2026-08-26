@@ -13,7 +13,8 @@ import {
   getMonthKeyFromTimestamp,
   syncEntityLogTimestamp,
 } from '../entities-logging';
-import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { acquireEffectClaim, resolveEffectClaim, deleteEffectClaim, deleteEffectClaimsByPrefix } from '@/lib/domain/effects/effect-claim-store';
+import { EffectClaimStatus } from '@/types/enums';
 import { EffectKeys } from '@/data-store/keys';
 import { createLink, getLinksFor, removeLink } from '@/links/link-registry';
 import { getFinancialById } from '@/data-store/datastore';
@@ -63,13 +64,20 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
   // New financial record creation
   if (!previousFinancial) {
     const effectKey = EffectKeys.created('financial', financial.id);
-    if (await hasEffect(effectKey)) return;
+    const claim = await acquireEffectClaim({
+      idempotencyKey: effectKey,
+      ownerId: `financial-workflow-${financial.id}`,
+      commandId: `upsert-${financial.id}`,
+      leaseSeconds: 60
+    });
+    if (!claim) return;
 
     // Character creation from emissary fields - when newCustomerName is provided
     // This MUST run first because it updates the financial record
     if (financial.context?.newCustomerName && !getFinancialCounterpartyId(financial)) {
       const characterEffectKey = EffectKeys.sideEffect('financial', financial.id, 'characterCreated');
-      if (!(await hasEffect(characterEffectKey))) {
+      const charClaim = await acquireEffectClaim({ idempotencyKey: characterEffectKey, ownerId: `financial-workflow-${financial.id}`, commandId: `create-char-${financial.id}`, leaseSeconds: 60 });
+      if (charClaim) {
         const createdCharacter = await createCharacterFromFinancial(financial);
         if (createdCharacter) {
           // Update financial record with the created character ID
@@ -82,7 +90,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
             __financialRelationsProvided: true,
           };
           await upsertFinancial(updatedFinancial, { skipWorkflowEffects: true });
-          await markEffect(characterEffectKey);
+          await resolveEffectClaim({ idempotencyKey: characterEffectKey, leaseToken: charClaim.leaseToken, status: EffectClaimStatus.COMPLETED });
         }
       }
     }
@@ -96,10 +104,11 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       sideEffects.push(
         (async () => {
           const itemEffectKey = EffectKeys.sideEffect('financial', financial.id, 'itemCreated');
-          if (!(await hasEffect(itemEffectKey))) {
+          const itemClaim = await acquireEffectClaim({ idempotencyKey: itemEffectKey, ownerId: `financial-workflow-${financial.id}`, commandId: `create-item-${financial.id}`, leaseSeconds: 60 });
+          if (itemClaim) {
             const createdItem = await createItemFromRecord(financial);
             if (createdItem) {
-              await markEffect(itemEffectKey);
+              await resolveEffectClaim({ idempotencyKey: itemEffectKey, leaseToken: itemClaim.leaseToken, status: EffectClaimStatus.COMPLETED });
             }
           }
         })()
@@ -149,7 +158,9 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
       const archiveIndexEffectKey = EffectKeys.sideEffect('financial', financial.id, `archiveIndex:${formatArchiveMonthKeyUTC(snapshotMonthDate)}`);
 
-      if (!(await hasEffect(archiveIndexEffectKey))) {
+      const archiveClaim = await acquireEffectClaim({ idempotencyKey: archiveIndexEffectKey, ownerId: `financial-workflow-${financial.id}`, commandId: `archive-${financial.id}`, leaseSeconds: 60 });
+
+      if (archiveClaim) {
         const monthKey = formatArchiveMonthKeyUTC(snapshotMonthDate);
         const { kvSAdd } = await import('@/lib/utils/kv');
         const archiveIndexKey = buildMonthIndexKey(EntityType.FINANCIAL, monthKey);
@@ -159,12 +170,13 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         await kvSAdd(buildArchiveMonthsKey(), monthKey);
         // The financial record's existence in the index and its inherent dates are the single source of truth.
 
-        await markEffect(archiveIndexEffectKey);
+        await resolveEffectClaim({ idempotencyKey: archiveIndexEffectKey, leaseToken: archiveClaim.leaseToken, status: EffectClaimStatus.COMPLETED });
       }
 
       // First lifecycle log is DONE.
       const doneLoggedKey = EffectKeys.sideEffect('financial', financial.id, 'doneLogged');
-      if (!(await hasEffect(doneLoggedKey))) {
+      const doneClaim = await acquireEffectClaim({ idempotencyKey: doneLoggedKey, ownerId: `financial-workflow-${financial.id}`, commandId: `done-log-${financial.id}`, leaseSeconds: 60 });
+      if (doneClaim) {
         await appendEntityLog(
           EntityType.FINANCIAL,
           financial.id,
@@ -178,7 +190,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
           },
           getFinancialDoneTimestamp(financial)
         );
-        await markEffect(doneLoggedKey);
+        await resolveEffectClaim({ idempotencyKey: doneLoggedKey, leaseToken: doneClaim.leaseToken, status: EffectClaimStatus.COMPLETED });
       }
     }
 
@@ -191,7 +203,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       );
     }
 
-    await markEffect(effectKey);
+    await resolveEffectClaim({ idempotencyKey: effectKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
     // DONE log is already written above when !isPending (effect-gated). Do not call ensureFinancialDoneLog here —
     // it could append a second DONE if month resolution or list order differed from the guard in appendEntityLog.
     return;
@@ -212,7 +224,8 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     }
 
     const doneLoggedKey = EffectKeys.sideEffect('financial', financial.id, 'doneLogged');
-    if (!(await hasEffect(doneLoggedKey))) {
+    const doneClaim = await acquireEffectClaim({ idempotencyKey: doneLoggedKey, ownerId: `financial-workflow-${financial.id}`, commandId: `done-log-${financial.id}`, leaseSeconds: 60 });
+    if (doneClaim) {
       await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.DONE, {
         name: financial.name,
         type: financial.type,
@@ -220,7 +233,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         cost: financial.cost,
         revenue: financial.revenue
       }, getFinancialDoneTimestamp(financial));
-      await markEffect(doneLoggedKey);
+      await resolveEffectClaim({ idempotencyKey: doneLoggedKey, leaseToken: doneClaim.leaseToken, status: EffectClaimStatus.COMPLETED });
     }
 
     // NEW: Archive Index Tracking
@@ -239,7 +252,9 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
     const archiveIndexEffectKey = EffectKeys.sideEffect('financial', financial.id, `archiveIndex:${formatArchiveMonthKeyUTC(snapshotMonthDate)}`);
 
-    if (!(await hasEffect(archiveIndexEffectKey))) {
+    const archiveClaim = await acquireEffectClaim({ idempotencyKey: archiveIndexEffectKey, ownerId: `financial-workflow-${financial.id}`, commandId: `archive-${financial.id}`, leaseSeconds: 60 });
+
+    if (archiveClaim) {
       const monthKey = formatArchiveMonthKeyUTC(snapshotMonthDate);
       const { kvSAdd } = await import('@/lib/utils/kv');
       const archiveIndexKey = buildMonthIndexKey(EntityType.FINANCIAL, monthKey);
@@ -250,7 +265,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
       // The financial record's existence in the index and its inherent dates are the single source of truth.
 
-      await markEffect(archiveIndexEffectKey);
+      await resolveEffectClaim({ idempotencyKey: archiveIndexEffectKey, leaseToken: archiveClaim.leaseToken, status: EffectClaimStatus.COMPLETED });
     }
   } else if (!wasPending && nowPending) {
     // Reverted from DONE to PENDING (became unpaid or uncharged)
@@ -268,7 +283,8 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     previousFinancial?.status !== FinancialStatus.COLLECTED
   ) {
     const collectedLoggedKey = EffectKeys.sideEffect('financial', financial.id, 'collectedLogged');
-    if (!(await hasEffect(collectedLoggedKey))) {
+    const collectClaim = await acquireEffectClaim({ idempotencyKey: collectedLoggedKey, ownerId: `financial-workflow-${financial.id}`, commandId: `collect-log-${financial.id}`, leaseSeconds: 60 });
+    if (collectClaim) {
       await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.COLLECTED, {
         name: financial.name,
         type: financial.type,
@@ -276,7 +292,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         cost: financial.cost,
         revenue: financial.revenue,
       }, financial.lifecycle?.collectedAt || getFinancialDate(financial));
-      await markEffect(collectedLoggedKey);
+      await resolveEffectClaim({ idempotencyKey: collectedLoggedKey, leaseToken: collectClaim.leaseToken, status: EffectClaimStatus.COMPLETED });
     }
   }
 
@@ -512,14 +528,14 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     }
 
     // 4. Clear effects registry
-    await clearEffect(EffectKeys.created('financial', recordId));
-    await clearEffect(EffectKeys.sideEffect('financial', recordId, 'characterCreated'));
-    await clearEffect(EffectKeys.sideEffect('financial', recordId, 'itemCreated'));
-    await clearEffect(EffectKeys.sideEffect('financial', recordId, 'pointsAwarded'));
-    await clearEffect(EffectKeys.sideEffect('financial', recordId, 'pointsVested')); // Remove old effect key
-    await clearEffect(EffectKeys.sideEffect('financial', recordId, 'pointsRewarded')); // Add new effect key
-    await clearEffectsByPrefix(EntityType.FINANCIAL, recordId, 'pointsLogged:');
-    await clearEffectsByPrefix(EntityType.FINANCIAL, recordId, 'financialLogged:');
+    await deleteEffectClaim(EffectKeys.created('financial', recordId));
+    await deleteEffectClaim(EffectKeys.sideEffect('financial', recordId, 'characterCreated'));
+    await deleteEffectClaim(EffectKeys.sideEffect('financial', recordId, 'itemCreated'));
+    await deleteEffectClaim(EffectKeys.sideEffect('financial', recordId, 'pointsAwarded'));
+    await deleteEffectClaim(EffectKeys.sideEffect('financial', recordId, 'pointsVested')); // Remove old effect key
+    await deleteEffectClaim(EffectKeys.sideEffect('financial', recordId, 'pointsRewarded')); // Add new effect key
+    await deleteEffectClaimsByPrefix(EffectKeys.sideEffect('financial', recordId, 'pointsLogged:'));
+    await deleteEffectClaimsByPrefix(EffectKeys.sideEffect('financial', recordId, 'financialLogged:'));
 
     // 5. Remove log entries from financials log (monthly lists)
     await removeLogEntriesAcrossMonths(EntityType.FINANCIAL, entry => entry.entityId === recordId);
@@ -542,7 +558,7 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
         const { kvSRem } = await import('@/lib/utils/kv');
         const archiveIndexKey = buildMonthIndexKey(EntityType.FINANCIAL, monthKey);
         await kvSRem(archiveIndexKey, recordId);
-        await clearEffect(EffectKeys.sideEffect('financial', recordId, `financialSnapshot:${monthKey}`));
+        await deleteEffectClaim(EffectKeys.sideEffect('financial', recordId, `financialSnapshot:${monthKey}`));
       }
     } catch (err) {
       console.error(`[removeRecordEffectsOnDelete] Failed to clean up archive index`, err);

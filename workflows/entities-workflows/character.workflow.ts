@@ -4,8 +4,10 @@
 import { EntityType, LogEventType } from '@/types/enums';
 import type { Character } from '@/types/entities';
 import { appendEntityLog, updateEntityLeanFields } from '../entities-logging';
-import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { acquireEffectClaim, resolveEffectClaim, deleteEffectClaim, deleteEffectClaimsByPrefix } from '@/lib/domain/effects/effect-claim-store';
+
 import { EffectKeys } from '@/data-store/keys';
+import { EffectClaimStatus } from '@/types/enums';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import type { Task, FinancialRecord } from '@/types/entities';
 
@@ -16,14 +18,15 @@ export async function onCharacterUpsert(character: Character, previousCharacter?
   if (!previousCharacter) {
     const effectKey = EffectKeys.created('character', character.id);
     
-    if (await hasEffect(effectKey)) return;
+    const claim = await acquireEffectClaim({ idempotencyKey: effectKey, ownerId: `workflow`, commandId: `cmd`, leaseSeconds: 60 });
+    if (!claim) return;
     
     await appendEntityLog(EntityType.CHARACTER, character.id, LogEventType.CREATED, { 
       name: character.name, 
       roles: character.roles
     }, character.createdAt);
     
-    await markEffect(effectKey);
+    await resolveEffectClaim({ idempotencyKey: effectKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
     return;
   }
   
@@ -76,8 +79,8 @@ export async function removeCharacterEffectsOnDelete(characterId: string): Promi
     }
     
     // 2. Clear all effects for this character
-    await clearEffect(EffectKeys.created('character', characterId));
-    await clearEffectsByPrefix(EntityType.CHARACTER, characterId, '');
+    await deleteEffectClaim(EffectKeys.created('character', characterId));
+    await deleteEffectClaimsByPrefix(EffectKeys.sideEffect('character', characterId, ''));
   } catch (error) {
     console.error('Error removing character effects:', error);
   }
@@ -89,19 +92,6 @@ export async function removeCharacterEffectsOnDelete(characterId: string): Promi
  * J$ are only earned via Points Exchange
  */
 export async function logCharacterEffect(task: Task): Promise<void> {
-  // J$ no longer awarded as task rewards - only earned via Points Exchange
-  // This function is now a no-op since tasks don't award J$ anymore
-  return;
-}
-
-// Only players can convert points to J$ through the points system
-
-/**
- * Log character update from task changes
- * This is currently a no-op since tasks don't award jungle coins anymore
- * J$ are only earned via Points Exchange
- */
-export async function logCharacterUpdateFromTask(task: Task, oldTask: Task): Promise<void> {
   // J$ no longer awarded as task rewards - only earned via Points Exchange
   // This function is now a no-op since tasks don't award J$ anymore
   return;

@@ -21,8 +21,7 @@ import {
   upsertSale,
 } from '@/data-store/datastore';
 import { getLinksFor } from '@/links/link-registry';
-import { clearEffectsByPrefix } from '@/data-store/effects-registry';
-import { clearEffect } from '@/data-store/effects-registry';
+import { acquireEffectClaim, resolveEffectClaim, deleteEffectClaim, deleteEffectClaimsByPrefix } from '@/lib/domain/effects/effect-claim-store';
 import { EffectKeys } from '@/data-store/keys';
 import { getSaleById as getPersistedSaleById } from '@/data-store/repositories/sale.repo';
 import {
@@ -130,8 +129,8 @@ describe('entity-test: full Direct Sale', () => {
       const financials = await getFinancialsBySourceSaleId(saleId);
       for (const financial of financials) await removeFinancial(financial.id);
       await removeSale(saleId);
-      await clearEffectsByPrefix(EntityType.SALE, saleId, '');
-      await clearEffect(EffectKeys.created('sale', saleId));
+      await deleteEffectClaimsByPrefix(EffectKeys.sideEffect('sale', saleId, ''));
+      await deleteEffectClaim(EffectKeys.created('sale', saleId));
       for (const effect of [
         'financialRecordsSynced',
         'financialCreated',
@@ -145,7 +144,7 @@ describe('entity-test: full Direct Sale', () => {
         'characterCreated',
         'taskCreated:service-line-full',
       ]) {
-        await clearEffect(EffectKeys.sideEffect('sale', saleId, effect));
+        await deleteEffectClaim(EffectKeys.sideEffect('sale', saleId, effect));
       }
     }
     await removeTask(serviceTaskId);

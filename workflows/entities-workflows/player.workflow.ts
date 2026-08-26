@@ -4,7 +4,8 @@
 import { EntityType, LogEventType, TaskStatus } from '@/types/enums';
 import type { Player } from '@/types/entities';
 import { appendEntityLog, updateEntityLeanFields, appendPlayerPointsChangedLog, upsertPlayerPointsChangedLog } from '../entities-logging';
-import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { acquireEffectClaim, resolveEffectClaim, deleteEffectClaim, deleteEffectClaimsByPrefix } from '@/lib/domain/effects/effect-claim-store';
+import { EffectClaimStatus } from '@/types/enums';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getPlayerById, upsertPlayer } from '@/data-store/datastore';
@@ -22,9 +23,14 @@ export async function onPlayerUpsert(player: Player, previousPlayer?: Player): P
   // New player creation
   if (!previousPlayer) {
     const effectKey = EffectKeys.created('player', player.id);
-    const hasEffectResult = await hasEffect(effectKey);
+    const claim = await acquireEffectClaim({
+      idempotencyKey: effectKey,
+      ownerId: `player-workflow-${player.id}`,
+      commandId: `upsert-${player.id}`,
+      leaseSeconds: 60
+    });
     
-    if (hasEffectResult) {
+    if (!claim) {
       return;
     }
     await appendEntityLog(EntityType.PLAYER, player.id, LogEventType.CREATED, { 
@@ -32,7 +38,11 @@ export async function onPlayerUpsert(player: Player, previousPlayer?: Player): P
       level: player.level
     }, player.createdAt);
     
-    await markEffect(effectKey);
+    await resolveEffectClaim({
+      idempotencyKey: effectKey,
+      leaseToken: claim.leaseToken,
+      status: EffectClaimStatus.COMPLETED
+    });
     return;
   }
   
@@ -81,12 +91,9 @@ export async function onPlayerUpsert(player: Player, previousPlayer?: Player): P
  */
 export async function removePlayerEffectsOnDelete(playerId: string): Promise<void> {
   try {
-
-    
     // 1. Remove all Links related to this player
     const playerLinks = await getLinksFor({ type: EntityType.PLAYER, id: playerId });
 
-    
     for (const link of playerLinks) {
       try {
         await removeLink(link.id);
@@ -96,14 +103,8 @@ export async function removePlayerEffectsOnDelete(playerId: string): Promise<voi
     }
     
     // 2. Clear all effects for this player
-    await clearEffect(EffectKeys.created('player', playerId));
-    await clearEffectsByPrefix(EntityType.PLAYER, playerId, '');
-    
-    // 3. Remove log entries from player log
-
-    
-    // TODO: Implement server-side log removal or remove this call
-
+    await deleteEffectClaim(EffectKeys.created('player', playerId));
+    await deleteEffectClaimsByPrefix(EffectKeys.sideEffect('player', playerId, ''));
     
   } catch (error) {
     console.error('Error removing player effects:', error);
@@ -125,7 +126,6 @@ export async function logPlayerUpdateFromTask(task: Task, oldTask: Task): Promis
     const rewardsChanged = JSON.stringify(oldRewards) !== JSON.stringify(newRewards);
     
     if (!rewardsChanged) {
-      return;
       return;
     }
     
@@ -179,7 +179,6 @@ export async function updatePlayerPointsFromTask(task: Task, oldTask: Task): Pro
     
     if (!hasChanges) {
       return;
-      return;
     }
     
     // Get main player
@@ -188,7 +187,6 @@ export async function updatePlayerPointsFromTask(task: Task, oldTask: Task): Pro
     const mainPlayer = await getPlayerById(mainPlayerId);
     
     if (!mainPlayer) {
-      return;
       return;
     }
     
@@ -220,7 +218,6 @@ export async function updatePlayerPointsFromTask(task: Task, oldTask: Task): Pro
     };
     
     // Store the updated player
-
     await upsertPlayer(updatedPlayer);
     
   } catch (error) {

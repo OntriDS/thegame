@@ -8,7 +8,8 @@ import { getItemById, upsertItem, deleteItem } from '@/data-store/datastore';
 import { upsertTask } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
-import { clearEffect, hasEffect, markEffect } from '@/data-store/effects-registry';
+import { deleteEffectClaim, isEffectCompleted, acquireEffectClaim, resolveEffectClaim } from '@/lib/domain/effects/effect-claim-store';
+import { EffectClaimStatus } from '@/types/enums';
 import { EffectKeys, buildArchiveMonthsKey, buildMonthIndexKey } from '@/data-store/keys';
 import { formatForDisplay } from '@/lib/utils/date-display-utils';
 import { getUTCNow, formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
@@ -54,6 +55,43 @@ export async function processSaleLines(sale: Sale): Promise<void> {
 }
 
 /**
+
+/**
+ * Process all sale lines in a sale
+ * Main dispatcher that processes each line based on its kind
+ */
+export async function processSaleLines(sale: Sale): Promise<void> {
+  try {
+    console.log(`[processSaleLines] Processing ${sale.lines.length} lines for sale: ${sale.counterpartyName}`);
+
+    // Process each line based on its kind
+    for (const line of sale.lines) {
+      console.log(`[processSaleLines] Processing line: ${line.kind}, lineId: ${line.lineId}`);
+
+      switch (line.kind) {
+        case 'item':
+          await processItemSaleLine(line as ItemSaleLine, sale);
+          break;
+        case 'service':
+          await processServiceLine(line as ServiceLine, sale);
+          break;
+        default:
+          console.warn(`[processSaleLines] Unknown line kind: ${(line as any).kind}`);
+      }
+    }
+
+    // Financial records from sales are created/updated only in onSaleUpsert → updateFinancialRecordsFromSale
+    // (creating them here duplicated finrecs on every charged resave).
+
+    console.log(`[processSaleLines] ✅ Processed all lines for sale: ${sale.counterpartyName}`);
+
+  } catch (error) {
+    console.error(`[processSaleLines] ❌ Failed to process sale lines for sale ${sale.id}:`, error);
+    throw error;
+  }
+}
+
+/**
  * Process item sale line - reduce item stock at specific site
  */
 export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promise<void> {
@@ -62,10 +100,10 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
 
     // Idempotency check
     const stockDecrementedKey = EffectKeys.sideEffect('sale', sale.id, `stockDecremented:${line.lineId}`);
-    const hasBeenDecremented = await hasEffect(stockDecrementedKey);
+    const claim = await acquireEffectClaim({ idempotencyKey: stockDecrementedKey, ownerId: `sale-line-${sale.id}`, commandId: `stock-${line.lineId}`, leaseSeconds: 60 });
 
-    if (hasBeenDecremented) {
-      console.log(`[processItemSaleLine] Stock already decremented for line ${line.lineId}, skipping`);
+    if (!claim) {
+      console.log(`[processItemSaleLine] Stock already decremented (or in progress) for line ${line.lineId}, skipping`);
       return;
     }
 
@@ -194,7 +232,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     await createLink(link);
 
     // Mark effect as complete
-    await markEffect(stockDecrementedKey);
+    await resolveEffectClaim({ idempotencyKey: stockDecrementedKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
 
     // SOLD item logs: only on the sold-item row (see ensureItemSoldLogsFromSale after ensureSoldItemEntities), not the live inventory id.
 
@@ -218,11 +256,14 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
     const taskStation = serviceContext?.taskStation || line.station;
 
     // Idempotency check
+    if (!serviceContext?.createTask) {
+      return;
+    }
     const taskCreatedKey = EffectKeys.sideEffect('sale', sale.id, `taskCreated:${line.lineId}`);
-    const hasBeenCreated = await hasEffect(taskCreatedKey);
+    const claim = await acquireEffectClaim({ idempotencyKey: taskCreatedKey, ownerId: `sale-line-${sale.id}`, commandId: `task-${line.lineId}`, leaseSeconds: 60 });
 
-    if (hasBeenCreated || !serviceContext?.createTask) {
-      console.log(`[processServiceLine] Task already created or not requested for line ${line.lineId}, skipping`);
+    if (!claim) {
+      console.log(`[processServiceLine] Task already created (or in progress) for line ${line.lineId}, skipping`);
       return;
     }
 
@@ -278,7 +319,7 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
     await createLink(link);
 
     // Mark effect as complete
-    await markEffect(taskCreatedKey);
+    await resolveEffectClaim({ idempotencyKey: taskCreatedKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
 
     // Log the task creation
     await appendEntityLog(EntityType.TASK, serviceTask.id, LogEventType.CREATED, {
@@ -395,8 +436,8 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
         if (prevLine?.itemId) {
           const prevBase = stripToInventoryBaseForLine(prevLine.itemId, lineId);
           if (prevBase !== inventoryBaseId) {
-            await clearEffect(effectKey);
-            await clearEffect(legacyBundleEffectKey);
+            await deleteEffectClaim(effectKey);
+            await deleteEffectClaim(legacyBundleEffectKey);
             console.warn(
               `[ensureSoldItemEntities] Inventory base changed for line ${lineId} (${prevBase} → ${inventoryBaseId}); cleared sold-item effects for sale ${sale.id}`
             );
@@ -404,15 +445,15 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
         }
       }
 
-      let hasPrimaryEffect = await hasEffect(effectKey);
-      let hasLegacyEffect = await hasEffect(legacyBundleEffectKey);
+      let hasPrimaryEffect = await isEffectCompleted(effectKey);
+      let hasLegacyEffect = await isEffectCompleted(legacyBundleEffectKey);
 
       let primaryRow = await getItemById(primaryCloneId);
       let legacyRow = await getItemById(legacyCloneId);
 
       if ((hasPrimaryEffect || hasLegacyEffect) && !primaryRow && !legacyRow) {
-        await clearEffect(effectKey);
-        await clearEffect(legacyBundleEffectKey);
+        await deleteEffectClaim(effectKey);
+        await deleteEffectClaim(legacyBundleEffectKey);
         hasPrimaryEffect = false;
         hasLegacyEffect = false;
         console.warn(
@@ -473,18 +514,19 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
 
         await ensureSaleItemLink(sale.id, soldItemEntity.id);
 
-        await markEffect(effectKey);
+        const claim = await acquireEffectClaim({ idempotencyKey: effectKey, ownerId: `sale-line-${sale.id}`, commandId: `ensure-${lineId}`, leaseSeconds: 60 });
+        if (claim) await resolveEffectClaim({ idempotencyKey: effectKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
         console.log(
           `[ensureSoldItemEntities] ✅ Created: ${soldItemEntity.id} (${item.name} x${working.quantity} @ $${working.unitPrice}) → ${monthKey}`
         );
       } else if (!hasPrimaryEffect && hasLegacyEffect && legacyRow) {
-        await markEffect(effectKey);
+        const claim = await acquireEffectClaim({ idempotencyKey: effectKey, ownerId: `sale-line-${sale.id}`, commandId: `ensure-legacy-${lineId}`, leaseSeconds: 60 });
+        if (claim) await resolveEffectClaim({ idempotencyKey: effectKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
       }
 
       primaryRow = await getItemById(primaryCloneId);
       legacyRow = await getItemById(legacyCloneId);
       const resolvedCloneId = primaryRow ? primaryCloneId : legacyRow ? legacyCloneId : null;
-
       if (!resolvedCloneId) {
         console.warn(
           `[ensureSoldItemEntities] No sold row after ensure (line ${lineId}, sale ${sale.id}, base ${inventoryBaseId})`

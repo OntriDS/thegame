@@ -5,7 +5,8 @@ import { EntityType, LogEventType, SiteStatus, SiteType } from '@/types/enums';
 import { LinkType } from '@/types/enums';
 import type { Site, Sale, FinancialRecord, Task, Character } from '@/types/entities';
 import { appendEntityLog, updateEntityLeanFields } from '../entities-logging';
-import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { acquireEffectClaim, resolveEffectClaim, deleteEffectClaim, deleteEffectClaimsByPrefix } from '@/lib/domain/effects/effect-claim-store';
+import { EffectClaimStatus } from '@/types/enums';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 // UTC STANDARDIZATION: Using new UTC utilities
@@ -185,7 +186,13 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
   // New site creation
   if (!previousSite) {
     const effectKey = EffectKeys.created('site', site.id);
-    if (await hasEffect(effectKey)) return;
+    const claim = await acquireEffectClaim({
+      idempotencyKey: effectKey,
+      ownerId: `site-workflow-${site.id}`,
+      commandId: `upsert-${site.id}`,
+      leaseSeconds: 60
+    });
+    if (!claim) return;
     
     // Build CREATED log payload with standard pattern (name, type, status, then type-specific fields)
     const logPayload: any = {
@@ -214,7 +221,11 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
     }
     
     await appendEntityLog(EntityType.SITE, site.id, LogEventType.CREATED, logPayload);
-    await markEffect(effectKey);
+    await resolveEffectClaim({
+      idempotencyKey: effectKey,
+      leaseToken: claim.leaseToken,
+      status: EffectClaimStatus.COMPLETED
+    });
     return;
   }
   
@@ -256,38 +267,19 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
       oldLean.settlementId !== newLean.settlementId;
 
     if (leanFieldsChanged) {
-      await updateEntityLeanFields(EntityType.SITE, site.id, newLean);
-      if (oldLean.name !== newLean.name) {
-        await syncSaleFinancialsForSiteNameChange(site.id);
-      }
+      await updateEntityLeanFields(EntityType.SITE, site.id, {
+        name: site.name,
+        type: site.type,
+        businessType: site.subtype,
+        url: site.url,
+        settlementId: site.settlementId
+      });
     }
   }
 }
 
-/**
- * Remove site effects when site is deleted
- * Sites can have entries in sites log and related links
- */
 export async function removeSiteEffectsOnDelete(siteId: string): Promise<void> {
-  try {
-    // 1. Remove all Links related to this site
-    const siteLinks = await getLinksFor({ type: EntityType.SITE, id: siteId });
-    
-    for (const link of siteLinks) {
-      try {
-        await removeLink(link.id);
-      } catch (error) {
-        console.error(`[removeSiteEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
-      }
-    }
-    
-    // 2. Clear all effects for this site
-    await clearEffect(EffectKeys.created('site', siteId));
-    await clearEffectsByPrefix(EntityType.SITE, siteId, '');
-    
-    // 3. Remove log entries from sites log
-    // TODO: Implement server-side log removal or remove this call
-  } catch (error) {
-    console.error('Error removing site effects:', error);
-  }
+  await deleteEffectClaim(EffectKeys.created('site', siteId));
+  const { removeLogEntriesAcrossMonths } = await import('../entities-logging');
+  await removeLogEntriesAcrossMonths(EntityType.SITE, entry => entry.entityId === siteId);
 }

@@ -2,11 +2,11 @@
 // workflows/entities-workflows/task.workflow.ts
 // Task-specific workflow with state vs descriptive field detection
 
-import { CharacterRole, EntityType, LogEventType, TaskStatus, TaskType, ItemStatus, WorkflowStatus } from '@/types/enums';
+import { CharacterRole, EntityType, LogEventType, TaskStatus, TaskType, ItemStatus, WorkflowStatus, EffectClaimStatus } from '@/types/enums';
 import type { CustomerCounterpartyRole, Task, WorkflowExecutionV1 } from '@/types/entities';
 import { executeWorkflow } from '../coordinator';
 import { appendEntityLog, updateEntityLeanFields, removeLogEntriesAcrossMonths } from '../entities-logging';
-import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { acquireEffectClaim, resolveEffectClaim, deleteEffectClaim, deleteEffectClaimsByPrefix, isEffectCompleted } from '@/lib/domain/effects/effect-claim-store';
 import { EffectKeys, buildMonthIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import {
   getTaskById,
@@ -30,7 +30,7 @@ import { kvSRem } from '@/lib/utils/kv';
 
 import { getTaskCollectedAt, getTaskDoneAt, withTaskLifecycle } from '@/lib/utils/task-lifecycle-utils';
 import { resolveTaskOwnerPlayerId } from '../task-player-resolution';
-import { deleteEffectClaim } from '@/lib/domain/effects/effect-claim-store';
+import { deleteEffectClaim as _deleteEffectClaim } from '@/lib/domain/effects/effect-claim-store';
 
 // UTC: archive Redis keys use formatArchiveMonthKeyUTC only (see utc-utils.ts + utc-time-system.md).
 import { getUTCNow, formatArchiveMonthKeyUTC, endOfMonthUTC } from '@/lib/utils/utc-utils';
@@ -191,36 +191,38 @@ async function normalizeTaskFailedState(task: Task, previousTask?: Task): Promis
 
     const previousPoints = previousTask.context?.rewardIntent?.points || task.context?.rewardIntent?.points;
     if (wasCollected && previousPoints) {
-      if (await hasEffect(pointsRewardedKey)) {
-        if (playerRef) await unrewardPointsForPlayer(playerRef, previousPoints, task.id, EntityType.TASK);
-        await clearEffect(pointsRewardedKey);
-      } else if (await hasEffect(stagingKey)) {
+      if (await isEffectCompleted(pointsRewardedKey)) {
+        if (playerRef) await unrewardPointsFromPlayer(playerRef, previousPoints, task.id, EntityType.TASK);
+        await deleteEffectClaim(pointsRewardedKey);
+      } else if (await isEffectCompleted(stagingKey)) {
         if (playerRef) await withdrawStagedPointsFromPlayer(playerRef, previousPoints, task.id, EntityType.TASK);
-        await clearEffect(stagingKey);
+        await deleteEffectClaim(stagingKey);
       }
       await removeLogEntriesAcrossMonths(
         EntityType.TASK,
         e => e.entityId === task.id && e.event === LogEventType.COLLECTED
       );
-    } else if (previousTask.status === TaskStatus.DONE && previousPoints && (await hasEffect(stagingKey))) {
+    } else if (previousTask.status === TaskStatus.DONE && previousPoints && (await isEffectCompleted(stagingKey))) {
       if (playerRef) await withdrawStagedPointsFromPlayer(playerRef, previousPoints, task.id, EntityType.TASK);
-      await clearEffect(stagingKey);
+      await deleteEffectClaim(stagingKey);
     }
   }
 
   const penaltyPoints = task.context?.rewardIntent?.points;
   const penaltyKey = EffectKeys.sideEffect('task', task.id, 'pointsPenalized');
-  if (penaltyPoints && !(await hasEffect(penaltyKey))) {
+  const penaltyClaim = await acquireEffectClaim({ idempotencyKey: penaltyKey, ownerId: `task-workflow-${task.id}`, commandId: `penalty-${task.id}`, leaseSeconds: 60 });
+  if (penaltyPoints && penaltyClaim) {
     const playerRef = await resolveTaskOwnerPlayerId(task);
     if (playerRef && await applyPenaltyToPlayer(playerRef, penaltyPoints, task.id, EntityType.TASK, doneAt)) {
-      await markEffect(penaltyKey);
+      await resolveEffectClaim({ idempotencyKey: penaltyKey, leaseToken: penaltyClaim.leaseToken, status: EffectClaimStatus.COMPLETED });
     }
   }
 
-  await clearEffect(EffectKeys.sideEffect('task', task.id, 'pointsAwarded'));
+  await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'pointsAwarded'));
 
   const failedLoggedKey = EffectKeys.sideEffect('task', task.id, 'failedLogged');
-  if (!(await hasEffect(failedLoggedKey))) {
+  const failedClaim = await acquireEffectClaim({ idempotencyKey: failedLoggedKey, ownerId: `task-workflow-${task.id}`, commandId: `failed-${task.id}`, leaseSeconds: 60 });
+  if (failedClaim) {
     await appendEntityLog(
       EntityType.TASK,
       task.id,
@@ -232,7 +234,7 @@ async function normalizeTaskFailedState(task: Task, previousTask?: Task): Promis
       },
       doneAt
     );
-    await markEffect(failedLoggedKey);
+    await resolveEffectClaim({ idempotencyKey: failedLoggedKey, leaseToken: failedClaim.leaseToken, status: EffectClaimStatus.COMPLETED });
   }
 
   await upsertTask(merged, { skipWorkflowEffects: true });
@@ -248,16 +250,21 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   // New task creation
   if (!previousTask) {
     const effectKey = EffectKeys.created('task', task.id);
-    const alreadyLoggedCreated = await hasEffect(effectKey);
+    const alreadyLoggedCreated = await isEffectCompleted(effectKey);
+    let claim = null;
 
     if (!alreadyLoggedCreated) {
+      claim = await acquireEffectClaim({ idempotencyKey: effectKey, ownerId: `task-workflow-${task.id}`, commandId: `upsert-${task.id}`, leaseSeconds: 60 });
+    }
+
+    if (claim) {
       // Minimal, event-specific payload for CREATED
       await appendEntityLog(EntityType.TASK, task.id, LogEventType.CREATED, {
         name: getSafeTaskNameForLogging(task),
         taskType: task.type,
         station: task.station
       }, task.createdAt);
-      await markEffect(effectKey);
+      await resolveEffectClaim({ idempotencyKey: effectKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
     }
 
     // Return early ONLY if CREATED was already logged AND task is not terminal
@@ -393,8 +400,9 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     }
 
     const pointsRewardedEffectKey = EffectKeys.sideEffect('task', outputsTask.id, 'pointsRewarded');
+    const collectClaim = await acquireEffectClaim({ idempotencyKey: pointsRewardedEffectKey, ownerId: `task-workflow-${task.id}`, commandId: `collect-${task.id}`, leaseSeconds: 60 });
 
-    if (!(await hasEffect(pointsRewardedEffectKey))) {
+    if (collectClaim) {
       await appendEntityLog(EntityType.TASK, outputsTask.id, LogEventType.COLLECTED, {
         name: getSafeTaskNameForLogging(outputsTask),
         taskType: outputsTask.type,
@@ -407,19 +415,19 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         await rewardPointsToPlayer(playerId, outputsTask.context?.rewardIntent?.points, outputsTask.id, EntityType.TASK, collectedAt);
       }
 
-      await markEffect(pointsRewardedEffectKey);
+      await resolveEffectClaim({ idempotencyKey: pointsRewardedEffectKey, leaseToken: collectClaim.leaseToken, status: EffectClaimStatus.COMPLETED });
 
       await cascadeCollectionToChildren(taskForCounterparty, collectedAt);
     }
   }
 
   // Tasks are not physical entities; skip MOVED logging even if site references change.
-
   // Character creation from emissary fields - when newCustomerName is provided
   const newCustomerName = task.context?.newCustomerName || task.newCustomerName;
   if (newCustomerName && !getTaskCounterpartyId(taskForCounterparty)) {
     const effectKey = EffectKeys.sideEffect('task', task.id, 'characterCreated');
-    if (!(await hasEffect(effectKey))) {
+    const charClaim = await acquireEffectClaim({ idempotencyKey: effectKey, ownerId: `task-workflow-${task.id}`, commandId: `create-char-${task.id}`, leaseSeconds: 60 });
+    if (charClaim) {
       const normalizedCustomerCharacterRole =
         (taskForCounterparty as any).__counterparty?.role ??
         taskForCounterparty.context?.counterparty?.role ??
@@ -437,7 +445,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         };
         await upsertTask(updatedTask, { skipWorkflowEffects: true });
         taskForCounterparty = updatedTask;
-        await markEffect(effectKey);
+        await resolveEffectClaim({ idempotencyKey: effectKey, leaseToken: charClaim.leaseToken, status: EffectClaimStatus.COMPLETED });
       }
     }
   }
@@ -622,22 +630,19 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
     }
 
     // 5. Clear effects registry
-    await clearEffect(EffectKeys.created('task', task.id));
-    await clearEffect(EffectKeys.sideEffect('task', task.id, 'characterCreated'));
-    await clearEffect(EffectKeys.sideEffect('task', task.id, 'itemCreated'));
-    await clearEffect(EffectKeys.sideEffect('task', task.id, 'financialCreated'));
-    await clearEffect(EffectKeys.sideEffect('task', task.id, 'pointsAwarded'));
-    await clearEffect(EffectKeys.sideEffect('task', task.id, 'pointsRewarded'));
-    await clearEffect(EffectKeys.sideEffect('task', task.id, 'pointsPenalized'));
-    await clearEffect(EffectKeys.sideEffect('task', task.id, 'pointsReversed'));
-    await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'pointsStaged'));
+    await deleteEffectClaim(EffectKeys.created('task', task.id));
+    await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'characterCreated'));
+    await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'itemCreated'));
+    await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'financialCreated'));
+    await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'pointsAwarded'));
     await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'pointsRewarded'));
     await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'pointsPenalized'));
     await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'pointsReversed'));
+    await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'pointsStaged'));
     await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'financialCreated'));
     await deleteEffectClaim(EffectKeys.sideEffect('task', task.id, 'itemCreated'));
-    await clearEffectsByPrefix(EntityType.TASK, task.id, 'pointsLogged:');
-    await clearEffectsByPrefix(EntityType.TASK, task.id, 'financialLogged:');
+    await deleteEffectClaimsByPrefix(EntityType.TASK, task.id, 'pointsLogged:');
+    await deleteEffectClaimsByPrefix(EntityType.TASK, task.id, 'financialLogged:');
 
     // 6. Remove log entries across all months using the new helper
     await removeLogEntriesAcrossMonths(EntityType.TASK, entry => entry.entityId === task.id);
@@ -710,18 +715,18 @@ async function removePlayerPointsFromTask(task: Task, wasCollectedOverride?: boo
     if (!hasPoints) return;
 
     const penaltyKey = EffectKeys.sideEffect('task', task.id, 'pointsPenalized');
-    if (await hasEffect(penaltyKey)) {
+    if (await isEffectCompleted(penaltyKey)) {
       await reversePenaltyFromPlayer(playerId, pointsToRemove);
-      await clearEffect(penaltyKey);
-      await markEffect(EffectKeys.sideEffect('task', task.id, 'pointsReversed'));
+      await deleteEffectClaim(penaltyKey);
+      await resolveEffectClaim({ idempotencyKey: EffectKeys.sideEffect('task', task.id, 'pointsReversed'), leaseToken: 'dummy', status: EffectClaimStatus.COMPLETED }); // Hack for legacy effect marker
       return;
     }
 
     // A failed task may carry a negative penalty intent without ever entering
     // the pending/vested reward lifecycle. Do not reverse a value that was
     // never applied to the Player projection.
-    const pointsWereStaged = await hasEffect(EffectKeys.sideEffect('task', task.id, 'pointsStaged'));
-    const pointsWereRewarded = await hasEffect(EffectKeys.sideEffect('task', task.id, 'pointsRewarded'));
+    const pointsWereStaged = await isEffectCompleted(EffectKeys.sideEffect('task', task.id, 'pointsStaged'));
+    const pointsWereRewarded = await isEffectCompleted(EffectKeys.sideEffect('task', task.id, 'pointsRewarded'));
     if (!pointsWereStaged && !pointsWereRewarded) return;
 
     // NOTE: We do NOT remove J$ here because:
@@ -731,14 +736,17 @@ async function removePlayerPointsFromTask(task: Task, wasCollectedOverride?: boo
     // - Those FinancialRecords are the source of truth for J$, not personalAssets
     // - If we need to reverse a points exchange, we should reverse the FinancialRecord, not modify personalAssets
     const reversalKey = EffectKeys.sideEffect('task', task.id, 'pointsReversed');
-    if (await hasEffect(reversalKey)) return;
+    if (await isEffectCompleted(reversalKey)) return;
 
     await revokePointsFromPlayer(
       playerId,
       pointsToRemove,
       wasCollectedOverride ?? task.status === TaskStatus.COLLECTED,
     );
-    await markEffect(reversalKey);
+    const revClaim = await acquireEffectClaim({ idempotencyKey: reversalKey, ownerId: `task-workflow-${task.id}`, commandId: `reverse-${task.id}`, leaseSeconds: 60 });
+    if (revClaim) {
+      await resolveEffectClaim({ idempotencyKey: reversalKey, leaseToken: revClaim.leaseToken, status: EffectClaimStatus.COMPLETED });
+    }
   } catch (error) {
     console.error(`[removePlayerPointsFromTask] ❌ FAILED to remove player points/J$ for task ${task.id}:`, error);
     throw error; // Re-throw to see the error in console
@@ -818,14 +826,14 @@ export async function uncompleteTask(taskId: string, previousTerminalTask?: Task
     await removeFinancialRecordsCreatedByTask(taskId);
     await removeLogEntriesAcrossMonths(EntityType.FINANCIAL, (entry: { sourceTaskId?: string }) => entry.sourceTaskId === taskId);
     // 3. Clear effects registry entries
-    await clearEffect(EffectKeys.sideEffect('task', taskId, 'itemCreated'));
-    await clearEffect(EffectKeys.sideEffect('task', taskId, 'financialCreated'));
-    await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsAwarded'));
-    await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsRewarded')); // Clear the new effect key
-    await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsPenalized'));
-    await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsStaged'));
-    await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsReversed'));
-    await clearEffect(EffectKeys.sideEffect('task', taskId, 'failedLogged'));
+    await deleteEffectClaim(EffectKeys.sideEffect('task', taskId, 'itemCreated'));
+    await deleteEffectClaim(EffectKeys.sideEffect('task', taskId, 'financialCreated'));
+    await deleteEffectClaim(EffectKeys.sideEffect('task', taskId, 'pointsAwarded'));
+    await deleteEffectClaim(EffectKeys.sideEffect('task', taskId, 'pointsRewarded')); // Clear the new effect key
+    await deleteEffectClaim(EffectKeys.sideEffect('task', taskId, 'pointsPenalized'));
+    await deleteEffectClaim(EffectKeys.sideEffect('task', taskId, 'pointsStaged'));
+    await deleteEffectClaim(EffectKeys.sideEffect('task', taskId, 'pointsReversed'));
+    await deleteEffectClaim(EffectKeys.sideEffect('task', taskId, 'failedLogged'));
     // 3.5 Remove from archive index & clear snapshot effect
     try {
       const snapshotRaw =
@@ -841,7 +849,7 @@ export async function uncompleteTask(taskId: string, previousTerminalTask?: Task
 
       if (monthKey) {
         await kvSRem(buildMonthIndexKey(EntityType.TASK, monthKey), task.id);
-        await clearEffect(EffectKeys.sideEffect('task', taskId, `taskSnapshot:${monthKey}`));
+        await deleteEffectClaim(EffectKeys.sideEffect('task', taskId, `taskSnapshot:${monthKey}`));
 
         // Also check standard date-based key just in case (fallback)
         const nowKey = formatArchiveMonthKeyUTC(getUTCNow());
@@ -877,7 +885,6 @@ async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date):
 
     // Import functions we need
     const { getAllTasks, upsertTask } = await import('@/data-store/datastore');
-    const { hasEffect, markEffect } = await import('@/data-store/effects-registry');
     const { kvSAdd } = await import('@/lib/utils/kv');
     const { appendEntityLog } = await import('@/workflows/entities-logging');
 
@@ -900,8 +907,9 @@ async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date):
     for (const childInstance of childInstances) {
       const childEffectKey = `task:${childInstance.id}:collectionCascaded:${parentTask.id}`;
       const childPointsRewardedEffectKey = EffectKeys.sideEffect('task', childInstance.id, 'pointsRewarded');
-
-      if (!(await hasEffect(childEffectKey))) {
+      
+      const childCascadeClaim = await acquireEffectClaim({ idempotencyKey: childEffectKey, ownerId: `task-workflow-${parentTask.id}`, commandId: `cascade-${childInstance.id}`, leaseSeconds: 60 });
+      if (childCascadeClaim) {
         // Create child snapshot for Archive Vault
         const normalizedChild: Task = {
           ...childInstance,
@@ -925,7 +933,7 @@ async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date):
 
         // 3. Reward points if child has rewards and points were staged
         const childStagingKey = EffectKeys.sideEffect('task', childInstance.id, 'pointsStaged');
-        if (childInstance.context?.rewardIntent?.points && await hasEffect(childStagingKey)) {
+        if (childInstance.context?.rewardIntent?.points && await isEffectCompleted(childStagingKey)) {
           const playerId = await resolveTaskOwnerPlayerId(childInstance);
           if (!playerId) throw new Error(`Cannot vest Task points: owner has no Player (${childInstance.id})`);
           await rewardPointsToPlayer(playerId, childInstance.context?.rewardIntent?.points, childInstance.id, EntityType.TASK, collectedAt);
@@ -935,8 +943,11 @@ async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date):
         await upsertTask(normalizedChild);
 
         // Mark cascade effect to prevent duplicates
-        await markEffect(childEffectKey);
-        await markEffect(childPointsRewardedEffectKey); // Mark points as rewarded for the child
+        await resolveEffectClaim({ idempotencyKey: childEffectKey, leaseToken: childCascadeClaim.leaseToken, status: EffectClaimStatus.COMPLETED });
+        const rewardClaim = await acquireEffectClaim({ idempotencyKey: childPointsRewardedEffectKey, ownerId: `task-workflow-${parentTask.id}`, commandId: `reward-${childInstance.id}`, leaseSeconds: 60 });
+        if (rewardClaim) {
+          await resolveEffectClaim({ idempotencyKey: childPointsRewardedEffectKey, leaseToken: rewardClaim.leaseToken, status: EffectClaimStatus.COMPLETED });
+        }
       }
     }
 

@@ -1,10 +1,13 @@
 // workflows/entities-workflows/account.workflow.ts
+// workflows/entities-workflows/account.workflow.ts
 // Account-specific workflow with EMAIL_VERIFIED, PASSWORD_RESET, LOGIN, LOGOUT events
 
 import { EntityType } from '@/types/enums';
 import type { Account } from '@/types/entities';
-import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { acquireEffectClaim, resolveEffectClaim, deleteEffectClaim, deleteEffectClaimsByPrefix } from '@/lib/domain/effects/effect-claim-store';
+
 import { EffectKeys } from '@/data-store/keys';
+import { EffectClaimStatus } from '@/types/enums';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 
 export async function onAccountUpsert(account: Account, previousAccount?: Account): Promise<void> {
@@ -14,8 +17,9 @@ export async function onAccountUpsert(account: Account, previousAccount?: Accoun
   // New account creation - just mark effect for idempotency
   if (!previousAccount) {
     const effectKey = EffectKeys.created('account', account.id);
-    if (await hasEffect(effectKey)) return;
-    await markEffect(effectKey);
+    const claim = await acquireEffectClaim({ idempotencyKey: effectKey, ownerId: `workflow`, commandId: `cmd`, leaseSeconds: 60 });
+    if (!claim) return;
+    await resolveEffectClaim({ idempotencyKey: effectKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
     return;
   }
   
@@ -40,8 +44,8 @@ export async function removeAccountEffectsOnDelete(accountId: string): Promise<v
     }
     
     // 2. Clear all effects for this account
-    await clearEffect(EffectKeys.created('account', accountId));
-    await clearEffectsByPrefix(EntityType.ACCOUNT, accountId, '');
+    await deleteEffectClaim(EffectKeys.created('account', accountId));
+    await deleteEffectClaimsByPrefix(EffectKeys.sideEffect('account', accountId, ''));
     
     // 3. No log entries to remove - Account is infrastructure entity
   } catch (error) {

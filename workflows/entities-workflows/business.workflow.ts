@@ -5,7 +5,8 @@
 import { EntityType, LinkType, LogEventType } from '@/types/enums';
 import type { Business } from '@/types/entities';
 import { appendEntityLog } from '../entities-logging';
-import { hasEffect, markEffect } from '@/data-store/effects-registry';
+import { acquireEffectClaim, resolveEffectClaim } from '@/lib/domain/effects/effect-claim-store';
+import { EffectClaimStatus } from '@/types/enums';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor } from '@/links/link-registry';
 
@@ -17,8 +18,15 @@ export async function onBusinessUpsert(business: Business, previousBusiness?: Bu
     // New business creation/linking
     if (!previousBusiness) {
         const effectKey = EffectKeys.created('business', business.id);
-        if (await hasEffect(effectKey)) {
-            return; // Already logged
+        const claim = await acquireEffectClaim({
+            idempotencyKey: effectKey,
+            ownerId: `business-workflow-${business.id}`,
+            commandId: `upsert-${business.id}`,
+            leaseSeconds: 60
+        });
+
+        if (!claim) {
+            return; // Already processed or locked
         }
 
         // Log to the owning Character log. Ownership is resolved from the canonical Link.
@@ -41,6 +49,10 @@ export async function onBusinessUpsert(business: Business, previousBusiness?: Bu
             );
         }
 
-        await markEffect(effectKey);
+        await resolveEffectClaim({
+            idempotencyKey: effectKey,
+            leaseToken: claim.leaseToken,
+            status: EffectClaimStatus.COMPLETED
+        });
     }
 }

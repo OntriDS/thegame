@@ -11,9 +11,8 @@ import {
 } from '@/data-store/datastore';
 import { getLinksFor } from '@/links/link-registry';
 import { getSaleById as getPersistedSaleById } from '@/data-store/repositories/sale.repo';
-import { clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { acquireEffectClaim, resolveEffectClaim, deleteEffectClaim, deleteEffectClaimsByPrefix } from '@/lib/domain/effects/effect-claim-store';
 import { EffectKeys } from '@/data-store/keys';
-import { deleteEffectClaim } from '@/lib/domain/effects/effect-claim-store';
 import { iamService } from '@/lib/iam-service';
 import { Collection, EntityType, ItemStatus, ItemType } from '@/types/enums';
 import { getUTCNow } from '@/lib/utils/utc-utils';
@@ -58,10 +57,10 @@ describe('entity-test: Online Sale M2M integration', () => {
     for (const financial of financials) await removeFinancial(financial.id);
     await removeSale(saleId);
     await removeSale(ghostSaleId);
-    await clearEffectsByPrefix(EntityType.SALE, saleId, '');
-    await clearEffectsByPrefix(EntityType.SALE, ghostSaleId, '');
-    await clearEffect(EffectKeys.created('sale', saleId));
-    await clearEffect(EffectKeys.created('sale', ghostSaleId));
+    await deleteEffectClaimsByPrefix(EffectKeys.sideEffect('sale', saleId, ''));
+    await deleteEffectClaimsByPrefix(EffectKeys.sideEffect('sale', ghostSaleId, ''));
+    await deleteEffectClaim(EffectKeys.created('sale', saleId));
+    await deleteEffectClaim(EffectKeys.created('sale', ghostSaleId));
     await clearWorkflowClaims(saleId);
     await clearWorkflowClaims(ghostSaleId);
     await removeItem(itemId);

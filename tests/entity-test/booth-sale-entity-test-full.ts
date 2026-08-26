@@ -20,7 +20,7 @@ import {
   upsertItem,
   upsertSale,
 } from '@/data-store/datastore';
-import { clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { acquireEffectClaim, resolveEffectClaim, deleteEffectClaim, deleteEffectClaimsByPrefix } from '@/lib/domain/effects/effect-claim-store';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { makeLink } from '@/links/links-workflows';
@@ -88,8 +88,8 @@ describe('entity-test: full Booth Sale', () => {
     await removeContract(contractId);
     await removeBusiness(principalBusinessId);
     await removeBusiness(partnerBusinessId);
-    await clearEffectsByPrefix(EntityType.SALE, saleId, '');
-    await clearEffect(EffectKeys.created('sale', saleId));
+    await deleteEffectClaimsByPrefix(EffectKeys.sideEffect('sale', saleId, ''));
+    await deleteEffectClaim(EffectKeys.created('sale', saleId));
     for (const effect of [
       'financialRecordsSynced',
       'financialCreated',
@@ -103,7 +103,7 @@ describe('entity-test: full Booth Sale', () => {
       'pointsAwarded',
       'pointsRewarded',
     ]) {
-      await clearEffect(EffectKeys.sideEffect('sale', saleId, effect));
+      await deleteEffectClaim(EffectKeys.sideEffect('sale', saleId, effect));
     }
   });
 
@@ -137,7 +137,7 @@ describe('entity-test: full Booth Sale', () => {
     await removeContract(contractId);
     await removeBusiness(principalBusinessId);
     await removeBusiness(partnerBusinessId);
-    await clearEffectsByPrefix(EntityType.SALE, saleId, '');
+    await deleteEffectClaimsByPrefix(EffectKeys.sideEffect('sale', saleId, ''));
 
     expect(await getSaleById(saleId)).toBeNull();
     expect(await getFinancialsBySourceSaleId(saleId)).toHaveLength(0);

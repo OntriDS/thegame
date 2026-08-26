@@ -4,7 +4,8 @@
 
 import type { Task, Item, Sale, FinancialRecord, Character, Player } from '@/types/entities';
 import { EntityType, TaskStatus, CharacterRole, LinkType, SaleType, SaleStatus } from '@/types/enums';
-import { clearEffect, hasEffect, markEffect } from '@/data-store/effects-registry';
+import { deleteEffectClaim, isEffectCompleted, acquireEffectClaim, resolveEffectClaim } from '@/lib/domain/effects/effect-claim-store';
+import { EffectClaimStatus } from '@/types/enums';
 import { EffectKeys } from '@/data-store/keys';
 import { getFinancialsBySourceTaskId, getFinancialsBySourceSaleId, getFinancialById, upsertFinancial, removeFinancial } from '@/data-store/datastore';
 import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById, upsertItem, removeItem } from '@/data-store/datastore';
@@ -103,7 +104,8 @@ export async function updateFinancialRecordsFromTask(
     for (const record of relatedRecords) {
       const updateKey = EffectKeys.sideEffect('task', task.id, `updateFinancial:${record.id}:${toDateTimestamp(task.updatedAt)}`);
 
-      if (await hasEffect(updateKey)) {
+      const claim = await acquireEffectClaim({ idempotencyKey: updateKey, ownerId: `update-prop-workflow`, commandId: `update-prop`, leaseSeconds: 60 });
+      if (!claim) {
         console.log(`[updateFinancialRecordsFromTask] ⏭️ Already updated record: ${record.id}`);
         continue;
       }
@@ -161,7 +163,7 @@ export async function updateFinancialRecordsFromTask(
         };
 
         await upsertFinancial(updatedRecord);
-        await markEffect(updateKey);
+        await resolveEffectClaim({ idempotencyKey: updateKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
 
         console.log(`[updateFinancialRecordsFromTask] ✅ Updated financial record: ${record.id}`);
       } else {
@@ -230,7 +232,8 @@ export async function updateTasksFromFinancialRecord(
     for (const task of relatedTasks) {
       const updateKey = EffectKeys.sideEffect('financial', record.id, `updateTask:${task.id}:${toDateTimestamp(record.updatedAt)}`);
 
-      if (await hasEffect(updateKey)) {
+      const claim = await acquireEffectClaim({ idempotencyKey: updateKey, ownerId: `update-prop-workflow`, commandId: `update-prop`, leaseSeconds: 60 });
+      if (!claim) {
         console.log(`[updateTasksFromFinancialRecord] ⏭️ Already updated task: ${task.id}`);
         continue;
       }
@@ -261,7 +264,7 @@ export async function updateTasksFromFinancialRecord(
         };
 
         await upsertTask(updatedTask);
-        await markEffect(updateKey);
+        await resolveEffectClaim({ idempotencyKey: updateKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
 
         console.log(`[updateTasksFromFinancialRecord] ✅ Updated task: ${task.id}`);
       }
@@ -287,7 +290,8 @@ export async function updateItemsCreatedByTask(
 
     if (!taskIsNewItem(task) && taskIsNewItem(previousTask) && relatedItems.length > 0) {
       const removalKey = EffectKeys.sideEffect('task', task.id, `removeCreatedItems:${toDateTimestamp(task.updatedAt)}`);
-      if (!(await hasEffect(removalKey))) {
+      const claim = await acquireEffectClaim({ idempotencyKey: removalKey, ownerId: `update-prop-workflow`, commandId: `update-prop`, leaseSeconds: 60 });
+      if (claim) {
         for (const item of relatedItems) {
           try {
             await removeItem(item.id);
@@ -296,7 +300,7 @@ export async function updateItemsCreatedByTask(
             console.error(`[updateItemsCreatedByTask] ❌ Failed to remove task-created item ${item.id}:`, error);
           }
         }
-        await markEffect(removalKey);
+        await resolveEffectClaim({ idempotencyKey: removalKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
       }
     }
 
@@ -304,7 +308,8 @@ export async function updateItemsCreatedByTask(
       for (const item of relatedItems) {
         const updateKey = EffectKeys.sideEffect('task', task.id, `updateItem:${item.id}:${toDateTimestamp(task.updatedAt)}`);
 
-        if (await hasEffect(updateKey)) {
+        const claim = await acquireEffectClaim({ idempotencyKey: updateKey, ownerId: `update-prop-workflow`, commandId: `update-prop`, leaseSeconds: 60 });
+      if (!claim) {
           console.log(`[updateItemsCreatedByTask] ⏭️ Already updated item: ${item.id}`);
           continue;
         }
@@ -345,7 +350,7 @@ export async function updateItemsCreatedByTask(
           // Update stock quantity if it changed
           // FIX: Skip delta calculation if the item was JUST created in this same workflow transaction
           // otherwise we add the delta (e.g. +3) to the initial value (e.g. 4), resulting in 7.
-          const wasJustCreated = await hasEffect(EffectKeys.sideEffect('task', task.id, 'itemCreated'));
+          const wasJustCreated = await isEffectCompleted(EffectKeys.sideEffect('task', task.id, 'itemCreated'));
 
           if (!wasJustCreated && taskOutputQuantity(task) !== taskOutputQuantity(previousTask)) {
             const quantityDiff = taskOutputQuantity(task) - taskOutputQuantity(previousTask);
@@ -375,7 +380,7 @@ export async function updateItemsCreatedByTask(
             quantity: updatedItem.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0
           }, task.updatedAt || getUTCNow());
 
-          await markEffect(updateKey);
+          await resolveEffectClaim({ idempotencyKey: updateKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
 
           console.log(`[updateItemsCreatedByTask] ✅ Updated item: ${item.id}`);
         }
@@ -405,7 +410,8 @@ export async function updateItemsCreatedByTask(
       const siteId = preferredSiteId || existingItem.stock?.[0]?.siteId || '';
       const updateKey = EffectKeys.sideEffect('task', task.id, `updateExistingItem:${itemId}:${siteId}:${effectLabel}:${toDateTimestamp(task.updatedAt)}`);
 
-      if (await hasEffect(updateKey)) {
+      const claim = await acquireEffectClaim({ idempotencyKey: updateKey, ownerId: `update-prop-workflow`, commandId: `update-prop`, leaseSeconds: 60 });
+      if (!claim) {
         console.log(`[updateItemsCreatedByTask] ⏭️ Already adjusted existing item ${itemId} @ ${siteId}`);
         return;
       }
@@ -436,7 +442,7 @@ export async function updateItemsCreatedByTask(
       };
 
       await upsertItem(updatedItem);
-      await markEffect(updateKey);
+      await resolveEffectClaim({ idempotencyKey: updateKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
       console.log(`[updateItemsCreatedByTask] ✅ Adjusted stock for existing item ${itemId} (Δ${quantityDelta} @ ${siteId})`);
     };
 
@@ -492,7 +498,8 @@ export async function updateItemsCreatedByRecord(
     for (const item of relatedItems) {
       const updateKey = EffectKeys.sideEffect('financial', record.id, `updateItem:${item.id}:${toDateTimestamp(record.updatedAt)}`);
 
-      if (await hasEffect(updateKey)) {
+      const claim = await acquireEffectClaim({ idempotencyKey: updateKey, ownerId: `update-prop-workflow`, commandId: `update-prop`, leaseSeconds: 60 });
+      if (!claim) {
         console.log(`[updateItemsCreatedByRecord] ⏭️ Already updated item: ${item.id}`);
         continue;
       }
@@ -547,7 +554,7 @@ export async function updateItemsCreatedByRecord(
           quantity: updatedItem.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0
         }, record.updatedAt || new Date(record.year, record.month - 1, 1));
 
-        await markEffect(updateKey);
+        await resolveEffectClaim({ idempotencyKey: updateKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
 
         console.log(`[updateItemsCreatedByRecord] ✅ Updated item: ${item.id}`);
       }
@@ -585,7 +592,7 @@ export async function updateFinancialRecordsFromSale(
           await removeFinancial(record.id);
         }
         // Also clear any 'financialCreated' effects to allow re-creation later
-        await clearEffect(EffectKeys.sideEffect('sale', sale.id, 'financialCreated'));
+        await deleteEffectClaim(EffectKeys.sideEffect('sale', sale.id, 'financialCreated'));
       }
       return;
     }
@@ -598,9 +605,10 @@ export async function updateFinancialRecordsFromSale(
         await createFinancialRecordFromBoothSale(sale);
       } else if (extractMoneyValue(sale.totals?.totalRevenue) > 0) {
         const effectKey = EffectKeys.sideEffect('sale', sale.id, 'financialCreated');
-        if (!(await hasEffect(effectKey))) {
+        const claim = await acquireEffectClaim({ idempotencyKey: effectKey, ownerId: `update-prop-workflow`, commandId: `update-prop`, leaseSeconds: 60 });
+      if (claim) {
           await createFinancialRecordFromSale(sale);
-          await markEffect(effectKey);
+          await resolveEffectClaim({ idempotencyKey: effectKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
         }
       }
       return;
@@ -630,8 +638,9 @@ export async function updateFinancialRecordsFromSale(
   if (extractMoneyValue(sale.totals.totalRevenue) > 0) {
       await createFinancialRecordFromSale(sale);
       const effectKey = EffectKeys.sideEffect('sale', sale.id, 'financialCreated');
-      if (!(await hasEffect(effectKey))) {
-        await markEffect(effectKey);
+      const claim = await acquireEffectClaim({ idempotencyKey: effectKey, ownerId: `update-prop-workflow`, commandId: `update-prop`, leaseSeconds: 60 });
+      if (claim) {
+        await resolveEffectClaim({ idempotencyKey: effectKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
       }
     }
   } catch (error) {
@@ -671,7 +680,8 @@ export async function updateItemsFromSale(
         const lineSig = `${line.itemId}:${line.quantity ?? 0}:${linePrice}`;
         const updateKey = EffectKeys.sideEffect('sale', sale.id, `updateItem:${lineId}:${lineSig}`);
 
-        if (await hasEffect(updateKey)) {
+        const claim = await acquireEffectClaim({ idempotencyKey: updateKey, ownerId: `update-prop-workflow`, commandId: `update-prop`, leaseSeconds: 60 });
+      if (!claim) {
           console.log(`[updateItemsFromSale] ⏭️ Already updated for line: ${lineId}`);
           continue;
         }
@@ -699,7 +709,7 @@ export async function updateItemsFromSale(
         await upsertItem(updatedItem, { skipWorkflowEffects: true });
         console.log(`[updateItemsFromSale] ✅ Updated item: ${line.itemId}`);
 
-        await markEffect(updateKey);
+        await resolveEffectClaim({ idempotencyKey: updateKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
       }
     }
   } catch (error) {
@@ -774,7 +784,8 @@ export async function updatePlayerPointsFromSource(
 
     const updateKey = EffectKeys.sideEffect(sourceType, newSource.id, `updatePlayerPoints:${player.id}:${toDateTimestamp(newSource.updatedAt)}`);
 
-    if (await hasEffect(updateKey)) {
+    const claim = await acquireEffectClaim({ idempotencyKey: updateKey, ownerId: `update-prop-workflow`, commandId: `update-prop`, leaseSeconds: 60 });
+      if (!claim) {
       console.log(`[updatePlayerPointsFromSource] ⏭️ Already updated player: ${player.id}`);
       return;
     }
@@ -826,7 +837,7 @@ export async function updatePlayerPointsFromSource(
     }
 
     await upsertPlayer(updatedPlayer);
-    await markEffect(updateKey);
+    await resolveEffectClaim({ idempotencyKey: updateKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
 
     // If this is a task update, also update the log entries
     if (sourceType === EntityType.TASK) {
