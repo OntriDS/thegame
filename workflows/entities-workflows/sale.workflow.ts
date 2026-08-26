@@ -11,7 +11,8 @@ import {
   removeLogEntriesAcrossMonths
 } from '../entities-logging';
 import { ensureFinancialDoneLog } from './financial.workflow';
-import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { acquireEffectClaim, resolveEffectClaim, deleteEffectClaim, deleteEffectClaimsByPrefix } from '@/lib/domain/effects/effect-claim-store';
+import { EffectClaimStatus } from '@/types/enums';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import {
@@ -205,9 +206,10 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   // New sale creation
   if (isNewSale) {
     const effectKey = EffectKeys.created('sale', sale.id);
-    if (await hasEffect(effectKey)) return;
+    const claim = await acquireEffectClaim({ idempotencyKey: effectKey, ownerId: 'workflow', commandId: 'cmd', leaseSeconds: 60 });
+    if (!claim) return;
 
-    await markEffect(effectKey);
+    await resolveEffectClaim({ idempotencyKey: effectKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
   }
 
   // Character creation is now handled by SaleSettlementProcessManager
@@ -428,14 +430,14 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
             getSaleLogDetails(sale),
             ts
           );
-          await markEffect(chargedLoggedKey);
+          await resolveEffectClaim({ idempotencyKey: chargedLoggedKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
         }
       }
 
       const saleCollectedLoggedKey = EffectKeys.sideEffect('sale', sale.id, 'saleCollectedLogged');
       if (!(await hasEffect(saleCollectedLoggedKey))) {
         await appendEntityLog(EntityType.SALE, sale.id, LogEventType.COLLECTED, getSaleLogDetails(sale), collectedAt);
-        await markEffect(saleCollectedLoggedKey);
+        await resolveEffectClaim({ idempotencyKey: saleCollectedLoggedKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
       }
     }
   }
@@ -471,12 +473,13 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
 
 async function processChargedSaleLines(sale: Sale): Promise<void> {
   const linesProcessedKey = EffectKeys.sideEffect('sale', sale.id, 'linesProcessed');
-  if (await hasEffect(linesProcessedKey)) {
+  const claim = await acquireEffectClaim({ idempotencyKey: linesProcessedKey, ownerId: 'workflow', commandId: 'cmd', leaseSeconds: 60 });
+    if (!claim) {
     return;
   }
 
   await processSaleLines(sale);
-  await markEffect(linesProcessedKey);
+  await resolveEffectClaim({ idempotencyKey: linesProcessedKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
 }
 
 /**
@@ -518,18 +521,18 @@ export async function removeSaleEffectsOnDelete(saleId: string, saleSnapshot?: S
     }
 
     // 4. Clear effects registry
-    await clearEffectsByPrefix(EntityType.SALE, saleId, 'sale:');
-    await clearEffectsByPrefix(EntityType.SALE, saleId, 'pointsAwarded:');
+    await deleteEffectClaimsByPrefix(EntityType.SALE, saleId, 'sale:');
+    await deleteEffectClaimsByPrefix(EntityType.SALE, saleId, 'pointsAwarded:');
 
     // Clear specific effects
-    const { clearEffect } = await import('@/data-store/effects-registry');
-    await clearEffect(EffectKeys.created('sale', saleId));
-    await clearEffect(EffectKeys.sideEffect('sale', saleId, 'characterCreated'));
-    await clearEffect(EffectKeys.sideEffect('sale', saleId, 'pointsAwarded'));
-    await clearEffect(EffectKeys.sideEffect('sale', saleId, 'saleCollectedLogged'));
-    await clearEffect(EffectKeys.sideEffect('sale', saleId, 'saleDoneLogged'));
-    await clearEffect(EffectKeys.sideEffect('sale', saleId, 'pointsRewarded'));
-    await clearEffect(EffectKeys.sideEffect('sale', saleId, 'pointsStaged'));
+    const { deleteEffectClaim } = await import('@/lib/domain/effects/effect-claim-store');
+    await deleteEffectClaim(EffectKeys.created('sale', saleId));
+    await deleteEffectClaim(EffectKeys.sideEffect('sale', saleId, 'characterCreated'));
+    await deleteEffectClaim(EffectKeys.sideEffect('sale', saleId, 'pointsAwarded'));
+    await deleteEffectClaim(EffectKeys.sideEffect('sale', saleId, 'saleCollectedLogged'));
+    await deleteEffectClaim(EffectKeys.sideEffect('sale', saleId, 'saleDoneLogged'));
+    await deleteEffectClaim(EffectKeys.sideEffect('sale', saleId, 'pointsRewarded'));
+    await deleteEffectClaim(EffectKeys.sideEffect('sale', saleId, 'pointsStaged'));
 
     // 4. Remove log entries from all relevant monthly lists
 
@@ -649,20 +652,20 @@ async function rollbackChargedSaleToPending(sale: Sale, previousSale: Sale): Pro
     }
 
     // Remove charged-state effect flags so side effects can run again later if needed.
-    await clearEffect(EffectKeys.sideEffect('sale', sale.id, 'linesProcessed'));
-    await clearEffect(EffectKeys.sideEffect('sale', sale.id, 'saleDoneLogged'));
-    await clearEffect(EffectKeys.sideEffect('sale', sale.id, 'saleCollectedLogged'));
-    await clearEffect(EffectKeys.sideEffect('sale', sale.id, 'pointsStaged'));
-    await clearEffect(EffectKeys.sideEffect('sale', sale.id, 'pointsRewarded'));
-    await clearEffect(EffectKeys.sideEffect('sale', sale.id, 'financialCreated'));
+    await deleteEffectClaim(EffectKeys.sideEffect('sale', sale.id, 'linesProcessed'));
+    await deleteEffectClaim(EffectKeys.sideEffect('sale', sale.id, 'saleDoneLogged'));
+    await deleteEffectClaim(EffectKeys.sideEffect('sale', sale.id, 'saleCollectedLogged'));
+    await deleteEffectClaim(EffectKeys.sideEffect('sale', sale.id, 'pointsStaged'));
+    await deleteEffectClaim(EffectKeys.sideEffect('sale', sale.id, 'pointsRewarded'));
+    await deleteEffectClaim(EffectKeys.sideEffect('sale', sale.id, 'financialCreated'));
 
     const previousItemLines = previousSale.lines?.filter((line): line is ItemSaleLine => line.kind === 'item') ?? [];
     for (const line of previousItemLines) {
       const lineId = line.lineId || line.itemId;
       if (!lineId) continue;
-      await clearEffect(EffectKeys.sideEffect('sale', sale.id, `stockDecremented:${lineId}`));
-      await clearEffect(EffectKeys.sideEffect('sale', sale.id, `soldItemEntity:${lineId}`));
-      await clearEffect(EffectKeys.sideEffect('sale', sale.id, `soldItemEntity:bundle:${lineId}`));
+      await deleteEffectClaim(EffectKeys.sideEffect('sale', sale.id, `stockDecremented:${lineId}`));
+      await deleteEffectClaim(EffectKeys.sideEffect('sale', sale.id, `soldItemEntity:${lineId}`));
+      await deleteEffectClaim(EffectKeys.sideEffect('sale', sale.id, `soldItemEntity:bundle:${lineId}`));
     }
 
     // Remove points that were granted by this charged state, if any.

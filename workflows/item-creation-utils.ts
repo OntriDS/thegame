@@ -6,7 +6,6 @@
 import type { Task, Item, FinancialRecord } from '@/types/entities';
 import { ItemStatus, ItemType, LinkType, EntityType, TaskStatus, EntitySchemaVersion } from '@/types/enums';
 import { upsertItem, removeItem, getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById } from '@/data-store/datastore';
-import { hasEffect, markEffect } from '@/data-store/effects-registry';
 // links are created by processLinkEntity()
 import { v4 as uuid } from 'uuid';
 import { getUTCNow } from '@/lib/utils/utc-utils';
@@ -17,6 +16,8 @@ import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { getTaskCollectedAt, getTaskDoneAt } from '@/lib/utils/task-lifecycle-utils';
+import { acquireEffectClaim, resolveEffectClaim, deleteEffectClaim, deleteEffectClaimsByPrefix } from '@/lib/domain/effects/effect-claim-store';
+import { EffectClaimStatus } from '@/types/enums';
 
 /**
  * Determines the default item status based on item type and sale status

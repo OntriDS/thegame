@@ -5,7 +5,6 @@
 import { Task } from '@/types/entities';
 import { TaskType, RecurrentFrequency, TaskStatus, TaskPriority, EntityType, LogEventType, LinkType } from '@/types/enums';
 import { getAllTasks, upsertTask, getTasksByParentId, getTaskById } from '@/data-store/datastore';
-import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { appendEntityLog } from '@/workflows/entities-logging';
 import { FrequencyConfig } from '@/components/ui/frequency-calendar';
 import { v4 as uuid } from 'uuid';
@@ -24,6 +23,8 @@ const getTaskRecurrenceStart = (task: Task) => task.context?.recurrence?.recurre
 const getTaskRecurrenceEnd = (task: Task) => task.context?.recurrence?.recurrenceEnd;
 const getTaskIsTemplate = (task: Task) => task.type === TaskType.RECURRENT_TEMPLATE;
 import { getLinksFor } from '@/links/link-registry';
+import { acquireEffectClaim, resolveEffectClaim, deleteEffectClaim, deleteEffectClaimsByPrefix } from '@/lib/domain/effects/effect-claim-store';
+import { EffectClaimStatus } from '@/types/enums';
 
 export interface SpawnNextResult {
   instance: Task | null;
@@ -578,7 +579,8 @@ export async function cascadeStatusToInstances(
 ): Promise<{ updated: Task[], count: number }> {
   // Check effects registry to prevent duplicate cascade operations
   const effectKey = `task:${templateId}:cascadeStatus:${newStatus}`;
-  if (await hasEffect(effectKey)) {
+  const claim = await acquireEffectClaim({ idempotencyKey: effectKey, ownerId: 'workflow', commandId: 'cmd', leaseSeconds: 60 });
+    if (!claim) {
     console.log(`[cascadeStatusToInstances] Cascade already applied for template ${templateId} to ${newStatus}`);
     return { updated: [], count: 0 };
   }
@@ -616,7 +618,7 @@ export async function cascadeStatusToInstances(
   );
 
   // Mark effect to prevent duplicate operations
-  await markEffect(effectKey);
+  await resolveEffectClaim({ idempotencyKey: effectKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
   console.log(`[cascadeStatusToInstances] ✅ Cascaded ${updatedInstances.length} instances to ${newStatus}`);
 
   return { updated: updatedInstances, count: updatedInstances.length };
@@ -642,7 +644,8 @@ export async function uncascadeStatusFromInstances(
 ): Promise<{ reverted: Task[], count: number }> {
   // Check effects registry to prevent duplicate uncascade operations
   const effectKey = `task:${templateId}:uncascadeStatus:${revertToStatus}`;
-  if (await hasEffect(effectKey)) {
+  const claim = await acquireEffectClaim({ idempotencyKey: effectKey, ownerId: 'workflow', commandId: 'cmd', leaseSeconds: 60 });
+    if (!claim) {
     console.log(`[uncascadeStatusFromInstances] Uncascade already applied for template ${templateId} to ${revertToStatus}`);
     return { reverted: [], count: 0 };
   }
@@ -680,7 +683,7 @@ export async function uncascadeStatusFromInstances(
   );
 
   // Mark effect to prevent duplicate operations
-  await markEffect(effectKey);
+  await resolveEffectClaim({ idempotencyKey: effectKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
   console.log(`[uncascadeStatusFromInstances] ✅ Reverted ${revertedInstances.length} instances to ${revertToStatus}`);
 
   return { reverted: revertedInstances, count: revertedInstances.length };

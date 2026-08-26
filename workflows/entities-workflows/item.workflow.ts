@@ -6,7 +6,8 @@ import { EntityType, LogEventType } from '@/types/enums';
 import type { Item } from '@/types/entities';
 import { ItemStatus } from '@/types/enums';
 import { appendEntityLog, updateEntityLeanFields, removeLogEntriesAcrossMonths } from '../entities-logging';
-import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { acquireEffectClaim, resolveEffectClaim, deleteEffectClaim, deleteEffectClaimsByPrefix } from '@/lib/domain/effects/effect-claim-store';
+import { EffectClaimStatus } from '@/types/enums';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { deleteItem } from '@/data-store/datastore';
@@ -35,7 +36,8 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   // New item creation
   if (!previousItem) {
     const effectKey = EffectKeys.created('item', item.id);
-    if (await hasEffect(effectKey)) return;
+    const claim = await acquireEffectClaim({ idempotencyKey: effectKey, ownerId: 'workflow', commandId: 'cmd', leaseSeconds: 60 });
+    if (!claim) return;
 
     // Log item creation with standard pattern + source tracking
     const totalQuantity = item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0;
@@ -48,7 +50,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       soldQuantity: 0 // It's newly created, not sold yet
     }, item.createdAt);
 
-    await markEffect(effectKey);
+    await resolveEffectClaim({ idempotencyKey: effectKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
 
     return;
   }
@@ -89,7 +91,8 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
 
   if (isSoldStatus(item.status) && (statusChangedToSold || manualQuantitySoldDelta > 0)) {
     const manualSoldEffectKey = EffectKeys.sideEffect('item', item.id, `manualSold-${Date.now()}`);
-    if (await hasEffect(manualSoldEffectKey)) return;
+    const claim = await acquireEffectClaim({ idempotencyKey: manualSoldEffectKey, ownerId: 'workflow', commandId: 'cmd', leaseSeconds: 60 });
+    if (!claim) return;
 
     const previousStockTotal = previousItem.stock?.reduce((sum, sp) => sum + sp.quantity, 0) || 0;
     
@@ -102,7 +105,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     }
 
     if (quantityToSell <= 0) {
-      await markEffect(manualSoldEffectKey);
+      await resolveEffectClaim({ idempotencyKey: manualSoldEffectKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
       return;
     }
 
@@ -198,7 +201,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       });
     }
 
-    await markEffect(manualSoldEffectKey);
+    await resolveEffectClaim({ idempotencyKey: manualSoldEffectKey, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
     return; // Halt generic workflow so it doesn't overwrite our logic
   }
 
@@ -354,10 +357,10 @@ export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
     }
 
     // 2. Clear all effects for this item
-    await clearEffect(EffectKeys.created('item', itemId));
-    await clearEffect(EffectKeys.sideEffect('item', itemId, 'characterCreated'));
-    await clearEffectsByPrefix(EntityType.ITEM, itemId, 'financialLogged:');
-    await clearEffectsByPrefix(EntityType.ITEM, itemId, 'pointsLogged:');
+    await deleteEffectClaim(EffectKeys.created('item', itemId));
+    await deleteEffectClaim(EffectKeys.sideEffect('item', itemId, 'characterCreated'));
+    await deleteEffectClaimsByPrefix(EntityType.ITEM, itemId, 'financialLogged:');
+    await deleteEffectClaimsByPrefix(EntityType.ITEM, itemId, 'pointsLogged:');
 
     // 3. Remove log entries from items log (monthly lists)
     await removeLogEntriesAcrossMonths(EntityType.ITEM, entry => entry.entityId === itemId);
