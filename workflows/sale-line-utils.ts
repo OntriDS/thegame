@@ -55,43 +55,6 @@ export async function processSaleLines(sale: Sale): Promise<void> {
 }
 
 /**
-
-/**
- * Process all sale lines in a sale
- * Main dispatcher that processes each line based on its kind
- */
-export async function processSaleLines(sale: Sale): Promise<void> {
-  try {
-    console.log(`[processSaleLines] Processing ${sale.lines.length} lines for sale: ${sale.counterpartyName}`);
-
-    // Process each line based on its kind
-    for (const line of sale.lines) {
-      console.log(`[processSaleLines] Processing line: ${line.kind}, lineId: ${line.lineId}`);
-
-      switch (line.kind) {
-        case 'item':
-          await processItemSaleLine(line as ItemSaleLine, sale);
-          break;
-        case 'service':
-          await processServiceLine(line as ServiceLine, sale);
-          break;
-        default:
-          console.warn(`[processSaleLines] Unknown line kind: ${(line as any).kind}`);
-      }
-    }
-
-    // Financial records from sales are created/updated only in onSaleUpsert → updateFinancialRecordsFromSale
-    // (creating them here duplicated finrecs on every charged resave).
-
-    console.log(`[processSaleLines] ✅ Processed all lines for sale: ${sale.counterpartyName}`);
-
-  } catch (error) {
-    console.error(`[processSaleLines] ❌ Failed to process sale lines for sale ${sale.id}:`, error);
-    throw error;
-  }
-}
-
-/**
  * Process item sale line - reduce item stock at specific site
  */
 export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promise<void> {
