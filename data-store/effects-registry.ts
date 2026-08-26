@@ -2,7 +2,6 @@
 // Idempotency registry stored in KV. Avoids global flags and server HTTP loops.
 
 import { kvGet, kvSet, kvScan, kvDel, kvDelMany, kvMGet } from './kv';
-import { buildEffectKey } from './keys';
 import { getClaim } from './workflow-store';
 import { EffectClaimStatus } from '@/types/enums';
 import type { EffectClaimV1 } from '@/types/entities';
@@ -10,10 +9,6 @@ import { getUTCNow } from '@/lib/utils/utc-utils';
 import { PROCESSING_CONSTANTS } from '@/lib/constants/app-constants';
 
 export async function hasEffect(effectKey: string): Promise<boolean> {
-  const key = buildEffectKey(effectKey);
-  const val = await kvGet<boolean>(key);
-  if (val === true) return true;
-
   // Check if a claim exists and is COMPLETED
   const claim = await getClaim(effectKey);
   if (claim && claim.status === EffectClaimStatus.COMPLETED) {
@@ -30,15 +25,12 @@ export async function hasEffect(effectKey: string): Promise<boolean> {
 export async function hasEffects(effectKeys: string[]): Promise<boolean[]> {
   if (effectKeys.length === 0) return [];
   
-  const keys = effectKeys.map(effectKey => buildEffectKey(effectKey));
-  const values = await kvMGet<boolean>(keys);
-  return values.map(val => val === true);
+  // Need to read claims instead of boolean values
+  const claims = await kvMGet<EffectClaimV1>(effectKeys.map(k => `effect:${k}`));
+  return claims.map(claim => claim?.status === EffectClaimStatus.COMPLETED);
 }
 
 export async function markEffect(effectKey: string, ttl?: number): Promise<void> {
-  const key = buildEffectKey(effectKey);
-  await kvSet(key, true);
-
   // Create a completed claim so new workflow readers see it
   const claim: EffectClaimV1 = {
     idempotencyKey: effectKey,
@@ -55,12 +47,8 @@ export async function markEffect(effectKey: string, ttl?: number): Promise<void>
 }
 
 export async function clearEffect(effectKey: string): Promise<void> {
-  const key = buildEffectKey(effectKey);
-  await kvSet(key, false);
-  // Remove the claim read by hasEffect as well as the boolean compatibility key.
+  // Remove the claim read by hasEffect.
   await kvDel(`effect:${effectKey}`);
-  // Also clear the canonical claim namespace used by newer coordinators.
-  await kvDel(`thegame:effect:${effectKey}`);
 }
 
 export async function clearEffectsByPrefix(entityType: string, entityId: string, prefix: string): Promise<void> {

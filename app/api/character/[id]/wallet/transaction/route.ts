@@ -6,7 +6,7 @@ import { createLink } from '@/links/link-registry';
 import { EntityType, LinkType, Station } from '@/types/enums';
 import { FinancialRecord } from '@/types/entities';
 import { AdminStation } from '@/lib/storage/taxonomy';
-import { getCharacterWallet } from '@/lib/compatibility/character-selectors';
+
 import { toMoney } from '@/lib/utils/financial-utils';
 
 // POST /api/character/[id]/wallet/transaction
@@ -77,7 +77,7 @@ export async function POST(
 
         // UPDATE WALLET (The "Write-Through" Logic)
         // 1. Initialize Wallet if missing (The Vault)
-        const currentWallet = getCharacterWallet(character) || { jungleCoins: 0 };
+        const currentWallet = (character as any).wallet || { jungleCoins: 0 };
 
         // 2. Calculate new balance
         const currentBalance = currentWallet.jungleCoins;

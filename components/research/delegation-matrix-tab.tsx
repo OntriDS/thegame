@@ -10,7 +10,6 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ClientAPI } from '@/lib/client-api';
 import ConfirmationModal from '@/components/modals/submodals/confirmation-submodal';
 import { Character, Task } from '@/types/entities';
-import { getTaskOwnerIds } from '@/lib/compatibility/task-selectors';
 import { STATION_CATEGORIES, TaskStatus } from '@/types/enums';
 
 import {
@@ -294,7 +293,7 @@ export function DelegationMatrixTab() {
     const realTask = allTasks.find(t => t.id === selectedTaskId);
     if (realTask) {
       let currentOwnerString = '';
-      const ownerIds = getTaskOwnerIds(realTask);
+      const ownerIds = realTask.ownerIds || [];
       if (ownerIds.length > 0) {
          currentOwnerString = ownerIds.join(',');
       }

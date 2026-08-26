@@ -2,13 +2,15 @@
 
 import { useState, useMemo } from 'react';
 import { Task } from '@/types/entities';
+import { TaskType } from '@/types/enums';
 import { format, addDays, startOfDay, differenceInMinutes, startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { getTaskScheduledStart, getTaskScheduledEnd } from '@/lib/compatibility/task-selectors';
+const getTaskScheduledStart = (task: Task) => task.type !== TaskType.RECURRENT_GROUP ? (task as any).schedule?.scheduledStart : undefined;
+const getTaskScheduledEnd = (task: Task) => task.type !== TaskType.RECURRENT_GROUP ? (task as any).schedule?.scheduledEnd : undefined;
 
 interface GanttChartProps {
     tasks: Task[];

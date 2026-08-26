@@ -10,9 +10,7 @@ import { useEntityUpdates } from "@/lib/hooks/use-entity-updates";
 import { ClientAPI } from "@/lib/client-api";
 import { Sale, Character, FinancialRecord } from "@/types/entities";
 import { getSaleCharacterId } from '@/lib/sale-character-id';
-import { 
-  getSaleLinks
-} from '@/lib/compatibility/sale-selectors';
+const getSaleLinks = (sale: Sale) => (sale as any).links || [];
 import { SaleType, SaleStatus } from "@/types/enums";
 import { getSaleStatusLabel } from "@/lib/constants/status-display-labels";
 import { formatDateDDMMYYYY, getMonthName } from "@/lib/constants/date-constants";

@@ -175,7 +175,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       sale.status === SaleStatus.PENDING
   );
 
-  // --- Sale Settlement Process Manager (Shadow Hook) ---
+  // --- Sale Settlement Process Manager ---
   const IS_SALE_SETTLEMENT_PILOT_ENABLED = true;
   let handledByCoordinator = false;
 
@@ -197,7 +197,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     };
 
     executeWorkflow(execution).catch(err => {
-      console.error(`[SHADOW] Error starting sale settlement coordinator for ${sale.id}`, err);
+      console.error(`[COORDINATOR] Error starting sale settlement coordinator for ${sale.id}`, err);
     });
     handledByCoordinator = IS_SALE_SETTLEMENT_PILOT_ENABLED;
   }

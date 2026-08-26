@@ -4,7 +4,13 @@ import { Task } from '@/types/entities';
 import { RecurrentFrequency, TaskType } from '@/types/enums';
 import { FrequencyConfig } from '@/components/ui/frequency-calendar';
 import { fromRecurrentUTC, toRecurrentUTC, addDaysUTC, addWeeksUTC, addMonthsUTC } from '@/lib/utils/utc-utils';;
-import { getTaskDueDate, getTaskFrequencyConfig, getTaskLastSpawnedDate, getTaskRecurrenceEnd, getTaskRecurrenceStart, getTaskScheduledEnd, getTaskScheduledStart } from '@/lib/compatibility/task-selectors';
+const getTaskDueDate = (task: Task) => task.type !== TaskType.RECURRENT_GROUP ? (task as any).schedule?.dueDate : undefined;
+const getTaskScheduledStart = (task: Task) => task.type !== TaskType.RECURRENT_GROUP ? (task as any).schedule?.scheduledStart : undefined;
+const getTaskScheduledEnd = (task: Task) => task.type !== TaskType.RECURRENT_GROUP ? (task as any).schedule?.scheduledEnd : undefined;
+const getTaskFrequencyConfig = (task: Task) => task.context?.recurrence?.frequencyConfig;
+const getTaskLastSpawnedDate = (task: Task) => task.context?.recurrence?.lastSpawnedDate;
+const getTaskRecurrenceStart = (task: Task) => task.context?.recurrence?.recurrenceStart;
+const getTaskRecurrenceEnd = (task: Task) => task.context?.recurrence?.recurrenceEnd;
 
 export interface TaskOccurrence {
   task: Task;

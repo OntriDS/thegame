@@ -15,7 +15,14 @@ import { isTaskHistoryTerminal } from '@/lib/utils/task-active-utils';
 import { toRecurrentUTC, fromRecurrentUTC, getNextWeekdayFromDate, addDaysUTC, addWeeksUTC, addMonthsUTC, getUTCCivilDayStartMs, utcCalendarDayKey } from '@/lib/utils/utc-utils';;
 import { getSafetyLimitDate, SpawnErrorCode, validateFrequencyConfig, type ValidationResult } from './recurrent-validation';
 import { clampToValidUTC, toUTC } from './utc-utils';
-import { getTaskDueDate, getTaskFrequencyConfig, getTaskIsTemplate, getTaskLastSpawnedDate, getTaskRecurrenceEnd, getTaskRecurrenceStart, getTaskScheduledEnd, getTaskScheduledStart } from '@/lib/compatibility/task-selectors';
+const getTaskDueDate = (task: Task) => task.type !== TaskType.RECURRENT_GROUP ? (task as any).schedule?.dueDate : undefined;
+const getTaskScheduledStart = (task: Task) => task.type !== TaskType.RECURRENT_GROUP ? (task as any).schedule?.scheduledStart : undefined;
+const getTaskScheduledEnd = (task: Task) => task.type !== TaskType.RECURRENT_GROUP ? (task as any).schedule?.scheduledEnd : undefined;
+const getTaskFrequencyConfig = (task: Task) => task.context?.recurrence?.frequencyConfig;
+const getTaskLastSpawnedDate = (task: Task) => task.context?.recurrence?.lastSpawnedDate;
+const getTaskRecurrenceStart = (task: Task) => task.context?.recurrence?.recurrenceStart;
+const getTaskRecurrenceEnd = (task: Task) => task.context?.recurrence?.recurrenceEnd;
+const getTaskIsTemplate = (task: Task) => task.type === TaskType.RECURRENT_TEMPLATE;
 import { getLinksFor } from '@/links/link-registry';
 
 export interface SpawnNextResult {

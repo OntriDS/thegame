@@ -24,7 +24,7 @@ import { createFinancialRecordFromTask } from '../financial-record-utils';
 import { createItemFromTask } from '../item-creation-utils';
 import { stagePointsForPlayer } from '../points-rewards-utils';
 import { EffectKeys } from '@/data-store/keys';
-import { getTaskPlayerCharacterId } from '@/lib/compatibility/task-selectors';
+
 import { resolveTaskOwnerPlayerId } from '../task-player-resolution';
 
 export class TaskCompletionProcessManager {

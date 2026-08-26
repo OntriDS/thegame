@@ -3,7 +3,7 @@
 import { Task } from '@/types/entities';
 import { TaskType, RecurrentFrequency } from '@/types/enums';
 import { fromRecurrentUTC, getUTCCivilDayStartMs } from '@/lib/utils/utc-utils';
-import { getTaskDueDate, getTaskFrequencyConfig, getTaskRecurrenceEnd } from '@/lib/compatibility/task-selectors';
+
 
 import { utcCalendarDayKey } from '@/lib/utils/utc-utils';
 
@@ -30,11 +30,11 @@ export interface ValidationResult {
  * Gets the safety limit date for a template.
  */
 export function getSafetyLimitDate(template: Task): Date | null {
-  const config = getTaskFrequencyConfig(template);
+  const config = template.context?.recurrence?.frequencyConfig;
   if (!config) return null;
 
   // Priority 1: Explicit recurrenceEnd (new field)
-  const recurrenceEnd = getTaskRecurrenceEnd(template);
+  const recurrenceEnd = template.context?.recurrence?.recurrenceEnd;
   if (recurrenceEnd) {
     return fromRecurrentUTC(recurrenceEnd);
   }
@@ -49,7 +49,7 @@ export function getSafetyLimitDate(template: Task): Date | null {
   }
 
   // Priority 3: Template dueDate as end boundary (non-custom patterns only; custom uses recurrenceEnd)
-  const dueDate = getTaskDueDate(template);
+  const dueDate = (template.type !== TaskType.RECURRENT_GROUP && (template as any).schedule?.dueDate) || (template as any).dueDate;
   if (config.type !== RecurrentFrequency.CUSTOM && dueDate) {
     return fromRecurrentUTC(dueDate);
   }

@@ -4,7 +4,7 @@
 
 import { EntityType, LinkType, LogEventType, TaskStatus, SaleType } from '@/types/enums';
 import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Link } from '@/types/entities';
-import { getTaskOwnerIds } from '@/lib/compatibility/task-selectors';
+
 import { createLink, removeLink, getLinksFor } from './link-registry';
 import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById } from '@/data-store/repositories/item.repo';
 import { getFinancialById } from '@/data-store/repositories/financial.repo';
@@ -95,7 +95,7 @@ export async function syncTaskCharacterCounterpartyLinks(task: Task): Promise<vo
     });
   }
   if (reconcileOwners) {
-    for (const ownerId of getTaskOwnerIds(task)) {
+    for (const ownerId of task.ownerIds || []) {
       if (!desiredRelationships.some((entry) => entry.id === ownerId && entry.relationship === 'owner')) {
         desiredRelationships.push({ id: ownerId, relationship: 'owner' });
       }

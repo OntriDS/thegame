@@ -1,12 +1,3 @@
-// app/api/sales/command/route.ts
-// Increment 7: Command-based Sale API
-//
-// This route accepts command envelopes and routes them to the atomic command handler.
-// It provides idempotency, version enforcement, and structured outcomes.
-//
-// The legacy POST /api/sales route remains active during migration.
-// New code should use this command route.
-
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { executeSaleCommand } from '@/lib/domain/commands/sale-command-handler';

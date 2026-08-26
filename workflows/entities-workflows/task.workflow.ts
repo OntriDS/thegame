@@ -27,7 +27,7 @@ import { createCharacterFromTask } from '../character-creation-utils';
 import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync-server';
 import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
 import { kvSRem } from '@/lib/utils/kv';
-import { getTaskPlayerCharacterId } from '@/lib/compatibility/task-selectors';
+
 import { getTaskCollectedAt, getTaskDoneAt, withTaskLifecycle } from '@/lib/utils/task-lifecycle-utils';
 import { resolveTaskOwnerPlayerId } from '../task-player-resolution';
 import { deleteEffectClaim } from '@/lib/domain/effects/effect-claim-store';
@@ -334,7 +334,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         station: outputsTask.station
       }, outputsDoneAt);
 
-      // --- Shadow Workflow Coordinator ---
+      // --- Workflow Coordinator ---
       const execution: WorkflowExecutionV1 = {
         workflowId: `task-done-${outputsTask.id}-${new Date(outputsDoneAt).getTime()}`,
         workflowType: 'task-completion',

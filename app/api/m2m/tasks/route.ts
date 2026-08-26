@@ -75,9 +75,7 @@ export async function GET(request: NextRequest) {
       const allTasks = await getAllTasks();
       const doneTaskIds = new Set<string>();
       allTasks.forEach((task) => {
-        // Support legacy owner fields for unmigrated tasks, but prioritize link registry
-        const legacyOwnerIds = task.ownerIds || (task.ownerId ? [task.ownerId] : []);
-        const isOwner = ownedTaskIds.has(task.id) || legacyOwnerIds.includes(ownerId);
+        const isOwner = ownedTaskIds.has(task.id);
         
         if (!isOwner) return;
         if (task.status !== TaskStatus.DONE) return;
@@ -102,8 +100,7 @@ export async function GET(request: NextRequest) {
 
     const activeTasks = await getActiveTasks();
     const assignedTasks = activeTasks.filter(t => {
-      const legacyOwnerIds = t.ownerIds || (t.ownerId ? [t.ownerId] : []);
-      const isOwner = ownedTaskIds.has(t.id) || legacyOwnerIds.includes(ownerId);
+      const isOwner = ownedTaskIds.has(t.id);
       return isOwner && t.status !== TaskStatus.COLLECTED;
     });
 
@@ -332,18 +329,7 @@ export async function PATCH(request: NextRequest) {
     delete (updatedTask as any).characterId;
     delete (updatedTask as any).ownerId;
     delete (updatedTask as any).customerCharacterRole;
-    // TASK_CHARACTER is the relationship authority. Legacy counterparty roots
-    // are accepted only as transient migration input and must not be stored.
-    const legacyCounterpartyId = (task as any).counterpartyCharacterId;
-    const legacyCounterpartyRole = (task as any).counterpartyRole;
-    if (!(updatedTask as any).__counterparty && legacyCounterpartyId) {
-      (updatedTask as any).__counterparty = {
-        id: legacyCounterpartyId,
-        role: legacyCounterpartyRole || 'customer',
-      };
-    }
-    delete (updatedTask as any).counterpartyCharacterId;
-    delete (updatedTask as any).counterpartyRole;
+
 
     const saved = await upsertTask(updatedTask);
 

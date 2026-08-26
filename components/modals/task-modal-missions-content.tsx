@@ -20,7 +20,20 @@ import { SmartSchedulerSubmodal } from './submodals/smart-scheduler-submodal';
 import { Task, Item, Site } from '@/types/entities';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
 import { TaskType, TaskStatus, TaskPriority, ItemType, ItemStatus, EntityType, CharacterRole } from '@/types/enums';
-import { getTaskIsRecurrentGroup, getTaskIsTemplate, getTaskOwnerIds, getTaskProgress, getTaskScheduledEnd, getTaskScheduledStart } from '@/lib/compatibility/task-selectors';
+const getTaskProgress = (task: Task) => {
+  const rawProgress = (task as any).progress;
+  if (rawProgress && typeof rawProgress === 'object') {
+    const percentage = Number(rawProgress.percentage);
+    return Number.isFinite(percentage) ? percentage : 0;
+  }
+  const numericProgress = Number(rawProgress);
+  return Number.isFinite(numericProgress) ? numericProgress : 0;
+};
+const getTaskOwnerIds = (task: Task) => task.ownerIds || [];
+const getTaskScheduledStart = (task: Task) => task.type !== TaskType.RECURRENT_GROUP ? (task as any).schedule?.scheduledStart : undefined;
+const getTaskScheduledEnd = (task: Task) => task.type !== TaskType.RECURRENT_GROUP ? (task as any).schedule?.scheduledEnd : undefined;
+const getTaskIsRecurrentGroup = (task: Task) => task.type === TaskType.RECURRENT_GROUP;
+const getTaskIsTemplate = (task: Task) => task.type === TaskType.RECURRENT_TEMPLATE;
 import { getItemStatusLabel, getTaskStatusLabel } from '@/lib/constants/status-display-labels';
 import { getTaskPriorityLabel, getTaskTypeLabel } from '@/lib/constants/task-taxonomy-labels';
 import { getStationFromCombined, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined, createCharacterOptions, createStationCategoryOptions, getCategoryFromCombined } from '@/lib/utils/searchable-select-utils';

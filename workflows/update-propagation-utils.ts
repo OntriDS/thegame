@@ -16,7 +16,7 @@ import { getUTCNow } from '@/lib/utils/utc-utils';
 import { getLinksFor } from '@/links/link-registry';
 import { getTaskCounterpartyId } from '@/workflows/task-counterparty-resolution';
 import { extractMoneyValue, toMoney } from '@/lib/utils/financial-utils';
-import { getTaskPlayerCharacterId } from '@/lib/compatibility/task-selectors';
+
 import { resolveTaskOwnerPlayerId } from './task-player-resolution';
 import { resolveSaleOwnerId } from '@/lib/sale-relationship-selectors';
 import { getTaskCollectedAt, getTaskDoneAt } from '@/lib/utils/task-lifecycle-utils';

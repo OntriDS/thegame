@@ -19,7 +19,16 @@ import { Edit, BarChart, CheckSquare, Flag, ChevronsRight, Users, Copy, Check, C
 import TaskModal from '@/components/modals/task-modal';
 import { useState, useRef, useEffect } from 'react';
 import { ClientAPI } from '@/lib/client-api';
-import { getTaskProgress, getTaskFrequencyConfig } from '@/lib/compatibility/task-selectors';
+const getTaskProgress = (task: Task) => {
+  const rawProgress = (task as any).progress;
+  if (rawProgress && typeof rawProgress === 'object') {
+    const percentage = Number(rawProgress.percentage);
+    return Number.isFinite(percentage) ? percentage : 0;
+  }
+  const numericProgress = Number(rawProgress);
+  return Number.isFinite(numericProgress) ? numericProgress : 0;
+};
+const getTaskFrequencyConfig = (task: Task) => task.context?.recurrence?.frequencyConfig;
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
 import { formatForDisplay } from '@/lib/utils/date-display-utils';;
 import { fromRecurrentUTC } from '@/lib/utils/utc-utils';;

@@ -95,9 +95,7 @@ export function buildLinkKey(id: string): string {
   return `${NAMESPACE}links:link:${id}`;
 }
 
-export function buildEffectKey(effectKey: string): string {
-  return `${NAMESPACE}effects:${effectKey}`;
-}
+
 
 // Unified effect key builders
 export const EffectKeys = {
