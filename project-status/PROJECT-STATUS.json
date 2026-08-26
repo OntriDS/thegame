@@ -9,8 +9,7 @@
       "description": "New Optimization & Agent-Ready Era",
       "deliverables": [
         "Solve the God Object anti-pattern (Project wide)",
-        "Optimize and Unify Workflows and Clean DataBase Architecture",
-        "Rossetta Stone v0.2, Link Core, nucleus that stores all the linked ids",
+        "Optimize and Update Workflows and Clean DataBase Architecture",
         "Update all agents tools to work with new entities pattern",
         "Create new agent tools, for promoter, marketer, timer, accounter, admin",
         "Implement Monthly Close Automation Task for the admin",
@@ -56,7 +55,10 @@
       "phaseName": "",
       "status": "not-started",
       "description": "",
-      "deliverables": []
+      "deliverables": [
+      "Rossetta Stone v0.2, Link Core, nucleus that stores all the linked ids"
+
+      ]
     },
     "phaseX.2": {
       "phaseName": "",
