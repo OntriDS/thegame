@@ -53,10 +53,19 @@ export async function POST(req: NextRequest) {
   if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const body = (await req.json()) as Sale & { customerId?: unknown };
-    const { customerId: _dropLegacySaleCustomerId, links: _dropEmbeddedLinks, ...bodyRest } = body;
+    const body = (await req.json()) as Sale & { customerId?: unknown; __saleRelations?: any };
+    
+    // Strict schema enforcement: new records must not persist legacy link fields directly on the root entity.
+    const legacyKeys = ['ownerId', 'characterId', 'siteId', 'targetSiteId', 'partnerId'];
+    const legacyKey = legacyKeys.find((key) => Object.prototype.hasOwnProperty.call(body, key) && (body as any)[key] !== undefined);
+    if (legacyKey) {
+      throw new Error(`SALE_CANONICAL_WRITE_REJECTED: ${legacyKey} must be represented by canonical Links via __saleRelations.`);
+    }
+
+    const { customerId: _dropLegacySaleCustomerId, links: _dropEmbeddedLinks, __saleRelations, ...bodyRest } = body;
     const sale = {
       ...bodyRest,
+      __saleRelations,
       id: body.id || uuid(),
       createdAt: body.createdAt ? parseDateToUTC(body.createdAt) : getUTCNow(),
       updatedAt: getUTCNow(),
@@ -83,4 +92,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

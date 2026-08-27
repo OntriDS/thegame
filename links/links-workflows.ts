@@ -280,10 +280,16 @@ export async function processItemEffects(item: Item): Promise<void> {
 }
 
 export async function processSaleEffects(sale: Sale): Promise<void> {
-  const saleCounterpartyCharId = await resolveSaleCharacterId(sale);
+  const relations = (sale as any).__saleRelations || {};
+  const relationsProvided = Boolean((sale as any).__saleRelations);
+  
+  const saleCounterpartyCharId = relationsProvided && relations.characterId !== undefined ? relations.characterId : await resolveSaleCharacterId(sale);
   // Online orders are owned by their customer journey, not by the admin who
   // processes them. This also removes any historical accidental owner link.
-  const saleOwnerCharId = sale.type === SaleType.ONLINE ? null : sale.ownerId || null;
+  const saleOwnerCharId = sale.type === SaleType.ONLINE ? null : (relationsProvided && relations.ownerId !== undefined ? relations.ownerId : sale.ownerId || null);
+  const salePartnerId = relationsProvided && relations.partnerId !== undefined ? relations.partnerId : sale.partnerId || null;
+  const saleSiteId = relationsProvided && relations.siteId !== undefined ? relations.siteId : sale.siteId || null;
+
   const existingLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
 
   // Helper: resolve an ID to a Character ID.
@@ -349,8 +355,8 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
   const allowedCharacterIds = new Set<string>();
   if (saleCounterpartyCharId) allowedCharacterIds.add(saleCounterpartyCharId);
   if (saleOwnerCharId) allowedCharacterIds.add(saleOwnerCharId);
-  if (sale.partnerId) {
-    const charId = await resolveToCharacterId(sale.partnerId);
+  if (salePartnerId) {
+    const charId = await resolveToCharacterId(salePartnerId);
     if (charId) allowedCharacterIds.add(charId);
   }
   for (const l of existingLinks) {
@@ -365,8 +371,8 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
   }
 
   // --- SALE_SITE ---
-  if (sale.siteId) {
-    const l = makeLink(LinkType.SALE_SITE, { type: EntityType.SALE, id: sale.id }, { type: EntityType.SITE, id: sale.siteId }, 'sold-at');
+  if (saleSiteId) {
+    const l = makeLink(LinkType.SALE_SITE, { type: EntityType.SALE, id: sale.id }, { type: EntityType.SITE, id: saleSiteId }, 'sold-at');
     promises.push(createLink(l));
   }
 
@@ -405,8 +411,8 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
   }
 
   // --- SALE_CHARACTER for partnerId (resolves Business → CHARACTER_BUSINESS) ---
-  if (sale.partnerId) {
-    const charId = await resolveToCharacterId(sale.partnerId);
+  if (salePartnerId) {
+    const charId = await resolveToCharacterId(salePartnerId);
     if (charId) {
       const l = makeLink(
         LinkType.SALE_CHARACTER,
@@ -417,7 +423,7 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
       promises.push(createLink(l));
     } else {
       console.warn(
-        `[processSaleEffects] Partner ID ${sale.partnerId} not found as Character or Business with a canonical CHARACTER_BUSINESS Link. Skipping link.`
+        `[processSaleEffects] Partner ID ${salePartnerId} not found as Character or Business with a canonical CHARACTER_BUSINESS Link. Skipping link.`
       );
     }
   }

@@ -1010,6 +1010,11 @@ export default function SalesModal({
       (playerPoints.fp || 0) > 0 ||
       (playerPoints.hp || 0) > 0;
 
+    if (hasEmissarySalePoints && (!ownerId || type === SaleType.ONLINE)) {
+      showValidationError('An owner must be selected to award points. Please select an owner using the button in the footer.', true);
+      return;
+    }
+
     const normalizedSaleDate = saleDate instanceof Date ? saleDate : new Date(saleDate as unknown as string);
     const safeSaleDate = Number.isFinite(normalizedSaleDate.getTime()) ? normalizedSaleDate : new Date();
 
@@ -1049,12 +1054,11 @@ export default function SalesModal({
       saleDate: safeSaleDate,
       type,
       status,
-      siteId: effectiveSiteId,
-      counterpartyName: counterpartyName.trim() || undefined,
-      ...(isNewCustomer || !characterId ? {} : { characterId }), // Existing customer only when selected
-      // Online orders are created by customers through the Ecosystem, never
-      // owned by the signed-in admin who happens to open this modal.
-      ...(ownerId && type !== SaleType.ONLINE ? { ownerId } : {}),
+      __saleRelations: {
+        siteId: effectiveSiteId !== 'none' ? effectiveSiteId : null,
+        characterId: isNewCustomer || !characterId ? null : characterId,
+        ownerId: (ownerId && type !== SaleType.ONLINE) ? ownerId : null,
+      },
       lines: effectiveLines,
       payments: effectivePayments,
       totals: {
