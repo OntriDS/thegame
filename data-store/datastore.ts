@@ -1465,13 +1465,14 @@ async function ensureSaleCharacterLink(saleId: string, characterId?: string | nu
 
 export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean }): Promise<Sale> {
   const previous = await getSaleById(sale.id);
-  const transientSiteId = sale.siteId ?? previous?.siteId;
-  const transientCharacterId = sale.characterId ?? previous?.characterId;
+  const relations = (sale as any).__saleRelations || {};
+  const transientSiteId = relations.siteId ?? sale.siteId ?? previous?.siteId;
+  const transientCharacterId = relations.characterId ?? sale.characterId ?? previous?.characterId;
   // An Online sale is customer-originated. Never carry an admin owner from a
   // compatibility projection or generic form submission into its Links.
   const transientOwnerId = sale.type === SaleType.ONLINE
     ? undefined
-    : sale.ownerId ?? previous?.ownerId;
+    : relations.ownerId ?? sale.ownerId ?? previous?.ownerId;
   const transientCounterpartyName = sale.counterpartyName ?? previous?.counterpartyName;
 
   // Identity Shield: Time-Window Deduplication (2 minutes)
@@ -1524,8 +1525,9 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
     ownerId: _transientOwnerId,
     partnerId: transientPartnerId,
     counterpartyName: _transientCounterpartyName,
+    __saleRelations: _transientSaleRelations,
     ...canonicalSale
-  } = normalizedSale;
+  } = normalizedSale as any;
   const saved = await repoUpsertSale(canonicalSale as Sale);
 
   // The sale workflow can create its financial record before the general link
