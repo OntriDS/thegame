@@ -499,10 +499,14 @@ export default function SalesModal({
   // Initialize form when sale changes
   useEffect(() => {
     if (sale) {
-      suppressAutoNameAfterSaleHydrationRef.current = true;
-      setSaleItemLinkTargets([]);
-      setRecordedPayments([]);
-      setSelectedItems([]);
+      const isNewHydration = draftId.current !== sale.id;
+
+      if (isNewHydration) {
+        suppressAutoNameAfterSaleHydrationRef.current = true;
+        setSaleItemLinkTargets([]);
+        setRecordedPayments([]);
+        setSelectedItems([]);
+      }
       const timelineAt = resolveCanonicalSaleTimelineDate(
         {
           doneAt: sale.lifecycle?.doneAt,
@@ -512,31 +516,35 @@ export default function SalesModal({
         new Date()
       );
       const defaultName = buildAutoSaleName(sale.type, sale.siteId || 'none', timelineAt, sites);
-      setName(sale.name);
+      if (isNewHydration) {
+        setName(sale.name);
+        setDescription(sale.description || '');
+        setSaleDate(timelineAt);
+        setType(sale.type);
+        setStatus(sale.status);
+        setSiteId(sale.siteId ?? '');
+        setCounterpartyName(sale.counterpartyName || '');
+        setCharacterId(getSaleCharacterId(sale) || '');
+        setIsNewCustomer(!getSaleCharacterId(sale)); // Toggle to "Existing" if customer exists
+        setNewCustomerName(sale.context?.newCustomerName || '');
+        setCost(roundCurrency2(extractMoneyValue(sale.totals?.totalCost)));
+        setRevenue(roundCurrency2(extractMoneyValue(sale.totals?.totalRevenue)));
+        setLocalDoneAt(sale.lifecycle?.doneAt ? new Date(sale.lifecycle.doneAt) : undefined);
+        setLocalCollectedAt(sale.lifecycle?.collectedAt ? new Date(sale.lifecycle.collectedAt) : undefined);
+        setOverallDiscount(sale.context?.overallDiscount || (sale as any).overallDiscount || {});
+        setLines(sale.lines || []);
+        setPayments((sale.payments || []).map(payment => ({
+          ...payment,
+          amount: extractMoneyValue(payment.amount),
+          currency: payment.amount.currency,
+        }))); 
+        setQuickRows([]);
+      }
+      
       setIsNameCustom(Boolean(sale.name?.trim()) && sale.name.trim() !== defaultName);
-      setDescription(sale.description || '');
-      setSaleDate(timelineAt);
-      setType(sale.type);
-      setStatus(sale.status);
-      setSiteId(sale.siteId ?? '');
-      setCounterpartyName(sale.counterpartyName || '');
-      setCharacterId(getSaleCharacterId(sale) || '');
-      setIsNewCustomer(!getSaleCharacterId(sale)); // Toggle to "Existing" if customer exists
-      setNewCustomerName(sale.context?.newCustomerName || '');
-      setCost(roundCurrency2(extractMoneyValue(sale.totals?.totalCost)));
-      setRevenue(roundCurrency2(extractMoneyValue(sale.totals?.totalRevenue)));
-      setLocalDoneAt(sale.lifecycle?.doneAt ? new Date(sale.lifecycle.doneAt) : undefined);
-      setLocalCollectedAt(sale.lifecycle?.collectedAt ? new Date(sale.lifecycle.collectedAt) : undefined);
-      setOverallDiscount(sale.context?.overallDiscount || (sale as any).overallDiscount || {});
-      setLines(sale.lines || []);
-      setPayments((sale.payments || []).map(payment => ({
-        ...payment,
-        amount: extractMoneyValue(payment.amount),
-        currency: payment.amount.currency,
-      }))); 
-      setQuickRows([]);
 
-      if (sale.type === SaleType.BOOTH) {
+      if (isNewHydration) {
+        if (sale.type === SaleType.BOOTH) {
         setDirectWhatKind('product');
         setSelectedTaskId('');
         setTaskName('');
@@ -603,12 +611,15 @@ export default function SalesModal({
         fp: emissaryPts?.fp ?? 0,
         hp: emissaryPts?.hp ?? 0,
       });
+      } // CLOSE the isNewHydration block
 
       // Reset init guard when editing
-      didInitRef.current = false;
-      collectedArchiveAcknowledgedForSaleIdRef.current = null;
-      // Sync Vault with existing sale ID
-      draftId.current = sale.id;
+      if (isNewHydration) {
+        didInitRef.current = false;
+        collectedArchiveAcknowledgedForSaleIdRef.current = null;
+        // Sync Vault with existing sale ID
+        draftId.current = sale.id;
+      }
     } else {
       suppressAutoNameAfterSaleHydrationRef.current = false;
       // New sale - always reset form when sale is null/undefined
