@@ -1860,9 +1860,9 @@ export default function SalesModal({
       <OwnerSelectorModal
         open={showOwnerSelector}
         onOpenChange={setShowOwnerSelector}
-        onMultiSelect={(ownerIds) => setOwnerId(ownerIds[0] || null)}
+        onSelect={(id) => setOwnerId(id)}
         multiSelect={false}
-        currentOwnerIds={ownerId ? [ownerId] : []}
+        currentOwnerId={ownerId}
       />
 
       {/* Archive Collection Confirmation Modal for status selector */}
