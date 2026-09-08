@@ -41,15 +41,15 @@ domain: design-thinking-studies
 prompt: How the Design for Growth framework unfolds from analysis to experimentation
 validator:
   kind: sequence
-  ref: design-thinking-for-innovation-easy-c2-m1:private
+  ref: 01-design-thinking-for-innovation-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: design-thinking-for-innovation-easy-c2-m1:public
-privateValidatorRef: design-thinking-for-innovation-easy-c2-m1:private
-rewardIdentity: design-thinking-for-innovation-easy-c2-m1:v1
+publicPayloadRef: 01-design-thinking-for-innovation-easy-c2-m1:public
+privateValidatorRef: 01-design-thinking-for-innovation-easy-c2-m1:private
+rewardIdentity: 01-design-thinking-for-innovation-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -109,14 +109,14 @@ domain: design-thinking-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: design-thinking-for-innovation-easy-c3-m1:private
+  ref: 01-design-thinking-for-innovation-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: design-thinking-for-innovation-easy-c3-m1:public
-privateValidatorRef: design-thinking-for-innovation-easy-c3-m1:private
-rewardIdentity: design-thinking-for-innovation-easy-c3-m1:v1
+publicPayloadRef: 01-design-thinking-for-innovation-easy-c3-m1:public
+privateValidatorRef: 01-design-thinking-for-innovation-easy-c3-m1:private
+rewardIdentity: 01-design-thinking-for-innovation-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -182,14 +182,14 @@ domain: design-thinking-studies
 prompt: 'Sort the problem characteristics: Puzzle or Mystery'
 validator:
   kind: mapping
-  ref: design-thinking-for-innovation-easy-c4-m1:private
+  ref: 01-design-thinking-for-innovation-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: design-thinking-for-innovation-easy-c4-m1:public
-privateValidatorRef: design-thinking-for-innovation-easy-c4-m1:private
-rewardIdentity: design-thinking-for-innovation-easy-c4-m1:v1
+publicPayloadRef: 01-design-thinking-for-innovation-easy-c4-m1:public
+privateValidatorRef: 01-design-thinking-for-innovation-easy-c4-m1:private
+rewardIdentity: 01-design-thinking-for-innovation-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -240,15 +240,15 @@ domain: design-thinking-studies
 prompt: The natural trajectory of ambiguity in the design thinking process
 validator:
   kind: sequence
-  ref: design-thinking-for-innovation-easy-c5-m1:private
+  ref: 01-design-thinking-for-innovation-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: design-thinking-for-innovation-easy-c5-m1:public
-privateValidatorRef: design-thinking-for-innovation-easy-c5-m1:private
-rewardIdentity: design-thinking-for-innovation-easy-c5-m1:v1
+publicPayloadRef: 01-design-thinking-for-innovation-easy-c5-m1:public
+privateValidatorRef: 01-design-thinking-for-innovation-easy-c5-m1:private
+rewardIdentity: 01-design-thinking-for-innovation-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -296,14 +296,14 @@ domain: design-thinking-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: design-thinking-for-innovation-easy-c6-m1:private
+  ref: 01-design-thinking-for-innovation-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: design-thinking-for-innovation-easy-c6-m1:public
-privateValidatorRef: design-thinking-for-innovation-easy-c6-m1:private
-rewardIdentity: design-thinking-for-innovation-easy-c6-m1:v1
+publicPayloadRef: 01-design-thinking-for-innovation-easy-c6-m1:public
+privateValidatorRef: 01-design-thinking-for-innovation-easy-c6-m1:private
+rewardIdentity: 01-design-thinking-for-innovation-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -382,15 +382,15 @@ domain: design-thinking-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: design-thinking-for-innovation-easy-c7-m1:private
+  ref: 01-design-thinking-for-innovation-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: design-thinking-for-innovation-easy-c7-m1:public
-privateValidatorRef: design-thinking-for-innovation-easy-c7-m1:private
-rewardIdentity: design-thinking-for-innovation-easy-c7-m1:v1
+publicPayloadRef: 01-design-thinking-for-innovation-easy-c7-m1:public
+privateValidatorRef: 01-design-thinking-for-innovation-easy-c7-m1:private
+rewardIdentity: 01-design-thinking-for-innovation-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -438,14 +438,14 @@ domain: design-thinking-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: design-thinking-for-innovation-easy-c8-m1:private
+  ref: 01-design-thinking-for-innovation-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: design-thinking-for-innovation-easy-c8-m1:public
-privateValidatorRef: design-thinking-for-innovation-easy-c8-m1:private
-rewardIdentity: design-thinking-for-innovation-easy-c8-m1:v1
+publicPayloadRef: 01-design-thinking-for-innovation-easy-c8-m1:public
+privateValidatorRef: 01-design-thinking-for-innovation-easy-c8-m1:private
+rewardIdentity: 01-design-thinking-for-innovation-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -493,14 +493,14 @@ domain: design-thinking-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: design-thinking-for-innovation-easy-c9-m1:private
+  ref: 01-design-thinking-for-innovation-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: design-thinking-for-innovation-easy-c9-m1:public
-privateValidatorRef: design-thinking-for-innovation-easy-c9-m1:private
-rewardIdentity: design-thinking-for-innovation-easy-c9-m1:v1
+publicPayloadRef: 01-design-thinking-for-innovation-easy-c9-m1:public
+privateValidatorRef: 01-design-thinking-for-innovation-easy-c9-m1:private
+rewardIdentity: 01-design-thinking-for-innovation-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer

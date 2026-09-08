@@ -36,14 +36,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: agile-framework-execution-guide-easy-c2-m1:private
+  ref: 06-agile-execution-guide-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-framework-execution-guide-easy-c2-m1:public
-privateValidatorRef: agile-framework-execution-guide-easy-c2-m1:private
-rewardIdentity: agile-framework-execution-guide-easy-c2-m1:v1
+publicPayloadRef: 06-agile-execution-guide-easy-c2-m1:public
+privateValidatorRef: 06-agile-execution-guide-easy-c2-m1:private
+rewardIdentity: 06-agile-execution-guide-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -102,14 +102,14 @@ domain: project-management-studies
 prompt: 'Sort the Agile documentation methods: Multi-Item or Single Item'
 validator:
   kind: mapping
-  ref: agile-framework-execution-guide-easy-c3-m1:private
+  ref: 06-agile-execution-guide-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-framework-execution-guide-easy-c3-m1:public
-privateValidatorRef: agile-framework-execution-guide-easy-c3-m1:private
-rewardIdentity: agile-framework-execution-guide-easy-c3-m1:v1
+publicPayloadRef: 06-agile-execution-guide-easy-c3-m1:public
+privateValidatorRef: 06-agile-execution-guide-easy-c3-m1:private
+rewardIdentity: 06-agile-execution-guide-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -178,15 +178,15 @@ domain: project-management-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: agile-framework-execution-guide-easy-c4-m1:private
+  ref: 06-agile-execution-guide-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: agile-framework-execution-guide-easy-c4-m1:public
-privateValidatorRef: agile-framework-execution-guide-easy-c4-m1:private
-rewardIdentity: agile-framework-execution-guide-easy-c4-m1:v1
+publicPayloadRef: 06-agile-execution-guide-easy-c4-m1:public
+privateValidatorRef: 06-agile-execution-guide-easy-c4-m1:private
+rewardIdentity: 06-agile-execution-guide-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -246,14 +246,14 @@ domain: project-management-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: agile-framework-execution-guide-easy-c5-m1:private
+  ref: 06-agile-execution-guide-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-framework-execution-guide-easy-c5-m1:public
-privateValidatorRef: agile-framework-execution-guide-easy-c5-m1:private
-rewardIdentity: agile-framework-execution-guide-easy-c5-m1:v1
+publicPayloadRef: 06-agile-execution-guide-easy-c5-m1:public
+privateValidatorRef: 06-agile-execution-guide-easy-c5-m1:private
+rewardIdentity: 06-agile-execution-guide-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -328,16 +328,16 @@ domain: project-management-studies
 prompt: Diagnose why team velocity is falling and adjust your management parameters.
 validator:
   kind: invariants
-  ref: agile-framework-execution-guide-easy-c6-m1:private
+  ref: 06-agile-execution-guide-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
   maxPayloadBytes: 4096
-publicPayloadRef: agile-framework-execution-guide-easy-c6-m1:public
-privateValidatorRef: agile-framework-execution-guide-easy-c6-m1:private
-rewardIdentity: agile-framework-execution-guide-easy-c6-m1:v1
+publicPayloadRef: 06-agile-execution-guide-easy-c6-m1:public
+privateValidatorRef: 06-agile-execution-guide-easy-c6-m1:private
+rewardIdentity: 06-agile-execution-guide-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -390,15 +390,15 @@ domain: project-management-studies
 prompt: How the Agile work cycle unfolds from start to finish
 validator:
   kind: sequence
-  ref: agile-framework-execution-guide-easy-c7-m1:private
+  ref: 06-agile-execution-guide-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: agile-framework-execution-guide-easy-c7-m1:public
-privateValidatorRef: agile-framework-execution-guide-easy-c7-m1:private
-rewardIdentity: agile-framework-execution-guide-easy-c7-m1:v1
+publicPayloadRef: 06-agile-execution-guide-easy-c7-m1:public
+privateValidatorRef: 06-agile-execution-guide-easy-c7-m1:private
+rewardIdentity: 06-agile-execution-guide-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -462,14 +462,14 @@ domain: project-management-studies
 prompt: What's missing from the conflict resolution process?
 validator:
   kind: mapping
-  ref: agile-framework-execution-guide-easy-c8-m1:private
+  ref: 06-agile-execution-guide-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-framework-execution-guide-easy-c8-m1:public
-privateValidatorRef: agile-framework-execution-guide-easy-c8-m1:private
-rewardIdentity: agile-framework-execution-guide-easy-c8-m1:v1
+publicPayloadRef: 06-agile-execution-guide-easy-c8-m1:public
+privateValidatorRef: 06-agile-execution-guide-easy-c8-m1:private
+rewardIdentity: 06-agile-execution-guide-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -595,15 +595,15 @@ prompt: >-
   metric into its target range.
 validator:
   kind: invariants
-  ref: agile-framework-execution-guide-easy-c9-m1:private
+  ref: 06-agile-execution-guide-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: agile-framework-execution-guide-easy-c9-m1:public
-privateValidatorRef: agile-framework-execution-guide-easy-c9-m1:private
-rewardIdentity: agile-framework-execution-guide-easy-c9-m1:v1
+publicPayloadRef: 06-agile-execution-guide-easy-c9-m1:public
+privateValidatorRef: 06-agile-execution-guide-easy-c9-m1:private
+rewardIdentity: 06-agile-execution-guide-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -697,15 +697,15 @@ domain: project-management-studies
 prompt: How does the project closure scenario play out?
 validator:
   kind: exact
-  ref: agile-framework-execution-guide-easy-c10-m1:private
+  ref: 06-agile-execution-guide-easy-c10-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
-publicPayloadRef: agile-framework-execution-guide-easy-c10-m1:public
-privateValidatorRef: agile-framework-execution-guide-easy-c10-m1:private
-rewardIdentity: agile-framework-execution-guide-easy-c10-m1:v1
+publicPayloadRef: 06-agile-execution-guide-easy-c10-m1:public
+privateValidatorRef: 06-agile-execution-guide-easy-c10-m1:private
+rewardIdentity: 06-agile-execution-guide-easy-c10-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -783,16 +783,16 @@ prompt: >-
   results.
 validator:
   kind: invariants
-  ref: agile-framework-execution-guide-easy-c11-m1:private
+  ref: 06-agile-execution-guide-easy-c11-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 2
   maxPayloadBytes: 4096
-publicPayloadRef: agile-framework-execution-guide-easy-c11-m1:public
-privateValidatorRef: agile-framework-execution-guide-easy-c11-m1:private
-rewardIdentity: agile-framework-execution-guide-easy-c11-m1:v1
+publicPayloadRef: 06-agile-execution-guide-easy-c11-m1:public
+privateValidatorRef: 06-agile-execution-guide-easy-c11-m1:private
+rewardIdentity: 06-agile-execution-guide-easy-c11-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -871,15 +871,15 @@ domain: project-management-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: agile-framework-execution-guide-easy-c12-m1:private
+  ref: 06-agile-execution-guide-easy-c12-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: agile-framework-execution-guide-easy-c12-m1:public
-privateValidatorRef: agile-framework-execution-guide-easy-c12-m1:private
-rewardIdentity: agile-framework-execution-guide-easy-c12-m1:v1
+publicPayloadRef: 06-agile-execution-guide-easy-c12-m1:public
+privateValidatorRef: 06-agile-execution-guide-easy-c12-m1:private
+rewardIdentity: 06-agile-execution-guide-easy-c12-m1:v1
 presentation:
   supportedModes:
     - pointer

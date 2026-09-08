@@ -36,14 +36,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: agile-meets-design-thinking-easy-c2-m1:private
+  ref: 08-agile-design-thinking-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-meets-design-thinking-easy-c2-m1:public
-privateValidatorRef: agile-meets-design-thinking-easy-c2-m1:private
-rewardIdentity: agile-meets-design-thinking-easy-c2-m1:v1
+publicPayloadRef: 08-agile-design-thinking-easy-c2-m1:public
+privateValidatorRef: 08-agile-design-thinking-easy-c2-m1:private
+rewardIdentity: 08-agile-design-thinking-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -109,14 +109,14 @@ domain: project-management-studies
 prompt: 'Sort the user story parts: Persona or Benefit'
 validator:
   kind: mapping
-  ref: agile-meets-design-thinking-easy-c3-m1:private
+  ref: 08-agile-design-thinking-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-meets-design-thinking-easy-c3-m1:public
-privateValidatorRef: agile-meets-design-thinking-easy-c3-m1:private
-rewardIdentity: agile-meets-design-thinking-easy-c3-m1:v1
+publicPayloadRef: 08-agile-design-thinking-easy-c3-m1:public
+privateValidatorRef: 08-agile-design-thinking-easy-c3-m1:private
+rewardIdentity: 08-agile-design-thinking-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -170,15 +170,15 @@ domain: project-management-studies
 prompt: How user feedback flows through an Agile iteration from start to finish
 validator:
   kind: sequence
-  ref: agile-meets-design-thinking-easy-c4-m1:private
+  ref: 08-agile-design-thinking-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: agile-meets-design-thinking-easy-c4-m1:public
-privateValidatorRef: agile-meets-design-thinking-easy-c4-m1:private
-rewardIdentity: agile-meets-design-thinking-easy-c4-m1:v1
+publicPayloadRef: 08-agile-design-thinking-easy-c4-m1:public
+privateValidatorRef: 08-agile-design-thinking-easy-c4-m1:private
+rewardIdentity: 08-agile-design-thinking-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -227,14 +227,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: agile-meets-design-thinking-easy-c5-m1:private
+  ref: 08-agile-design-thinking-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-meets-design-thinking-easy-c5-m1:public
-privateValidatorRef: agile-meets-design-thinking-easy-c5-m1:private
-rewardIdentity: agile-meets-design-thinking-easy-c5-m1:v1
+publicPayloadRef: 08-agile-design-thinking-easy-c5-m1:public
+privateValidatorRef: 08-agile-design-thinking-easy-c5-m1:private
+rewardIdentity: 08-agile-design-thinking-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -292,15 +292,15 @@ prompt: >-
   launch
 validator:
   kind: sequence
-  ref: agile-meets-design-thinking-easy-c6-m1:private
+  ref: 08-agile-design-thinking-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: agile-meets-design-thinking-easy-c6-m1:public
-privateValidatorRef: agile-meets-design-thinking-easy-c6-m1:private
-rewardIdentity: agile-meets-design-thinking-easy-c6-m1:v1
+publicPayloadRef: 08-agile-design-thinking-easy-c6-m1:public
+privateValidatorRef: 08-agile-design-thinking-easy-c6-m1:private
+rewardIdentity: 08-agile-design-thinking-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -365,14 +365,14 @@ domain: project-management-studies
 prompt: 'Sort the persona insights: cognitive ideas or emotions experienced'
 validator:
   kind: mapping
-  ref: agile-meets-design-thinking-easy-c7-m1:private
+  ref: 08-agile-design-thinking-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-meets-design-thinking-easy-c7-m1:public
-privateValidatorRef: agile-meets-design-thinking-easy-c7-m1:private
-rewardIdentity: agile-meets-design-thinking-easy-c7-m1:v1
+publicPayloadRef: 08-agile-design-thinking-easy-c7-m1:public
+privateValidatorRef: 08-agile-design-thinking-easy-c7-m1:private
+rewardIdentity: 08-agile-design-thinking-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -455,15 +455,15 @@ domain: project-management-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: agile-meets-design-thinking-easy-c8-m1:private
+  ref: 08-agile-design-thinking-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: agile-meets-design-thinking-easy-c8-m1:public
-privateValidatorRef: agile-meets-design-thinking-easy-c8-m1:private
-rewardIdentity: agile-meets-design-thinking-easy-c8-m1:v1
+publicPayloadRef: 08-agile-design-thinking-easy-c8-m1:public
+privateValidatorRef: 08-agile-design-thinking-easy-c8-m1:private
+rewardIdentity: 08-agile-design-thinking-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -511,14 +511,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: agile-meets-design-thinking-easy-c9-m1:private
+  ref: 08-agile-design-thinking-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-meets-design-thinking-easy-c9-m1:public
-privateValidatorRef: agile-meets-design-thinking-easy-c9-m1:private
-rewardIdentity: agile-meets-design-thinking-easy-c9-m1:v1
+publicPayloadRef: 08-agile-design-thinking-easy-c9-m1:public
+privateValidatorRef: 08-agile-design-thinking-easy-c9-m1:private
+rewardIdentity: 08-agile-design-thinking-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -566,14 +566,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: agile-meets-design-thinking-easy-c10-m1:private
+  ref: 08-agile-design-thinking-easy-c10-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-meets-design-thinking-easy-c10-m1:public
-privateValidatorRef: agile-meets-design-thinking-easy-c10-m1:private
-rewardIdentity: agile-meets-design-thinking-easy-c10-m1:v1
+publicPayloadRef: 08-agile-design-thinking-easy-c10-m1:public
+privateValidatorRef: 08-agile-design-thinking-easy-c10-m1:private
+rewardIdentity: 08-agile-design-thinking-easy-c10-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -635,14 +635,14 @@ domain: project-management-studies
 prompt: 'Sort the TimeBoxing practices: Setup or After'
 validator:
   kind: mapping
-  ref: agile-meets-design-thinking-easy-c11-m1:private
+  ref: 08-agile-design-thinking-easy-c11-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-meets-design-thinking-easy-c11-m1:public
-privateValidatorRef: agile-meets-design-thinking-easy-c11-m1:private
-rewardIdentity: agile-meets-design-thinking-easy-c11-m1:v1
+publicPayloadRef: 08-agile-design-thinking-easy-c11-m1:public
+privateValidatorRef: 08-agile-design-thinking-easy-c11-m1:private
+rewardIdentity: 08-agile-design-thinking-easy-c11-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -690,14 +690,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: agile-meets-design-thinking-easy-c12-m1:private
+  ref: 08-agile-design-thinking-easy-c12-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-meets-design-thinking-easy-c12-m1:public
-privateValidatorRef: agile-meets-design-thinking-easy-c12-m1:private
-rewardIdentity: agile-meets-design-thinking-easy-c12-m1:v1
+publicPayloadRef: 08-agile-design-thinking-easy-c12-m1:public
+privateValidatorRef: 08-agile-design-thinking-easy-c12-m1:private
+rewardIdentity: 08-agile-design-thinking-easy-c12-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -750,15 +750,15 @@ domain: project-management-studies
 prompt: How a user moves from initial goal to action in Donald Norman's 7 Steps Model
 validator:
   kind: sequence
-  ref: agile-meets-design-thinking-easy-c13-m1:private
+  ref: 08-agile-design-thinking-easy-c13-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: agile-meets-design-thinking-easy-c13-m1:public
-privateValidatorRef: agile-meets-design-thinking-easy-c13-m1:private
-rewardIdentity: agile-meets-design-thinking-easy-c13-m1:v1
+publicPayloadRef: 08-agile-design-thinking-easy-c13-m1:public
+privateValidatorRef: 08-agile-design-thinking-easy-c13-m1:private
+rewardIdentity: 08-agile-design-thinking-easy-c13-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -823,14 +823,14 @@ domain: project-management-studies
 prompt: 'Sort the Visual Design Program stages: Defining or Applying'
 validator:
   kind: mapping
-  ref: agile-meets-design-thinking-easy-c14-m1:private
+  ref: 08-agile-design-thinking-easy-c14-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-meets-design-thinking-easy-c14-m1:public
-privateValidatorRef: agile-meets-design-thinking-easy-c14-m1:private
-rewardIdentity: agile-meets-design-thinking-easy-c14-m1:v1
+publicPayloadRef: 08-agile-design-thinking-easy-c14-m1:public
+privateValidatorRef: 08-agile-design-thinking-easy-c14-m1:private
+rewardIdentity: 08-agile-design-thinking-easy-c14-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -896,15 +896,15 @@ domain: project-management-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: agile-meets-design-thinking-easy-c15-m1:private
+  ref: 08-agile-design-thinking-easy-c15-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: agile-meets-design-thinking-easy-c15-m1:public
-privateValidatorRef: agile-meets-design-thinking-easy-c15-m1:private
-rewardIdentity: agile-meets-design-thinking-easy-c15-m1:v1
+publicPayloadRef: 08-agile-design-thinking-easy-c15-m1:public
+privateValidatorRef: 08-agile-design-thinking-easy-c15-m1:private
+rewardIdentity: 08-agile-design-thinking-easy-c15-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -960,15 +960,15 @@ domain: project-management-studies
 prompt: How usability testing unfolds from early discovery to final launch
 validator:
   kind: sequence
-  ref: agile-meets-design-thinking-easy-c16-m1:private
+  ref: 08-agile-design-thinking-easy-c16-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: agile-meets-design-thinking-easy-c16-m1:public
-privateValidatorRef: agile-meets-design-thinking-easy-c16-m1:private
-rewardIdentity: agile-meets-design-thinking-easy-c16-m1:v1
+publicPayloadRef: 08-agile-design-thinking-easy-c16-m1:public
+privateValidatorRef: 08-agile-design-thinking-easy-c16-m1:private
+rewardIdentity: 08-agile-design-thinking-easy-c16-m1:v1
 presentation:
   supportedModes:
     - pointer

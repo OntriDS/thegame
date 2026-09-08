@@ -46,14 +46,14 @@ domain: business-systems-studies
 prompt: 'Sort the blitzscaling ideas: Scale or Learning'
 validator:
   kind: mapping
-  ref: blitzscaling-easy-c3-m1:private
+  ref: 01-blitzscaling-growth-strategy-principles-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: blitzscaling-easy-c3-m1:public
-privateValidatorRef: blitzscaling-easy-c3-m1:private
-rewardIdentity: blitzscaling-easy-c3-m1:v1
+publicPayloadRef: 01-blitzscaling-growth-strategy-principles-easy-c3-m1:public
+privateValidatorRef: 01-blitzscaling-growth-strategy-principles-easy-c3-m1:private
+rewardIdentity: 01-blitzscaling-growth-strategy-principles-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -133,16 +133,16 @@ domain: business-systems-studies
 prompt: Select components that meet all constraints.
 validator:
   kind: invariants
-  ref: blitzscaling-easy-c4-m1:private
+  ref: 01-blitzscaling-growth-strategy-principles-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 3
   maxPayloadBytes: 4096
-publicPayloadRef: blitzscaling-easy-c4-m1:public
-privateValidatorRef: blitzscaling-easy-c4-m1:private
-rewardIdentity: blitzscaling-easy-c4-m1:v1
+publicPayloadRef: 01-blitzscaling-growth-strategy-principles-easy-c4-m1:public
+privateValidatorRef: 01-blitzscaling-growth-strategy-principles-easy-c4-m1:private
+rewardIdentity: 01-blitzscaling-growth-strategy-principles-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -195,15 +195,15 @@ domain: business-systems-studies
 prompt: How company growth levels unfold from smallest team to large organization
 validator:
   kind: sequence
-  ref: blitzscaling-easy-c5-m1:private
+  ref: 01-blitzscaling-growth-strategy-principles-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: blitzscaling-easy-c5-m1:public
-privateValidatorRef: blitzscaling-easy-c5-m1:private
-rewardIdentity: blitzscaling-easy-c5-m1:v1
+publicPayloadRef: 01-blitzscaling-growth-strategy-principles-easy-c5-m1:public
+privateValidatorRef: 01-blitzscaling-growth-strategy-principles-easy-c5-m1:private
+rewardIdentity: 01-blitzscaling-growth-strategy-principles-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -270,14 +270,14 @@ domain: business-systems-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: blitzscaling-easy-c6-m1:private
+  ref: 01-blitzscaling-growth-strategy-principles-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: blitzscaling-easy-c6-m1:public
-privateValidatorRef: blitzscaling-easy-c6-m1:private
-rewardIdentity: blitzscaling-easy-c6-m1:v1
+publicPayloadRef: 01-blitzscaling-growth-strategy-principles-easy-c6-m1:public
+privateValidatorRef: 01-blitzscaling-growth-strategy-principles-easy-c6-m1:private
+rewardIdentity: 01-blitzscaling-growth-strategy-principles-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -325,14 +325,14 @@ domain: business-systems-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: blitzscaling-easy-c2-m1:private
+  ref: 01-blitzscaling-growth-strategy-principles-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: blitzscaling-easy-c2-m1:public
-privateValidatorRef: blitzscaling-easy-c2-m1:private
-rewardIdentity: blitzscaling-easy-c2-m1:v1
+publicPayloadRef: 01-blitzscaling-growth-strategy-principles-easy-c2-m1:public
+privateValidatorRef: 01-blitzscaling-growth-strategy-principles-easy-c2-m1:private
+rewardIdentity: 01-blitzscaling-growth-strategy-principles-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer

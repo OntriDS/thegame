@@ -51,14 +51,14 @@ domain: financial-freedom-studies
 prompt: 'Sort the RICE motivational levers: Internal driver or External driver'
 validator:
   kind: mapping
-  ref: getting-rich-cia-rice-framework-easy-c2-m1:private
+  ref: 02-rice-motivational-levers-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: getting-rich-cia-rice-framework-easy-c2-m1:public
-privateValidatorRef: getting-rich-cia-rice-framework-easy-c2-m1:private
-rewardIdentity: getting-rich-cia-rice-framework-easy-c2-m1:v1
+publicPayloadRef: 02-rice-motivational-levers-easy-c2-m1:public
+privateValidatorRef: 02-rice-motivational-levers-easy-c2-m1:private
+rewardIdentity: 02-rice-motivational-levers-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -106,14 +106,14 @@ domain: financial-freedom-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: getting-rich-cia-rice-framework-easy-c3-m1:private
+  ref: 02-rice-motivational-levers-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: getting-rich-cia-rice-framework-easy-c3-m1:public
-privateValidatorRef: getting-rich-cia-rice-framework-easy-c3-m1:private
-rewardIdentity: getting-rich-cia-rice-framework-easy-c3-m1:v1
+publicPayloadRef: 02-rice-motivational-levers-easy-c3-m1:public
+privateValidatorRef: 02-rice-motivational-levers-easy-c3-m1:private
+rewardIdentity: 02-rice-motivational-levers-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -179,14 +179,14 @@ domain: financial-freedom-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: getting-rich-cia-rice-framework-easy-c4-m1:private
+  ref: 02-rice-motivational-levers-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: getting-rich-cia-rice-framework-easy-c4-m1:public
-privateValidatorRef: getting-rich-cia-rice-framework-easy-c4-m1:private
-rewardIdentity: getting-rich-cia-rice-framework-easy-c4-m1:v1
+publicPayloadRef: 02-rice-motivational-levers-easy-c4-m1:public
+privateValidatorRef: 02-rice-motivational-levers-easy-c4-m1:private
+rewardIdentity: 02-rice-motivational-levers-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -234,14 +234,14 @@ domain: financial-freedom-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: getting-rich-cia-rice-framework-easy-c5-m1:private
+  ref: 02-rice-motivational-levers-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: getting-rich-cia-rice-framework-easy-c5-m1:public
-privateValidatorRef: getting-rich-cia-rice-framework-easy-c5-m1:private
-rewardIdentity: getting-rich-cia-rice-framework-easy-c5-m1:v1
+publicPayloadRef: 02-rice-motivational-levers-easy-c5-m1:public
+privateValidatorRef: 02-rice-motivational-levers-easy-c5-m1:private
+rewardIdentity: 02-rice-motivational-levers-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -305,14 +305,14 @@ domain: financial-freedom-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: getting-rich-cia-rice-framework-easy-c6-m1:private
+  ref: 02-rice-motivational-levers-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: getting-rich-cia-rice-framework-easy-c6-m1:public
-privateValidatorRef: getting-rich-cia-rice-framework-easy-c6-m1:private
-rewardIdentity: getting-rich-cia-rice-framework-easy-c6-m1:v1
+publicPayloadRef: 02-rice-motivational-levers-easy-c6-m1:public
+privateValidatorRef: 02-rice-motivational-levers-easy-c6-m1:private
+rewardIdentity: 02-rice-motivational-levers-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -394,15 +394,15 @@ domain: financial-freedom-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: getting-rich-cia-rice-framework-easy-c8-m1:private
+  ref: 02-rice-motivational-levers-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: getting-rich-cia-rice-framework-easy-c8-m1:public
-privateValidatorRef: getting-rich-cia-rice-framework-easy-c8-m1:private
-rewardIdentity: getting-rich-cia-rice-framework-easy-c8-m1:v1
+publicPayloadRef: 02-rice-motivational-levers-easy-c8-m1:public
+privateValidatorRef: 02-rice-motivational-levers-easy-c8-m1:private
+rewardIdentity: 02-rice-motivational-levers-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -450,14 +450,14 @@ domain: financial-freedom-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: getting-rich-cia-rice-framework-easy-c9-m1:private
+  ref: 02-rice-motivational-levers-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: getting-rich-cia-rice-framework-easy-c9-m1:public
-privateValidatorRef: getting-rich-cia-rice-framework-easy-c9-m1:private
-rewardIdentity: getting-rich-cia-rice-framework-easy-c9-m1:v1
+publicPayloadRef: 02-rice-motivational-levers-easy-c9-m1:public
+privateValidatorRef: 02-rice-motivational-levers-easy-c9-m1:private
+rewardIdentity: 02-rice-motivational-levers-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -516,14 +516,14 @@ domain: financial-freedom-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: getting-rich-cia-rice-framework-easy-c10-m1:private
+  ref: 02-rice-motivational-levers-easy-c10-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: getting-rich-cia-rice-framework-easy-c10-m1:public
-privateValidatorRef: getting-rich-cia-rice-framework-easy-c10-m1:private
-rewardIdentity: getting-rich-cia-rice-framework-easy-c10-m1:v1
+publicPayloadRef: 02-rice-motivational-levers-easy-c10-m1:public
+privateValidatorRef: 02-rice-motivational-levers-easy-c10-m1:private
+rewardIdentity: 02-rice-motivational-levers-easy-c10-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -620,15 +620,15 @@ domain: financial-freedom-studies
 prompt: How does the ideological influence scenario play out?
 validator:
   kind: exact
-  ref: getting-rich-cia-rice-framework-easy-c11-m1:private
+  ref: 02-rice-motivational-levers-easy-c11-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
-publicPayloadRef: getting-rich-cia-rice-framework-easy-c11-m1:public
-privateValidatorRef: getting-rich-cia-rice-framework-easy-c11-m1:private
-rewardIdentity: getting-rich-cia-rice-framework-easy-c11-m1:v1
+publicPayloadRef: 02-rice-motivational-levers-easy-c11-m1:public
+privateValidatorRef: 02-rice-motivational-levers-easy-c11-m1:private
+rewardIdentity: 02-rice-motivational-levers-easy-c11-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -685,15 +685,15 @@ domain: financial-freedom-studies
 prompt: How the persuasion model unfolds from diagnosis to tailored appeal
 validator:
   kind: sequence
-  ref: getting-rich-cia-rice-framework-easy-c12-m1:private
+  ref: 02-rice-motivational-levers-easy-c12-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: getting-rich-cia-rice-framework-easy-c12-m1:public
-privateValidatorRef: getting-rich-cia-rice-framework-easy-c12-m1:private
-rewardIdentity: getting-rich-cia-rice-framework-easy-c12-m1:v1
+publicPayloadRef: 02-rice-motivational-levers-easy-c12-m1:public
+privateValidatorRef: 02-rice-motivational-levers-easy-c12-m1:private
+rewardIdentity: 02-rice-motivational-levers-easy-c12-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -766,15 +766,15 @@ domain: financial-freedom-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: getting-rich-cia-rice-framework-easy-c13-m1:private
+  ref: 02-rice-motivational-levers-easy-c13-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: getting-rich-cia-rice-framework-easy-c13-m1:public
-privateValidatorRef: getting-rich-cia-rice-framework-easy-c13-m1:private
-rewardIdentity: getting-rich-cia-rice-framework-easy-c13-m1:v1
+publicPayloadRef: 02-rice-motivational-levers-easy-c13-m1:public
+privateValidatorRef: 02-rice-motivational-levers-easy-c13-m1:private
+rewardIdentity: 02-rice-motivational-levers-easy-c13-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -839,14 +839,14 @@ domain: financial-freedom-studies
 prompt: 'Sort the course offer details: Pricing or Promise'
 validator:
   kind: mapping
-  ref: getting-rich-cia-rice-framework-easy-c14-m1:private
+  ref: 02-rice-motivational-levers-easy-c14-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: getting-rich-cia-rice-framework-easy-c14-m1:public
-privateValidatorRef: getting-rich-cia-rice-framework-easy-c14-m1:private
-rewardIdentity: getting-rich-cia-rice-framework-easy-c14-m1:v1
+publicPayloadRef: 02-rice-motivational-levers-easy-c14-m1:public
+privateValidatorRef: 02-rice-motivational-levers-easy-c14-m1:private
+rewardIdentity: 02-rice-motivational-levers-easy-c14-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -921,16 +921,16 @@ prompt: >-
   motivation.
 validator:
   kind: invariants
-  ref: getting-rich-cia-rice-framework-easy-c15-m1:private
+  ref: 02-rice-motivational-levers-easy-c15-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
   maxPayloadBytes: 4096
-publicPayloadRef: getting-rich-cia-rice-framework-easy-c15-m1:public
-privateValidatorRef: getting-rich-cia-rice-framework-easy-c15-m1:private
-rewardIdentity: getting-rich-cia-rice-framework-easy-c15-m1:v1
+publicPayloadRef: 02-rice-motivational-levers-easy-c15-m1:public
+privateValidatorRef: 02-rice-motivational-levers-easy-c15-m1:private
+rewardIdentity: 02-rice-motivational-levers-easy-c15-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -978,14 +978,14 @@ domain: financial-freedom-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: getting-rich-cia-rice-framework-easy-c7-m1:private
+  ref: 02-rice-motivational-levers-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: getting-rich-cia-rice-framework-easy-c7-m1:public
-privateValidatorRef: getting-rich-cia-rice-framework-easy-c7-m1:private
-rewardIdentity: getting-rich-cia-rice-framework-easy-c7-m1:v1
+publicPayloadRef: 02-rice-motivational-levers-easy-c7-m1:public
+privateValidatorRef: 02-rice-motivational-levers-easy-c7-m1:private
+rewardIdentity: 02-rice-motivational-levers-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer

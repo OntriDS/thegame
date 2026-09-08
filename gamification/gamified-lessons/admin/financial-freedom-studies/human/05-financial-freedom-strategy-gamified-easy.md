@@ -90,15 +90,15 @@ prompt: >-
   range.
 validator:
   kind: invariants
-  ref: road-to-financial-freedom-easy-c2-m1:private
+  ref: 05-financial-freedom-strategy-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: road-to-financial-freedom-easy-c2-m1:public
-privateValidatorRef: road-to-financial-freedom-easy-c2-m1:private
-rewardIdentity: road-to-financial-freedom-easy-c2-m1:v1
+publicPayloadRef: 05-financial-freedom-strategy-easy-c2-m1:public
+privateValidatorRef: 05-financial-freedom-strategy-easy-c2-m1:private
+rewardIdentity: 05-financial-freedom-strategy-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -160,14 +160,14 @@ domain: financial-freedom-studies
 prompt: 'Sort the spending changes: Big Cuts or Small Cuts'
 validator:
   kind: mapping
-  ref: road-to-financial-freedom-easy-c3-m1:private
+  ref: 05-financial-freedom-strategy-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: road-to-financial-freedom-easy-c3-m1:public
-privateValidatorRef: road-to-financial-freedom-easy-c3-m1:private
-rewardIdentity: road-to-financial-freedom-easy-c3-m1:v1
+publicPayloadRef: 05-financial-freedom-strategy-easy-c3-m1:public
+privateValidatorRef: 05-financial-freedom-strategy-easy-c3-m1:private
+rewardIdentity: 05-financial-freedom-strategy-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -229,14 +229,14 @@ domain: financial-freedom-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: road-to-financial-freedom-easy-c4-m1:private
+  ref: 05-financial-freedom-strategy-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: road-to-financial-freedom-easy-c4-m1:public
-privateValidatorRef: road-to-financial-freedom-easy-c4-m1:private
-rewardIdentity: road-to-financial-freedom-easy-c4-m1:v1
+publicPayloadRef: 05-financial-freedom-strategy-easy-c4-m1:public
+privateValidatorRef: 05-financial-freedom-strategy-easy-c4-m1:private
+rewardIdentity: 05-financial-freedom-strategy-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -294,15 +294,15 @@ prompt: >-
   freedom
 validator:
   kind: sequence
-  ref: road-to-financial-freedom-easy-c5-m1:private
+  ref: 05-financial-freedom-strategy-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: road-to-financial-freedom-easy-c5-m1:public
-privateValidatorRef: road-to-financial-freedom-easy-c5-m1:private
-rewardIdentity: road-to-financial-freedom-easy-c5-m1:v1
+publicPayloadRef: 05-financial-freedom-strategy-easy-c5-m1:public
+privateValidatorRef: 05-financial-freedom-strategy-easy-c5-m1:private
+rewardIdentity: 05-financial-freedom-strategy-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -388,15 +388,15 @@ domain: financial-freedom-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: road-to-financial-freedom-easy-c6-m1:private
+  ref: 05-financial-freedom-strategy-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: road-to-financial-freedom-easy-c6-m1:public
-privateValidatorRef: road-to-financial-freedom-easy-c6-m1:private
-rewardIdentity: road-to-financial-freedom-easy-c6-m1:v1
+publicPayloadRef: 05-financial-freedom-strategy-easy-c6-m1:public
+privateValidatorRef: 05-financial-freedom-strategy-easy-c6-m1:private
+rewardIdentity: 05-financial-freedom-strategy-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -458,14 +458,14 @@ domain: financial-freedom-studies
 prompt: What's missing from the inversion process?
 validator:
   kind: mapping
-  ref: road-to-financial-freedom-easy-c7-m1:private
+  ref: 05-financial-freedom-strategy-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: road-to-financial-freedom-easy-c7-m1:public
-privateValidatorRef: road-to-financial-freedom-easy-c7-m1:private
-rewardIdentity: road-to-financial-freedom-easy-c7-m1:v1
+publicPayloadRef: 05-financial-freedom-strategy-easy-c7-m1:public
+privateValidatorRef: 05-financial-freedom-strategy-easy-c7-m1:private
+rewardIdentity: 05-financial-freedom-strategy-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -541,16 +541,16 @@ domain: financial-freedom-studies
 prompt: Select approaches that match the focus-first principle.
 validator:
   kind: invariants
-  ref: road-to-financial-freedom-easy-c8-m1:private
+  ref: 05-financial-freedom-strategy-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 2
   maxPayloadBytes: 4096
-publicPayloadRef: road-to-financial-freedom-easy-c8-m1:public
-privateValidatorRef: road-to-financial-freedom-easy-c8-m1:private
-rewardIdentity: road-to-financial-freedom-easy-c8-m1:v1
+publicPayloadRef: 05-financial-freedom-strategy-easy-c8-m1:public
+privateValidatorRef: 05-financial-freedom-strategy-easy-c8-m1:private
+rewardIdentity: 05-financial-freedom-strategy-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -632,15 +632,15 @@ domain: financial-freedom-studies
 prompt: How does the early-career financial scenario play out?
 validator:
   kind: exact
-  ref: road-to-financial-freedom-easy-c9-m1:private
+  ref: 05-financial-freedom-strategy-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
-publicPayloadRef: road-to-financial-freedom-easy-c9-m1:public
-privateValidatorRef: road-to-financial-freedom-easy-c9-m1:private
-rewardIdentity: road-to-financial-freedom-easy-c9-m1:v1
+publicPayloadRef: 05-financial-freedom-strategy-easy-c9-m1:public
+privateValidatorRef: 05-financial-freedom-strategy-easy-c9-m1:private
+rewardIdentity: 05-financial-freedom-strategy-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -688,14 +688,14 @@ domain: financial-freedom-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: road-to-financial-freedom-easy-c10-m1:private
+  ref: 05-financial-freedom-strategy-easy-c10-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: road-to-financial-freedom-easy-c10-m1:public
-privateValidatorRef: road-to-financial-freedom-easy-c10-m1:private
-rewardIdentity: road-to-financial-freedom-easy-c10-m1:v1
+publicPayloadRef: 05-financial-freedom-strategy-easy-c10-m1:public
+privateValidatorRef: 05-financial-freedom-strategy-easy-c10-m1:private
+rewardIdentity: 05-financial-freedom-strategy-easy-c10-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -760,14 +760,14 @@ domain: financial-freedom-studies
 prompt: 'Sort the financial freedom ideas: Myth or Truth'
 validator:
   kind: mapping
-  ref: road-to-financial-freedom-easy-c11-m1:private
+  ref: 05-financial-freedom-strategy-easy-c11-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: road-to-financial-freedom-easy-c11-m1:public
-privateValidatorRef: road-to-financial-freedom-easy-c11-m1:private
-rewardIdentity: road-to-financial-freedom-easy-c11-m1:v1
+publicPayloadRef: 05-financial-freedom-strategy-easy-c11-m1:public
+privateValidatorRef: 05-financial-freedom-strategy-easy-c11-m1:private
+rewardIdentity: 05-financial-freedom-strategy-easy-c11-m1:v1
 presentation:
   supportedModes:
     - pointer

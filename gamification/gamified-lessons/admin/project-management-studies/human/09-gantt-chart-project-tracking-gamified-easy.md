@@ -36,14 +36,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: gantt-charts-easy-c2-m1:private
+  ref: 09-gantt-chart-project-tracking-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: gantt-charts-easy-c2-m1:public
-privateValidatorRef: gantt-charts-easy-c2-m1:private
-rewardIdentity: gantt-charts-easy-c2-m1:v1
+publicPayloadRef: 09-gantt-chart-project-tracking-easy-c2-m1:public
+privateValidatorRef: 09-gantt-chart-project-tracking-easy-c2-m1:private
+rewardIdentity: 09-gantt-chart-project-tracking-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -108,14 +108,14 @@ domain: project-management-studies
 prompt: 'Sort the Gantt chart elements: Vertical axis (Tasks) or Horizontal axis (Time)'
 validator:
   kind: mapping
-  ref: gantt-charts-easy-c3-m1:private
+  ref: 09-gantt-chart-project-tracking-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: gantt-charts-easy-c3-m1:public
-privateValidatorRef: gantt-charts-easy-c3-m1:private
-rewardIdentity: gantt-charts-easy-c3-m1:v1
+publicPayloadRef: 09-gantt-chart-project-tracking-easy-c3-m1:public
+privateValidatorRef: 09-gantt-chart-project-tracking-easy-c3-m1:private
+rewardIdentity: 09-gantt-chart-project-tracking-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -177,14 +177,14 @@ domain: project-management-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: gantt-charts-easy-c4-m1:private
+  ref: 09-gantt-chart-project-tracking-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: gantt-charts-easy-c4-m1:public
-privateValidatorRef: gantt-charts-easy-c4-m1:private
-rewardIdentity: gantt-charts-easy-c4-m1:v1
+publicPayloadRef: 09-gantt-chart-project-tracking-easy-c4-m1:public
+privateValidatorRef: 09-gantt-chart-project-tracking-easy-c4-m1:private
+rewardIdentity: 09-gantt-chart-project-tracking-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -244,15 +244,15 @@ domain: project-management-studies
 prompt: How the Gantt chart lifecycle unfolds from beginning to end
 validator:
   kind: sequence
-  ref: gantt-charts-easy-c5-m1:private
+  ref: 09-gantt-chart-project-tracking-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: gantt-charts-easy-c5-m1:public
-privateValidatorRef: gantt-charts-easy-c5-m1:private
-rewardIdentity: gantt-charts-easy-c5-m1:v1
+publicPayloadRef: 09-gantt-chart-project-tracking-easy-c5-m1:public
+privateValidatorRef: 09-gantt-chart-project-tracking-easy-c5-m1:private
+rewardIdentity: 09-gantt-chart-project-tracking-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -301,14 +301,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: gantt-charts-easy-c6-m1:private
+  ref: 09-gantt-chart-project-tracking-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: gantt-charts-easy-c6-m1:public
-privateValidatorRef: gantt-charts-easy-c6-m1:private
-rewardIdentity: gantt-charts-easy-c6-m1:v1
+publicPayloadRef: 09-gantt-chart-project-tracking-easy-c6-m1:public
+privateValidatorRef: 09-gantt-chart-project-tracking-easy-c6-m1:private
+rewardIdentity: 09-gantt-chart-project-tracking-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -356,14 +356,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: gantt-charts-easy-c8-m1:private
+  ref: 09-gantt-chart-project-tracking-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: gantt-charts-easy-c8-m1:public
-privateValidatorRef: gantt-charts-easy-c8-m1:private
-rewardIdentity: gantt-charts-easy-c8-m1:v1
+publicPayloadRef: 09-gantt-chart-project-tracking-easy-c8-m1:public
+privateValidatorRef: 09-gantt-chart-project-tracking-easy-c8-m1:private
+rewardIdentity: 09-gantt-chart-project-tracking-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer

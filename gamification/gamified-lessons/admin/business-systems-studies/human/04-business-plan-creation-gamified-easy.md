@@ -53,14 +53,14 @@ domain: business-systems-studies
 prompt: 'Sort the market research concepts: Sizing the Market or Knowing the Customer'
 validator:
   kind: mapping
-  ref: business-plan-easy-c3-m1:private
+  ref: 04-business-plan-creation-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: business-plan-easy-c3-m1:public
-privateValidatorRef: business-plan-easy-c3-m1:private
-rewardIdentity: business-plan-easy-c3-m1:v1
+publicPayloadRef: 04-business-plan-creation-easy-c3-m1:public
+privateValidatorRef: 04-business-plan-creation-easy-c3-m1:private
+rewardIdentity: 04-business-plan-creation-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -124,14 +124,14 @@ domain: business-systems-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: business-plan-easy-c4-m1:private
+  ref: 04-business-plan-creation-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: business-plan-easy-c4-m1:public
-privateValidatorRef: business-plan-easy-c4-m1:private
-rewardIdentity: business-plan-easy-c4-m1:v1
+publicPayloadRef: 04-business-plan-creation-easy-c4-m1:public
+privateValidatorRef: 04-business-plan-creation-easy-c4-m1:private
+rewardIdentity: 04-business-plan-creation-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -203,15 +203,15 @@ domain: business-systems-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: business-plan-easy-c5-m1:private
+  ref: 04-business-plan-creation-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: business-plan-easy-c5-m1:public
-privateValidatorRef: business-plan-easy-c5-m1:private
-rewardIdentity: business-plan-easy-c5-m1:v1
+publicPayloadRef: 04-business-plan-creation-easy-c5-m1:public
+privateValidatorRef: 04-business-plan-creation-easy-c5-m1:private
+rewardIdentity: 04-business-plan-creation-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -287,16 +287,16 @@ domain: business-systems-studies
 prompt: Diagnose the operational breakdown and apply the right fix.
 validator:
   kind: invariants
-  ref: business-plan-easy-c6-m1:private
+  ref: 04-business-plan-creation-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
   maxPayloadBytes: 4096
-publicPayloadRef: business-plan-easy-c6-m1:public
-privateValidatorRef: business-plan-easy-c6-m1:private
-rewardIdentity: business-plan-easy-c6-m1:v1
+publicPayloadRef: 04-business-plan-creation-easy-c6-m1:public
+privateValidatorRef: 04-business-plan-creation-easy-c6-m1:private
+rewardIdentity: 04-business-plan-creation-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -344,14 +344,14 @@ domain: business-systems-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: business-plan-easy-c7-m1:private
+  ref: 04-business-plan-creation-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: business-plan-easy-c7-m1:public
-privateValidatorRef: business-plan-easy-c7-m1:private
-rewardIdentity: business-plan-easy-c7-m1:v1
+publicPayloadRef: 04-business-plan-creation-easy-c7-m1:public
+privateValidatorRef: 04-business-plan-creation-easy-c7-m1:private
+rewardIdentity: 04-business-plan-creation-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -435,16 +435,16 @@ domain: business-systems-studies
 prompt: Select customer acquisition strategies that satisfy all financial constraints.
 validator:
   kind: invariants
-  ref: business-plan-easy-c8-m1:private
+  ref: 04-business-plan-creation-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 2
   maxPayloadBytes: 4096
-publicPayloadRef: business-plan-easy-c8-m1:public
-privateValidatorRef: business-plan-easy-c8-m1:private
-rewardIdentity: business-plan-easy-c8-m1:v1
+publicPayloadRef: 04-business-plan-creation-easy-c8-m1:public
+privateValidatorRef: 04-business-plan-creation-easy-c8-m1:private
+rewardIdentity: 04-business-plan-creation-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -493,14 +493,14 @@ domain: business-systems-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: business-plan-easy-c9-m1:private
+  ref: 04-business-plan-creation-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: business-plan-easy-c9-m1:public
-privateValidatorRef: business-plan-easy-c9-m1:private
-rewardIdentity: business-plan-easy-c9-m1:v1
+publicPayloadRef: 04-business-plan-creation-easy-c9-m1:public
+privateValidatorRef: 04-business-plan-creation-easy-c9-m1:private
+rewardIdentity: 04-business-plan-creation-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -548,14 +548,14 @@ domain: business-systems-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: business-plan-easy-c2-m1:private
+  ref: 04-business-plan-creation-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: business-plan-easy-c2-m1:public
-privateValidatorRef: business-plan-easy-c2-m1:private
-rewardIdentity: business-plan-easy-c2-m1:v1
+publicPayloadRef: 04-business-plan-creation-easy-c2-m1:public
+privateValidatorRef: 04-business-plan-creation-easy-c2-m1:private
+rewardIdentity: 04-business-plan-creation-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer

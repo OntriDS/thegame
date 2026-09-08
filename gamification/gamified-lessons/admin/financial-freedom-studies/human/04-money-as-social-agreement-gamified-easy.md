@@ -36,14 +36,14 @@ domain: financial-freedom-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: map-of-money-easy-c2-m1:private
+  ref: 04-money-as-social-agreement-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: map-of-money-easy-c2-m1:public
-privateValidatorRef: map-of-money-easy-c2-m1:private
-rewardIdentity: map-of-money-easy-c2-m1:v1
+publicPayloadRef: 04-money-as-social-agreement-easy-c2-m1:public
+privateValidatorRef: 04-money-as-social-agreement-easy-c2-m1:private
+rewardIdentity: 04-money-as-social-agreement-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -105,14 +105,14 @@ domain: financial-freedom-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: map-of-money-easy-c3-m1:private
+  ref: 04-money-as-social-agreement-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: map-of-money-easy-c3-m1:public
-privateValidatorRef: map-of-money-easy-c3-m1:private
-rewardIdentity: map-of-money-easy-c3-m1:v1
+publicPayloadRef: 04-money-as-social-agreement-easy-c3-m1:public
+privateValidatorRef: 04-money-as-social-agreement-easy-c3-m1:private
+rewardIdentity: 04-money-as-social-agreement-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -178,14 +178,14 @@ domain: financial-freedom-studies
 prompt: 'Sort the origins-of-money claims: Barter Myth or Reality'
 validator:
   kind: mapping
-  ref: map-of-money-easy-c4-m1:private
+  ref: 04-money-as-social-agreement-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: map-of-money-easy-c4-m1:public
-privateValidatorRef: map-of-money-easy-c4-m1:private
-rewardIdentity: map-of-money-easy-c4-m1:v1
+publicPayloadRef: 04-money-as-social-agreement-easy-c4-m1:public
+privateValidatorRef: 04-money-as-social-agreement-easy-c4-m1:private
+rewardIdentity: 04-money-as-social-agreement-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -240,15 +240,15 @@ domain: financial-freedom-studies
 prompt: How the history of money unfolds from the earliest records to coinage
 validator:
   kind: sequence
-  ref: map-of-money-easy-c5-m1:private
+  ref: 04-money-as-social-agreement-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: map-of-money-easy-c5-m1:public
-privateValidatorRef: map-of-money-easy-c5-m1:private
-rewardIdentity: map-of-money-easy-c5-m1:v1
+publicPayloadRef: 04-money-as-social-agreement-easy-c5-m1:public
+privateValidatorRef: 04-money-as-social-agreement-easy-c5-m1:private
+rewardIdentity: 04-money-as-social-agreement-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -313,14 +313,14 @@ domain: financial-freedom-studies
 prompt: 'Sort the money history events: Progress or Failure'
 validator:
   kind: mapping
-  ref: map-of-money-easy-c6-m1:private
+  ref: 04-money-as-social-agreement-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: map-of-money-easy-c6-m1:public
-privateValidatorRef: map-of-money-easy-c6-m1:private
-rewardIdentity: map-of-money-easy-c6-m1:v1
+publicPayloadRef: 04-money-as-social-agreement-easy-c6-m1:public
+privateValidatorRef: 04-money-as-social-agreement-easy-c6-m1:private
+rewardIdentity: 04-money-as-social-agreement-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -396,15 +396,15 @@ domain: financial-freedom-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: map-of-money-easy-c7-m1:private
+  ref: 04-money-as-social-agreement-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: map-of-money-easy-c7-m1:public
-privateValidatorRef: map-of-money-easy-c7-m1:private
-rewardIdentity: map-of-money-easy-c7-m1:v1
+publicPayloadRef: 04-money-as-social-agreement-easy-c7-m1:public
+privateValidatorRef: 04-money-as-social-agreement-easy-c7-m1:private
+rewardIdentity: 04-money-as-social-agreement-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -468,14 +468,14 @@ domain: financial-freedom-studies
 prompt: What's missing from the goldsmith banking process?
 validator:
   kind: mapping
-  ref: map-of-money-easy-c8-m1:private
+  ref: 04-money-as-social-agreement-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: map-of-money-easy-c8-m1:public
-privateValidatorRef: map-of-money-easy-c8-m1:private
-rewardIdentity: map-of-money-easy-c8-m1:v1
+publicPayloadRef: 04-money-as-social-agreement-easy-c8-m1:public
+privateValidatorRef: 04-money-as-social-agreement-easy-c8-m1:private
+rewardIdentity: 04-money-as-social-agreement-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -546,15 +546,15 @@ domain: financial-freedom-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: map-of-money-easy-c9-m1:private
+  ref: 04-money-as-social-agreement-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: map-of-money-easy-c9-m1:public
-privateValidatorRef: map-of-money-easy-c9-m1:private
-rewardIdentity: map-of-money-easy-c9-m1:v1
+publicPayloadRef: 04-money-as-social-agreement-easy-c9-m1:public
+privateValidatorRef: 04-money-as-social-agreement-easy-c9-m1:private
+rewardIdentity: 04-money-as-social-agreement-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -632,16 +632,16 @@ prompt: >-
   Sequence the repairs in the correct order to restore it.
 validator:
   kind: sequence
-  ref: map-of-money-easy-c10-m1:private
+  ref: 04-money-as-social-agreement-easy-c10-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
   maxPayloadBytes: 4096
-publicPayloadRef: map-of-money-easy-c10-m1:public
-privateValidatorRef: map-of-money-easy-c10-m1:private
-rewardIdentity: map-of-money-easy-c10-m1:v1
+publicPayloadRef: 04-money-as-social-agreement-easy-c10-m1:public
+privateValidatorRef: 04-money-as-social-agreement-easy-c10-m1:private
+rewardIdentity: 04-money-as-social-agreement-easy-c10-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -732,15 +732,15 @@ domain: financial-freedom-studies
 prompt: How does the credit money system play out?
 validator:
   kind: exact
-  ref: map-of-money-easy-c12-m1:private
+  ref: 04-money-as-social-agreement-easy-c12-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
-publicPayloadRef: map-of-money-easy-c12-m1:public
-privateValidatorRef: map-of-money-easy-c12-m1:private
-rewardIdentity: map-of-money-easy-c12-m1:v1
+publicPayloadRef: 04-money-as-social-agreement-easy-c12-m1:public
+privateValidatorRef: 04-money-as-social-agreement-easy-c12-m1:private
+rewardIdentity: 04-money-as-social-agreement-easy-c12-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -837,15 +837,15 @@ prompt: >-
   their target ranges.
 validator:
   kind: invariants
-  ref: map-of-money-easy-c13-m1:private
+  ref: 04-money-as-social-agreement-easy-c13-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: map-of-money-easy-c13-m1:public
-privateValidatorRef: map-of-money-easy-c13-m1:private
-rewardIdentity: map-of-money-easy-c13-m1:v1
+publicPayloadRef: 04-money-as-social-agreement-easy-c13-m1:public
+privateValidatorRef: 04-money-as-social-agreement-easy-c13-m1:private
+rewardIdentity: 04-money-as-social-agreement-easy-c13-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -900,15 +900,15 @@ domain: financial-freedom-studies
 prompt: How the monetary system converts trusted claims into expandable claims
 validator:
   kind: sequence
-  ref: map-of-money-easy-c14-m1:private
+  ref: 04-money-as-social-agreement-easy-c14-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: map-of-money-easy-c14-m1:public
-privateValidatorRef: map-of-money-easy-c14-m1:private
-rewardIdentity: map-of-money-easy-c14-m1:v1
+publicPayloadRef: 04-money-as-social-agreement-easy-c14-m1:public
+privateValidatorRef: 04-money-as-social-agreement-easy-c14-m1:private
+rewardIdentity: 04-money-as-social-agreement-easy-c14-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -956,14 +956,14 @@ domain: financial-freedom-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: map-of-money-easy-c15-m1:private
+  ref: 04-money-as-social-agreement-easy-c15-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: map-of-money-easy-c15-m1:public
-privateValidatorRef: map-of-money-easy-c15-m1:private
-rewardIdentity: map-of-money-easy-c15-m1:v1
+publicPayloadRef: 04-money-as-social-agreement-easy-c15-m1:public
+privateValidatorRef: 04-money-as-social-agreement-easy-c15-m1:private
+rewardIdentity: 04-money-as-social-agreement-easy-c15-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -1031,14 +1031,14 @@ domain: financial-freedom-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: map-of-money-easy-c11-m1:private
+  ref: 04-money-as-social-agreement-easy-c11-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: map-of-money-easy-c11-m1:public
-privateValidatorRef: map-of-money-easy-c11-m1:private
-rewardIdentity: map-of-money-easy-c11-m1:v1
+publicPayloadRef: 04-money-as-social-agreement-easy-c11-m1:public
+privateValidatorRef: 04-money-as-social-agreement-easy-c11-m1:private
+rewardIdentity: 04-money-as-social-agreement-easy-c11-m1:v1
 presentation:
   supportedModes:
     - pointer

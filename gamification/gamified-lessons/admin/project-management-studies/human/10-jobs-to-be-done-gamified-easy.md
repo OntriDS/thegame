@@ -36,14 +36,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: jobs-to-be-done-easy-c2-m1:private
+  ref: 10-jobs-to-be-done-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: jobs-to-be-done-easy-c2-m1:public
-privateValidatorRef: jobs-to-be-done-easy-c2-m1:private
-rewardIdentity: jobs-to-be-done-easy-c2-m1:v1
+publicPayloadRef: 10-jobs-to-be-done-easy-c2-m1:public
+privateValidatorRef: 10-jobs-to-be-done-easy-c2-m1:private
+rewardIdentity: 10-jobs-to-be-done-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -109,14 +109,14 @@ domain: project-management-studies
 prompt: 'Sort the Job Statement examples: Functional or Emotional'
 validator:
   kind: mapping
-  ref: jobs-to-be-done-easy-c4-m1:private
+  ref: 10-jobs-to-be-done-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: jobs-to-be-done-easy-c4-m1:public
-privateValidatorRef: jobs-to-be-done-easy-c4-m1:private
-rewardIdentity: jobs-to-be-done-easy-c4-m1:v1
+publicPayloadRef: 10-jobs-to-be-done-easy-c4-m1:public
+privateValidatorRef: 10-jobs-to-be-done-easy-c4-m1:private
+rewardIdentity: 10-jobs-to-be-done-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -178,14 +178,14 @@ domain: project-management-studies
 prompt: Which pillar do these clues support?
 validator:
   kind: mapping
-  ref: jobs-to-be-done-easy-c5-m1:private
+  ref: 10-jobs-to-be-done-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: jobs-to-be-done-easy-c5-m1:public
-privateValidatorRef: jobs-to-be-done-easy-c5-m1:private
-rewardIdentity: jobs-to-be-done-easy-c5-m1:v1
+publicPayloadRef: 10-jobs-to-be-done-easy-c5-m1:public
+privateValidatorRef: 10-jobs-to-be-done-easy-c5-m1:private
+rewardIdentity: 10-jobs-to-be-done-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -255,15 +255,15 @@ domain: project-management-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: jobs-to-be-done-easy-c6-m1:private
+  ref: 10-jobs-to-be-done-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: jobs-to-be-done-easy-c6-m1:public
-privateValidatorRef: jobs-to-be-done-easy-c6-m1:private
-rewardIdentity: jobs-to-be-done-easy-c6-m1:v1
+publicPayloadRef: 10-jobs-to-be-done-easy-c6-m1:public
+privateValidatorRef: 10-jobs-to-be-done-easy-c6-m1:private
+rewardIdentity: 10-jobs-to-be-done-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -311,14 +311,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: jobs-to-be-done-easy-c7-m1:private
+  ref: 10-jobs-to-be-done-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: jobs-to-be-done-easy-c7-m1:public
-privateValidatorRef: jobs-to-be-done-easy-c7-m1:private
-rewardIdentity: jobs-to-be-done-easy-c7-m1:v1
+publicPayloadRef: 10-jobs-to-be-done-easy-c7-m1:public
+privateValidatorRef: 10-jobs-to-be-done-easy-c7-m1:private
+rewardIdentity: 10-jobs-to-be-done-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -410,15 +410,15 @@ domain: project-management-studies
 prompt: How does the dimensional hierarchy scenario play out?
 validator:
   kind: exact
-  ref: jobs-to-be-done-easy-c9-m1:private
+  ref: 10-jobs-to-be-done-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
-publicPayloadRef: jobs-to-be-done-easy-c9-m1:public
-privateValidatorRef: jobs-to-be-done-easy-c9-m1:private
-rewardIdentity: jobs-to-be-done-easy-c9-m1:v1
+publicPayloadRef: 10-jobs-to-be-done-easy-c9-m1:public
+privateValidatorRef: 10-jobs-to-be-done-easy-c9-m1:private
+rewardIdentity: 10-jobs-to-be-done-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -466,14 +466,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: jobs-to-be-done-easy-c10-m1:private
+  ref: 10-jobs-to-be-done-easy-c10-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: jobs-to-be-done-easy-c10-m1:public
-privateValidatorRef: jobs-to-be-done-easy-c10-m1:private
-rewardIdentity: jobs-to-be-done-easy-c10-m1:v1
+publicPayloadRef: 10-jobs-to-be-done-easy-c10-m1:public
+privateValidatorRef: 10-jobs-to-be-done-easy-c10-m1:private
+rewardIdentity: 10-jobs-to-be-done-easy-c10-m1:v1
 presentation:
   supportedModes:
     - pointer

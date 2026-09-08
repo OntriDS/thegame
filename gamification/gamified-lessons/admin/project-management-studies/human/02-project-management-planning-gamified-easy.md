@@ -75,15 +75,15 @@ domain: project-management-studies
 prompt: Choose which driver to make the primary priority for the project.
 validator:
   kind: rubric
-  ref: project-management-12-steps-easy-c3-m1:private
+  ref: 02-project-management-planning-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: project-management-12-steps-easy-c3-m1:public
-privateValidatorRef: project-management-12-steps-easy-c3-m1:private
-rewardIdentity: project-management-12-steps-easy-c3-m1:v1
+publicPayloadRef: 02-project-management-planning-easy-c3-m1:public
+privateValidatorRef: 02-project-management-planning-easy-c3-m1:private
+rewardIdentity: 02-project-management-planning-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -145,14 +145,14 @@ domain: project-management-studies
 prompt: 'Sort the task planning concepts: Task Method or WBS Issue'
 validator:
   kind: mapping
-  ref: project-management-12-steps-easy-c4-m1:private
+  ref: 02-project-management-planning-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: project-management-12-steps-easy-c4-m1:public
-privateValidatorRef: project-management-12-steps-easy-c4-m1:private
-rewardIdentity: project-management-12-steps-easy-c4-m1:v1
+publicPayloadRef: 02-project-management-planning-easy-c4-m1:public
+privateValidatorRef: 02-project-management-planning-easy-c4-m1:private
+rewardIdentity: 02-project-management-planning-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -200,14 +200,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: project-management-12-steps-easy-c5-m1:private
+  ref: 02-project-management-planning-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: project-management-12-steps-easy-c5-m1:public
-privateValidatorRef: project-management-12-steps-easy-c5-m1:private
-rewardIdentity: project-management-12-steps-easy-c5-m1:v1
+publicPayloadRef: 02-project-management-planning-easy-c5-m1:public
+privateValidatorRef: 02-project-management-planning-easy-c5-m1:private
+rewardIdentity: 02-project-management-planning-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -267,14 +267,14 @@ domain: project-management-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: project-management-12-steps-easy-c6-m1:private
+  ref: 02-project-management-planning-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: project-management-12-steps-easy-c6-m1:public
-privateValidatorRef: project-management-12-steps-easy-c6-m1:private
-rewardIdentity: project-management-12-steps-easy-c6-m1:v1
+publicPayloadRef: 02-project-management-planning-easy-c6-m1:public
+privateValidatorRef: 02-project-management-planning-easy-c6-m1:private
+rewardIdentity: 02-project-management-planning-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -347,15 +347,15 @@ domain: project-management-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: project-management-12-steps-easy-c7-m1:private
+  ref: 02-project-management-planning-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: project-management-12-steps-easy-c7-m1:public
-privateValidatorRef: project-management-12-steps-easy-c7-m1:private
-rewardIdentity: project-management-12-steps-easy-c7-m1:v1
+publicPayloadRef: 02-project-management-planning-easy-c7-m1:public
+privateValidatorRef: 02-project-management-planning-easy-c7-m1:private
+rewardIdentity: 02-project-management-planning-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -405,15 +405,15 @@ domain: project-management-studies
 prompt: How drawing a Gantt Chart unfolds from start to finish
 validator:
   kind: sequence
-  ref: project-management-12-steps-easy-c8-m1:private
+  ref: 02-project-management-planning-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: project-management-12-steps-easy-c8-m1:public
-privateValidatorRef: project-management-12-steps-easy-c8-m1:private
-rewardIdentity: project-management-12-steps-easy-c8-m1:v1
+publicPayloadRef: 02-project-management-planning-easy-c8-m1:public
+privateValidatorRef: 02-project-management-planning-easy-c8-m1:private
+rewardIdentity: 02-project-management-planning-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -524,15 +524,15 @@ prompt: >-
   inside its target range.
 validator:
   kind: invariants
-  ref: project-management-12-steps-easy-c9-m1:private
+  ref: 02-project-management-planning-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: project-management-12-steps-easy-c9-m1:public
-privateValidatorRef: project-management-12-steps-easy-c9-m1:private
-rewardIdentity: project-management-12-steps-easy-c9-m1:v1
+publicPayloadRef: 02-project-management-planning-easy-c9-m1:public
+privateValidatorRef: 02-project-management-planning-easy-c9-m1:private
+rewardIdentity: 02-project-management-planning-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -597,14 +597,14 @@ domain: project-management-studies
 prompt: 'Sort the risk factors: High Risk or Low Risk'
 validator:
   kind: mapping
-  ref: project-management-12-steps-easy-c10-m1:private
+  ref: 02-project-management-planning-easy-c10-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: project-management-12-steps-easy-c10-m1:public
-privateValidatorRef: project-management-12-steps-easy-c10-m1:private
-rewardIdentity: project-management-12-steps-easy-c10-m1:v1
+publicPayloadRef: 02-project-management-planning-easy-c10-m1:public
+privateValidatorRef: 02-project-management-planning-easy-c10-m1:private
+rewardIdentity: 02-project-management-planning-easy-c10-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -689,7 +689,7 @@ domain: project-management-studies
 prompt: Reach the target progress and close the schedule gap.
 validator:
   kind: invariants
-  ref: project-management-12-steps-easy-c11-m1:private
+  ref: 02-project-management-planning-easy-c11-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
@@ -697,9 +697,9 @@ limits:
   timeLimitSeconds: 60
   maxActions: 5
   maxReboots: 3
-publicPayloadRef: project-management-12-steps-easy-c11-m1:public
-privateValidatorRef: project-management-12-steps-easy-c11-m1:private
-rewardIdentity: project-management-12-steps-easy-c11-m1:v1
+publicPayloadRef: 02-project-management-planning-easy-c11-m1:public
+privateValidatorRef: 02-project-management-planning-easy-c11-m1:private
+rewardIdentity: 02-project-management-planning-easy-c11-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -792,15 +792,15 @@ domain: project-management-studies
 prompt: How does the cost monitoring scenario play out?
 validator:
   kind: exact
-  ref: project-management-12-steps-easy-c12-m1:private
+  ref: 02-project-management-planning-easy-c12-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
-publicPayloadRef: project-management-12-steps-easy-c12-m1:public
-privateValidatorRef: project-management-12-steps-easy-c12-m1:private
-rewardIdentity: project-management-12-steps-easy-c12-m1:v1
+publicPayloadRef: 02-project-management-planning-easy-c12-m1:public
+privateValidatorRef: 02-project-management-planning-easy-c12-m1:private
+rewardIdentity: 02-project-management-planning-easy-c12-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -873,16 +873,16 @@ domain: project-management-studies
 prompt: Recover time and stay within budget.
 validator:
   kind: invariants
-  ref: project-management-12-steps-easy-c13-m1:private
+  ref: 02-project-management-planning-easy-c13-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 2
   maxPayloadBytes: 4096
-publicPayloadRef: project-management-12-steps-easy-c13-m1:public
-privateValidatorRef: project-management-12-steps-easy-c13-m1:private
-rewardIdentity: project-management-12-steps-easy-c13-m1:v1
+publicPayloadRef: 02-project-management-planning-easy-c13-m1:public
+privateValidatorRef: 02-project-management-planning-easy-c13-m1:private
+rewardIdentity: 02-project-management-planning-easy-c13-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -948,14 +948,14 @@ domain: project-management-studies
 prompt: 'Sort the project review questions: Wins or Lessons'
 validator:
   kind: mapping
-  ref: project-management-12-steps-easy-c14-m1:private
+  ref: 02-project-management-planning-easy-c14-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: project-management-12-steps-easy-c14-m1:public
-privateValidatorRef: project-management-12-steps-easy-c14-m1:private
-rewardIdentity: project-management-12-steps-easy-c14-m1:v1
+publicPayloadRef: 02-project-management-planning-easy-c14-m1:public
+privateValidatorRef: 02-project-management-planning-easy-c14-m1:private
+rewardIdentity: 02-project-management-planning-easy-c14-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -1003,14 +1003,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: project-management-12-steps-easy-c15-m1:private
+  ref: 02-project-management-planning-easy-c15-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: project-management-12-steps-easy-c15-m1:public
-privateValidatorRef: project-management-12-steps-easy-c15-m1:private
-rewardIdentity: project-management-12-steps-easy-c15-m1:v1
+publicPayloadRef: 02-project-management-planning-easy-c15-m1:public
+privateValidatorRef: 02-project-management-planning-easy-c15-m1:private
+rewardIdentity: 02-project-management-planning-easy-c15-m1:v1
 presentation:
   supportedModes:
     - pointer

@@ -36,14 +36,14 @@ domain: entrepreneurship-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: ceo-three-jobs-easy-c2-m1:private
+  ref: 01-owner-level-business-operations-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: ceo-three-jobs-easy-c2-m1:public
-privateValidatorRef: ceo-three-jobs-easy-c2-m1:private
-rewardIdentity: ceo-three-jobs-easy-c2-m1:v1
+publicPayloadRef: 01-owner-level-business-operations-easy-c2-m1:public
+privateValidatorRef: 01-owner-level-business-operations-easy-c2-m1:private
+rewardIdentity: 01-owner-level-business-operations-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -124,15 +124,15 @@ domain: entrepreneurship-studies
 prompt: Transfer the team-building principle from the lesson into economics.
 validator:
   kind: rubric
-  ref: ceo-three-jobs-easy-c3-m1:private
+  ref: 01-owner-level-business-operations-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: ceo-three-jobs-easy-c3-m1:public
-privateValidatorRef: ceo-three-jobs-easy-c3-m1:private
-rewardIdentity: ceo-three-jobs-easy-c3-m1:v1
+publicPayloadRef: 01-owner-level-business-operations-easy-c3-m1:public
+privateValidatorRef: 01-owner-level-business-operations-easy-c3-m1:private
+rewardIdentity: 01-owner-level-business-operations-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -186,15 +186,15 @@ domain: entrepreneurship-studies
 prompt: How the team-building method unfolds from start to finish
 validator:
   kind: sequence
-  ref: ceo-three-jobs-easy-c4-m1:private
+  ref: 01-owner-level-business-operations-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: ceo-three-jobs-easy-c4-m1:public
-privateValidatorRef: ceo-three-jobs-easy-c4-m1:private
-rewardIdentity: ceo-three-jobs-easy-c4-m1:v1
+publicPayloadRef: 01-owner-level-business-operations-easy-c4-m1:public
+privateValidatorRef: 01-owner-level-business-operations-easy-c4-m1:private
+rewardIdentity: 01-owner-level-business-operations-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -253,14 +253,14 @@ domain: entrepreneurship-studies
 prompt: 'Sort the direction-setting layers: Timed goal or Ongoing guide'
 validator:
   kind: mapping
-  ref: ceo-three-jobs-easy-c5-m1:private
+  ref: 01-owner-level-business-operations-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: ceo-three-jobs-easy-c5-m1:public
-privateValidatorRef: ceo-three-jobs-easy-c5-m1:private
-rewardIdentity: ceo-three-jobs-easy-c5-m1:v1
+publicPayloadRef: 01-owner-level-business-operations-easy-c5-m1:public
+privateValidatorRef: 01-owner-level-business-operations-easy-c5-m1:private
+rewardIdentity: 01-owner-level-business-operations-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -339,15 +339,15 @@ domain: entrepreneurship-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: ceo-three-jobs-easy-c6-m1:private
+  ref: 01-owner-level-business-operations-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: ceo-three-jobs-easy-c6-m1:public
-privateValidatorRef: ceo-three-jobs-easy-c6-m1:private
-rewardIdentity: ceo-three-jobs-easy-c6-m1:v1
+publicPayloadRef: 01-owner-level-business-operations-easy-c6-m1:public
+privateValidatorRef: 01-owner-level-business-operations-easy-c6-m1:private
+rewardIdentity: 01-owner-level-business-operations-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -417,14 +417,14 @@ domain: entrepreneurship-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: ceo-three-jobs-easy-c7-m1:private
+  ref: 01-owner-level-business-operations-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: ceo-three-jobs-easy-c7-m1:public
-privateValidatorRef: ceo-three-jobs-easy-c7-m1:private
-rewardIdentity: ceo-three-jobs-easy-c7-m1:v1
+publicPayloadRef: 01-owner-level-business-operations-easy-c7-m1:public
+privateValidatorRef: 01-owner-level-business-operations-easy-c7-m1:private
+rewardIdentity: 01-owner-level-business-operations-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -488,14 +488,14 @@ domain: entrepreneurship-studies
 prompt: What's missing from the improvement method cycle?
 validator:
   kind: mapping
-  ref: ceo-three-jobs-easy-c8-m1:private
+  ref: 01-owner-level-business-operations-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: ceo-three-jobs-easy-c8-m1:public
-privateValidatorRef: ceo-three-jobs-easy-c8-m1:private
-rewardIdentity: ceo-three-jobs-easy-c8-m1:v1
+publicPayloadRef: 01-owner-level-business-operations-easy-c8-m1:public
+privateValidatorRef: 01-owner-level-business-operations-easy-c8-m1:private
+rewardIdentity: 01-owner-level-business-operations-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer

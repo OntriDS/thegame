@@ -36,14 +36,14 @@ domain: entrepreneurship-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: small-business-errors-easy-c2-m1:private
+  ref: 03-small-business-financial-failure-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: small-business-errors-easy-c2-m1:public
-privateValidatorRef: small-business-errors-easy-c2-m1:private
-rewardIdentity: small-business-errors-easy-c2-m1:v1
+publicPayloadRef: 03-small-business-financial-failure-easy-c2-m1:public
+privateValidatorRef: 03-small-business-financial-failure-easy-c2-m1:private
+rewardIdentity: 03-small-business-financial-failure-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -97,15 +97,15 @@ prompt: >-
   capital
 validator:
   kind: sequence
-  ref: small-business-errors-easy-c3-m1:private
+  ref: 03-small-business-financial-failure-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: small-business-errors-easy-c3-m1:public
-privateValidatorRef: small-business-errors-easy-c3-m1:private
-rewardIdentity: small-business-errors-easy-c3-m1:v1
+publicPayloadRef: 03-small-business-financial-failure-easy-c3-m1:public
+privateValidatorRef: 03-small-business-financial-failure-easy-c3-m1:private
+rewardIdentity: 03-small-business-financial-failure-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -171,14 +171,14 @@ domain: entrepreneurship-studies
 prompt: 'Sort the business expenses: Fixed Cost or Variable Cost'
 validator:
   kind: mapping
-  ref: small-business-errors-easy-c4-m1:private
+  ref: 03-small-business-financial-failure-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: small-business-errors-easy-c4-m1:public
-privateValidatorRef: small-business-errors-easy-c4-m1:private
-rewardIdentity: small-business-errors-easy-c4-m1:v1
+publicPayloadRef: 03-small-business-financial-failure-easy-c4-m1:public
+privateValidatorRef: 03-small-business-financial-failure-easy-c4-m1:private
+rewardIdentity: 03-small-business-financial-failure-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -287,15 +287,15 @@ prompt: >-
   cash flow targets.
 validator:
   kind: invariants
-  ref: small-business-errors-easy-c5-m1:private
+  ref: 03-small-business-financial-failure-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: small-business-errors-easy-c5-m1:public
-privateValidatorRef: small-business-errors-easy-c5-m1:private
-rewardIdentity: small-business-errors-easy-c5-m1:v1
+publicPayloadRef: 03-small-business-financial-failure-easy-c5-m1:public
+privateValidatorRef: 03-small-business-financial-failure-easy-c5-m1:private
+rewardIdentity: 03-small-business-financial-failure-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -355,14 +355,14 @@ domain: entrepreneurship-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: small-business-errors-easy-c6-m1:private
+  ref: 03-small-business-financial-failure-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: small-business-errors-easy-c6-m1:public
-privateValidatorRef: small-business-errors-easy-c6-m1:private
-rewardIdentity: small-business-errors-easy-c6-m1:v1
+publicPayloadRef: 03-small-business-financial-failure-easy-c6-m1:public
+privateValidatorRef: 03-small-business-financial-failure-easy-c6-m1:private
+rewardIdentity: 03-small-business-financial-failure-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -456,15 +456,15 @@ domain: entrepreneurship-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: small-business-errors-easy-c7-m1:private
+  ref: 03-small-business-financial-failure-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: small-business-errors-easy-c7-m1:public
-privateValidatorRef: small-business-errors-easy-c7-m1:private
-rewardIdentity: small-business-errors-easy-c7-m1:v1
+publicPayloadRef: 03-small-business-financial-failure-easy-c7-m1:public
+privateValidatorRef: 03-small-business-financial-failure-easy-c7-m1:private
+rewardIdentity: 03-small-business-financial-failure-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -534,16 +534,16 @@ domain: entrepreneurship-studies
 prompt: Diagnose why this business lost money despite strong revenue.
 validator:
   kind: invariants
-  ref: small-business-errors-easy-c8-m1:private
+  ref: 03-small-business-financial-failure-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
   maxPayloadBytes: 4096
-publicPayloadRef: small-business-errors-easy-c8-m1:public
-privateValidatorRef: small-business-errors-easy-c8-m1:private
-rewardIdentity: small-business-errors-easy-c8-m1:v1
+publicPayloadRef: 03-small-business-financial-failure-easy-c8-m1:public
+privateValidatorRef: 03-small-business-financial-failure-easy-c8-m1:private
+rewardIdentity: 03-small-business-financial-failure-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -608,14 +608,14 @@ domain: entrepreneurship-studies
 prompt: What's missing from the pre-scaling checklist process?
 validator:
   kind: mapping
-  ref: small-business-errors-easy-c9-m1:private
+  ref: 03-small-business-financial-failure-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: small-business-errors-easy-c9-m1:public
-privateValidatorRef: small-business-errors-easy-c9-m1:private
-rewardIdentity: small-business-errors-easy-c9-m1:v1
+publicPayloadRef: 03-small-business-financial-failure-easy-c9-m1:public
+privateValidatorRef: 03-small-business-financial-failure-easy-c9-m1:private
+rewardIdentity: 03-small-business-financial-failure-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -663,14 +663,14 @@ domain: entrepreneurship-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: small-business-errors-easy-c10-m1:private
+  ref: 03-small-business-financial-failure-easy-c10-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: small-business-errors-easy-c10-m1:public
-privateValidatorRef: small-business-errors-easy-c10-m1:private
-rewardIdentity: small-business-errors-easy-c10-m1:v1
+publicPayloadRef: 03-small-business-financial-failure-easy-c10-m1:public
+privateValidatorRef: 03-small-business-financial-failure-easy-c10-m1:private
+rewardIdentity: 03-small-business-financial-failure-easy-c10-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -738,15 +738,15 @@ domain: entrepreneurship-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: small-business-errors-easy-c11-m1:private
+  ref: 03-small-business-financial-failure-easy-c11-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: small-business-errors-easy-c11-m1:public
-privateValidatorRef: small-business-errors-easy-c11-m1:private
-rewardIdentity: small-business-errors-easy-c11-m1:v1
+publicPayloadRef: 03-small-business-financial-failure-easy-c11-m1:public
+privateValidatorRef: 03-small-business-financial-failure-easy-c11-m1:private
+rewardIdentity: 03-small-business-financial-failure-easy-c11-m1:v1
 presentation:
   supportedModes:
     - pointer

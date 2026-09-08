@@ -36,14 +36,14 @@ domain: interactive-design-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: interaction-design-ux-specialization-easy-c3-m1:private
+  ref: 02-interaction-design-ux-architecture-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: interaction-design-ux-specialization-easy-c3-m1:public
-privateValidatorRef: interaction-design-ux-specialization-easy-c3-m1:private
-rewardIdentity: interaction-design-ux-specialization-easy-c3-m1:v1
+publicPayloadRef: 02-interaction-design-ux-architecture-easy-c3-m1:public
+privateValidatorRef: 02-interaction-design-ux-architecture-easy-c3-m1:private
+rewardIdentity: 02-interaction-design-ux-architecture-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -127,15 +127,15 @@ domain: interactive-design-studies
 prompt: Which prototyping approach should the team use?
 validator:
   kind: rubric
-  ref: interaction-design-ux-specialization-easy-c4-m1:private
+  ref: 02-interaction-design-ux-architecture-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: interaction-design-ux-specialization-easy-c4-m1:public
-privateValidatorRef: interaction-design-ux-specialization-easy-c4-m1:private
-rewardIdentity: interaction-design-ux-specialization-easy-c4-m1:v1
+publicPayloadRef: 02-interaction-design-ux-architecture-easy-c4-m1:public
+privateValidatorRef: 02-interaction-design-ux-architecture-easy-c4-m1:private
+rewardIdentity: 02-interaction-design-ux-architecture-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -200,14 +200,14 @@ domain: interactive-design-studies
 prompt: 'Sort the UX design examples: System Feedback or Error Recovery'
 validator:
   kind: mapping
-  ref: interaction-design-ux-specialization-easy-c5-m1:private
+  ref: 02-interaction-design-ux-architecture-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: interaction-design-ux-specialization-easy-c5-m1:public
-privateValidatorRef: interaction-design-ux-specialization-easy-c5-m1:private
-rewardIdentity: interaction-design-ux-specialization-easy-c5-m1:v1
+publicPayloadRef: 02-interaction-design-ux-architecture-easy-c5-m1:public
+privateValidatorRef: 02-interaction-design-ux-architecture-easy-c5-m1:private
+rewardIdentity: 02-interaction-design-ux-architecture-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -269,14 +269,14 @@ domain: interactive-design-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: interaction-design-ux-specialization-easy-c7-m1:private
+  ref: 02-interaction-design-ux-architecture-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: interaction-design-ux-specialization-easy-c7-m1:public
-privateValidatorRef: interaction-design-ux-specialization-easy-c7-m1:private
-rewardIdentity: interaction-design-ux-specialization-easy-c7-m1:v1
+publicPayloadRef: 02-interaction-design-ux-architecture-easy-c7-m1:public
+privateValidatorRef: 02-interaction-design-ux-architecture-easy-c7-m1:private
+rewardIdentity: 02-interaction-design-ux-architecture-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -342,14 +342,14 @@ domain: interactive-design-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: interaction-design-ux-specialization-easy-c8-m1:private
+  ref: 02-interaction-design-ux-architecture-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: interaction-design-ux-specialization-easy-c8-m1:public
-privateValidatorRef: interaction-design-ux-specialization-easy-c8-m1:private
-rewardIdentity: interaction-design-ux-specialization-easy-c8-m1:v1
+publicPayloadRef: 02-interaction-design-ux-architecture-easy-c8-m1:public
+privateValidatorRef: 02-interaction-design-ux-architecture-easy-c8-m1:private
+rewardIdentity: 02-interaction-design-ux-architecture-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -397,14 +397,14 @@ domain: interactive-design-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: interaction-design-ux-specialization-easy-c9-m1:private
+  ref: 02-interaction-design-ux-architecture-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: interaction-design-ux-specialization-easy-c9-m1:public
-privateValidatorRef: interaction-design-ux-specialization-easy-c9-m1:private
-rewardIdentity: interaction-design-ux-specialization-easy-c9-m1:v1
+publicPayloadRef: 02-interaction-design-ux-architecture-easy-c9-m1:public
+privateValidatorRef: 02-interaction-design-ux-architecture-easy-c9-m1:private
+rewardIdentity: 02-interaction-design-ux-architecture-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -468,15 +468,15 @@ domain: interactive-design-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: interaction-design-ux-specialization-easy-c10-m1:private
+  ref: 02-interaction-design-ux-architecture-easy-c10-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: interaction-design-ux-specialization-easy-c10-m1:public
-privateValidatorRef: interaction-design-ux-specialization-easy-c10-m1:private
-rewardIdentity: interaction-design-ux-specialization-easy-c10-m1:v1
+publicPayloadRef: 02-interaction-design-ux-architecture-easy-c10-m1:public
+privateValidatorRef: 02-interaction-design-ux-architecture-easy-c10-m1:private
+rewardIdentity: 02-interaction-design-ux-architecture-easy-c10-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -545,15 +545,15 @@ domain: interactive-design-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: interaction-design-ux-specialization-easy-c11-m1:private
+  ref: 02-interaction-design-ux-architecture-easy-c11-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: interaction-design-ux-specialization-easy-c11-m1:public
-privateValidatorRef: interaction-design-ux-specialization-easy-c11-m1:private
-rewardIdentity: interaction-design-ux-specialization-easy-c11-m1:v1
+publicPayloadRef: 02-interaction-design-ux-architecture-easy-c11-m1:public
+privateValidatorRef: 02-interaction-design-ux-architecture-easy-c11-m1:private
+rewardIdentity: 02-interaction-design-ux-architecture-easy-c11-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -631,16 +631,16 @@ prompt: >-
   teams.
 validator:
   kind: invariants
-  ref: interaction-design-ux-specialization-easy-c12-m1:private
+  ref: 02-interaction-design-ux-architecture-easy-c12-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 2
   maxPayloadBytes: 4096
-publicPayloadRef: interaction-design-ux-specialization-easy-c12-m1:public
-privateValidatorRef: interaction-design-ux-specialization-easy-c12-m1:private
-rewardIdentity: interaction-design-ux-specialization-easy-c12-m1:v1
+publicPayloadRef: 02-interaction-design-ux-architecture-easy-c12-m1:public
+privateValidatorRef: 02-interaction-design-ux-architecture-easy-c12-m1:private
+rewardIdentity: 02-interaction-design-ux-architecture-easy-c12-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -705,14 +705,14 @@ domain: interactive-design-studies
 prompt: 'Sort the crowdsourcing concepts: platform example or worker motivation'
 validator:
   kind: mapping
-  ref: interaction-design-ux-specialization-easy-c13-m1:private
+  ref: 02-interaction-design-ux-architecture-easy-c13-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: interaction-design-ux-specialization-easy-c13-m1:public
-privateValidatorRef: interaction-design-ux-specialization-easy-c13-m1:private
-rewardIdentity: interaction-design-ux-specialization-easy-c13-m1:v1
+publicPayloadRef: 02-interaction-design-ux-architecture-easy-c13-m1:public
+privateValidatorRef: 02-interaction-design-ux-architecture-easy-c13-m1:private
+rewardIdentity: 02-interaction-design-ux-architecture-easy-c13-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -766,15 +766,15 @@ domain: interactive-design-studies
 prompt: How the full interaction loop unfolds from user intent to screen output
 validator:
   kind: sequence
-  ref: interaction-design-ux-specialization-easy-c14-m1:private
+  ref: 02-interaction-design-ux-architecture-easy-c14-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: interaction-design-ux-specialization-easy-c14-m1:public
-privateValidatorRef: interaction-design-ux-specialization-easy-c14-m1:private
-rewardIdentity: interaction-design-ux-specialization-easy-c14-m1:v1
+publicPayloadRef: 02-interaction-design-ux-architecture-easy-c14-m1:public
+privateValidatorRef: 02-interaction-design-ux-architecture-easy-c14-m1:private
+rewardIdentity: 02-interaction-design-ux-architecture-easy-c14-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -894,15 +894,15 @@ prompt: >-
   target range, using Fitts's Law principles.
 validator:
   kind: invariants
-  ref: interaction-design-ux-specialization-easy-c15-m1:private
+  ref: 02-interaction-design-ux-architecture-easy-c15-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: interaction-design-ux-specialization-easy-c15-m1:public
-privateValidatorRef: interaction-design-ux-specialization-easy-c15-m1:private
-rewardIdentity: interaction-design-ux-specialization-easy-c15-m1:v1
+publicPayloadRef: 02-interaction-design-ux-architecture-easy-c15-m1:public
+privateValidatorRef: 02-interaction-design-ux-architecture-easy-c15-m1:private
+rewardIdentity: 02-interaction-design-ux-architecture-easy-c15-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -981,15 +981,15 @@ domain: interactive-design-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: interaction-design-ux-specialization-easy-c16-m1:private
+  ref: 02-interaction-design-ux-architecture-easy-c16-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: interaction-design-ux-specialization-easy-c16-m1:public
-privateValidatorRef: interaction-design-ux-specialization-easy-c16-m1:private
-rewardIdentity: interaction-design-ux-specialization-easy-c16-m1:v1
+publicPayloadRef: 02-interaction-design-ux-architecture-easy-c16-m1:public
+privateValidatorRef: 02-interaction-design-ux-architecture-easy-c16-m1:private
+rewardIdentity: 02-interaction-design-ux-architecture-easy-c16-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -1053,14 +1053,14 @@ domain: interactive-design-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: interaction-design-ux-specialization-easy-c17-m1:private
+  ref: 02-interaction-design-ux-architecture-easy-c17-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: interaction-design-ux-specialization-easy-c17-m1:public
-privateValidatorRef: interaction-design-ux-specialization-easy-c17-m1:private
-rewardIdentity: interaction-design-ux-specialization-easy-c17-m1:v1
+publicPayloadRef: 02-interaction-design-ux-architecture-easy-c17-m1:public
+privateValidatorRef: 02-interaction-design-ux-architecture-easy-c17-m1:private
+rewardIdentity: 02-interaction-design-ux-architecture-easy-c17-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -1125,14 +1125,14 @@ domain: interactive-design-studies
 prompt: 'Sort the UX research methods: Generative or Evaluative research'
 validator:
   kind: mapping
-  ref: interaction-design-ux-specialization-easy-c18-m1:private
+  ref: 02-interaction-design-ux-architecture-easy-c18-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: interaction-design-ux-specialization-easy-c18-m1:public
-privateValidatorRef: interaction-design-ux-specialization-easy-c18-m1:private
-rewardIdentity: interaction-design-ux-specialization-easy-c18-m1:v1
+publicPayloadRef: 02-interaction-design-ux-architecture-easy-c18-m1:public
+privateValidatorRef: 02-interaction-design-ux-architecture-easy-c18-m1:private
+rewardIdentity: 02-interaction-design-ux-architecture-easy-c18-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -1180,14 +1180,14 @@ domain: interactive-design-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: interaction-design-ux-specialization-easy-c19-m1:private
+  ref: 02-interaction-design-ux-architecture-easy-c19-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: interaction-design-ux-specialization-easy-c19-m1:public
-privateValidatorRef: interaction-design-ux-specialization-easy-c19-m1:private
-rewardIdentity: interaction-design-ux-specialization-easy-c19-m1:v1
+publicPayloadRef: 02-interaction-design-ux-architecture-easy-c19-m1:public
+privateValidatorRef: 02-interaction-design-ux-architecture-easy-c19-m1:private
+rewardIdentity: 02-interaction-design-ux-architecture-easy-c19-m1:v1
 presentation:
   supportedModes:
     - pointer

@@ -54,14 +54,14 @@ domain: entrepreneurship-studies
 prompt: 'Sort the examples: belongs on an Ideas List or skip it?'
 validator:
   kind: mapping
-  ref: entrepreneurship-foundations-easy-c2-m1:private
+  ref: 02-entrepreneurship-business-foundations-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: entrepreneurship-foundations-easy-c2-m1:public
-privateValidatorRef: entrepreneurship-foundations-easy-c2-m1:private
-rewardIdentity: entrepreneurship-foundations-easy-c2-m1:v1
+publicPayloadRef: 02-entrepreneurship-business-foundations-easy-c2-m1:public
+privateValidatorRef: 02-entrepreneurship-business-foundations-easy-c2-m1:private
+rewardIdentity: 02-entrepreneurship-business-foundations-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -154,15 +154,15 @@ domain: entrepreneurship-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: entrepreneurship-foundations-easy-c3-m1:private
+  ref: 02-entrepreneurship-business-foundations-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: entrepreneurship-foundations-easy-c3-m1:public
-privateValidatorRef: entrepreneurship-foundations-easy-c3-m1:private
-rewardIdentity: entrepreneurship-foundations-easy-c3-m1:v1
+publicPayloadRef: 02-entrepreneurship-business-foundations-easy-c3-m1:public
+privateValidatorRef: 02-entrepreneurship-business-foundations-easy-c3-m1:private
+rewardIdentity: 02-entrepreneurship-business-foundations-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -222,14 +222,14 @@ domain: entrepreneurship-studies
 prompt: Which strategy do these clues support?
 validator:
   kind: mapping
-  ref: entrepreneurship-foundations-easy-c4-m1:private
+  ref: 02-entrepreneurship-business-foundations-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: entrepreneurship-foundations-easy-c4-m1:public
-privateValidatorRef: entrepreneurship-foundations-easy-c4-m1:private
-rewardIdentity: entrepreneurship-foundations-easy-c4-m1:v1
+publicPayloadRef: 02-entrepreneurship-business-foundations-easy-c4-m1:public
+privateValidatorRef: 02-entrepreneurship-business-foundations-easy-c4-m1:private
+rewardIdentity: 02-entrepreneurship-business-foundations-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -283,15 +283,15 @@ domain: entrepreneurship-studies
 prompt: How the foundations of business professionalism unfold in order
 validator:
   kind: sequence
-  ref: entrepreneurship-foundations-easy-c5-m1:private
+  ref: 02-entrepreneurship-business-foundations-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: entrepreneurship-foundations-easy-c5-m1:public
-privateValidatorRef: entrepreneurship-foundations-easy-c5-m1:private
-rewardIdentity: entrepreneurship-foundations-easy-c5-m1:v1
+publicPayloadRef: 02-entrepreneurship-business-foundations-easy-c5-m1:public
+privateValidatorRef: 02-entrepreneurship-business-foundations-easy-c5-m1:private
+rewardIdentity: 02-entrepreneurship-business-foundations-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -353,14 +353,14 @@ domain: entrepreneurship-studies
 prompt: What's missing from the viability testing process?
 validator:
   kind: mapping
-  ref: entrepreneurship-foundations-easy-c6-m1:private
+  ref: 02-entrepreneurship-business-foundations-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: entrepreneurship-foundations-easy-c6-m1:public
-privateValidatorRef: entrepreneurship-foundations-easy-c6-m1:private
-rewardIdentity: entrepreneurship-foundations-easy-c6-m1:v1
+publicPayloadRef: 02-entrepreneurship-business-foundations-easy-c6-m1:public
+privateValidatorRef: 02-entrepreneurship-business-foundations-easy-c6-m1:private
+rewardIdentity: 02-entrepreneurship-business-foundations-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -426,14 +426,14 @@ domain: entrepreneurship-studies
 prompt: 'Sort the business checklist questions: Customer focus or Operations focus'
 validator:
   kind: mapping
-  ref: entrepreneurship-foundations-easy-c7-m1:private
+  ref: 02-entrepreneurship-business-foundations-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: entrepreneurship-foundations-easy-c7-m1:public
-privateValidatorRef: entrepreneurship-foundations-easy-c7-m1:private
-rewardIdentity: entrepreneurship-foundations-easy-c7-m1:v1
+publicPayloadRef: 02-entrepreneurship-business-foundations-easy-c7-m1:public
+privateValidatorRef: 02-entrepreneurship-business-foundations-easy-c7-m1:private
+rewardIdentity: 02-entrepreneurship-business-foundations-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -493,14 +493,14 @@ domain: entrepreneurship-studies
 prompt: Which pricing method do these clues support?
 validator:
   kind: mapping
-  ref: entrepreneurship-foundations-easy-c8-m1:private
+  ref: 02-entrepreneurship-business-foundations-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: entrepreneurship-foundations-easy-c8-m1:public
-privateValidatorRef: entrepreneurship-foundations-easy-c8-m1:private
-rewardIdentity: entrepreneurship-foundations-easy-c8-m1:v1
+publicPayloadRef: 02-entrepreneurship-business-foundations-easy-c8-m1:public
+privateValidatorRef: 02-entrepreneurship-business-foundations-easy-c8-m1:private
+rewardIdentity: 02-entrepreneurship-business-foundations-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -580,16 +580,16 @@ domain: entrepreneurship-studies
 prompt: Select the launch strategies that meet both constraints.
 validator:
   kind: invariants
-  ref: entrepreneurship-foundations-easy-c9-m1:private
+  ref: 02-entrepreneurship-business-foundations-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 2
   maxPayloadBytes: 4096
-publicPayloadRef: entrepreneurship-foundations-easy-c9-m1:public
-privateValidatorRef: entrepreneurship-foundations-easy-c9-m1:private
-rewardIdentity: entrepreneurship-foundations-easy-c9-m1:v1
+publicPayloadRef: 02-entrepreneurship-business-foundations-easy-c9-m1:public
+privateValidatorRef: 02-entrepreneurship-business-foundations-easy-c9-m1:private
+rewardIdentity: 02-entrepreneurship-business-foundations-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -721,15 +721,15 @@ prompt: >-
   inside its target range.
 validator:
   kind: invariants
-  ref: entrepreneurship-foundations-easy-c10-m1:private
+  ref: 02-entrepreneurship-business-foundations-easy-c10-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: entrepreneurship-foundations-easy-c10-m1:public
-privateValidatorRef: entrepreneurship-foundations-easy-c10-m1:private
-rewardIdentity: entrepreneurship-foundations-easy-c10-m1:v1
+publicPayloadRef: 02-entrepreneurship-business-foundations-easy-c10-m1:public
+privateValidatorRef: 02-entrepreneurship-business-foundations-easy-c10-m1:private
+rewardIdentity: 02-entrepreneurship-business-foundations-easy-c10-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -800,15 +800,15 @@ domain: entrepreneurship-studies
 prompt: How does the startup runway scenario play out?
 validator:
   kind: exact
-  ref: entrepreneurship-foundations-easy-c11-m1:private
+  ref: 02-entrepreneurship-business-foundations-easy-c11-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
-publicPayloadRef: entrepreneurship-foundations-easy-c11-m1:public
-privateValidatorRef: entrepreneurship-foundations-easy-c11-m1:private
-rewardIdentity: entrepreneurship-foundations-easy-c11-m1:v1
+publicPayloadRef: 02-entrepreneurship-business-foundations-easy-c11-m1:public
+privateValidatorRef: 02-entrepreneurship-business-foundations-easy-c11-m1:private
+rewardIdentity: 02-entrepreneurship-business-foundations-easy-c11-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -894,15 +894,15 @@ domain: entrepreneurship-studies
 prompt: Choose the legal structure for your new solo business and weigh the tradeoffs.
 validator:
   kind: rubric
-  ref: entrepreneurship-foundations-easy-c12-m1:private
+  ref: 02-entrepreneurship-business-foundations-easy-c12-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: entrepreneurship-foundations-easy-c12-m1:public
-privateValidatorRef: entrepreneurship-foundations-easy-c12-m1:private
-rewardIdentity: entrepreneurship-foundations-easy-c12-m1:v1
+publicPayloadRef: 02-entrepreneurship-business-foundations-easy-c12-m1:public
+privateValidatorRef: 02-entrepreneurship-business-foundations-easy-c12-m1:private
+rewardIdentity: 02-entrepreneurship-business-foundations-easy-c12-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -950,14 +950,14 @@ domain: entrepreneurship-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: entrepreneurship-foundations-easy-c13-m1:private
+  ref: 02-entrepreneurship-business-foundations-easy-c13-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: entrepreneurship-foundations-easy-c13-m1:public
-privateValidatorRef: entrepreneurship-foundations-easy-c13-m1:private
-rewardIdentity: entrepreneurship-foundations-easy-c13-m1:v1
+publicPayloadRef: 02-entrepreneurship-business-foundations-easy-c13-m1:public
+privateValidatorRef: 02-entrepreneurship-business-foundations-easy-c13-m1:private
+rewardIdentity: 02-entrepreneurship-business-foundations-easy-c13-m1:v1
 presentation:
   supportedModes:
     - pointer

@@ -50,14 +50,14 @@ domain: project-management-studies
 prompt: 'Sort the PMBOK phases: Set Up or Do & Done'
 validator:
   kind: mapping
-  ref: project-management-fundamentals-easy-c2-m1:private
+  ref: 01-project-management-fundamentals-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: project-management-fundamentals-easy-c2-m1:public
-privateValidatorRef: project-management-fundamentals-easy-c2-m1:private
-rewardIdentity: project-management-fundamentals-easy-c2-m1:v1
+publicPayloadRef: 01-project-management-fundamentals-easy-c2-m1:public
+privateValidatorRef: 01-project-management-fundamentals-easy-c2-m1:private
+rewardIdentity: 01-project-management-fundamentals-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -119,14 +119,14 @@ domain: project-management-studies
 prompt: Which concept do these clues support?
 validator:
   kind: mapping
-  ref: project-management-fundamentals-easy-c3-m1:private
+  ref: 01-project-management-fundamentals-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: project-management-fundamentals-easy-c3-m1:public
-privateValidatorRef: project-management-fundamentals-easy-c3-m1:private
-rewardIdentity: project-management-fundamentals-easy-c3-m1:v1
+publicPayloadRef: 01-project-management-fundamentals-easy-c3-m1:public
+privateValidatorRef: 01-project-management-fundamentals-easy-c3-m1:private
+rewardIdentity: 01-project-management-fundamentals-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -174,14 +174,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: project-management-fundamentals-easy-c4-m1:private
+  ref: 01-project-management-fundamentals-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: project-management-fundamentals-easy-c4-m1:public
-privateValidatorRef: project-management-fundamentals-easy-c4-m1:private
-rewardIdentity: project-management-fundamentals-easy-c4-m1:v1
+publicPayloadRef: 01-project-management-fundamentals-easy-c4-m1:public
+privateValidatorRef: 01-project-management-fundamentals-easy-c4-m1:private
+rewardIdentity: 01-project-management-fundamentals-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -229,14 +229,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: project-management-fundamentals-easy-c5-m1:private
+  ref: 01-project-management-fundamentals-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: project-management-fundamentals-easy-c5-m1:public
-privateValidatorRef: project-management-fundamentals-easy-c5-m1:private
-rewardIdentity: project-management-fundamentals-easy-c5-m1:v1
+publicPayloadRef: 01-project-management-fundamentals-easy-c5-m1:public
+privateValidatorRef: 01-project-management-fundamentals-easy-c5-m1:private
+rewardIdentity: 01-project-management-fundamentals-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -284,14 +284,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: project-management-fundamentals-easy-c6-m1:private
+  ref: 01-project-management-fundamentals-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: project-management-fundamentals-easy-c6-m1:public
-privateValidatorRef: project-management-fundamentals-easy-c6-m1:private
-rewardIdentity: project-management-fundamentals-easy-c6-m1:v1
+publicPayloadRef: 01-project-management-fundamentals-easy-c6-m1:public
+privateValidatorRef: 01-project-management-fundamentals-easy-c6-m1:private
+rewardIdentity: 01-project-management-fundamentals-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -356,14 +356,14 @@ domain: project-management-studies
 prompt: 'Sort the scope creep items: Cause or Effect'
 validator:
   kind: mapping
-  ref: project-management-fundamentals-easy-c7-m1:private
+  ref: 01-project-management-fundamentals-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: project-management-fundamentals-easy-c7-m1:public
-privateValidatorRef: project-management-fundamentals-easy-c7-m1:private
-rewardIdentity: project-management-fundamentals-easy-c7-m1:v1
+publicPayloadRef: 01-project-management-fundamentals-easy-c7-m1:public
+privateValidatorRef: 01-project-management-fundamentals-easy-c7-m1:private
+rewardIdentity: 01-project-management-fundamentals-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -440,15 +440,15 @@ domain: project-management-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: project-management-fundamentals-easy-c8-m1:private
+  ref: 01-project-management-fundamentals-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: project-management-fundamentals-easy-c8-m1:public
-privateValidatorRef: project-management-fundamentals-easy-c8-m1:private
-rewardIdentity: project-management-fundamentals-easy-c8-m1:v1
+publicPayloadRef: 01-project-management-fundamentals-easy-c8-m1:public
+privateValidatorRef: 01-project-management-fundamentals-easy-c8-m1:private
+rewardIdentity: 01-project-management-fundamentals-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer

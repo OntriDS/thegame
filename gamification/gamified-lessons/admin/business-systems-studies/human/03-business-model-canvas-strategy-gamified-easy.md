@@ -54,14 +54,14 @@ domain: business-systems-studies
 prompt: 'Sort the customer segment examples: Mass Market or Niche Market'
 validator:
   kind: mapping
-  ref: business-model-canvas-easy-c4-m1:private
+  ref: 03-business-model-canvas-strategy-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: business-model-canvas-easy-c4-m1:public
-privateValidatorRef: business-model-canvas-easy-c4-m1:private
-rewardIdentity: business-model-canvas-easy-c4-m1:v1
+publicPayloadRef: 03-business-model-canvas-strategy-easy-c4-m1:public
+privateValidatorRef: 03-business-model-canvas-strategy-easy-c4-m1:private
+rewardIdentity: 03-business-model-canvas-strategy-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -123,14 +123,14 @@ domain: business-systems-studies
 prompt: Which value proposition type do these clues support?
 validator:
   kind: mapping
-  ref: business-model-canvas-easy-c5-m1:private
+  ref: 03-business-model-canvas-strategy-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: business-model-canvas-easy-c5-m1:public
-privateValidatorRef: business-model-canvas-easy-c5-m1:private
-rewardIdentity: business-model-canvas-easy-c5-m1:v1
+publicPayloadRef: 03-business-model-canvas-strategy-easy-c5-m1:public
+privateValidatorRef: 03-business-model-canvas-strategy-easy-c5-m1:private
+rewardIdentity: 03-business-model-canvas-strategy-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -187,15 +187,15 @@ prompt: >-
   a purchase
 validator:
   kind: sequence
-  ref: business-model-canvas-easy-c6-m1:private
+  ref: 03-business-model-canvas-strategy-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: business-model-canvas-easy-c6-m1:public
-privateValidatorRef: business-model-canvas-easy-c6-m1:private
-rewardIdentity: business-model-canvas-easy-c6-m1:v1
+publicPayloadRef: 03-business-model-canvas-strategy-easy-c6-m1:public
+privateValidatorRef: 03-business-model-canvas-strategy-easy-c6-m1:private
+rewardIdentity: 03-business-model-canvas-strategy-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -271,15 +271,15 @@ domain: business-systems-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: business-model-canvas-easy-c7-m1:private
+  ref: 03-business-model-canvas-strategy-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: business-model-canvas-easy-c7-m1:public
-privateValidatorRef: business-model-canvas-easy-c7-m1:private
-rewardIdentity: business-model-canvas-easy-c7-m1:v1
+publicPayloadRef: 03-business-model-canvas-strategy-easy-c7-m1:public
+privateValidatorRef: 03-business-model-canvas-strategy-easy-c7-m1:private
+rewardIdentity: 03-business-model-canvas-strategy-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -345,14 +345,14 @@ domain: business-systems-studies
 prompt: 'Sort these business examples: Recurring revenue or One-time payment'
 validator:
   kind: mapping
-  ref: business-model-canvas-easy-c8-m1:private
+  ref: 03-business-model-canvas-strategy-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: business-model-canvas-easy-c8-m1:public
-privateValidatorRef: business-model-canvas-easy-c8-m1:private
-rewardIdentity: business-model-canvas-easy-c8-m1:v1
+publicPayloadRef: 03-business-model-canvas-strategy-easy-c8-m1:public
+privateValidatorRef: 03-business-model-canvas-strategy-easy-c8-m1:private
+rewardIdentity: 03-business-model-canvas-strategy-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -422,14 +422,14 @@ domain: business-systems-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: business-model-canvas-easy-c9-m1:private
+  ref: 03-business-model-canvas-strategy-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: business-model-canvas-easy-c9-m1:public
-privateValidatorRef: business-model-canvas-easy-c9-m1:private
-rewardIdentity: business-model-canvas-easy-c9-m1:v1
+publicPayloadRef: 03-business-model-canvas-strategy-easy-c9-m1:public
+privateValidatorRef: 03-business-model-canvas-strategy-easy-c9-m1:private
+rewardIdentity: 03-business-model-canvas-strategy-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -501,16 +501,16 @@ domain: business-systems-studies
 prompt: Diagnose why this business is failing to deliver on its value proposition.
 validator:
   kind: invariants
-  ref: business-model-canvas-easy-c10-m1:private
+  ref: 03-business-model-canvas-strategy-easy-c10-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
   maxPayloadBytes: 4096
-publicPayloadRef: business-model-canvas-easy-c10-m1:public
-privateValidatorRef: business-model-canvas-easy-c10-m1:private
-rewardIdentity: business-model-canvas-easy-c10-m1:v1
+publicPayloadRef: 03-business-model-canvas-strategy-easy-c10-m1:public
+privateValidatorRef: 03-business-model-canvas-strategy-easy-c10-m1:private
+rewardIdentity: 03-business-model-canvas-strategy-easy-c10-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -582,15 +582,15 @@ domain: business-systems-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: business-model-canvas-easy-c11-m1:private
+  ref: 03-business-model-canvas-strategy-easy-c11-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: business-model-canvas-easy-c11-m1:public
-privateValidatorRef: business-model-canvas-easy-c11-m1:private
-rewardIdentity: business-model-canvas-easy-c11-m1:v1
+publicPayloadRef: 03-business-model-canvas-strategy-easy-c11-m1:public
+privateValidatorRef: 03-business-model-canvas-strategy-easy-c11-m1:private
+rewardIdentity: 03-business-model-canvas-strategy-easy-c11-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -638,14 +638,14 @@ domain: business-systems-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: business-model-canvas-easy-c12-m1:private
+  ref: 03-business-model-canvas-strategy-easy-c12-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: business-model-canvas-easy-c12-m1:public
-privateValidatorRef: business-model-canvas-easy-c12-m1:private
-rewardIdentity: business-model-canvas-easy-c12-m1:v1
+publicPayloadRef: 03-business-model-canvas-strategy-easy-c12-m1:public
+privateValidatorRef: 03-business-model-canvas-strategy-easy-c12-m1:private
+rewardIdentity: 03-business-model-canvas-strategy-easy-c12-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -711,14 +711,14 @@ domain: business-systems-studies
 prompt: 'Sort the external forces around your canvas: Market or Industry'
 validator:
   kind: mapping
-  ref: business-model-canvas-easy-c14-m1:private
+  ref: 03-business-model-canvas-strategy-easy-c14-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: business-model-canvas-easy-c14-m1:public
-privateValidatorRef: business-model-canvas-easy-c14-m1:private
-rewardIdentity: business-model-canvas-easy-c14-m1:v1
+publicPayloadRef: 03-business-model-canvas-strategy-easy-c14-m1:public
+privateValidatorRef: 03-business-model-canvas-strategy-easy-c14-m1:private
+rewardIdentity: 03-business-model-canvas-strategy-easy-c14-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -766,14 +766,14 @@ domain: business-systems-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: business-model-canvas-easy-c15-m1:private
+  ref: 03-business-model-canvas-strategy-easy-c15-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: business-model-canvas-easy-c15-m1:public
-privateValidatorRef: business-model-canvas-easy-c15-m1:private
-rewardIdentity: business-model-canvas-easy-c15-m1:v1
+publicPayloadRef: 03-business-model-canvas-strategy-easy-c15-m1:public
+privateValidatorRef: 03-business-model-canvas-strategy-easy-c15-m1:private
+rewardIdentity: 03-business-model-canvas-strategy-easy-c15-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -821,14 +821,14 @@ domain: business-systems-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: business-model-canvas-easy-c2-m1:private
+  ref: 03-business-model-canvas-strategy-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: business-model-canvas-easy-c2-m1:public
-privateValidatorRef: business-model-canvas-easy-c2-m1:private
-rewardIdentity: business-model-canvas-easy-c2-m1:v1
+publicPayloadRef: 03-business-model-canvas-strategy-easy-c2-m1:public
+privateValidatorRef: 03-business-model-canvas-strategy-easy-c2-m1:private
+rewardIdentity: 03-business-model-canvas-strategy-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer

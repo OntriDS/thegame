@@ -54,14 +54,14 @@ domain: project-management-studies
 prompt: 'Sort the project management concepts: Agile or Waterfall'
 validator:
   kind: mapping
-  ref: agile-core-framework-easy-c2-m1:private
+  ref: 04-agile-core-framework-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-core-framework-easy-c2-m1:public
-privateValidatorRef: agile-core-framework-easy-c2-m1:private
-rewardIdentity: agile-core-framework-easy-c2-m1:v1
+publicPayloadRef: 04-agile-core-framework-easy-c2-m1:public
+privateValidatorRef: 04-agile-core-framework-easy-c2-m1:private
+rewardIdentity: 04-agile-core-framework-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -124,14 +124,14 @@ domain: project-management-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: agile-core-framework-easy-c3-m1:private
+  ref: 04-agile-core-framework-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-core-framework-easy-c3-m1:public
-privateValidatorRef: agile-core-framework-easy-c3-m1:private
-rewardIdentity: agile-core-framework-easy-c3-m1:v1
+publicPayloadRef: 04-agile-core-framework-easy-c3-m1:public
+privateValidatorRef: 04-agile-core-framework-easy-c3-m1:private
+rewardIdentity: 04-agile-core-framework-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -223,15 +223,15 @@ domain: project-management-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: agile-core-framework-easy-c4-m1:private
+  ref: 04-agile-core-framework-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: agile-core-framework-easy-c4-m1:public
-privateValidatorRef: agile-core-framework-easy-c4-m1:private
-rewardIdentity: agile-core-framework-easy-c4-m1:v1
+publicPayloadRef: 04-agile-core-framework-easy-c4-m1:public
+privateValidatorRef: 04-agile-core-framework-easy-c4-m1:private
+rewardIdentity: 04-agile-core-framework-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -279,14 +279,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: agile-core-framework-easy-c5-m1:private
+  ref: 04-agile-core-framework-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-core-framework-easy-c5-m1:public
-privateValidatorRef: agile-core-framework-easy-c5-m1:private
-rewardIdentity: agile-core-framework-easy-c5-m1:v1
+publicPayloadRef: 04-agile-core-framework-easy-c5-m1:public
+privateValidatorRef: 04-agile-core-framework-easy-c5-m1:private
+rewardIdentity: 04-agile-core-framework-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -351,14 +351,14 @@ domain: project-management-studies
 prompt: 'Sort the project items: Constraint Type or PDS Requirement'
 validator:
   kind: mapping
-  ref: agile-core-framework-easy-c6-m1:private
+  ref: 04-agile-core-framework-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-core-framework-easy-c6-m1:public
-privateValidatorRef: agile-core-framework-easy-c6-m1:private
-rewardIdentity: agile-core-framework-easy-c6-m1:v1
+publicPayloadRef: 04-agile-core-framework-easy-c6-m1:public
+privateValidatorRef: 04-agile-core-framework-easy-c6-m1:private
+rewardIdentity: 04-agile-core-framework-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -462,15 +462,15 @@ prompt: >-
   in their target ranges.
 validator:
   kind: invariants
-  ref: agile-core-framework-easy-c7-m1:private
+  ref: 04-agile-core-framework-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: agile-core-framework-easy-c7-m1:public
-privateValidatorRef: agile-core-framework-easy-c7-m1:private
-rewardIdentity: agile-core-framework-easy-c7-m1:v1
+publicPayloadRef: 04-agile-core-framework-easy-c7-m1:public
+privateValidatorRef: 04-agile-core-framework-easy-c7-m1:private
+rewardIdentity: 04-agile-core-framework-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -533,15 +533,15 @@ domain: project-management-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: agile-core-framework-easy-c8-m1:private
+  ref: 04-agile-core-framework-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: agile-core-framework-easy-c8-m1:public
-privateValidatorRef: agile-core-framework-easy-c8-m1:private
-rewardIdentity: agile-core-framework-easy-c8-m1:v1
+publicPayloadRef: 04-agile-core-framework-easy-c8-m1:public
+privateValidatorRef: 04-agile-core-framework-easy-c8-m1:private
+rewardIdentity: 04-agile-core-framework-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -601,14 +601,14 @@ domain: project-management-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: agile-core-framework-easy-c9-m1:private
+  ref: 04-agile-core-framework-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-core-framework-easy-c9-m1:public
-privateValidatorRef: agile-core-framework-easy-c9-m1:private
-rewardIdentity: agile-core-framework-easy-c9-m1:v1
+publicPayloadRef: 04-agile-core-framework-easy-c9-m1:public
+privateValidatorRef: 04-agile-core-framework-easy-c9-m1:private
+rewardIdentity: 04-agile-core-framework-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer

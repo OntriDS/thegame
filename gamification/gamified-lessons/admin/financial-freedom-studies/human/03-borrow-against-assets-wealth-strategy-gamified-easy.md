@@ -36,14 +36,14 @@ domain: financial-freedom-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: how-rich-make-money-easy-c2-m1:private
+  ref: 03-borrow-against-assets-wealth-strategy-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: how-rich-make-money-easy-c2-m1:public
-privateValidatorRef: how-rich-make-money-easy-c2-m1:private
-rewardIdentity: how-rich-make-money-easy-c2-m1:v1
+publicPayloadRef: 03-borrow-against-assets-wealth-strategy-easy-c2-m1:public
+privateValidatorRef: 03-borrow-against-assets-wealth-strategy-easy-c2-m1:private
+rewardIdentity: 03-borrow-against-assets-wealth-strategy-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -105,14 +105,14 @@ domain: financial-freedom-studies
 prompt: 'Sort the holdings: Assets or Non-asset'
 validator:
   kind: mapping
-  ref: how-rich-make-money-easy-c3-m1:private
+  ref: 03-borrow-against-assets-wealth-strategy-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: how-rich-make-money-easy-c3-m1:public
-privateValidatorRef: how-rich-make-money-easy-c3-m1:private
-rewardIdentity: how-rich-make-money-easy-c3-m1:v1
+publicPayloadRef: 03-borrow-against-assets-wealth-strategy-easy-c3-m1:public
+privateValidatorRef: 03-borrow-against-assets-wealth-strategy-easy-c3-m1:private
+rewardIdentity: 03-borrow-against-assets-wealth-strategy-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -176,14 +176,14 @@ domain: financial-freedom-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: how-rich-make-money-easy-c4-m1:private
+  ref: 03-borrow-against-assets-wealth-strategy-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: how-rich-make-money-easy-c4-m1:public
-privateValidatorRef: how-rich-make-money-easy-c4-m1:private
-rewardIdentity: how-rich-make-money-easy-c4-m1:v1
+publicPayloadRef: 03-borrow-against-assets-wealth-strategy-easy-c4-m1:public
+privateValidatorRef: 03-borrow-against-assets-wealth-strategy-easy-c4-m1:private
+rewardIdentity: 03-borrow-against-assets-wealth-strategy-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -239,15 +239,15 @@ domain: financial-freedom-studies
 prompt: How the claimed wealth formula unfolds from start to finish
 validator:
   kind: sequence
-  ref: how-rich-make-money-easy-c5-m1:private
+  ref: 03-borrow-against-assets-wealth-strategy-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: how-rich-make-money-easy-c5-m1:public
-privateValidatorRef: how-rich-make-money-easy-c5-m1:private
-rewardIdentity: how-rich-make-money-easy-c5-m1:v1
+publicPayloadRef: 03-borrow-against-assets-wealth-strategy-easy-c5-m1:public
+privateValidatorRef: 03-borrow-against-assets-wealth-strategy-easy-c5-m1:private
+rewardIdentity: 03-borrow-against-assets-wealth-strategy-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -295,14 +295,14 @@ domain: financial-freedom-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: how-rich-make-money-easy-c6-m1:private
+  ref: 03-borrow-against-assets-wealth-strategy-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: how-rich-make-money-easy-c6-m1:public
-privateValidatorRef: how-rich-make-money-easy-c6-m1:private
-rewardIdentity: how-rich-make-money-easy-c6-m1:v1
+publicPayloadRef: 03-borrow-against-assets-wealth-strategy-easy-c6-m1:public
+privateValidatorRef: 03-borrow-against-assets-wealth-strategy-easy-c6-m1:private
+rewardIdentity: 03-borrow-against-assets-wealth-strategy-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -368,14 +368,14 @@ domain: financial-freedom-studies
 prompt: 'Sort the asset-backed borrowing items: Asset or Loan'
 validator:
   kind: mapping
-  ref: how-rich-make-money-easy-c7-m1:private
+  ref: 03-borrow-against-assets-wealth-strategy-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: how-rich-make-money-easy-c7-m1:public
-privateValidatorRef: how-rich-make-money-easy-c7-m1:private
-rewardIdentity: how-rich-make-money-easy-c7-m1:v1
+publicPayloadRef: 03-borrow-against-assets-wealth-strategy-easy-c7-m1:public
+privateValidatorRef: 03-borrow-against-assets-wealth-strategy-easy-c7-m1:private
+rewardIdentity: 03-borrow-against-assets-wealth-strategy-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -439,14 +439,14 @@ domain: financial-freedom-studies
 prompt: What's missing from the family capital transfer process?
 validator:
   kind: mapping
-  ref: how-rich-make-money-easy-c8-m1:private
+  ref: 03-borrow-against-assets-wealth-strategy-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: how-rich-make-money-easy-c8-m1:public
-privateValidatorRef: how-rich-make-money-easy-c8-m1:private
-rewardIdentity: how-rich-make-money-easy-c8-m1:v1
+publicPayloadRef: 03-borrow-against-assets-wealth-strategy-easy-c8-m1:public
+privateValidatorRef: 03-borrow-against-assets-wealth-strategy-easy-c8-m1:private
+rewardIdentity: 03-borrow-against-assets-wealth-strategy-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -531,7 +531,7 @@ domain: financial-freedom-studies
 prompt: Build the wealth feedback loop.
 validator:
   kind: invariants
-  ref: how-rich-make-money-easy-c9-m1:private
+  ref: 03-borrow-against-assets-wealth-strategy-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
@@ -539,9 +539,9 @@ limits:
   timeLimitSeconds: 60
   maxActions: 5
   maxReboots: 3
-publicPayloadRef: how-rich-make-money-easy-c9-m1:public
-privateValidatorRef: how-rich-make-money-easy-c9-m1:private
-rewardIdentity: how-rich-make-money-easy-c9-m1:v1
+publicPayloadRef: 03-borrow-against-assets-wealth-strategy-easy-c9-m1:public
+privateValidatorRef: 03-borrow-against-assets-wealth-strategy-easy-c9-m1:private
+rewardIdentity: 03-borrow-against-assets-wealth-strategy-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -608,15 +608,15 @@ domain: financial-freedom-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: how-rich-make-money-easy-c10-m1:private
+  ref: 03-borrow-against-assets-wealth-strategy-easy-c10-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: how-rich-make-money-easy-c10-m1:public
-privateValidatorRef: how-rich-make-money-easy-c10-m1:private
-rewardIdentity: how-rich-make-money-easy-c10-m1:v1
+publicPayloadRef: 03-borrow-against-assets-wealth-strategy-easy-c10-m1:public
+privateValidatorRef: 03-borrow-against-assets-wealth-strategy-easy-c10-m1:private
+rewardIdentity: 03-borrow-against-assets-wealth-strategy-easy-c10-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -665,14 +665,14 @@ domain: financial-freedom-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: how-rich-make-money-easy-c11-m1:private
+  ref: 03-borrow-against-assets-wealth-strategy-easy-c11-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: how-rich-make-money-easy-c11-m1:public
-privateValidatorRef: how-rich-make-money-easy-c11-m1:private
-rewardIdentity: how-rich-make-money-easy-c11-m1:v1
+publicPayloadRef: 03-borrow-against-assets-wealth-strategy-easy-c11-m1:public
+privateValidatorRef: 03-borrow-against-assets-wealth-strategy-easy-c11-m1:private
+rewardIdentity: 03-borrow-against-assets-wealth-strategy-easy-c11-m1:v1
 presentation:
   supportedModes:
     - pointer

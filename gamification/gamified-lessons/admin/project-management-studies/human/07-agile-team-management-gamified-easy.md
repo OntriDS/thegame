@@ -54,14 +54,14 @@ domain: project-management-studies
 prompt: 'Sort the Agile metrics: Outcome or Activity'
 validator:
   kind: mapping
-  ref: agile-team-frameworks-easy-c2-m1:private
+  ref: 07-agile-team-management-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-team-frameworks-easy-c2-m1:public
-privateValidatorRef: agile-team-frameworks-easy-c2-m1:private
-rewardIdentity: agile-team-frameworks-easy-c2-m1:v1
+publicPayloadRef: 07-agile-team-management-easy-c2-m1:public
+privateValidatorRef: 07-agile-team-management-easy-c2-m1:private
+rewardIdentity: 07-agile-team-management-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -112,15 +112,15 @@ domain: project-management-studies
 prompt: How the Agile learning cycle unfolds from experiment to improvement
 validator:
   kind: sequence
-  ref: agile-team-frameworks-easy-c3-m1:private
+  ref: 07-agile-team-management-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: agile-team-frameworks-easy-c3-m1:public
-privateValidatorRef: agile-team-frameworks-easy-c3-m1:private
-rewardIdentity: agile-team-frameworks-easy-c3-m1:v1
+publicPayloadRef: 07-agile-team-management-easy-c3-m1:public
+privateValidatorRef: 07-agile-team-management-easy-c3-m1:private
+rewardIdentity: 07-agile-team-management-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -199,16 +199,16 @@ domain: project-management-studies
 prompt: Diagnose why stakeholders were surprised at the sprint demo.
 validator:
   kind: invariants
-  ref: agile-team-frameworks-easy-c4-m1:private
+  ref: 07-agile-team-management-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
   maxPayloadBytes: 4096
-publicPayloadRef: agile-team-frameworks-easy-c4-m1:public
-privateValidatorRef: agile-team-frameworks-easy-c4-m1:private
-rewardIdentity: agile-team-frameworks-easy-c4-m1:v1
+publicPayloadRef: 07-agile-team-management-easy-c4-m1:public
+privateValidatorRef: 07-agile-team-management-easy-c4-m1:private
+rewardIdentity: 07-agile-team-management-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -268,14 +268,14 @@ domain: project-management-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: agile-team-frameworks-easy-c5-m1:private
+  ref: 07-agile-team-management-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-team-frameworks-easy-c5-m1:public
-privateValidatorRef: agile-team-frameworks-easy-c5-m1:private
-rewardIdentity: agile-team-frameworks-easy-c5-m1:v1
+publicPayloadRef: 07-agile-team-management-easy-c5-m1:public
+privateValidatorRef: 07-agile-team-management-easy-c5-m1:private
+rewardIdentity: 07-agile-team-management-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -323,14 +323,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: agile-team-frameworks-easy-c6-m1:private
+  ref: 07-agile-team-management-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-team-frameworks-easy-c6-m1:public
-privateValidatorRef: agile-team-frameworks-easy-c6-m1:private
-rewardIdentity: agile-team-frameworks-easy-c6-m1:v1
+publicPayloadRef: 07-agile-team-management-easy-c6-m1:public
+privateValidatorRef: 07-agile-team-management-easy-c6-m1:private
+rewardIdentity: 07-agile-team-management-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -396,15 +396,15 @@ domain: project-management-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: agile-team-frameworks-easy-c7-m1:private
+  ref: 07-agile-team-management-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: agile-team-frameworks-easy-c7-m1:public
-privateValidatorRef: agile-team-frameworks-easy-c7-m1:private
-rewardIdentity: agile-team-frameworks-easy-c7-m1:v1
+publicPayloadRef: 07-agile-team-management-easy-c7-m1:public
+privateValidatorRef: 07-agile-team-management-easy-c7-m1:private
+rewardIdentity: 07-agile-team-management-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -485,16 +485,16 @@ domain: project-management-studies
 prompt: Select mitigation strategies that meet all constraints.
 validator:
   kind: invariants
-  ref: agile-team-frameworks-easy-c8-m1:private
+  ref: 07-agile-team-management-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 2
   maxPayloadBytes: 4096
-publicPayloadRef: agile-team-frameworks-easy-c8-m1:public
-privateValidatorRef: agile-team-frameworks-easy-c8-m1:private
-rewardIdentity: agile-team-frameworks-easy-c8-m1:v1
+publicPayloadRef: 07-agile-team-management-easy-c8-m1:public
+privateValidatorRef: 07-agile-team-management-easy-c8-m1:private
+rewardIdentity: 07-agile-team-management-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -558,14 +558,14 @@ domain: project-management-studies
 prompt: What's missing from the New Teams process?
 validator:
   kind: mapping
-  ref: agile-team-frameworks-easy-c9-m1:private
+  ref: 07-agile-team-management-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-team-frameworks-easy-c9-m1:public
-privateValidatorRef: agile-team-frameworks-easy-c9-m1:private
-rewardIdentity: agile-team-frameworks-easy-c9-m1:v1
+publicPayloadRef: 07-agile-team-management-easy-c9-m1:public
+privateValidatorRef: 07-agile-team-management-easy-c9-m1:private
+rewardIdentity: 07-agile-team-management-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -625,14 +625,14 @@ domain: project-management-studies
 prompt: Which framework do these clues support?
 validator:
   kind: mapping
-  ref: agile-team-frameworks-easy-c10-m1:private
+  ref: 07-agile-team-management-easy-c10-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-team-frameworks-easy-c10-m1:public
-privateValidatorRef: agile-team-frameworks-easy-c10-m1:private
-rewardIdentity: agile-team-frameworks-easy-c10-m1:v1
+publicPayloadRef: 07-agile-team-management-easy-c10-m1:public
+privateValidatorRef: 07-agile-team-management-easy-c10-m1:private
+rewardIdentity: 07-agile-team-management-easy-c10-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -729,15 +729,15 @@ domain: project-management-studies
 prompt: How does the Agile adoption scenario play out?
 validator:
   kind: exact
-  ref: agile-team-frameworks-easy-c11-m1:private
+  ref: 07-agile-team-management-easy-c11-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
-publicPayloadRef: agile-team-frameworks-easy-c11-m1:public
-privateValidatorRef: agile-team-frameworks-easy-c11-m1:private
-rewardIdentity: agile-team-frameworks-easy-c11-m1:v1
+publicPayloadRef: 07-agile-team-management-easy-c11-m1:public
+privateValidatorRef: 07-agile-team-management-easy-c11-m1:private
+rewardIdentity: 07-agile-team-management-easy-c11-m1:v1
 presentation:
   supportedModes:
     - pointer

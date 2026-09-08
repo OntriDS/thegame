@@ -55,14 +55,14 @@ domain: interactive-design-studies
 prompt: 'Sort the XR characteristics: VR or AR/MR'
 validator:
   kind: mapping
-  ref: interaction-design-for-xr-easy-c2-m1:private
+  ref: 01-xr-interaction-design-spatial-ux-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: interaction-design-for-xr-easy-c2-m1:public
-privateValidatorRef: interaction-design-for-xr-easy-c2-m1:private
-rewardIdentity: interaction-design-for-xr-easy-c2-m1:v1
+publicPayloadRef: 01-xr-interaction-design-spatial-ux-easy-c2-m1:public
+privateValidatorRef: 01-xr-interaction-design-spatial-ux-easy-c2-m1:private
+rewardIdentity: 01-xr-interaction-design-spatial-ux-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -110,14 +110,14 @@ domain: interactive-design-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: interaction-design-for-xr-easy-c3-m1:private
+  ref: 01-xr-interaction-design-spatial-ux-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: interaction-design-for-xr-easy-c3-m1:public
-privateValidatorRef: interaction-design-for-xr-easy-c3-m1:private
-rewardIdentity: interaction-design-for-xr-easy-c3-m1:v1
+publicPayloadRef: 01-xr-interaction-design-spatial-ux-easy-c3-m1:public
+privateValidatorRef: 01-xr-interaction-design-spatial-ux-easy-c3-m1:private
+rewardIdentity: 01-xr-interaction-design-spatial-ux-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -201,16 +201,16 @@ domain: interactive-design-studies
 prompt: Select UI components that fit within the comfortable FOV canvas.
 validator:
   kind: invariants
-  ref: interaction-design-for-xr-easy-c4-m1:private
+  ref: 01-xr-interaction-design-spatial-ux-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 2
   maxPayloadBytes: 4096
-publicPayloadRef: interaction-design-for-xr-easy-c4-m1:public
-privateValidatorRef: interaction-design-for-xr-easy-c4-m1:private
-rewardIdentity: interaction-design-for-xr-easy-c4-m1:v1
+publicPayloadRef: 01-xr-interaction-design-spatial-ux-easy-c4-m1:public
+privateValidatorRef: 01-xr-interaction-design-spatial-ux-easy-c4-m1:private
+rewardIdentity: 01-xr-interaction-design-spatial-ux-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -281,15 +281,15 @@ domain: interactive-design-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: interaction-design-for-xr-easy-c5-m1:private
+  ref: 01-xr-interaction-design-spatial-ux-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: interaction-design-for-xr-easy-c5-m1:public
-privateValidatorRef: interaction-design-for-xr-easy-c5-m1:private
-rewardIdentity: interaction-design-for-xr-easy-c5-m1:v1
+publicPayloadRef: 01-xr-interaction-design-spatial-ux-easy-c5-m1:public
+privateValidatorRef: 01-xr-interaction-design-spatial-ux-easy-c5-m1:private
+rewardIdentity: 01-xr-interaction-design-spatial-ux-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -359,14 +359,14 @@ domain: interactive-design-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: interaction-design-for-xr-easy-c6-m1:private
+  ref: 01-xr-interaction-design-spatial-ux-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: interaction-design-for-xr-easy-c6-m1:public
-privateValidatorRef: interaction-design-for-xr-easy-c6-m1:private
-rewardIdentity: interaction-design-for-xr-easy-c6-m1:v1
+publicPayloadRef: 01-xr-interaction-design-spatial-ux-easy-c6-m1:public
+privateValidatorRef: 01-xr-interaction-design-spatial-ux-easy-c6-m1:private
+rewardIdentity: 01-xr-interaction-design-spatial-ux-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -434,16 +434,16 @@ domain: interactive-design-studies
 prompt: Diagnose the cause of user discomfort and adjust the controls to fix it.
 validator:
   kind: invariants
-  ref: interaction-design-for-xr-easy-c7-m1:private
+  ref: 01-xr-interaction-design-spatial-ux-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
   maxPayloadBytes: 4096
-publicPayloadRef: interaction-design-for-xr-easy-c7-m1:public
-privateValidatorRef: interaction-design-for-xr-easy-c7-m1:private
-rewardIdentity: interaction-design-for-xr-easy-c7-m1:v1
+publicPayloadRef: 01-xr-interaction-design-spatial-ux-easy-c7-m1:public
+privateValidatorRef: 01-xr-interaction-design-spatial-ux-easy-c7-m1:private
+rewardIdentity: 01-xr-interaction-design-spatial-ux-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -491,14 +491,14 @@ domain: interactive-design-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: interaction-design-for-xr-easy-c8-m1:private
+  ref: 01-xr-interaction-design-spatial-ux-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: interaction-design-for-xr-easy-c8-m1:public
-privateValidatorRef: interaction-design-for-xr-easy-c8-m1:private
-rewardIdentity: interaction-design-for-xr-easy-c8-m1:v1
+publicPayloadRef: 01-xr-interaction-design-spatial-ux-easy-c8-m1:public
+privateValidatorRef: 01-xr-interaction-design-spatial-ux-easy-c8-m1:private
+rewardIdentity: 01-xr-interaction-design-spatial-ux-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -551,15 +551,15 @@ domain: interactive-design-studies
 prompt: How a bodystorming session unfolds from start to finish
 validator:
   kind: sequence
-  ref: interaction-design-for-xr-easy-c9-m1:private
+  ref: 01-xr-interaction-design-spatial-ux-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: interaction-design-for-xr-easy-c9-m1:public
-privateValidatorRef: interaction-design-for-xr-easy-c9-m1:private
-rewardIdentity: interaction-design-for-xr-easy-c9-m1:v1
+publicPayloadRef: 01-xr-interaction-design-spatial-ux-easy-c9-m1:public
+privateValidatorRef: 01-xr-interaction-design-spatial-ux-easy-c9-m1:private
+rewardIdentity: 01-xr-interaction-design-spatial-ux-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -626,15 +626,15 @@ domain: interactive-design-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: interaction-design-for-xr-easy-c10-m1:private
+  ref: 01-xr-interaction-design-spatial-ux-easy-c10-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: interaction-design-for-xr-easy-c10-m1:public
-privateValidatorRef: interaction-design-for-xr-easy-c10-m1:private
-rewardIdentity: interaction-design-for-xr-easy-c10-m1:v1
+publicPayloadRef: 01-xr-interaction-design-spatial-ux-easy-c10-m1:public
+privateValidatorRef: 01-xr-interaction-design-spatial-ux-easy-c10-m1:private
+rewardIdentity: 01-xr-interaction-design-spatial-ux-easy-c10-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -702,14 +702,14 @@ domain: interactive-design-studies
 prompt: Which prototyping stage do these clues support?
 validator:
   kind: mapping
-  ref: interaction-design-for-xr-easy-c11-m1:private
+  ref: 01-xr-interaction-design-spatial-ux-easy-c11-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: interaction-design-for-xr-easy-c11-m1:public
-privateValidatorRef: interaction-design-for-xr-easy-c11-m1:private
-rewardIdentity: interaction-design-for-xr-easy-c11-m1:v1
+publicPayloadRef: 01-xr-interaction-design-spatial-ux-easy-c11-m1:public
+privateValidatorRef: 01-xr-interaction-design-spatial-ux-easy-c11-m1:private
+rewardIdentity: 01-xr-interaction-design-spatial-ux-easy-c11-m1:v1
 presentation:
   supportedModes:
     - pointer

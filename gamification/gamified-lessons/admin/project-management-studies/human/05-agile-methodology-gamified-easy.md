@@ -42,15 +42,15 @@ domain: project-management-studies
 prompt: How the Agile 5-Stages Methodology unfolds from kickoff to completion
 validator:
   kind: sequence
-  ref: agile-5-stages-methodology-easy-c2-m1:private
+  ref: 05-agile-methodology-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: agile-5-stages-methodology-easy-c2-m1:public
-privateValidatorRef: agile-5-stages-methodology-easy-c2-m1:private
-rewardIdentity: agile-5-stages-methodology-easy-c2-m1:v1
+publicPayloadRef: 05-agile-methodology-easy-c2-m1:public
+privateValidatorRef: 05-agile-methodology-easy-c2-m1:private
+rewardIdentity: 05-agile-methodology-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -98,14 +98,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: agile-5-stages-methodology-easy-c3-m1:private
+  ref: 05-agile-methodology-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-5-stages-methodology-easy-c3-m1:public
-privateValidatorRef: agile-5-stages-methodology-easy-c3-m1:private
-rewardIdentity: agile-5-stages-methodology-easy-c3-m1:v1
+publicPayloadRef: 05-agile-methodology-easy-c3-m1:public
+privateValidatorRef: 05-agile-methodology-easy-c3-m1:private
+rewardIdentity: 05-agile-methodology-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -170,14 +170,14 @@ domain: project-management-studies
 prompt: 'Sort the Plan stage elements: Activity or Output'
 validator:
   kind: mapping
-  ref: agile-5-stages-methodology-easy-c4-m1:private
+  ref: 05-agile-methodology-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-5-stages-methodology-easy-c4-m1:public
-privateValidatorRef: agile-5-stages-methodology-easy-c4-m1:private
-rewardIdentity: agile-5-stages-methodology-easy-c4-m1:v1
+publicPayloadRef: 05-agile-methodology-easy-c4-m1:public
+privateValidatorRef: 05-agile-methodology-easy-c4-m1:private
+rewardIdentity: 05-agile-methodology-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -225,14 +225,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: agile-5-stages-methodology-easy-c5-m1:private
+  ref: 05-agile-methodology-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-5-stages-methodology-easy-c5-m1:public
-privateValidatorRef: agile-5-stages-methodology-easy-c5-m1:private
-rewardIdentity: agile-5-stages-methodology-easy-c5-m1:v1
+publicPayloadRef: 05-agile-methodology-easy-c5-m1:public
+privateValidatorRef: 05-agile-methodology-easy-c5-m1:private
+rewardIdentity: 05-agile-methodology-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -296,14 +296,14 @@ domain: project-management-studies
 prompt: What's missing from the Adapt stage process?
 validator:
   kind: mapping
-  ref: agile-5-stages-methodology-easy-c6-m1:private
+  ref: 05-agile-methodology-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-5-stages-methodology-easy-c6-m1:public
-privateValidatorRef: agile-5-stages-methodology-easy-c6-m1:private
-rewardIdentity: agile-5-stages-methodology-easy-c6-m1:v1
+publicPayloadRef: 05-agile-methodology-easy-c6-m1:public
+privateValidatorRef: 05-agile-methodology-easy-c6-m1:private
+rewardIdentity: 05-agile-methodology-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -365,14 +365,14 @@ domain: project-management-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: agile-5-stages-methodology-easy-c7-m1:private
+  ref: 05-agile-methodology-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-5-stages-methodology-easy-c7-m1:public
-privateValidatorRef: agile-5-stages-methodology-easy-c7-m1:private
-rewardIdentity: agile-5-stages-methodology-easy-c7-m1:v1
+publicPayloadRef: 05-agile-methodology-easy-c7-m1:public
+privateValidatorRef: 05-agile-methodology-easy-c7-m1:private
+rewardIdentity: 05-agile-methodology-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -420,14 +420,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: agile-5-stages-methodology-easy-c8-m1:private
+  ref: 05-agile-methodology-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-5-stages-methodology-easy-c8-m1:public
-privateValidatorRef: agile-5-stages-methodology-easy-c8-m1:private
-rewardIdentity: agile-5-stages-methodology-easy-c8-m1:v1
+publicPayloadRef: 05-agile-methodology-easy-c8-m1:public
+privateValidatorRef: 05-agile-methodology-easy-c8-m1:private
+rewardIdentity: 05-agile-methodology-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer

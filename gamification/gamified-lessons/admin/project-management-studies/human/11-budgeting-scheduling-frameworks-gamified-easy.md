@@ -54,14 +54,14 @@ domain: project-management-studies
 prompt: 'Sort the project elements: work task or milestone'
 validator:
   kind: mapping
-  ref: budgeting-scheduling-projects-easy-c2-m1:private
+  ref: 11-budgeting-scheduling-frameworks-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: budgeting-scheduling-projects-easy-c2-m1:public
-privateValidatorRef: budgeting-scheduling-projects-easy-c2-m1:private
-rewardIdentity: budgeting-scheduling-projects-easy-c2-m1:v1
+publicPayloadRef: 11-budgeting-scheduling-frameworks-easy-c2-m1:public
+privateValidatorRef: 11-budgeting-scheduling-frameworks-easy-c2-m1:private
+rewardIdentity: 11-budgeting-scheduling-frameworks-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -147,15 +147,15 @@ prompt: >-
   inside the target range (divide by 6 to get the time estimate in days).
 validator:
   kind: invariants
-  ref: budgeting-scheduling-projects-easy-c3-m1:private
+  ref: 11-budgeting-scheduling-frameworks-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: budgeting-scheduling-projects-easy-c3-m1:public
-privateValidatorRef: budgeting-scheduling-projects-easy-c3-m1:private
-rewardIdentity: budgeting-scheduling-projects-easy-c3-m1:v1
+publicPayloadRef: 11-budgeting-scheduling-frameworks-easy-c3-m1:public
+privateValidatorRef: 11-budgeting-scheduling-frameworks-easy-c3-m1:private
+rewardIdentity: 11-budgeting-scheduling-frameworks-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -221,14 +221,14 @@ domain: project-management-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: budgeting-scheduling-projects-easy-c4-m1:private
+  ref: 11-budgeting-scheduling-frameworks-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: budgeting-scheduling-projects-easy-c4-m1:public
-privateValidatorRef: budgeting-scheduling-projects-easy-c4-m1:private
-rewardIdentity: budgeting-scheduling-projects-easy-c4-m1:v1
+publicPayloadRef: 11-budgeting-scheduling-frameworks-easy-c4-m1:public
+privateValidatorRef: 11-budgeting-scheduling-frameworks-easy-c4-m1:private
+rewardIdentity: 11-budgeting-scheduling-frameworks-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -293,14 +293,14 @@ domain: project-management-studies
 prompt: 'Sort the RACI role examples: Does the work or Signs it off'
 validator:
   kind: mapping
-  ref: budgeting-scheduling-projects-easy-c5-m1:private
+  ref: 11-budgeting-scheduling-frameworks-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: budgeting-scheduling-projects-easy-c5-m1:public
-privateValidatorRef: budgeting-scheduling-projects-easy-c5-m1:private
-rewardIdentity: budgeting-scheduling-projects-easy-c5-m1:v1
+publicPayloadRef: 11-budgeting-scheduling-frameworks-easy-c5-m1:public
+privateValidatorRef: 11-budgeting-scheduling-frameworks-easy-c5-m1:private
+rewardIdentity: 11-budgeting-scheduling-frameworks-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -348,14 +348,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: budgeting-scheduling-projects-easy-c6-m1:private
+  ref: 11-budgeting-scheduling-frameworks-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: budgeting-scheduling-projects-easy-c6-m1:public
-privateValidatorRef: budgeting-scheduling-projects-easy-c6-m1:private
-rewardIdentity: budgeting-scheduling-projects-easy-c6-m1:v1
+publicPayloadRef: 11-budgeting-scheduling-frameworks-easy-c6-m1:public
+privateValidatorRef: 11-budgeting-scheduling-frameworks-easy-c6-m1:private
+rewardIdentity: 11-budgeting-scheduling-frameworks-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -419,15 +419,15 @@ domain: project-management-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: budgeting-scheduling-projects-easy-c7-m1:private
+  ref: 11-budgeting-scheduling-frameworks-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: budgeting-scheduling-projects-easy-c7-m1:public
-privateValidatorRef: budgeting-scheduling-projects-easy-c7-m1:private
-rewardIdentity: budgeting-scheduling-projects-easy-c7-m1:v1
+publicPayloadRef: 11-budgeting-scheduling-frameworks-easy-c7-m1:public
+privateValidatorRef: 11-budgeting-scheduling-frameworks-easy-c7-m1:private
+rewardIdentity: 11-budgeting-scheduling-frameworks-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer

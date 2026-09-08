@@ -36,14 +36,14 @@ domain: project-management-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: agile-project-management-easy-c2-m1:private
+  ref: 03-agile-project-management-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-project-management-easy-c2-m1:public
-privateValidatorRef: agile-project-management-easy-c2-m1:private
-rewardIdentity: agile-project-management-easy-c2-m1:v1
+publicPayloadRef: 03-agile-project-management-easy-c2-m1:public
+privateValidatorRef: 03-agile-project-management-easy-c2-m1:private
+rewardIdentity: 03-agile-project-management-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -111,14 +111,14 @@ domain: project-management-studies
 prompt: 'Sort the Agile PM terms: Sprint concept or Feature concept'
 validator:
   kind: mapping
-  ref: agile-project-management-easy-c3-m1:private
+  ref: 03-agile-project-management-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-project-management-easy-c3-m1:public
-privateValidatorRef: agile-project-management-easy-c3-m1:private
-rewardIdentity: agile-project-management-easy-c3-m1:v1
+publicPayloadRef: 03-agile-project-management-easy-c3-m1:public
+privateValidatorRef: 03-agile-project-management-easy-c3-m1:private
+rewardIdentity: 03-agile-project-management-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -191,15 +191,15 @@ domain: project-management-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: agile-project-management-easy-c4-m1:private
+  ref: 03-agile-project-management-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: agile-project-management-easy-c4-m1:public
-privateValidatorRef: agile-project-management-easy-c4-m1:private
-rewardIdentity: agile-project-management-easy-c4-m1:v1
+publicPayloadRef: 03-agile-project-management-easy-c4-m1:public
+privateValidatorRef: 03-agile-project-management-easy-c4-m1:private
+rewardIdentity: 03-agile-project-management-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -261,14 +261,14 @@ domain: project-management-studies
 prompt: Which methodology do these clues support?
 validator:
   kind: mapping
-  ref: agile-project-management-easy-c6-m1:private
+  ref: 03-agile-project-management-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-project-management-easy-c6-m1:public
-privateValidatorRef: agile-project-management-easy-c6-m1:private
-rewardIdentity: agile-project-management-easy-c6-m1:v1
+publicPayloadRef: 03-agile-project-management-easy-c6-m1:public
+privateValidatorRef: 03-agile-project-management-easy-c6-m1:private
+rewardIdentity: 03-agile-project-management-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -324,15 +324,15 @@ domain: project-management-studies
 prompt: How the five-stage Agile methodology unfolds from start to finish
 validator:
   kind: sequence
-  ref: agile-project-management-easy-c8-m1:private
+  ref: 03-agile-project-management-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: agile-project-management-easy-c8-m1:public
-privateValidatorRef: agile-project-management-easy-c8-m1:private
-rewardIdentity: agile-project-management-easy-c8-m1:v1
+publicPayloadRef: 03-agile-project-management-easy-c8-m1:public
+privateValidatorRef: 03-agile-project-management-easy-c8-m1:private
+rewardIdentity: 03-agile-project-management-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -394,14 +394,14 @@ domain: project-management-studies
 prompt: What's missing from the Envision stage process?
 validator:
   kind: mapping
-  ref: agile-project-management-easy-c9-m1:private
+  ref: 03-agile-project-management-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: agile-project-management-easy-c9-m1:public
-privateValidatorRef: agile-project-management-easy-c9-m1:private
-rewardIdentity: agile-project-management-easy-c9-m1:v1
+publicPayloadRef: 03-agile-project-management-easy-c9-m1:public
+privateValidatorRef: 03-agile-project-management-easy-c9-m1:private
+rewardIdentity: 03-agile-project-management-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -512,15 +512,15 @@ domain: project-management-studies
 prompt: Tune the Plan stage activities so every output lands within its target range.
 validator:
   kind: invariants
-  ref: agile-project-management-easy-c10-m1:private
+  ref: 03-agile-project-management-easy-c10-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: agile-project-management-easy-c10-m1:public
-privateValidatorRef: agile-project-management-easy-c10-m1:private
-rewardIdentity: agile-project-management-easy-c10-m1:v1
+publicPayloadRef: 03-agile-project-management-easy-c10-m1:public
+privateValidatorRef: 03-agile-project-management-easy-c10-m1:private
+rewardIdentity: 03-agile-project-management-easy-c10-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -602,16 +602,16 @@ prompt: >-
   to fix it.
 validator:
   kind: invariants
-  ref: agile-project-management-easy-c11-m1:private
+  ref: 03-agile-project-management-easy-c11-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
   maxPayloadBytes: 4096
-publicPayloadRef: agile-project-management-easy-c11-m1:public
-privateValidatorRef: agile-project-management-easy-c11-m1:private
-rewardIdentity: agile-project-management-easy-c11-m1:v1
+publicPayloadRef: 03-agile-project-management-easy-c11-m1:public
+privateValidatorRef: 03-agile-project-management-easy-c11-m1:private
+rewardIdentity: 03-agile-project-management-easy-c11-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -702,7 +702,7 @@ domain: project-management-studies
 prompt: Run the Adapt stage and bring its deliverables to target.
 validator:
   kind: invariants
-  ref: agile-project-management-easy-c12-m1:private
+  ref: 03-agile-project-management-easy-c12-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
@@ -710,9 +710,9 @@ limits:
   timeLimitSeconds: 60
   maxActions: 5
   maxReboots: 3
-publicPayloadRef: agile-project-management-easy-c12-m1:public
-privateValidatorRef: agile-project-management-easy-c12-m1:private
-rewardIdentity: agile-project-management-easy-c12-m1:v1
+publicPayloadRef: 03-agile-project-management-easy-c12-m1:public
+privateValidatorRef: 03-agile-project-management-easy-c12-m1:private
+rewardIdentity: 03-agile-project-management-easy-c12-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -773,15 +773,15 @@ domain: project-management-studies
 prompt: How the project Close stage unfolds from final delivery to team release
 validator:
   kind: sequence
-  ref: agile-project-management-easy-c13-m1:private
+  ref: 03-agile-project-management-easy-c13-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: agile-project-management-easy-c13-m1:public
-privateValidatorRef: agile-project-management-easy-c13-m1:private
-rewardIdentity: agile-project-management-easy-c13-m1:v1
+publicPayloadRef: 03-agile-project-management-easy-c13-m1:public
+privateValidatorRef: 03-agile-project-management-easy-c13-m1:private
+rewardIdentity: 03-agile-project-management-easy-c13-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -864,16 +864,16 @@ domain: project-management-studies
 prompt: Select the projects that meet the Agile suitability constraints.
 validator:
   kind: invariants
-  ref: agile-project-management-easy-c14-m1:private
+  ref: 03-agile-project-management-easy-c14-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 2
   maxPayloadBytes: 4096
-publicPayloadRef: agile-project-management-easy-c14-m1:public
-privateValidatorRef: agile-project-management-easy-c14-m1:private
-rewardIdentity: agile-project-management-easy-c14-m1:v1
+publicPayloadRef: 03-agile-project-management-easy-c14-m1:public
+privateValidatorRef: 03-agile-project-management-easy-c14-m1:private
+rewardIdentity: 03-agile-project-management-easy-c14-m1:v1
 presentation:
   supportedModes:
     - pointer

@@ -36,14 +36,14 @@ domain: business-systems-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: building-business-systems-easy-c2-m1:private
+  ref: 02-building-delegable-business-systems-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: building-business-systems-easy-c2-m1:public
-privateValidatorRef: building-business-systems-easy-c2-m1:private
-rewardIdentity: building-business-systems-easy-c2-m1:v1
+publicPayloadRef: 02-building-delegable-business-systems-easy-c2-m1:public
+privateValidatorRef: 02-building-delegable-business-systems-easy-c2-m1:private
+rewardIdentity: 02-building-delegable-business-systems-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -105,14 +105,14 @@ domain: business-systems-studies
 prompt: 'Sort the system traits: System or Chaos'
 validator:
   kind: mapping
-  ref: building-business-systems-easy-c3-m1:private
+  ref: 02-building-delegable-business-systems-easy-c3-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: building-business-systems-easy-c3-m1:public
-privateValidatorRef: building-business-systems-easy-c3-m1:private
-rewardIdentity: building-business-systems-easy-c3-m1:v1
+publicPayloadRef: 02-building-delegable-business-systems-easy-c3-m1:public
+privateValidatorRef: 02-building-delegable-business-systems-easy-c3-m1:private
+rewardIdentity: 02-building-delegable-business-systems-easy-c3-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -172,14 +172,14 @@ domain: business-systems-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: building-business-systems-easy-c4-m1:private
+  ref: 02-building-delegable-business-systems-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: building-business-systems-easy-c4-m1:public
-privateValidatorRef: building-business-systems-easy-c4-m1:private
-rewardIdentity: building-business-systems-easy-c4-m1:v1
+publicPayloadRef: 02-building-delegable-business-systems-easy-c4-m1:public
+privateValidatorRef: 02-building-delegable-business-systems-easy-c4-m1:private
+rewardIdentity: 02-building-delegable-business-systems-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -232,15 +232,15 @@ domain: business-systems-studies
 prompt: How a business operation breaks down from highest level to individual work
 validator:
   kind: sequence
-  ref: building-business-systems-easy-c5-m1:private
+  ref: 02-building-delegable-business-systems-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: building-business-systems-easy-c5-m1:public
-privateValidatorRef: building-business-systems-easy-c5-m1:private
-rewardIdentity: building-business-systems-easy-c5-m1:v1
+publicPayloadRef: 02-building-delegable-business-systems-easy-c5-m1:public
+privateValidatorRef: 02-building-delegable-business-systems-easy-c5-m1:private
+rewardIdentity: 02-building-delegable-business-systems-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -375,15 +375,15 @@ prompt: >-
   candidate.
 validator:
   kind: invariants
-  ref: building-business-systems-easy-c6-m1:private
+  ref: 02-building-delegable-business-systems-easy-c6-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: building-business-systems-easy-c6-m1:public
-privateValidatorRef: building-business-systems-easy-c6-m1:private
-rewardIdentity: building-business-systems-easy-c6-m1:v1
+publicPayloadRef: 02-building-delegable-business-systems-easy-c6-m1:public
+privateValidatorRef: 02-building-delegable-business-systems-easy-c6-m1:private
+rewardIdentity: 02-building-delegable-business-systems-easy-c6-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -441,14 +441,14 @@ domain: business-systems-studies
 prompt: 'Sort the task cues: Automate or Delegate'
 validator:
   kind: mapping
-  ref: building-business-systems-easy-c7-m1:private
+  ref: 02-building-delegable-business-systems-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: building-business-systems-easy-c7-m1:public
-privateValidatorRef: building-business-systems-easy-c7-m1:private
-rewardIdentity: building-business-systems-easy-c7-m1:v1
+publicPayloadRef: 02-building-delegable-business-systems-easy-c7-m1:public
+privateValidatorRef: 02-building-delegable-business-systems-easy-c7-m1:private
+rewardIdentity: 02-building-delegable-business-systems-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -523,15 +523,15 @@ domain: business-systems-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: building-business-systems-easy-c8-m1:private
+  ref: 02-building-delegable-business-systems-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: building-business-systems-easy-c8-m1:public
-privateValidatorRef: building-business-systems-easy-c8-m1:private
-rewardIdentity: building-business-systems-easy-c8-m1:v1
+publicPayloadRef: 02-building-delegable-business-systems-easy-c8-m1:public
+privateValidatorRef: 02-building-delegable-business-systems-easy-c8-m1:private
+rewardIdentity: 02-building-delegable-business-systems-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -608,16 +608,16 @@ domain: business-systems-studies
 prompt: Select documentation components that meet all constraints.
 validator:
   kind: invariants
-  ref: building-business-systems-easy-c9-m1:private
+  ref: 02-building-delegable-business-systems-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 2
   maxPayloadBytes: 4096
-publicPayloadRef: building-business-systems-easy-c9-m1:public
-privateValidatorRef: building-business-systems-easy-c9-m1:private
-rewardIdentity: building-business-systems-easy-c9-m1:v1
+publicPayloadRef: 02-building-delegable-business-systems-easy-c9-m1:public
+privateValidatorRef: 02-building-delegable-business-systems-easy-c9-m1:private
+rewardIdentity: 02-building-delegable-business-systems-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -695,15 +695,15 @@ domain: business-systems-studies
 prompt: How does the post-delegation systems scenario play out?
 validator:
   kind: exact
-  ref: building-business-systems-easy-c10-m1:private
+  ref: 02-building-delegable-business-systems-easy-c10-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
-publicPayloadRef: building-business-systems-easy-c10-m1:public
-privateValidatorRef: building-business-systems-easy-c10-m1:private
-rewardIdentity: building-business-systems-easy-c10-m1:v1
+publicPayloadRef: 02-building-delegable-business-systems-easy-c10-m1:public
+privateValidatorRef: 02-building-delegable-business-systems-easy-c10-m1:private
+rewardIdentity: 02-building-delegable-business-systems-easy-c10-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -793,7 +793,7 @@ domain: business-systems-studies
 prompt: Tune the manufacturing system so it produces results.
 validator:
   kind: invariants
-  ref: building-business-systems-easy-c11-m1:private
+  ref: 02-building-delegable-business-systems-easy-c11-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
@@ -801,9 +801,9 @@ limits:
   timeLimitSeconds: 60
   maxActions: 5
   maxReboots: 3
-publicPayloadRef: building-business-systems-easy-c11-m1:public
-privateValidatorRef: building-business-systems-easy-c11-m1:private
-rewardIdentity: building-business-systems-easy-c11-m1:v1
+publicPayloadRef: 02-building-delegable-business-systems-easy-c11-m1:public
+privateValidatorRef: 02-building-delegable-business-systems-easy-c11-m1:private
+rewardIdentity: 02-building-delegable-business-systems-easy-c11-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -867,14 +867,14 @@ domain: business-systems-studies
 prompt: What's missing from the feedback loop process?
 validator:
   kind: mapping
-  ref: building-business-systems-easy-c12-m1:private
+  ref: 02-building-delegable-business-systems-easy-c12-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: building-business-systems-easy-c12-m1:public
-privateValidatorRef: building-business-systems-easy-c12-m1:private
-rewardIdentity: building-business-systems-easy-c12-m1:v1
+publicPayloadRef: 02-building-delegable-business-systems-easy-c12-m1:public
+privateValidatorRef: 02-building-delegable-business-systems-easy-c12-m1:private
+rewardIdentity: 02-building-delegable-business-systems-easy-c12-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -941,14 +941,14 @@ domain: business-systems-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: building-business-systems-easy-c13-m1:private
+  ref: 02-building-delegable-business-systems-easy-c13-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: building-business-systems-easy-c13-m1:public
-privateValidatorRef: building-business-systems-easy-c13-m1:private
-rewardIdentity: building-business-systems-easy-c13-m1:v1
+publicPayloadRef: 02-building-delegable-business-systems-easy-c13-m1:public
+privateValidatorRef: 02-building-delegable-business-systems-easy-c13-m1:private
+rewardIdentity: 02-building-delegable-business-systems-easy-c13-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -1012,15 +1012,15 @@ domain: business-systems-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: building-business-systems-easy-c14-m1:private
+  ref: 02-building-delegable-business-systems-easy-c14-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: building-business-systems-easy-c14-m1:public
-privateValidatorRef: building-business-systems-easy-c14-m1:private
-rewardIdentity: building-business-systems-easy-c14-m1:v1
+publicPayloadRef: 02-building-delegable-business-systems-easy-c14-m1:public
+privateValidatorRef: 02-building-delegable-business-systems-easy-c14-m1:private
+rewardIdentity: 02-building-delegable-business-systems-easy-c14-m1:v1
 presentation:
   supportedModes:
     - pointer

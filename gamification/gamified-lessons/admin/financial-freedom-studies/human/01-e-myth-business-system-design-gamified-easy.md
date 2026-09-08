@@ -37,14 +37,14 @@ domain: financial-freedom-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: build-a-business-for-financial-freedom-easy-c2-m1:private
+  ref: 01-e-myth-business-system-design-easy-c2-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: build-a-business-for-financial-freedom-easy-c2-m1:public
-privateValidatorRef: build-a-business-for-financial-freedom-easy-c2-m1:private
-rewardIdentity: build-a-business-for-financial-freedom-easy-c2-m1:v1
+publicPayloadRef: 01-e-myth-business-system-design-easy-c2-m1:public
+privateValidatorRef: 01-e-myth-business-system-design-easy-c2-m1:private
+rewardIdentity: 01-e-myth-business-system-design-easy-c2-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -92,14 +92,14 @@ domain: financial-freedom-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: build-a-business-for-financial-freedom-easy-c4-m1:private
+  ref: 01-e-myth-business-system-design-easy-c4-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: build-a-business-for-financial-freedom-easy-c4-m1:public
-privateValidatorRef: build-a-business-for-financial-freedom-easy-c4-m1:private
-rewardIdentity: build-a-business-for-financial-freedom-easy-c4-m1:v1
+publicPayloadRef: 01-e-myth-business-system-design-easy-c4-m1:public
+privateValidatorRef: 01-e-myth-business-system-design-easy-c4-m1:private
+rewardIdentity: 01-e-myth-business-system-design-easy-c4-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -165,14 +165,14 @@ domain: financial-freedom-studies
 prompt: 'Sort these small-business owner behaviors: Visionary or Doer'
 validator:
   kind: mapping
-  ref: build-a-business-for-financial-freedom-easy-c5-m1:private
+  ref: 01-e-myth-business-system-design-easy-c5-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: build-a-business-for-financial-freedom-easy-c5-m1:public
-privateValidatorRef: build-a-business-for-financial-freedom-easy-c5-m1:private
-rewardIdentity: build-a-business-for-financial-freedom-easy-c5-m1:v1
+publicPayloadRef: 01-e-myth-business-system-design-easy-c5-m1:public
+privateValidatorRef: 01-e-myth-business-system-design-easy-c5-m1:private
+rewardIdentity: 01-e-myth-business-system-design-easy-c5-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -231,15 +231,15 @@ domain: financial-freedom-studies
 prompt: How the infancy stage of a business unfolds from start to finish
 validator:
   kind: sequence
-  ref: build-a-business-for-financial-freedom-easy-c7-m1:private
+  ref: 01-e-myth-business-system-design-easy-c7-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: build-a-business-for-financial-freedom-easy-c7-m1:public
-privateValidatorRef: build-a-business-for-financial-freedom-easy-c7-m1:private
-rewardIdentity: build-a-business-for-financial-freedom-easy-c7-m1:v1
+publicPayloadRef: 01-e-myth-business-system-design-easy-c7-m1:public
+privateValidatorRef: 01-e-myth-business-system-design-easy-c7-m1:private
+rewardIdentity: 01-e-myth-business-system-design-easy-c7-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -301,14 +301,14 @@ domain: financial-freedom-studies
 prompt: What's missing from the adolescence process?
 validator:
   kind: mapping
-  ref: build-a-business-for-financial-freedom-easy-c8-m1:private
+  ref: 01-e-myth-business-system-design-easy-c8-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: build-a-business-for-financial-freedom-easy-c8-m1:public
-privateValidatorRef: build-a-business-for-financial-freedom-easy-c8-m1:private
-rewardIdentity: build-a-business-for-financial-freedom-easy-c8-m1:v1
+publicPayloadRef: 01-e-myth-business-system-design-easy-c8-m1:public
+privateValidatorRef: 01-e-myth-business-system-design-easy-c8-m1:private
+rewardIdentity: 01-e-myth-business-system-design-easy-c8-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -380,15 +380,15 @@ domain: financial-freedom-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: build-a-business-for-financial-freedom-easy-c9-m1:private
+  ref: 01-e-myth-business-system-design-easy-c9-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: build-a-business-for-financial-freedom-easy-c9-m1:public
-privateValidatorRef: build-a-business-for-financial-freedom-easy-c9-m1:private
-rewardIdentity: build-a-business-for-financial-freedom-easy-c9-m1:v1
+publicPayloadRef: 01-e-myth-business-system-design-easy-c9-m1:public
+privateValidatorRef: 01-e-myth-business-system-design-easy-c9-m1:private
+rewardIdentity: 01-e-myth-business-system-design-easy-c9-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -448,14 +448,14 @@ domain: financial-freedom-studies
 prompt: Which theory do these clues support?
 validator:
   kind: mapping
-  ref: build-a-business-for-financial-freedom-easy-c10-m1:private
+  ref: 01-e-myth-business-system-design-easy-c10-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: build-a-business-for-financial-freedom-easy-c10-m1:public
-privateValidatorRef: build-a-business-for-financial-freedom-easy-c10-m1:private
-rewardIdentity: build-a-business-for-financial-freedom-easy-c10-m1:v1
+publicPayloadRef: 01-e-myth-business-system-design-easy-c10-m1:public
+privateValidatorRef: 01-e-myth-business-system-design-easy-c10-m1:private
+rewardIdentity: 01-e-myth-business-system-design-easy-c10-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -531,16 +531,16 @@ domain: financial-freedom-studies
 prompt: Build a system that runs without the owner.
 validator:
   kind: invariants
-  ref: build-a-business-for-financial-freedom-easy-c11-m1:private
+  ref: 01-e-myth-business-system-design-easy-c11-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 2
   maxPayloadBytes: 4096
-publicPayloadRef: build-a-business-for-financial-freedom-easy-c11-m1:public
-privateValidatorRef: build-a-business-for-financial-freedom-easy-c11-m1:private
-rewardIdentity: build-a-business-for-financial-freedom-easy-c11-m1:v1
+publicPayloadRef: 01-e-myth-business-system-design-easy-c11-m1:public
+privateValidatorRef: 01-e-myth-business-system-design-easy-c11-m1:private
+rewardIdentity: 01-e-myth-business-system-design-easy-c11-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -611,16 +611,16 @@ domain: financial-freedom-studies
 prompt: Diagnose why this business keeps pulling the owner back in.
 validator:
   kind: invariants
-  ref: build-a-business-for-financial-freedom-easy-c12-m1:private
+  ref: 01-e-myth-business-system-design-easy-c12-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
   maxPayloadBytes: 4096
-publicPayloadRef: build-a-business-for-financial-freedom-easy-c12-m1:public
-privateValidatorRef: build-a-business-for-financial-freedom-easy-c12-m1:private
-rewardIdentity: build-a-business-for-financial-freedom-easy-c12-m1:v1
+publicPayloadRef: 01-e-myth-business-system-design-easy-c12-m1:public
+privateValidatorRef: 01-e-myth-business-system-design-easy-c12-m1:private
+rewardIdentity: 01-e-myth-business-system-design-easy-c12-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -737,15 +737,15 @@ prompt: >-
   targets.
 validator:
   kind: invariants
-  ref: build-a-business-for-financial-freedom-easy-c13-m1:private
+  ref: 01-e-myth-business-system-design-easy-c13-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: build-a-business-for-financial-freedom-easy-c13-m1:public
-privateValidatorRef: build-a-business-for-financial-freedom-easy-c13-m1:private
-rewardIdentity: build-a-business-for-financial-freedom-easy-c13-m1:v1
+publicPayloadRef: 01-e-myth-business-system-design-easy-c13-m1:public
+privateValidatorRef: 01-e-myth-business-system-design-easy-c13-m1:private
+rewardIdentity: 01-e-myth-business-system-design-easy-c13-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -797,15 +797,15 @@ domain: financial-freedom-studies
 prompt: How the franchise business development process unfolds from idea to standard
 validator:
   kind: sequence
-  ref: build-a-business-for-financial-freedom-easy-c14-m1:private
+  ref: 01-e-myth-business-system-design-easy-c14-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxActions: 5
-publicPayloadRef: build-a-business-for-financial-freedom-easy-c14-m1:public
-privateValidatorRef: build-a-business-for-financial-freedom-easy-c14-m1:private
-rewardIdentity: build-a-business-for-financial-freedom-easy-c14-m1:v1
+publicPayloadRef: 01-e-myth-business-system-design-easy-c14-m1:public
+privateValidatorRef: 01-e-myth-business-system-design-easy-c14-m1:private
+rewardIdentity: 01-e-myth-business-system-design-easy-c14-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -853,14 +853,14 @@ domain: financial-freedom-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: build-a-business-for-financial-freedom-easy-c15-m1:private
+  ref: 01-e-myth-business-system-design-easy-c15-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: build-a-business-for-financial-freedom-easy-c15-m1:public
-privateValidatorRef: build-a-business-for-financial-freedom-easy-c15-m1:private
-rewardIdentity: build-a-business-for-financial-freedom-easy-c15-m1:v1
+publicPayloadRef: 01-e-myth-business-system-design-easy-c15-m1:public
+privateValidatorRef: 01-e-myth-business-system-design-easy-c15-m1:private
+rewardIdentity: 01-e-myth-business-system-design-easy-c15-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -947,15 +947,15 @@ domain: financial-freedom-studies
 prompt: How does the quantification scenario play out?
 validator:
   kind: exact
-  ref: build-a-business-for-financial-freedom-easy-c16-m1:private
+  ref: 01-e-myth-business-system-design-easy-c16-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   timeLimitSeconds: 60
-publicPayloadRef: build-a-business-for-financial-freedom-easy-c16-m1:public
-privateValidatorRef: build-a-business-for-financial-freedom-easy-c16-m1:private
-rewardIdentity: build-a-business-for-financial-freedom-easy-c16-m1:v1
+publicPayloadRef: 01-e-myth-business-system-design-easy-c16-m1:public
+privateValidatorRef: 01-e-myth-business-system-design-easy-c16-m1:private
+rewardIdentity: 01-e-myth-business-system-design-easy-c16-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -1046,7 +1046,7 @@ domain: financial-freedom-studies
 prompt: Orchestrate by testing, standardizing, and rolling out improvements.
 validator:
   kind: invariants
-  ref: build-a-business-for-financial-freedom-easy-c17-m1:private
+  ref: 01-e-myth-business-system-design-easy-c17-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
@@ -1054,9 +1054,9 @@ limits:
   timeLimitSeconds: 60
   maxActions: 5
   maxReboots: 3
-publicPayloadRef: build-a-business-for-financial-freedom-easy-c17-m1:public
-privateValidatorRef: build-a-business-for-financial-freedom-easy-c17-m1:private
-rewardIdentity: build-a-business-for-financial-freedom-easy-c17-m1:v1
+publicPayloadRef: 01-e-myth-business-system-design-easy-c17-m1:public
+privateValidatorRef: 01-e-myth-business-system-design-easy-c17-m1:private
+rewardIdentity: 01-e-myth-business-system-design-easy-c17-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -1121,15 +1121,15 @@ domain: financial-freedom-studies
 prompt: Complete the challenge.
 validator:
   kind: rubric
-  ref: build-a-business-for-financial-freedom-easy-c18-m1:private
+  ref: 01-e-myth-business-system-design-easy-c18-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
   maxPayloadBytes: 4096
-publicPayloadRef: build-a-business-for-financial-freedom-easy-c18-m1:public
-privateValidatorRef: build-a-business-for-financial-freedom-easy-c18-m1:private
-rewardIdentity: build-a-business-for-financial-freedom-easy-c18-m1:v1
+publicPayloadRef: 01-e-myth-business-system-design-easy-c18-m1:public
+privateValidatorRef: 01-e-myth-business-system-design-easy-c18-m1:private
+rewardIdentity: 01-e-myth-business-system-design-easy-c18-m1:v1
 presentation:
   supportedModes:
     - pointer
@@ -1177,14 +1177,14 @@ domain: financial-freedom-studies
 prompt: Pick the right one.
 validator:
   kind: exact
-  ref: build-a-business-for-financial-freedom-easy-c19-m1:private
+  ref: 01-e-myth-business-system-design-easy-c19-m1:private
   version: '1'
 knowledgeBaseline: Lesson content provided up to this point.
 limits:
   attemptsPerMinute: 5
-publicPayloadRef: build-a-business-for-financial-freedom-easy-c19-m1:public
-privateValidatorRef: build-a-business-for-financial-freedom-easy-c19-m1:private
-rewardIdentity: build-a-business-for-financial-freedom-easy-c19-m1:v1
+publicPayloadRef: 01-e-myth-business-system-design-easy-c19-m1:public
+privateValidatorRef: 01-e-myth-business-system-design-easy-c19-m1:private
+rewardIdentity: 01-e-myth-business-system-design-easy-c19-m1:v1
 presentation:
   supportedModes:
     - pointer
