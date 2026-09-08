@@ -927,16 +927,17 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
         saleDate: saleDate,
         type: SaleType.BOOTH,
         status: status,
-        siteId: siteId,
-        characterId: null,
-        // Booth saves bypass the parent SalesModal payload. Persist the
-        // selected Founder here so the sale workflow creates SALE_CHARACTER
-        // with relationship "owner".
-        ownerId: selectedFounderCharacterId || undefined,
-        partnerId:
-          viewMode === "Partner" && selectedPartnerId
-            ? selectedPartnerId
-            : null,
+        // Booth saves bypass the parent SalesModal payload builder. Keep all
+        // relationship inputs transient so the API can persist canonical Links.
+        __saleRelations: {
+          siteId,
+          characterId: null,
+          ownerId: selectedFounderCharacterId || null,
+          partnerId:
+            viewMode === "Partner" && selectedPartnerId
+              ? selectedPartnerId
+              : null,
+        },
 
         // Financials (Converted to USD)
         lines: updatedLines,

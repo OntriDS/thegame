@@ -253,10 +253,12 @@ describe('entity-test: full Booth Sale', () => {
       description: 'Full Booth Sale workflow test',
       type: SaleType.BOOTH,
       status: SaleStatus.CHARGED,
-      siteId: 'hq',
-      characterId: partnerCharacter.id,
-      ownerId: ownerCharacter.id,
-      partnerId: partnerCharacter.id,
+      __saleRelations: {
+        siteId: 'hq',
+        characterId: partnerCharacter.id,
+        ownerId: ownerCharacter.id,
+        partnerId: partnerCharacter.id,
+      },
       lines: [
         {
           lineId: 'booth-line-full',
