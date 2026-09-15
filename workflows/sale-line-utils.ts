@@ -408,13 +408,18 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
       let primaryRow = await getItemById(primaryCloneId);
       let legacyRow = await getItemById(legacyCloneId);
 
-      if ((hasPrimaryEffect || hasLegacyEffect) && !primaryRow && !legacyRow) {
+      // Self-healing: if a clone exists but was corrupted by the previous bug (status is not SOLD),
+      // we treat it as missing so it gets cleanly recreated.
+      const isPrimaryCorrupted = primaryRow && primaryRow.status !== ItemStatus.SOLD;
+      const isLegacyCorrupted = legacyRow && legacyRow.status !== ItemStatus.SOLD;
+
+      if ((hasPrimaryEffect || hasLegacyEffect) && (!primaryRow && !legacyRow || isPrimaryCorrupted || isLegacyCorrupted)) {
         await deleteEffectClaim(effectKey);
         await deleteEffectClaim(legacyBundleEffectKey);
         hasPrimaryEffect = false;
         hasLegacyEffect = false;
         console.warn(
-          `[ensureSoldItemEntities] Stale sold-item effect cleared (clone missing KV). Recreating for line ${lineId}, sale ${sale.id}`
+          `[ensureSoldItemEntities] Stale/corrupted sold-item effect cleared. Recreating for line ${lineId}, sale ${sale.id}`
         );
       }
 
