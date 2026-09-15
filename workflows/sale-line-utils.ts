@@ -304,11 +304,16 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
 
 export function stripToInventoryBaseForLine(itemId: string, lineId: string): string {
   if (!itemId.includes('-sold-')) return itemId;
+  
   const suf = `-sold-${lineId}`;
   if (itemId.endsWith(suf)) return itemId.slice(0, -suf.length);
+  
   const bundleSuf = `-sold-bundle-${lineId}`;
   if (itemId.endsWith(bundleSuf)) return itemId.slice(0, -bundleSuf.length);
-  return itemId;
+  
+  // Robust fallback: if lineId doesn't perfectly match (e.g. legacy sales or mutated lineIds),
+  // we can safely assume the base item ID is everything before the first '-sold-'.
+  return itemId.split('-sold-')[0];
 }
 
 async function ensureSaleItemLink(saleId: string, soldItemId: string): Promise<void> {
