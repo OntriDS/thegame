@@ -836,10 +836,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
 
     // Handler to merge everything and Save
     const handleSave = () => {
-      if (!siteId) {
-        alert("Please select a Site.");
-        return;
-      }
+      // Removed mandatory site selection for ad-hoc/unregistered sales
 
       // Safeguard against division by zero
       const safeExchangeRate = exchangeRate || 500;

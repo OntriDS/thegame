@@ -48,6 +48,7 @@ function SalesPageContent() {
     refreshSummary,
   } = useMonthlySummary();
   const [monthlySalesProfit, setMonthlySalesProfit] = useState<number>(0);
+  const [monthlySalesRevenue, setMonthlySalesRevenue] = useState<number>(0);
   const characterById = useMemo(() => {
     const map = new Map<string, string>();
     for (const character of characters) {
@@ -216,16 +217,16 @@ function SalesPageContent() {
         ))
         .map(l => l.source.type === 'financial' ? l.source.id : l.target.id);
 
-      // The Booth financial workflow creates two records. The sales page
-      // displays the core performance record; the partner-impact record stays
-      // separate and is not folded into this value.
-      const coreRecord = financialRecords.find(
-        (record) => saleFinRecIds.includes(record.id) && !record.id.includes('payout'),
+      // The Booth financial workflow creates two records: the core performance and the payout.
+      // To show the true net financial impact (including contract commissions), we sum them.
+      const saleFinRecs = financialRecords.filter(
+        (record) => saleFinRecIds.includes(record.id)
       );
-      if (coreRecord) {
-        grossRevenue = extractMoneyValue(coreRecord.revenue);
-        cost = extractMoneyValue(coreRecord.cost);
-        netProfit = extractMoneyValue(coreRecord.netCashflow);
+      
+      if (saleFinRecs.length > 0) {
+        grossRevenue = saleFinRecs.reduce((sum, rec) => sum + extractMoneyValue(rec.revenue), 0);
+        cost = saleFinRecs.reduce((sum, rec) => sum + extractMoneyValue(rec.cost), 0);
+        netProfit = saleFinRecs.reduce((sum, rec) => sum + extractMoneyValue(rec.netCashflow), 0);
       }
     } else {
       const explicitCost = extractMoneyValue(sale.totals?.totalCost);
@@ -243,10 +244,17 @@ function SalesPageContent() {
   }, [financialRecords, links]);
 
   useEffect(() => {
-    const nextMonthlySalesProfit = sales
-      .filter(isCountableSaleForSummary)
-      .reduce((sum, sale) => sum + getSaleFinancials(sale).netProfit, 0);
-    setMonthlySalesProfit(roundCurrency2(nextMonthlySalesProfit));
+    let totalProfit = 0;
+    let totalRevenue = 0;
+    
+    sales.filter(isCountableSaleForSummary).forEach(sale => {
+      const { grossRevenue, netProfit } = getSaleFinancials(sale);
+      totalProfit += netProfit;
+      totalRevenue += grossRevenue;
+    });
+    
+    setMonthlySalesProfit(roundCurrency2(totalProfit));
+    setMonthlySalesRevenue(roundCurrency2(totalRevenue));
   }, [sales, getSaleFinancials, isCountableSaleForSummary]);
 
   const handleNewSale = () => {
@@ -305,7 +313,7 @@ function SalesPageContent() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        {/* Monthly Revenue (Atomic) */}
+        {/* Monthly Revenue (Dynamic) */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
@@ -313,7 +321,7 @@ function SalesPageContent() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(atomicSummary?.salesRevenue || 0)}
+              {formatCurrency(monthlySalesRevenue)}
             </div>
             <p className="text-xs text-muted-foreground">
               Monthly Total
