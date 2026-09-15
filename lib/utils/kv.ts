@@ -17,6 +17,7 @@ type KVClient = {
   lpush: (key: string, ...values: string[]) => Promise<void>;
   lrange: (key: string, start: number, stop: number) => Promise<string[]>;
   lset: (key: string, index: number, value: string) => Promise<void>;
+  lrem: (key: string, count: number, element: string) => Promise<number>;
   keys: (pattern: string) => Promise<string[]>;
   sunion: (...keys: string[]) => Promise<string[]>;
   hincrbyfloat: (key: string, field: string, increment: number) => Promise<number>;
@@ -145,6 +146,10 @@ export async function kvLRange(key: string, start: number, stop: number): Promis
 
 export async function kvLSet(key: string, index: number, value: string): Promise<void> {
   await kv.lset(key, index, value);
+}
+
+export async function kvLRem(key: string, count: number, element: string): Promise<number> {
+  return (await kv.lrem(key, count, element)) ?? 0;
 }
 
 export async function kvDelMany(keys: string[]): Promise<void> {

@@ -1428,8 +1428,14 @@ async function hydrateSaleCompatibility(sale: Sale): Promise<Sale> {
       link.relationship === 'owner' &&
       link.target.type === EntityType.CHARACTER
   );
+  const partnerLink = saleLinks.find(
+    link => link.linkType === LinkType.SALE_CHARACTER &&
+      link.relationship === 'partner' &&
+      link.target.type === EntityType.CHARACTER
+  );
   const linkedCharacterId = characterLink?.target.id;
   const linkedOwnerId = ownerLink?.target.id;
+  const linkedPartnerId = partnerLink?.target.id;
   let counterpartyName = sale.counterpartyName;
   if (!counterpartyName && linkedCharacterId) {
     const character = await getCharacterById(linkedCharacterId);
@@ -1440,6 +1446,7 @@ async function hydrateSaleCompatibility(sale: Sale): Promise<Sale> {
     ...(siteLink ? { siteId: siteLink.target.id } : {}),
     ...(linkedCharacterId ? { characterId: linkedCharacterId } : {}),
     ...(linkedOwnerId ? { ownerId: linkedOwnerId } : {}),
+    ...(linkedPartnerId ? { partnerId: linkedPartnerId } : {}),
     ...(counterpartyName ? { counterpartyName } : {}),
     ...(sale.saleDate ? {} : { saleDate: sale.createdAt }),
   };
@@ -1454,7 +1461,7 @@ async function ensureSaleSiteLink(saleId: string, siteId?: string): Promise<void
   await createLink(makeLink(LinkType.SALE_SITE, { type: EntityType.SALE, id: saleId }, { type: EntityType.SITE, id: siteId }, 'sold-at'));
 }
 
-async function ensureSaleCharacterLink(saleId: string, characterId?: string | null, relationship: 'customer' | 'owner' = 'customer'): Promise<void> {
+async function ensureSaleCharacterLink(saleId: string, characterId?: string | null, relationship: 'customer' | 'owner' | 'partner' = 'customer'): Promise<void> {
   if (!characterId) return;
   const { createLink, getLinksFor } = await import('@/links/link-registry');
   const { makeLink } = await import('@/links/links-workflows');
@@ -1473,6 +1480,7 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
   const transientOwnerId = sale.type === SaleType.ONLINE
     ? undefined
     : relations.ownerId ?? sale.ownerId ?? previous?.ownerId;
+  const transientPartnerId = relations.partnerId ?? (sale as any).partnerId ?? (previous as any)?.partnerId;
   const transientCounterpartyName = sale.counterpartyName ?? previous?.counterpartyName;
 
   // Identity Shield: Time-Window Deduplication (2 minutes)
@@ -1523,7 +1531,7 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
     saleDate: _transientSaleDate,
     characterId: _transientCharacterId,
     ownerId: _transientOwnerId,
-    partnerId: transientPartnerId,
+    partnerId: _transientPartnerId,
     counterpartyName: _transientCounterpartyName,
     __saleRelations: _transientSaleRelations,
     ...canonicalSale
@@ -1536,6 +1544,7 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
   await ensureSaleSiteLink(saved.id, transientSiteId);
   await ensureSaleCharacterLink(saved.id, transientCharacterId, 'customer');
   await ensureSaleCharacterLink(saved.id, transientOwnerId, 'owner');
+  await ensureSaleCharacterLink(saved.id, transientPartnerId, 'partner');
 
   // Phase 2: Rolling Summary Update
   await SummaryService.updateSalesCounters(saved, previous || undefined);
