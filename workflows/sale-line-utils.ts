@@ -59,22 +59,23 @@ export async function processSaleLines(sale: Sale): Promise<void> {
  */
 export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promise<void> {
   try {
-    console.log(`[processItemSaleLine] Processing item sale: ${line.itemId}, quantity: ${line.quantity}`);
+    const baseItemId = stripToInventoryBaseForLine(line.itemId, line.lineId || line.itemId);
+    console.log(`[processItemSaleLine] Processing item sale: ${baseItemId} (from ${line.itemId}), quantity: ${line.quantity}`);
 
     // Idempotency check
-    const stockDecrementedKey = EffectKeys.sideEffect('sale', sale.id, `stockDecremented:${line.lineId}`);
-    const claim = await acquireEffectClaim({ idempotencyKey: stockDecrementedKey, ownerId: `sale-line-${sale.id}`, commandId: `stock-${line.lineId}`, leaseSeconds: 60 });
+    const stockDecrementedKey = EffectKeys.sideEffect('sale', sale.id, `stockDecremented:${line.lineId || line.itemId}`);
+    const claim = await acquireEffectClaim({ idempotencyKey: stockDecrementedKey, ownerId: `sale-line-${sale.id}`, commandId: `stock-${line.lineId || line.itemId}`, leaseSeconds: 60 });
 
     if (!claim) {
-      console.log(`[processItemSaleLine] Stock already decremented (or in progress) for line ${line.lineId}, skipping`);
+      console.log(`[processItemSaleLine] Stock already decremented (or in progress) for line ${line.lineId || line.itemId}, skipping`);
       return;
     }
 
     // Get the item
-    const item = await getItemById(line.itemId);
+    const item = await getItemById(baseItemId);
 
     if (!item) {
-      console.error(`[processItemSaleLine] Item not found: ${line.itemId}`);
+      console.error(`[processItemSaleLine] Item not found: ${baseItemId}`);
       return;
     }
 
@@ -189,7 +190,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     const link = makeLink(
       LinkType.SALE_ITEM,
       { type: EntityType.SALE, id: sale.id },
-      { type: EntityType.ITEM, id: line.itemId },
+      { type: EntityType.ITEM, id: baseItemId },
       'sold-item'
     );
     await createLink(link);
@@ -301,7 +302,7 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
   }
 }
 
-function stripToInventoryBaseForLine(itemId: string, lineId: string): string {
+export function stripToInventoryBaseForLine(itemId: string, lineId: string): string {
   if (!itemId.includes('-sold-')) return itemId;
   const suf = `-sold-${lineId}`;
   if (itemId.endsWith(suf)) return itemId.slice(0, -suf.length);
@@ -363,15 +364,8 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
 
       let inventoryBaseId = working.itemId;
       if (working.itemId.includes('-sold-')) {
-        const suf = `-sold-${lineId}`;
-        const bundleSuf = `-sold-bundle-${lineId}`;
-        let stripped: string | null = null;
-        if (working.itemId.endsWith(suf)) {
-          stripped = working.itemId.slice(0, -suf.length);
-        } else if (working.itemId.endsWith(bundleSuf)) {
-          stripped = working.itemId.slice(0, -bundleSuf.length);
-        }
-        if (stripped) {
+        const stripped = stripToInventoryBaseForLine(working.itemId, lineId);
+        if (stripped !== working.itemId) {
           inventoryBaseId = stripped;
           working = { ...working, itemId: stripped };
           newLines[i] = working;

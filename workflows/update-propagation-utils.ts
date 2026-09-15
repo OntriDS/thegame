@@ -686,9 +686,11 @@ export async function updateItemsFromSale(
           continue;
         }
 
-        const item = await getItemById(line.itemId);
+        const { stripToInventoryBaseForLine } = await import('./sale-line-utils');
+        const baseItemId = stripToInventoryBaseForLine(line.itemId, lineId);
+        const item = await getItemById(baseItemId);
         if (!item) {
-          console.warn(`[updateItemsFromSale] Item not found: ${line.itemId}`);
+          console.warn(`[updateItemsFromSale] Item not found: ${baseItemId}`);
           continue;
         }
 
