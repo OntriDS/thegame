@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
-import { requireAdminAuth } from '@/lib/api-auth';
+import { requireAdminAuth, requireAdminOrM2MAuth } from '@/lib/api-auth';
 import { iamService } from '@/lib/iam-service';
 import { CharacterRole, EntityType, FinancialStatus, LinkType, SaleStatus } from '@/types/enums';
 import { characterHasSpecialRole, normalizeCharacterRole } from '@/lib/character-roles';
@@ -296,7 +296,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdminAuth(req))) {
+  if (!(await requireAdminOrM2MAuth(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -313,7 +313,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const actorRoles = parseCharacterRoles(tokenUser.roles, 'Actor');
+    // A trusted provisioning M2M request is the system actor for this
+    // canonical entity route. User JWT requests retain normal IAM checks.
+    const actorRoles = tokenUser
+      ? parseCharacterRoles(tokenUser.roles, 'Actor')
+      : [CharacterRole.FOUNDER];
     const normalizedIncomingRoles = parseCharacterRoles(body.roles, 'Incoming');
     const existingCharacter = body.id ? await getCharacterById(body.id) : null;
     const existingRoles = parseCharacterRoles(existingCharacter?.roles, 'Existing');

@@ -1,13 +1,13 @@
 // app/api/links/route.ts
 import { NextResponse, NextRequest } from 'next/server';
-import { requireAdminAuth } from '@/lib/api-auth';
+import { requireAdminAuth, requireAdminOrM2MAuth } from '@/lib/api-auth';
 import { getAllLinks, getLinksFor } from '@/links/link-registry';
 
 // Force dynamic rendering - this route accesses cookies
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  if (!(await requireAdminAuth(req))) {
+  if (!(await requireAdminOrM2MAuth(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

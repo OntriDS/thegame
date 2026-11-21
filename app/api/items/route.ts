@@ -4,7 +4,7 @@ import { v4 as uuid } from 'uuid';
 import type { Item } from '@/types/entities';
 import { getAllItems, getItemsByType, upsertItem, bulkUpsertItems, getItemsForMonth, getActiveItems, getLegacyItems, getItemsByCharacterId } from '@/data-store/datastore';
 import { getUTCNow } from '@/lib/utils/utc-utils';
-import { requireAdminAuth } from '@/lib/api-auth';
+import { requireAdminAuth, requireAdminOrM2MAuth } from '@/lib/api-auth';
 import { ItemStatus } from '@/types/enums';
 import { EntitySchemaVersion } from '@/types/enums';
 import { isSoldStatus } from '@/lib/utils/status-utils';
@@ -205,7 +205,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await requireAdminOrM2MAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
     const body = await req.json();

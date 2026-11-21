@@ -28,7 +28,13 @@ function extractAuthToken(req: NextRequest): string | null {
 }
 
 function getProvisioningM2MApps(): string[] {
-  const raw = process.env.THEGAME_M2M_PROVISIONING_APPS?.trim() || process.env.AKILES_ECOSYSTEM_M2M_APP_ID?.trim() || 'akiles-ecosystem';
+  // TheGame's first-party service boundary. These are application identities,
+  // not user roles or deploy-time credentials. Keep the baseline explicit so
+  // Pixelbrain can use its already-issued TheGame M2M token without requiring
+  // a second, similarly named environment variable in every deployment.
+  const raw = process.env.THEGAME_M2M_PROVISIONING_APPS?.trim()
+    || process.env.AKILES_ECOSYSTEM_M2M_APP_ID?.trim()
+    || 'akiles-ecosystem,pixelbrain';
   return raw
     .split(',')
     .map((value) => value.trim().toLowerCase())

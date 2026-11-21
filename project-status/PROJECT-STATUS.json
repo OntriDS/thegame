@@ -11,7 +11,7 @@
         "Solve the God Object anti-pattern (Project wide)",
         "Optimize and Update Workflows and Clean DataBase Architecture",
         "Update all agents tools to work with new entities pattern",
-        "Create new agent tools, for promoter, marketer, timer, accounter, admin",
+        "Create new agent tools, for promoter, marketer, timer, accountant, admin",
         "Implement Monthly Close Automation Task for the admin",
         "Implement Monthly Summary Analysis generation Automation Task (post Monthly Close) for Analyst",
         "Pixelbrain: Debuger Agent + Local Automation Tasks",

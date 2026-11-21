@@ -4,7 +4,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { Sale } from '@/types/entities';
 import { getAllSales, upsertSale, getSalesForMonth } from '@/data-store/datastore';
-import { requireAdminAuth } from '@/lib/api-auth';
+import { requireAdminOrM2MAuth, requireAdminAuth } from '@/lib/api-auth';
 // UTC STANDARDIZATION: Using new UTC utilities
 import { getUTCNow, startOfDayUTC } from '@/lib/utils/utc-utils';
 import { parseDateToUTC } from '@/lib/utils/date-parsers';
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await requireAdminOrM2MAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
     const body = (await req.json()) as Sale & { customerId?: unknown; __saleRelations?: any };
