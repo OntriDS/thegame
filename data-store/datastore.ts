@@ -325,9 +325,9 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
   if (!options?.skipLinkEffects) {
     const linkInput = {
       ...runtimeSaved,
-      ...(siteId ? { siteId } : {}),
-      ...(targetSiteId ? { targetSiteId } : {}),
-      ...(parentId ? { parentId } : {}),
+      ...(siteId !== undefined ? { siteId } : {}),
+      ...(targetSiteId !== undefined ? { targetSiteId } : {}),
+      ...(parentId !== undefined ? { parentId } : {}),
       ...(hasOwnerSelection ? { ownerIds: requestedOwnerIds } : {}),
       ...(taskCounterparty ? { __counterparty: taskCounterparty } : {}),
     };
@@ -350,17 +350,17 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
     const linkInput = latest
       ? {
           ...latest,
-          ...(siteId ? { siteId } : {}),
-          ...(targetSiteId ? { targetSiteId } : {}),
-          ...(parentId ? { parentId } : {}),
+          ...(siteId !== undefined ? { siteId } : {}),
+          ...(targetSiteId !== undefined ? { targetSiteId } : {}),
+          ...(parentId !== undefined ? { parentId } : {}),
           ...(hasOwnerSelection ? { ownerIds: requestedOwnerIds } : {}),
           ...(taskCounterparty ? { __counterparty: taskCounterparty } : {}),
         }
       : {
           ...runtimeSaved,
-          ...(siteId ? { siteId } : {}),
-          ...(targetSiteId ? { targetSiteId } : {}),
-          ...(parentId ? { parentId } : {}),
+          ...(siteId !== undefined ? { siteId } : {}),
+          ...(targetSiteId !== undefined ? { targetSiteId } : {}),
+          ...(parentId !== undefined ? { parentId } : {}),
           ...(taskCounterparty ? { __counterparty: taskCounterparty } : {}),
         };
     await processLinkEntity(linkInput, EntityType.TASK);
@@ -1473,14 +1473,18 @@ async function ensureSaleCharacterLink(saleId: string, characterId?: string | nu
 export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean }): Promise<Sale> {
   const previous = await getSaleById(sale.id);
   const relations = (sale as any).__saleRelations || {};
-  const transientSiteId = relations.siteId ?? sale.siteId ?? previous?.siteId;
-  const transientCharacterId = relations.characterId ?? sale.characterId ?? previous?.characterId;
+  // A supplied null is an intentional relationship removal. Preserve that
+  // distinction so edits can clear canonical Links instead of retaining them.
+  const relationValue = (key: string, fallback: unknown): unknown =>
+    Object.prototype.hasOwnProperty.call(relations, key) ? relations[key] : fallback;
+  const transientSiteId = relationValue('siteId', sale.siteId ?? previous?.siteId) as string | null | undefined;
+  const transientCharacterId = relationValue('characterId', sale.characterId ?? previous?.characterId) as string | null | undefined;
   // An Online sale is customer-originated. Never carry an admin owner from a
   // compatibility projection or generic form submission into its Links.
   const transientOwnerId = sale.type === SaleType.ONLINE
     ? undefined
-    : relations.ownerId ?? sale.ownerId ?? previous?.ownerId;
-  const transientPartnerId = relations.partnerId ?? (sale as any).partnerId ?? (previous as any)?.partnerId;
+    : relationValue('ownerId', sale.ownerId ?? previous?.ownerId) as string | null | undefined;
+  const transientPartnerId = relationValue('partnerId', (sale as any).partnerId ?? (previous as any)?.partnerId) as string | null | undefined;
   const transientCounterpartyName = sale.counterpartyName ?? previous?.counterpartyName;
 
   // Identity Shield: Time-Window Deduplication (2 minutes)
@@ -1552,10 +1556,10 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
   /** After onSaleUpsert, ensureSoldItemEntities may persist updated line itemIds (sold clones). Link sync must use that state, not the in-memory first write. */
   const runtimeSale = {
     ...saved,
-    ...(transientSiteId ? { siteId: transientSiteId } : {}),
-    ...(transientCharacterId ? { characterId: transientCharacterId } : {}),
-    ...(transientOwnerId ? { ownerId: transientOwnerId } : {}),
-    ...(transientPartnerId ? { partnerId: transientPartnerId } : {}),
+    ...(transientSiteId !== undefined ? { siteId: transientSiteId } : {}),
+    ...(transientCharacterId !== undefined ? { characterId: transientCharacterId } : {}),
+    ...(transientOwnerId !== undefined ? { ownerId: transientOwnerId } : {}),
+    ...(transientPartnerId !== undefined ? { partnerId: transientPartnerId } : {}),
     ...(transientCounterpartyName ? { counterpartyName: transientCounterpartyName } : {}),
   } as Sale;
   let resultForLinks: Sale = runtimeSale;
@@ -1569,10 +1573,10 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
       const [revived] = reviveDates([latestRaw]);
       resultForLinks = {
         ...normalizeSale(revived),
-        ...(transientSiteId ? { siteId: transientSiteId } : {}),
-        ...(transientCharacterId ? { characterId: transientCharacterId } : {}),
-        ...(transientOwnerId ? { ownerId: transientOwnerId } : {}),
-        ...(transientPartnerId ? { partnerId: transientPartnerId } : {}),
+        ...(transientSiteId !== undefined ? { siteId: transientSiteId } : {}),
+        ...(transientCharacterId !== undefined ? { characterId: transientCharacterId } : {}),
+        ...(transientOwnerId !== undefined ? { ownerId: transientOwnerId } : {}),
+        ...(transientPartnerId !== undefined ? { partnerId: transientPartnerId } : {}),
         ...(transientCounterpartyName ? { counterpartyName: transientCounterpartyName } : {}),
       } as Sale;
     }

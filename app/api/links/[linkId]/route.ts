@@ -1,6 +1,6 @@
 // app/api/links/[linkId]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdminAuth } from '@/lib/api-auth';
+import { requireAdminOrM2MAuth } from '@/lib/api-auth';
 
 // Force dynamic rendering - this route accesses cookies
 export const dynamic = 'force-dynamic';
@@ -9,7 +9,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { linkId: string } }
 ) {
-  if (!(await requireAdminAuth(req))) {
+  if (!(await requireAdminOrM2MAuth(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

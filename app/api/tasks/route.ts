@@ -84,9 +84,12 @@ export async function POST(req: NextRequest) {
     // Relationship identity is persisted only through TASK_CHARACTER.
 
     if (cleanTaskBody.description === '') delete cleanTaskBody.description;
-    if (cleanTaskBody.parentId == null) delete cleanTaskBody.parentId;
-    if (cleanTaskBody.siteId == null) delete cleanTaskBody.siteId;
-    if (cleanTaskBody.targetSiteId == null) delete cleanTaskBody.targetSiteId;
+    // Preserve explicit null relationship inputs. The canonical task workflow
+    // uses null to remove an existing parent/site/target-site Link; deleting
+    // these keys here would make an edit silently preserve the old Link.
+    if (cleanTaskBody.parentId === undefined) delete cleanTaskBody.parentId;
+    if (cleanTaskBody.siteId === undefined) delete cleanTaskBody.siteId;
+    if (cleanTaskBody.targetSiteId === undefined) delete cleanTaskBody.targetSiteId;
 
     const rawContext = (taskBody.context || {}) as Record<string, any>;
     const rawProductionPlan = rawContext.productionPlan;
@@ -223,7 +226,7 @@ export async function POST(req: NextRequest) {
     const task = {
       ...cleanTaskBody,
       id,
-      ...(parentId ? { parentId } : {}),
+      ...(Object.prototype.hasOwnProperty.call(taskBody, 'parentId') ? { parentId } : {}),
       ...(taskBody.outputItemId ? { outputItemId: taskBody.outputItemId } : {}),
       ...(requestedOwnerIds !== undefined ? { ownerIds: requestedOwnerIds } : {}),
       createdAt: taskBody.createdAt ? parseDateToUTC(taskBody.createdAt as Date | string | number | null | undefined) : getUTCNow(),

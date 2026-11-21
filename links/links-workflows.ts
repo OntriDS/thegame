@@ -147,8 +147,23 @@ export async function processTaskEffects(task: Task): Promise<void> {
     )));
   }
 
-  if (task.siteId) {
-    const l = makeLink(LinkType.TASK_SITE, { type: EntityType.TASK, id: task.id }, { type: EntityType.SITE, id: task.siteId }, 'performed-at');
+  // TASK_SITE performed-at is a single relationship. Reconcile it exactly as
+  // the Task modal does: none clears it, a site replaces the previous site.
+  const existingPerformedAtLinks = existingTaskLinks.filter((link) =>
+    link.linkType === LinkType.TASK_SITE &&
+    link.relationship === 'performed-at' &&
+    link.source.id === task.id
+  );
+  const desiredSiteId = typeof task.siteId === 'string' && task.siteId.trim() && task.siteId.trim().toLowerCase() !== 'none'
+    ? task.siteId.trim()
+    : null;
+  for (const link of existingPerformedAtLinks) {
+    if (!desiredSiteId || link.target?.type !== EntityType.SITE || link.target.id !== desiredSiteId) {
+      promises.push(removeLink(link.id));
+    }
+  }
+  if (desiredSiteId) {
+    const l = makeLink(LinkType.TASK_SITE, { type: EntityType.TASK, id: task.id }, { type: EntityType.SITE, id: desiredSiteId }, 'performed-at');
     promises.push(createLink(l));
   }
   if (task.outputItemId) {
