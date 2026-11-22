@@ -3,7 +3,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import { requireAdminAuth, requireAdminOrM2MAuth } from '@/lib/api-auth';
 import { iamService } from '@/lib/iam-service';
-import { CharacterRole, EntityType, FinancialStatus, LinkType, SaleStatus } from '@/types/enums';
+import { CharacterRole, CHARACTER_ROLE_TYPES, EntityType, FinancialStatus, LinkType, SaleStatus } from '@/types/enums';
 import { characterHasSpecialRole, normalizeCharacterRole } from '@/lib/character-roles';
 import { canGrantSpecialRole, getRoleGrantDenialReason } from '@/lib/game-mechanics/roles-rules';
 import { getAllCharacters, getCharacterById, upsertCharacter, getFinancialById, getSaleById } from '@/data-store/datastore';
@@ -341,15 +341,28 @@ export async function POST(req: NextRequest) {
     }
 
     const isFounder = actorRoles.includes(CharacterRole.FOUNDER);
+    const isAgent = actorRoles.includes(CharacterRole.AGENT);
+    const regularRoles = new Set<CharacterRole>(CHARACTER_ROLE_TYPES.REGULAR as readonly CharacterRole[]);
+    const changedRoles = new Set<CharacterRole>([
+      ...existingRoles.filter((role) => !normalizedIncomingRoles.includes(role)),
+      ...normalizedIncomingRoles.filter((role) => !existingRoles.includes(role)),
+    ]);
+    const changedProtectedRole = [...changedRoles].some((role) => !regularRoles.has(role));
+    const changedRegularRole = [...changedRoles].some((role) => regularRoles.has(role));
 
-    const rolesCanChange =
-      normalizedIncomingRoles.length === existingRoles.length &&
-      new Set(existingRoles).size === new Set(normalizedIncomingRoles).size &&
-      normalizedIncomingRoles.every(role => existingRoles.includes(role));
-
-    if (!isFounder && !rolesCanChange) {
+    // Professional roles represent normal character development. Agents may
+    // grant or remove only these roles. Founder/Team/Apprentice/Player and
+    // other special roles remain governed by their dedicated rules/workflows.
+    if (!isFounder && changedProtectedRole) {
       return NextResponse.json(
-        { error: 'Forbidden: Only founders can change character roles' },
+        { error: 'Forbidden: Only founders or the dedicated role workflow can change protected character roles' },
+        { status: 403 }
+      );
+    }
+
+    if (changedRegularRole && !isFounder && !isAgent) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only agents or founders can change regular character roles' },
         { status: 403 }
       );
     }
