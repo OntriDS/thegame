@@ -20,6 +20,7 @@ const initialProgress = (execution: WorkflowExecutionV1): MonthlyCloseProgressV1
     workflowType: 'monthly-close',
     year: execution.input.year,
     month: execution.input.month,
+    mode: execution.input.mode,
     taskCursor: 0,
     saleCursor: 0,
     tasksCollected: 0,
