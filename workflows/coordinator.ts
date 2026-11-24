@@ -34,8 +34,11 @@ export async function executeWorkflow(execution: WorkflowExecutionV1): Promise<v
       return;
     }
     
-    // Fallback for unknown workflows
-    execution.state = WorkflowStatus.COMPLETED;
+    // Unknown workflow types must fail closed. Marking them completed would
+    // falsely report work that was never executed.
+    execution.state = WorkflowStatus.FAILED_TERMINAL;
+    execution.lastErrorCode = `UNKNOWN_WORKFLOW_TYPE:${execution.workflowType}`;
+    execution.currentStep = 'failed';
     
     await saveWorkflowExecution(execution);
     

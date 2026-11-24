@@ -1,5 +1,6 @@
 // workflows/entities-workflows/financial.workflow.ts
-// Financial-specific workflow: PENDING → DONE → COLLECTED; financials do not vest points.
+// Financial-specific workflow: PENDING → DONE; financials do not vest points
+// and are not collected by monthly close.
 import { isValid } from 'date-fns';
 
 import { EntityType, LogEventType, FinancialStatus } from '@/types/enums';
@@ -276,24 +277,6 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       cost: financial.cost,
       revenue: financial.revenue
     }, getFinancialDate(financial));
-  }
-
-  if (
-    financial.status === FinancialStatus.COLLECTED &&
-    previousFinancial?.status !== FinancialStatus.COLLECTED
-  ) {
-    const collectedLoggedKey = EffectKeys.sideEffect('financial', financial.id, 'collectedLogged');
-    const collectClaim = await acquireEffectClaim({ idempotencyKey: collectedLoggedKey, ownerId: `financial-workflow-${financial.id}`, commandId: `collect-log-${financial.id}`, leaseSeconds: 60 });
-    if (collectClaim) {
-      await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.COLLECTED, {
-        name: financial.name,
-        type: financial.type,
-        station: financial.station,
-        cost: financial.cost,
-        revenue: financial.revenue,
-      }, financial.lifecycle?.collectedAt || getFinancialDate(financial));
-      await resolveEffectClaim({ idempotencyKey: collectedLoggedKey, leaseToken: collectClaim.leaseToken, status: EffectClaimStatus.COMPLETED });
-    }
   }
 
   // COMPREHENSIVE UPDATE PROPAGATION - when financial record properties change

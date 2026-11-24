@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Edit, BarChart, CheckSquare, Flag, ChevronsRight, Users, Copy, Check, ChevronDown, Tag, Play } from 'lucide-react';
+import { Edit, BarChart, CheckSquare, Flag, ChevronsRight, Users, Copy, Check, ChevronDown, Tag } from 'lucide-react';
 import TaskModal from '@/components/modals/task-modal';
 import { useState, useRef, useEffect } from 'react';
 import { ClientAPI } from '@/lib/client-api';
@@ -68,6 +68,12 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
   // Inline editing states
   const [editingField, setEditingField] = useState<string | null>(null);
   const [tempValue, setTempValue] = useState<string>('');
+  const [automationYear, setAutomationYear] = useState(() => new Date().getUTCFullYear());
+  const [automationMonth, setAutomationMonth] = useState(() => new Date().getUTCMonth() + 1);
+  const [automationMode, setAutomationMode] = useState<'dry-run' | 'execute'>('dry-run');
+  const [automationRunning, setAutomationRunning] = useState(false);
+  const [automationResult, setAutomationResult] = useState<any>(null);
+  const [automationError, setAutomationError] = useState<string | null>(null);
 
   const [showDuplicateSuccess, setShowDuplicateSuccess] = useState(false);
   const [currentProgress, setCurrentProgress] = useState<number>(0);
@@ -393,79 +399,69 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
     children.some(child => child.task.type === TaskType.RECURRENT_TEMPLATE);
 
   if (task.type === TaskType.AUTOMATION) {
+    const automationType = (task as any).context?.automation?.automationType || 'unknown';
+    const runAutomation = async () => {
+      if (automationMode === 'execute' && !window.confirm('Execute monthly close for this UTC period? This changes eligible Tasks and Sales to collected.')) return;
+      setAutomationRunning(true);
+      setAutomationError(null);
+      setAutomationResult(null);
+      try {
+        const result = await ClientAPI.runAutomation(task.id, automationYear, automationMonth, automationMode);
+        setAutomationResult(result);
+        onTaskUpdate?.();
+      } catch (error) {
+        setAutomationError(error instanceof Error ? error.message : 'Automation run failed.');
+      } finally {
+        setAutomationRunning(false);
+      }
+    };
     return (
       <div className="h-full overflow-y-auto p-4 sm:p-6 flex flex-col items-center justify-center text-center">
         <Icon className="h-16 w-16 text-purple-600/50 mb-4" />
         <h2 className="text-2xl font-bold mb-2">{task.name}</h2>
         <p className="text-muted-foreground max-w-md mb-8">
-          {task.description || "This is a programmatic system automation. It runs securely in the background on its scheduled routine."}
+          {task.description || 'This Task defines a registered, runnable automation procedure.'}
         </p>
 
         <div className="p-6 border rounded-xl bg-card shadow-sm w-full max-w-md space-y-4">
-          <h3 className="font-semibold text-lg text-left">Manual Override</h3>
-          <p className="text-sm text-left text-muted-foreground mb-4">
-            Execute these automations immediately. This will trigger the backend workflow independent of the cron schedule.
-          </p>
-
-          <div className="flex flex-col gap-3">
-            {/* Master Trigger */}
-            <Button
-              variant="default"
-              size="lg"
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white border-0 shadow-md font-bold"
-              onClick={async () => {
-                try {
-                  const now = new Date();
-                  await ClientAPI.collectAllEntities(now.getMonth() + 1, now.getFullYear());
-                  alert(`Mega-Collection Complete! Successfully processed all items.`);
-                } catch (error: any) {
-                  alert(`Collection Failed: ${error.message}`);
-                }
-              }}
-            >
-              <Play className="h-5 w-5 mr-2" />
-              Run All Monthly Rewards
+          <h3 className="font-semibold text-lg text-left">Registered automation</h3>
+          <div className="text-sm text-left text-muted-foreground space-y-2">
+            <p><span className="font-medium text-foreground">Type:</span> {automationType}</p>
+            <p><span className="font-medium text-foreground">Status:</span> {task.status}</p>
+            <p>Runs use an explicit UTC period. Dry-run is non-mutating; execute requires confirmation.</p>
+            <div className="grid grid-cols-2 gap-3 pt-2 text-left">
+              <div>
+                <Label htmlFor="automation-year">UTC year</Label>
+                <Input id="automation-year" type="number" min={2000} max={9999} value={automationYear} onChange={(event) => setAutomationYear(Number(event.target.value))} />
+              </div>
+              <div>
+                <Label htmlFor="automation-month">UTC month</Label>
+                <Input id="automation-month" type="number" min={1} max={12} value={automationMonth} onChange={(event) => setAutomationMonth(Number(event.target.value))} />
+              </div>
+            </div>
+            <div className="pt-1 text-left">
+              <Label htmlFor="automation-mode">Run mode</Label>
+              <Select value={automationMode} onValueChange={(value: 'dry-run' | 'execute') => setAutomationMode(value)}>
+                <SelectTrigger id="automation-mode"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dry-run">dry-run (no mutations)</SelectItem>
+                  <SelectItem value="execute">execute (collect eligible records)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {automationError && <p className="text-sm text-destructive pt-2">{automationError}</p>}
+            {automationResult && (
+              <div className="rounded border p-3 text-xs text-left space-y-1">
+                <p><span className="font-medium">Run:</span> {automationResult.runId}</p>
+                <p><span className="font-medium">Overall:</span> {automationResult.status}</p>
+                <p><span className="font-medium">Core:</span> {automationResult.core?.status}</p>
+                <p><span className="font-medium">Eligible:</span> tasks {automationResult.core?.tasksEligible ?? 0}, sales {automationResult.core?.salesEligible ?? 0}</p>
+              </div>
+            )}
+            <Button className="w-full mt-2" onClick={runAutomation} disabled={automationRunning || task.status !== TaskStatus.IN_PROGRESS || automationType !== 'monthly-close'}>
+              {automationRunning ? 'Running…' : 'Run registered automation'}
             </Button>
-
-            <div className="relative py-2">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">Individual Collections</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs"
-                onClick={async () => {
-                  try {
-                    const now = new Date();
-                    const res = await ClientAPI.bulkCollectTasks(now.getMonth() + 1, now.getFullYear());
-                    alert(`Tasks Collection Complete! Processed ${(res as any).collected || 0} records.`);
-                  } catch (error: any) { alert(error.message); }
-                }}
-              >
-                Tasks Only
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs"
-                onClick={async () => {
-                  try {
-                    const now = new Date();
-                    const res = await ClientAPI.collectSales(now.getMonth() + 1, now.getFullYear());
-                    alert(`Sales Collection Complete! Processed ${(res as any).collected || 0} records.`);
-                  } catch (error: any) { alert(error.message); }
-                }}
-              >
-                Sales Only
-              </Button>
-            </div>
+            {task.status !== TaskStatus.IN_PROGRESS && <p className="text-xs text-muted-foreground">Set this definition to in-progress to enable Run.</p>}
           </div>
         </div>
       </div>

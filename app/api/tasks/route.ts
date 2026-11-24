@@ -17,6 +17,43 @@ const normalizeCharacterId = (value: unknown): string | null => {
   return trimmed === '' ? null : trimmed;
 };
 
+/** Automation is a persistent runnable definition. Its implementation is selected by the server registry. */
+function validateAutomationDefinition(taskBody: Record<string, any>): { error: string } | null {
+  if (taskBody.type !== TaskType.AUTOMATION) return null;
+
+  if (typeof taskBody.description !== 'string' || taskBody.description.trim() === '') {
+    return { error: 'Automation tasks require an exact execution description.' };
+  }
+
+  const automation = taskBody.context?.automation;
+  if (!automation || typeof automation !== 'object' || Array.isArray(automation)) {
+    return { error: 'Automation tasks require context.automation.' };
+  }
+
+  const allowed = new Set(['automationType']);
+  const unknown = Object.keys(automation).filter((key) => !allowed.has(key));
+  if (unknown.length > 0) {
+    return { error: `Unknown automation field(s): ${unknown.join(', ')}` };
+  }
+
+  if (automation.automationType !== 'monthly-close') {
+    return { error: 'Automation currently supports automationType=monthly-close only.' };
+  }
+
+  const allowedStatuses = new Set([
+    TaskStatus.CREATED,
+    TaskStatus.ON_HOLD,
+    TaskStatus.IN_PROGRESS,
+    TaskStatus.FINISHING,
+    TaskStatus.DONE,
+    TaskStatus.FAILED,
+  ]);
+  if (taskBody.status !== undefined && !allowedStatuses.has(taskBody.status)) {
+    return { error: 'Automation tasks cannot use status none or collected.' };
+  }
+  return null;
+}
+
 // Force dynamic rendering - this route accesses cookies
 export const dynamic = 'force-dynamic';
 
@@ -67,6 +104,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { skipDuplicateCheck, ...taskData } = body as { skipDuplicateCheck?: boolean } & Record<string, unknown>;
     const taskBody = taskData as unknown as Task;
+    const automationValidation = validateAutomationDefinition(taskBody as any);
+    if (automationValidation) return NextResponse.json(automationValidation, { status: 400 });
     const incomingTaskCharacterId = normalizeCharacterId((taskBody as { characterId?: string | null }).characterId);
     const characterId = incomingTaskCharacterId;
 

@@ -13,7 +13,7 @@ A gamified admin web-app for business management with Vercel-only architecture. 
 
 ### Core Systems
 
-- **Rosetta Stone Links System**: Entity relationship management with 35+ link types
+- **Rosetta Stone Links System**: Entity relationship management with 24 canonical link types
 - **Mission Hub**: Hierarchical task management with recurrent tasks
 - **Financial System**: Company vs Personal split with monthly tracking
 - **Inventory System**: Unified stock management across multiple sites

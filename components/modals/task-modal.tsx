@@ -220,7 +220,12 @@ export default function TaskModal({
           onSelectKind={task ? undefined : setCreateKindChoice}
         />
         {showAutomation ? (
-          <AutomationTaskModalContent onOpenChange={onOpenChange} />
+          <AutomationTaskModalContent
+            task={task}
+            allCharacters={allCharacters}
+            onSave={handleSave}
+            onOpenChange={onOpenChange}
+          />
         ) : showRecurrent ? (
           <RecurrentTreeModalContent
             task={task}

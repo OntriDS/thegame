@@ -27,7 +27,6 @@ describe('entity-test: full FinancialRecord', () => {
 
     const now = getUTCNow();
     const doneAt = new Date(now.getTime() - 60_000);
-    const collectedAt = now;
 
     await upsertFinancial({
       id: financialId,
@@ -43,8 +42,8 @@ describe('entity-test: full FinancialRecord', () => {
       cost: { minorUnits: '2500', currency: 'USD' },
       revenue: { minorUnits: '10000', currency: 'USD' },
       netCashflow: { minorUnits: '7500', currency: 'USD' },
-      status: FinancialStatus.COLLECTED,
-      lifecycle: { doneAt, collectedAt },
+      status: FinancialStatus.DONE,
+      lifecycle: { doneAt },
       context: {
         jungleCoins: 1,
         productionPlan: {

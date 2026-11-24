@@ -1,308 +1,133 @@
 // workflows/process-managers/monthly-close-pm.ts
-// Increment 6: Durable monthly close Process Manager
-//
-// Replaces bulk collection and whole-database scans with a durable Process Manager.
-// Uses cursor-based pagination to page through indexed eligible sources.
-// Issues idempotent collect commands for each entity.
-// Persists close summary with cursors, counts, and failure state.
-//
-// Monthly close workflow:
-//   1. Page through DONE tasks for the month
-//   2. Collect each task (DONE → COLLECTED)
-//   3. Vest task point grants
-//   4. Page through CHARGED sales for the month
-//   5. Collect each sale (CHARGED → COLLECTED)
-//   6. Vest sale point grants
-//   7. Persist close summary
-//   8. Complete or expose unresolved sources
+// Canonical monthly-close process manager.
+// The dispatcher supplies typed period input; this process manager owns only
+// the domain procedure and bounded progress.
 
-import type { WorkflowExecutionV1, Task, Sale, StepOutcomeV1 } from '@/types/entities';
-import { WorkflowStatus, EffectClaimStatus, TaskStatus, SaleStatus, EntityType } from '@/types/enums';
+import type { WorkflowExecutionV1, MonthlyCloseProgressV1, Task, Sale } from '@/types/entities';
+import { WorkflowStatus, EffectClaimStatus, TaskStatus, SaleStatus } from '@/types/enums';
 import { saveWorkflowExecution } from '@/data-store/workflow-store';
 import { getTasksForMonth, getSalesForMonth, upsertTask, upsertSale } from '@/data-store/datastore';
 import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
 import { acquireEffectClaim, resolveEffectClaim } from '@/lib/domain/effects/effect-claim-store';
 import { EffectKeys } from '@/data-store/keys';
 
-// ─── Monthly Close State ────────────────────────────────────────────────────
+const initialProgress = (execution: WorkflowExecutionV1): MonthlyCloseProgressV1 => {
+  if (!execution.input || execution.input.workflowType !== 'monthly-close') {
+    throw new Error('MONTHLY_CLOSE_INPUT_REQUIRED');
+  }
+  if (execution.progress?.workflowType === 'monthly-close') return execution.progress;
+  return {
+    workflowType: 'monthly-close',
+    year: execution.input.year,
+    month: execution.input.month,
+    taskCursor: 0,
+    saleCursor: 0,
+    tasksCollected: 0,
+    salesCollected: 0,
+    tasksFailed: 0,
+    salesFailed: 0,
+    grantsVested: 0,
+  };
+};
 
-interface MonthlyCloseState {
-  year: number;
-  month: number;
-  taskCursor: number;
-  saleCursor: number;
-  tasksCollected: number;
-  salesCollected: number;
-  tasksFailed: number;
-  salesFailed: number;
-  grantsVested: number;
-  completedAt?: string;
-}
-
-// ─── Monthly Close Process Manager ──────────────────────────────────────────
+const hasFailures = (progress: MonthlyCloseProgressV1): boolean =>
+  progress.tasksFailed > 0 || progress.salesFailed > 0;
 
 export class MonthlyCloseProcessManager {
   static async process(execution: WorkflowExecutionV1): Promise<void> {
     console.log(`[MonthlyClosePM] Processing workflow ${execution.workflowId}`);
-
     try {
-      // Extract month/year from workflowId (e.g. monthly-close-2026-08)
-      const parts = execution.workflowId.split('-');
-      if (parts.length < 4) {
-        throw new Error(`Invalid workflowId format for monthly-close: ${execution.workflowId}`);
+      const progress = initialProgress(execution);
+      execution.progress = progress;
+      execution.stepOutcomes ??= {};
+
+      // Continue all source groups so successful effects remain valid even if
+      // one group fails. The run cannot complete until every group reconciles.
+      await this.collectTasks(execution, progress);
+      await this.collectSales(execution, progress);
+
+      if (hasFailures(progress)) {
+        execution.state = WorkflowStatus.FAILED_RETRYABLE;
+        execution.currentStep = 'awaiting-retry';
+        execution.lastErrorCode = 'MONTHLY_CLOSE_SOURCE_FAILURES';
+      } else {
+        progress.completedAt = getUTCNow();
+        execution.state = WorkflowStatus.COMPLETED;
+        execution.currentStep = 'completed';
+        execution.lastErrorCode = undefined;
       }
 
-      const year = parseInt(parts[2], 10);
-      const month = parseInt(parts[3], 10);
-
-      // Initialize or load state
-      const state = this.loadState(execution) || {
-        year,
-        month,
-        taskCursor: 0,
-        saleCursor: 0,
-        tasksCollected: 0,
-        salesCollected: 0,
-        tasksFailed: 0,
-        salesFailed: 0,
-        grantsVested: 0,
-      };
-
-      // Initialize step outcomes if not present
-      if (!execution.stepOutcomes) {
-        execution.stepOutcomes = {};
-      }
-
-      // Step 1: Collect tasks
-      await this.collectTasks(execution, state);
-
-      // Step 2: Collect sales
-      await this.collectSales(execution, state);
-
-      // Step 3: Persist close summary
-      state.completedAt = getUTCNow() as unknown as string; // or getUTCNow().toISOString() depending on getUTCNow return type. Actually let's use toISOString if it's a Date.
-      state.completedAt = (getUTCNow() as any).toISOString ? (getUTCNow() as any).toISOString() : String(getUTCNow());
-      this.saveState(execution, state);
-
-      // Mark workflow as completed
-      execution.state = WorkflowStatus.COMPLETED;
-      execution.currentStep = 'completed';
+      execution.progress = progress;
       execution.updatedAt = getUTCNow();
       await saveWorkflowExecution(execution);
-
-      console.log(`[MonthlyClosePM] Workflow ${execution.workflowId} completed successfully`);
-      console.log(`[MonthlyClosePM] Tasks collected: ${state.tasksCollected}, failed: ${state.tasksFailed}`);
-      console.log(`[MonthlyClosePM] Sales collected: ${state.salesCollected}, failed: ${state.salesFailed}`);
-      console.log(`[MonthlyClosePM] Grants vested: ${state.grantsVested}`);
+      console.log(`[MonthlyClosePM] ${execution.state} ${execution.workflowId}`);
     } catch (error: any) {
       console.error(`[MonthlyClosePM] Error in workflow ${execution.workflowId}:`, error);
-
-      if (error.name === 'VersionConflictError') {
-        execution.state = WorkflowStatus.FAILED_RETRYABLE;
-      } else {
-        execution.state = WorkflowStatus.FAILED_TERMINAL;
-      }
-      execution.lastErrorCode = error.message;
+      execution.state = error.name === 'VersionConflictError'
+        ? WorkflowStatus.FAILED_RETRYABLE
+        : WorkflowStatus.FAILED_TERMINAL;
+      execution.currentStep = 'failed';
+      execution.lastErrorCode = error.message || 'MONTHLY_CLOSE_FAILED';
       execution.updatedAt = getUTCNow();
       await saveWorkflowExecution(execution);
     }
   }
 
-  // ─── Task Collection ────────────────────────────────────────────────────
-
-  private static async collectTasks(execution: WorkflowExecutionV1, state: MonthlyCloseState): Promise<void> {
-    const stepName = 'collectTasks';
-
-    console.log(`[MonthlyClosePM] Collecting tasks for ${state.month}/${state.year}`);
-
-    // Get all tasks for the month (cursor-based pagination would be better, but this is simpler for now)
-    const tasks = await getTasksForMonth(state.year, state.month);
-    const tasksToCollect = tasks.filter((t: any) => t.status === TaskStatus.DONE);
-
-    console.log(`[MonthlyClosePM] Found ${tasksToCollect.length} DONE tasks`);
-
-    for (const task of tasksToCollect) {
-      const effectKey = EffectKeys.sideEffect('task', task.id, 'taskCollected');
-
-      // Acquire effect claim
-      const claim = await acquireEffectClaim({
-        idempotencyKey: effectKey,
-        ownerId: execution.workflowId,
-        commandId: execution.rootCommandId,
-        workflowId: execution.workflowId,
-      });
-
-      if (!claim) {
-        console.log(`[MonthlyClosePM] Task ${task.id} already claimed by another workflow`);
-        continue;
-      }
-
+  private static async collectTasks(execution: WorkflowExecutionV1, progress: MonthlyCloseProgressV1): Promise<void> {
+    const step = 'collectTasks';
+    const eligible = (await getTasksForMonth(progress.year, progress.month)).filter(task => task.status === TaskStatus.DONE);
+    let failed = false;
+    for (const task of eligible) {
+      const key = EffectKeys.sideEffect('task', task.id, 'taskCollected');
+      const claim = await acquireEffectClaim({ idempotencyKey: key, ownerId: execution.workflowId, commandId: execution.rootCommandId, workflowId: execution.workflowId });
+      if (!claim) continue;
       try {
-        // Collect task (DONE → COLLECTED)
-        const done = (task as any).lifecycle?.doneAt ?? (task as any).doneAt;
-        const collectedAt = endOfMonthUTC(
-          done ? (done instanceof Date ? done : new Date(done)) : (getUTCNow() as Date)
-        );
-
-        const updatedTask = {
+        const taskRuntime = task as any;
+        const done = taskRuntime.lifecycle?.doneAt ?? taskRuntime.doneAt;
+        await upsertTask({
           ...task,
           status: TaskStatus.COLLECTED,
-          lifecycle: { ...((task as any).lifecycle || {}), collectedAt },
+          lifecycle: { ...(taskRuntime.lifecycle || {}), collectedAt: endOfMonthUTC(done ? new Date(done) : getUTCNow()) },
           updatedAt: getUTCNow(),
-        } as Task;
-
-        await upsertTask(updatedTask);
-
-        // Resolve claim
-        const resolved = await resolveEffectClaim({
-          idempotencyKey: effectKey,
-          leaseToken: claim.leaseToken,
-          status: EffectClaimStatus.COMPLETED,
-        });
-
-        if (resolved) {
-          state.tasksCollected++;
-
-          // Vest task point grant
-        } else {
-          state.tasksFailed++;
-        }
+        } as Task);
+        await resolveEffectClaim({ idempotencyKey: key, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
+        progress.tasksCollected++;
       } catch (error: any) {
-        console.error(`[MonthlyClosePM] Failed to collect task ${task.id}`, error);
-
-        await resolveEffectClaim({
-          idempotencyKey: effectKey,
-          leaseToken: claim.leaseToken,
-          status: EffectClaimStatus.FAILED_RETRYABLE,
-          errorCode: error.message,
-        });
-
-        state.tasksFailed++;
+        failed = true;
+        progress.tasksFailed++;
+        await resolveEffectClaim({ idempotencyKey: key, leaseToken: claim.leaseToken, status: EffectClaimStatus.FAILED_RETRYABLE, errorCode: error.message });
       }
     }
-
-    execution.stepOutcomes[stepName] = {
-      step: stepName,
-      state: state.tasksFailed > 0 ? 'failed-retryable' : 'completed',
-      completedAt: getUTCNow(),
-    };
+    progress.taskCursor = eligible.length;
+    execution.stepOutcomes[step] = { step, state: failed ? 'failed-retryable' : 'completed', completedAt: getUTCNow() };
   }
 
-  // ─── Sale Collection ────────────────────────────────────────────────────
-
-  private static async collectSales(execution: WorkflowExecutionV1, state: MonthlyCloseState): Promise<void> {
-    const stepName = 'collectSales';
-
-    console.log(`[MonthlyClosePM] Collecting sales for ${state.month}/${state.year}`);
-
-    // Get all sales for the month
-    const sales = await getSalesForMonth(state.year, state.month);
-    const salesToCollect = sales.filter((s: any) => s.status === SaleStatus.CHARGED);
-
-    console.log(`[MonthlyClosePM] Found ${salesToCollect.length} CHARGED sales`);
-
-    for (const sale of salesToCollect) {
-      const effectKey = EffectKeys.sideEffect('sale', sale.id, 'saleCollected');
-
-      // Acquire effect claim
-      const claim = await acquireEffectClaim({
-        idempotencyKey: effectKey,
-        ownerId: execution.workflowId,
-        commandId: execution.rootCommandId,
-        workflowId: execution.workflowId,
-      });
-
-      if (!claim) {
-        console.log(`[MonthlyClosePM] Sale ${sale.id} already claimed by another workflow`);
-        continue;
-      }
-
+  private static async collectSales(execution: WorkflowExecutionV1, progress: MonthlyCloseProgressV1): Promise<void> {
+    const step = 'collectSales';
+    const eligible = (await getSalesForMonth(progress.year, progress.month)).filter(sale => sale.status === SaleStatus.CHARGED);
+    let failed = false;
+    for (const sale of eligible) {
+      const key = EffectKeys.sideEffect('sale', sale.id, 'saleCollected');
+      const claim = await acquireEffectClaim({ idempotencyKey: key, ownerId: execution.workflowId, commandId: execution.rootCommandId, workflowId: execution.workflowId });
+      if (!claim) continue;
       try {
-        // Collect sale (CHARGED → COLLECTED)
-        const chargedAt = (sale as any).chargedAt
-          ? new Date((sale as any).chargedAt)
-          : sale.saleDate
-          ? sale.saleDate instanceof Date
-            ? sale.saleDate
-            : new Date(sale.saleDate as string)
-          : getUTCNow();
-
-        const collectedAt = endOfMonthUTC(chargedAt);
-
-        const updatedSale = {
+        const chargedAt = sale.lifecycle?.chargedAt ? new Date(sale.lifecycle.chargedAt) : sale.saleDate ? new Date(sale.saleDate) : getUTCNow();
+        await upsertSale({
           ...sale,
           status: SaleStatus.COLLECTED,
-          collectedAt,
+          lifecycle: { ...(sale.lifecycle || {}), collectedAt: endOfMonthUTC(chargedAt) },
           updatedAt: getUTCNow(),
-        } as Sale;
-
-        await upsertSale(updatedSale);
-
-        // Resolve claim
-        const resolved = await resolveEffectClaim({
-          idempotencyKey: effectKey,
-          leaseToken: claim.leaseToken,
-          status: EffectClaimStatus.COMPLETED,
-        });
-
-        if (resolved) {
-          state.salesCollected++;
-
-          // Vest sale point grant
-        } else {
-          state.salesFailed++;
-        }
+        } as Sale);
+        await resolveEffectClaim({ idempotencyKey: key, leaseToken: claim.leaseToken, status: EffectClaimStatus.COMPLETED });
+        progress.salesCollected++;
       } catch (error: any) {
-        console.error(`[MonthlyClosePM] Failed to collect sale ${sale.id}`, error);
-
-        await resolveEffectClaim({
-          idempotencyKey: effectKey,
-          leaseToken: claim.leaseToken,
-          status: EffectClaimStatus.FAILED_RETRYABLE,
-          errorCode: error.message,
-        });
-
-        state.salesFailed++;
+        failed = true;
+        progress.salesFailed++;
+        await resolveEffectClaim({ idempotencyKey: key, leaseToken: claim.leaseToken, status: EffectClaimStatus.FAILED_RETRYABLE, errorCode: error.message });
       }
     }
-
-    execution.stepOutcomes[stepName] = {
-      step: stepName,
-      state: state.salesFailed > 0 ? 'failed-retryable' : 'completed',
-      completedAt: getUTCNow(),
-    };
+    progress.saleCursor = eligible.length;
+    execution.stepOutcomes[step] = { step, state: failed ? 'failed-retryable' : 'completed', completedAt: getUTCNow() };
   }
 
-  // ─── State Management ───────────────────────────────────────────────────
-
-  private static loadState(execution: WorkflowExecutionV1): MonthlyCloseState | null {
-    // State is stored in the workflow execution metadata
-    // For now, we'll use a simple approach: store state in completedSteps
-    // A better approach would be to add a metadata field to WorkflowExecutionV1
-
-    // Check if state is already in completedSteps (as JSON)
-    if (execution.completedSteps.length > 0) {
-      const lastStep = execution.completedSteps[execution.completedSteps.length - 1];
-      if (lastStep.startsWith('state:')) {
-        try {
-          return JSON.parse(lastStep.substring(6));
-        } catch {
-          return null;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  private static saveState(execution: WorkflowExecutionV1, state: MonthlyCloseState): void {
-    // Save state as the last completed step
-    const stateJson = `state:${JSON.stringify(state)}`;
-
-    // Remove any existing state step
-    execution.completedSteps = execution.completedSteps.filter(s => !s.startsWith('state:'));
-
-    // Add new state step
-    execution.completedSteps.push(stateJson);
-  }
 }

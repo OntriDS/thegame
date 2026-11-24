@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
-import { CollectionService } from '@/workflows/collection.service';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,23 +8,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    try {
-        const body = await request.json();
-        const { month, year } = body;
-
-        if (!month || !year) {
-            return NextResponse.json({ error: 'Missing month or year' }, { status: 400 });
-        }
-
-        const { collectedCount } = await CollectionService.collectSales(month, year);
-
-        return NextResponse.json({
-            success: true,
-            collected: collectedCount
-        });
-
-    } catch (error: any) {
-        console.error('[COLLECT-SALES] General error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    return NextResponse.json(
+        { error: 'This legacy collection route is retired. Run the registered monthly-close Automation Task.' },
+        { status: 410 }
+    );
 }

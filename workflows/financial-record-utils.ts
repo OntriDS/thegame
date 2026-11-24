@@ -199,14 +199,11 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
       cost: toMoney(cost),
       revenue: toMoney(revenue),
       netCashflow: toMoney(revenue - cost),
-      status: task.status === TaskStatus.COLLECTED
-        ? FinancialStatus.COLLECTED
-        : task.status === TaskStatus.DONE
-          ? FinancialStatus.DONE
-          : FinancialStatus.PENDING,
+       status: task.status === TaskStatus.DONE || task.status === TaskStatus.COLLECTED
+         ? FinancialStatus.DONE
+         : FinancialStatus.PENDING,
       lifecycle: {
         ...(task.status !== TaskStatus.PENDING ? { doneAt: taskDoneAt || dateToUse } : {}),
-        ...(task.status === TaskStatus.COLLECTED && taskCollectedAt ? { collectedAt: taskCollectedAt } : {}),
       },
       context: {
         jungleCoins: 0,

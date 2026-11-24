@@ -242,6 +242,10 @@ async function normalizeTaskFailedState(task: Task, previousTask?: Task): Promis
 }
 
 export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<void> {
+  // Automation rows are definitions, not ordinary mission executions. Their
+  // status changes must not trigger rewards, item output, financial creation,
+  // or collection side effects.
+  if (task.type === TaskType.AUTOMATION) return;
   let taskForCounterparty = task;
   let outputsTask: Task = task;
 
@@ -347,8 +351,10 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         workflowType: 'task-completion',
         rootCommandId: `cmd-done-${outputsTask.id}`,
         state: WorkflowStatus.RUNNING,
+        revision: 0,
         currentStep: 'init',
         completedSteps: [],
+        stepOutcomes: {},
         attempts: 0,
         createdAt: getUTCNow(),
         updatedAt: getUTCNow()

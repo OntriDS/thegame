@@ -190,8 +190,10 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       workflowType: 'sale-settlement',
       rootCommandId: `cmd-settle-${sale.id}`,
       state: WorkflowStatus.RUNNING,
+      revision: 0,
       currentStep: 'init',
       completedSteps: [],
+      stepOutcomes: {},
       attempts: 0,
       createdAt: getUTCNow(),
       updatedAt: getUTCNow()

@@ -3,7 +3,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { FinancialRecord } from '@/types/entities';
-import { getAllFinancials, upsertFinancial, getFinancialsForMonth } from '@/data-store/datastore';
+import { getAllFinancials, getFinancialById, upsertFinancial, getFinancialsForMonth } from '@/data-store/datastore';
 import { requireAdminAuth, requireAdminOrM2MAuth } from '@/lib/api-auth';
 
 // Force dynamic rendering - this route accesses cookies
@@ -45,7 +45,12 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = (await req.json()) as FinancialRecord;
-    const createdAt = body.createdAt ? new Date(body.createdAt) : new Date();
+    const existing = body.id ? await getFinancialById(body.id) : undefined;
+    const createdAt = existing?.createdAt
+      ? new Date(existing.createdAt)
+      : body.createdAt
+        ? new Date(body.createdAt)
+        : new Date();
     const updatedAt = new Date(Math.max(Date.now(), createdAt.getTime()));
     const rawBody = body as any;
     const legacyKeys = ['doneAt', 'collectedAt', 'siteId', 'targetSiteId', 'characterId', 'playerCharacterId', 'sourceTaskId', 'sourceSaleId'];

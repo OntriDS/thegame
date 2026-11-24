@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CollectionService } from '@/workflows/collection.service';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,21 +13,11 @@ export async function GET(request: NextRequest) {
         const results: any = {};
         const now = new Date();
 
-        // Determine if today is the LAST day of the current month
-        const tomorrow = new Date(now);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const isLastDayOfMonth = tomorrow.getDate() === 1;
-
-
-        // --- JOB: Automated monthly collection (tasks + sales). Items archive on SOLD only. ---
-        if (isLastDayOfMonth) {
-            const targetMonth = now.getMonth() + 1; // 1-12
-            const targetYear = now.getFullYear();
-
-            results.tasks = await CollectionService.collectTasks(targetMonth, targetYear);
-            results.sales = await CollectionService.collectSales(targetMonth, targetYear);
-            results.financials = await CollectionService.collectFinancials(targetMonth, targetYear);
-        }
+        // Monthly-close is no longer executed directly by this Vercel route.
+        // The canonical automation Run boundary is invoked by its scheduler
+        // (currently planned for local Hermes), and owns dry-run, lease,
+        // idempotency, and workflow execution.
+        results.monthlyClose = { status: 'not-run', reason: 'use-automation-run-boundary' };
 
         // --- JOB: Pixelbrain Autonomous Pulse (Piggyback Strategy) ---
         // We read the shared KV directly from the common Redis instance
@@ -60,7 +49,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            message: 'Orchestrator finished evaluating daily tasks.',
+            message: 'Orchestrator finished evaluating scheduled services.',
             date: now.toISOString(),
             jobsRun: results
         });

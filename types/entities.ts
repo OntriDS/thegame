@@ -341,7 +341,6 @@ export type CanonicalLink =
   | SiteSettlementLinkV1
   | FinrecSiteLinkV1
   | FinrecItemLinkV1
-  | TaskFinRecLinkV1
   | FinrecCharacterLinkV1
   | SiteSiteLinkV1
   | CharacterContractLinkV1
@@ -357,10 +356,15 @@ export interface WorkflowExecutionV1 {
   workflowType: WorkflowType;
   rootCommandId: CommandId;
   state: WorkflowStatus;
+  /** Optimistic-concurrency revision. New durable workflows start at 0. */
   revision: number;
   leaseToken?: string;
   leaseExpiresAt?: UtcIsoString;
   currentStep: string;
+  /** Closed workflow input; never inferred from workflowId. */
+  input?: WorkflowInputV1;
+  /** Bounded, workflow-specific operational progress. */
+  progress?: WorkflowProgressV1;
   completedSteps: string[];
   stepOutcomes: Record<string, StepOutcomeV1>;
   attempts: number;
@@ -369,6 +373,28 @@ export interface WorkflowExecutionV1 {
   createdAt: UtcIsoString;
   updatedAt: UtcIsoString;
 }
+
+export type WorkflowInputV1 =
+  | { workflowType: 'monthly-close'; year: number; month: number; mode: 'dry-run' | 'execute' };
+
+export interface MonthlyCloseProgressV1 {
+  workflowType: 'monthly-close';
+  year: number;
+  month: number;
+  mode: 'dry-run' | 'execute';
+  tasksEligible?: number;
+  salesEligible?: number;
+  taskCursor: number;
+  saleCursor: number;
+  tasksCollected: number;
+  salesCollected: number;
+  tasksFailed: number;
+  salesFailed: number;
+  grantsVested: number;
+  completedAt?: UtcIsoString;
+}
+
+export type WorkflowProgressV1 = MonthlyCloseProgressV1;
 
 export interface StepOutcomeV1 {
   step: string;
@@ -388,6 +414,38 @@ export interface EffectClaimV1 {
   leaseExpiresAt: UtcIsoString;
   attempts: number;
   resultRef?: EntityRef;
+  errorCode?: string;
+  createdAt: UtcIsoString;
+  updatedAt: UtcIsoString;
+}
+
+export type AutomationAgentActionStatus =
+  | 'pending'
+  | 'running'
+  | 'completed'
+  | 'failed-retryable'
+  | 'failed-terminal';
+
+export interface AutomationAgentActionV1 {
+  actionId: string;
+  runId: WorkflowId;
+  automationTaskId: string;
+  agentSlug: 'admin';
+  capability: 'create-monthly-close-report';
+  mode: 'dry-run' | 'execute';
+  reportInput: {
+    year: number;
+    month: number;
+    coreStatus: 'completed';
+    tasksEligible: number;
+    salesEligible: number;
+    tasksCollected: number;
+    salesCollected: number;
+  };
+  status: AutomationAgentActionStatus;
+  claimToken?: string;
+  claimExpiresAt?: UtcIsoString;
+  resultRef?: string;
   errorCode?: string;
   createdAt: UtcIsoString;
   updatedAt: UtcIsoString;
@@ -622,12 +680,18 @@ export interface FinancialIntentFacetV1 {
   revenueIntent?: Money;
 }
 
+/** Closed registry key for an automation Task definition. */
+export interface AutomationFacetV1 {
+  automationType: 'monthly-close';
+}
+
 export interface RewardIntentFacetV1 {
   points: PointAmountV1;
 }
 
 export interface TaskContextV1 {
   recurrence?: RecurrenceFacetV1;
+  automation?: AutomationFacetV1;
   counterparty?: TaskCounterpartyFacetV1;
   newCustomerName?: string;
   productionPlan?: ProductionPlanFacetV1;

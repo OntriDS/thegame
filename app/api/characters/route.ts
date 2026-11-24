@@ -143,7 +143,7 @@ const buildDirectoryAmountTotals = async (characterIds: string[]): Promise<Map<s
 
     const amount = extractMoneyValue(financial.cost);
     if (!Number.isFinite(amount) || amount === 0) continue;
-    if (financial.status !== FinancialStatus.DONE && financial.status !== FinancialStatus.COLLECTED) continue;
+    if (financial.status !== FinancialStatus.DONE) continue;
 
     // Costs are stored as negative values in this codebase, so convert for payout totals.
     const paidAmount = Math.abs(amount);

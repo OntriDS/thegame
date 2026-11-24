@@ -56,7 +56,7 @@ const PAGE_SIZE = 50;
 const defaultSorts: Record<ArchiveTabKey, { field: string; direction: "asc" | "desc" }> = {
   tasks: { field: "collectedAt", direction: "desc" },
   sales: { field: "saleDate", direction: "desc" },
-  financials: { field: "collectedAt", direction: "desc" },
+  financials: { field: "doneAt", direction: "desc" },
   items: { field: "saleDate", direction: "desc" },
 };
 
@@ -80,8 +80,8 @@ const TaskColumns: ColumnConfig<Task>[] = [
   { key: "station", label: "Station", accessor: (row) => row.station, sortable: true, sortValue: (row) => row.station ?? "" },
   { key: "status", label: "Status", accessor: (row) => row.status, sortable: true, sortValue: (row) => row.status ?? "" },
   {
-    key: "collectedAt",
-    label: "Collected",
+     key: "doneAt",
+     label: "Done",
      accessor: (row) => {
        const collectedAt = getTaskCollectedAt(row);
        return collectedAt ? formatForDisplay(collectedAt) : "—";
@@ -143,13 +143,13 @@ const FinancialColumns: ColumnConfig<FinancialRecord>[] = [
     key: "collectedAt",
     label: "Collected",
      accessor: (row) => {
-       const collectedAt = row.lifecycle?.collectedAt;
-       return collectedAt ? formatForDisplay(collectedAt) : "—";
+        const doneAt = row.lifecycle?.doneAt;
+        return doneAt ? formatForDisplay(doneAt) : "—";
      },
      sortable: true,
      sortValue: (row) => {
-       const collectedAt = row.lifecycle?.collectedAt;
-       return collectedAt ? new Date(collectedAt).getTime() : 0;
+        const doneAt = row.lifecycle?.doneAt;
+        return doneAt ? new Date(doneAt).getTime() : 0;
      },
   },
   {

@@ -185,16 +185,6 @@ export const ClientAPI = {
     return result.queueId;
   },
 
-  bulkCollectTasks: async (month: number, year: number): Promise<{ collectedCount: number }> => {
-    const res = await request('/api/tasks/bulk-collect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ month, year })
-    });
-    if (!res.ok) throw new Error('Failed to bulk collect tasks');
-    return await res.json();
-  },
-
   // ============================================================================
   // ITEMS - Item management operations
   // ============================================================================
@@ -635,6 +625,21 @@ export const ClientAPI = {
       return { success: false, message: `Failed to remove ${logType} log entry` };
     }
     return await res.json();
+  },
+
+  runAutomation: async (taskId: string, year: number, month: number, mode: 'dry-run' | 'execute') => {
+    const requestId = crypto.randomUUID();
+    const res = await request('/api/automations/run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': requestId,
+      },
+      body: JSON.stringify({ taskId, year, month, mode }),
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result?.error || 'Failed to run automation');
+    return result;
   },
 
   // ============================================================================
@@ -1410,26 +1415,6 @@ export const ClientAPI = {
       method: 'DELETE'
     });
     if (!res.ok) throw new Error('Failed to delete archived task');
-  },
-
-  collectSales: async (month: number, year: number): Promise<{ success: boolean; collected: number }> => {
-    const res = await request('/api/sales/collect-all', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ month, year })
-    });
-    if (!res.ok) throw new Error('Failed to collect sales');
-    return await res.json();
-  },
-
-  collectAllEntities: async (month: number, year: number): Promise<{ success: boolean; results: any }> => {
-    const res = await request('/api/tasks/collect-all-orchestrated', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ month, year })
-    });
-    if (!res.ok) throw new Error('Failed to collect all entities');
-    return await res.json();
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
