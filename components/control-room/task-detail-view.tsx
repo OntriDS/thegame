@@ -417,8 +417,16 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
     };
     return (
       <div className="h-full overflow-y-auto p-4 sm:p-6 flex flex-col items-center justify-center text-center">
-        <Icon className="h-16 w-16 text-purple-600/50 mb-4" />
-        <h2 className="text-2xl font-bold mb-2">{task.name}</h2>
+        <div className="flex w-full max-w-md items-start justify-between gap-4 mb-4">
+          <div className="flex-1 text-left">
+            <Icon className="h-16 w-16 text-purple-600/50 mb-4" />
+            <h2 className="text-2xl font-bold mb-2">{task.name}</h2>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => onEditTask(task)}>
+            <Edit className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+        </div>
         <p className="text-muted-foreground max-w-md mb-8">
           {task.description || 'This Task defines a registered, runnable automation procedure.'}
         </p>

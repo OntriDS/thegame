@@ -10,10 +10,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { TaskModalFooter } from './task-modal';
+import DatesSubmodal from './submodals/dates-submodal';
 import { Task } from '@/types/entities';
 import { BUSINESS_STRUCTURE, TaskStatus, TaskType } from '@/types/enums';
 import { v4 as uuid } from 'uuid';
 import type { Station } from '@/types/type-aliases';
+import { Calendar as CalendarIcon } from 'lucide-react';
 
 interface AutomationTaskModalContentProps {
   task?: Task | null;
@@ -43,15 +45,21 @@ export default function AutomationTaskModalContent({
   const [station, setStation] = useState<Station>('strategy' as Station);
   const [status, setStatus] = useState<TaskStatus>(TaskStatus.CREATED);
   const [ownerId, setOwnerId] = useState('');
+  const [doneAt, setDoneAt] = useState<Date | undefined>();
+  const [collectedAt, setCollectedAt] = useState<Date | undefined>();
+  const [showDatesModal, setShowDatesModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    const runtimeTask = task as (Task & { doneAt?: string | Date; collectedAt?: string | Date }) | null | undefined;
     setName(task?.name || '');
     setDescription(task?.description || '');
     setStation((task?.station || 'strategy') as Station);
     setStatus((task?.status || TaskStatus.CREATED) as TaskStatus);
     setOwnerId(task?.ownerIds?.[0] || '');
+    setDoneAt(runtimeTask?.doneAt ? new Date(runtimeTask.doneAt) : undefined);
+    setCollectedAt(runtimeTask?.collectedAt ? new Date(runtimeTask.collectedAt) : undefined);
     setError('');
   }, [task]);
 
@@ -73,6 +81,13 @@ export default function AutomationTaskModalContent({
       status,
       station,
       ownerIds: ownerId ? [ownerId] : [],
+      doneAt,
+      collectedAt,
+      lifecycle: {
+        ...((task as any)?.lifecycle || {}),
+        doneAt: doneAt || null,
+        collectedAt: collectedAt || null,
+      },
       context: {
         ...((task as any)?.context || {}),
         automation: { automationType: 'monthly-close' },
@@ -88,6 +103,11 @@ export default function AutomationTaskModalContent({
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDatesUpdate = (newDates: { createdAt?: Date; doneAt?: Date; collectedAt?: Date }) => {
+    setDoneAt(newDates.doneAt);
+    setCollectedAt(newDates.collectedAt);
   };
 
   return <>
@@ -133,11 +153,34 @@ export default function AutomationTaskModalContent({
       {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
     </div>
     <TaskModalFooter>
-      <div className="text-xs text-muted-foreground">The definition selects a registered automation. Run inputs and scheduling are handled separately.</div>
+      <div className="flex flex-wrap items-center gap-2">
+        {task && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowDatesModal(true)}
+            className="h-8 text-xs bg-secondary/50"
+          >
+            <CalendarIcon className="w-3 h-3 mr-2" />
+            Timeline
+          </Button>
+        )}
+        <div className="text-xs text-muted-foreground">The definition selects a registered automation. Run inputs and scheduling are handled separately.</div>
+      </div>
       <div className="flex gap-2">
         <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
         <Button type="button" onClick={handleSubmit} disabled={saving}>{saving ? 'Saving…' : 'Save automation task'}</Button>
       </div>
     </TaskModalFooter>
+    <DatesSubmodal
+      open={showDatesModal}
+      onOpenChange={setShowDatesModal}
+      entityId={task?.id ? `data:task:${task.id}` : undefined}
+      createdAt={task?.createdAt}
+      doneAt={doneAt}
+      collectedAt={collectedAt}
+      currentStatus={status}
+      onDatesChange={handleDatesUpdate}
+    />
   </>;
 }
