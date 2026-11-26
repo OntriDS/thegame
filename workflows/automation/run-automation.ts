@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import type { WorkflowExecutionV1, MonthlyCloseProgressV1 } from '@/types/entities';
 import { SaleStatus, TaskStatus, TaskType, WorkflowStatus } from '@/types/enums';
-import { getTaskById, getTasksForMonth, getSalesForMonth } from '@/data-store/datastore';
+import { getTaskById, getTasksForMonth, getSalesForMonth, upsertTask } from '@/data-store/datastore';
 import { CollectionService } from '@/workflows/collection.service';
 import {
   acquireWorkflowLease,
@@ -253,11 +253,28 @@ export async function runAutomation(input: RunAutomationInput): Promise<Automati
   const task = await getTaskById(input.taskId);
   if (!task) throw new Error('AUTOMATION_TASK_NOT_FOUND');
   if (task.type !== TaskType.AUTOMATION) throw new Error('TASK_IS_NOT_AUTOMATION');
-  if (task.status !== TaskStatus.IN_PROGRESS) throw new Error('AUTOMATION_TASK_NOT_RUNNABLE');
 
   const automationType = task.context?.automation?.automationType;
   const registration = automationType ? getRegisteredAutomation(automationType) : null;
   if (!registration || !registration.validateTask(task)) throw new Error('AUTOMATION_TYPE_NOT_REGISTERED');
+
+  // The Run command is the activation boundary. Automation Tasks may be
+  // created, paused, or left in a previous terminal state; the process that
+  // actually runs one activates it through the canonical Task workflow before
+  // starting the period execution. This keeps scheduling and agent execution
+  // from requiring a separate manual status change.
+  if (task.status !== TaskStatus.IN_PROGRESS) {
+    await upsertTask({
+      ...task,
+      status: TaskStatus.IN_PROGRESS,
+      updatedAt: getUTCNow(),
+      lifecycle: {
+        ...(task.lifecycle || {}),
+        doneAt: null,
+        collectedAt: null,
+      },
+    });
+  }
 
   const initial = baseExecution(input.taskId, input.year, input.month, input.mode, input.requestId);
   const created = await createOrGetWorkflowExecution(initial);
