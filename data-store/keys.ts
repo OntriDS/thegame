@@ -17,7 +17,13 @@ function normalizeMonthKey(mmyy: string): string {
 }
 
 export function buildDataKey(entity: string, id: string): string {
-  return `${NAMESPACE}data:${entity}:${id}`;
+  // Entity IDs may be supplied either as their canonical fully-qualified
+  // data key or as the short ID used by older callers.  Do not prefix an ID
+  // that is already canonical; otherwise a lookup for
+  // `thegame:data:task:<id>` becomes
+  // `thegame:data:task:thegame:data:task:<id>`.
+  const prefix = `${NAMESPACE}data:${entity}:`;
+  return id.startsWith(prefix) ? id : `${prefix}${id}`;
 }
 
 export function buildAccountKey(identifier: string): string {
