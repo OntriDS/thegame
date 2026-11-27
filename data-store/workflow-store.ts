@@ -6,6 +6,17 @@ import { getUTCNow } from '@/lib/utils/utc-utils';
 import { VersionConflictError } from '@/lib/exceptions/workflow-errors';
 
 /**
+ * Upstash Redis automatically deserializes JSON-looking Lua return strings.
+ * Accept either that parsed object or the raw JSON string, depending on client
+ * configuration/version.
+ */
+function parseLuaJsonResult<T>(result: unknown): T {
+  if (typeof result === 'string') return JSON.parse(result) as T;
+  if (result !== null && typeof result === 'object') return result as T;
+  throw new Error('Redis Lua script returned neither a JSON string nor an object.');
+}
+
+/**
  * Attempts to acquire an atomic lock for an effect claim.
  * Uses Redis SET NX to ensure only one coordinator can claim it.
  * @param idempotencyKey The unique key for the effect
@@ -113,7 +124,7 @@ export async function acquireWorkflowLease(
   const nowIso = now.toISOString();
   const leaseExpiresAt = new Date(now.getTime() + leaseSeconds * 1000).toISOString();
   const leaseToken = `${ownerId}:${Date.now()}`;
-  const result = await kvEval<string | null>(
+  const result = await kvEval<unknown | null>(
     `
       local raw = redis.call('GET', KEYS[1])
       if not raw then return nil end
@@ -133,7 +144,7 @@ export async function acquireWorkflowLease(
     [key],
     [nowIso, leaseToken, leaseExpiresAt],
   );
-  return result ? JSON.parse(result) as WorkflowExecutionV1 : null;
+  return result === null ? null : parseLuaJsonResult<WorkflowExecutionV1>(result);
 }
 
 /** Save only if the caller still owns the expected revision and lease. */
@@ -205,7 +216,7 @@ export async function claimNextAutomationAgentAction(
   const expiresIso = new Date(now.getTime() + leaseSeconds * 1000).toISOString();
   for (const actionId of actionIds) {
     const claimToken = randomUUID();
-    const result = await kvEval<string | null>(
+    const result = await kvEval<unknown | null>(
       `
         local raw = redis.call('GET', KEYS[1])
         if not raw then return nil end
@@ -222,7 +233,7 @@ export async function claimNextAutomationAgentAction(
       [automationActionKey(actionId)],
       [nowIso, claimToken, expiresIso],
     );
-    if (result) return JSON.parse(result) as AutomationAgentActionV1;
+    if (result !== null) return parseLuaJsonResult<AutomationAgentActionV1>(result);
   }
   return null;
 }
