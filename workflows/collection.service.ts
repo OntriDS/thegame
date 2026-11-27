@@ -11,6 +11,7 @@ import { getUTCNow, endOfMonthUTC, formatArchiveMonthKeyUTCFromParts } from '@/l
 import { kvSAdd } from '@/lib/utils/kv';
 import { buildArchiveMonthsKey } from '@/data-store/keys';
 import { getTaskDoneAt, withTaskLifecycle } from '@/lib/utils/task-lifecycle-utils';
+import { getEntityLogs } from '@/workflows/entities-logging';
 
 /**
  * Monthly collection: tasks and sales only. Points vest on those entities in their workflows.
@@ -20,15 +21,30 @@ export const CollectionService = {
     async collectTasks(month: number, year: number) {
         const tasks = await getTasksForMonth(year, month);
         const toCollect = tasks.filter(t => t.status === TaskStatus.DONE && t.status !== TaskStatus.COLLECTED);
+        const taskMonthKey = `${String(month).padStart(2, '0')}-${String(year).slice(-2)}`;
+        const taskLogs = await getEntityLogs(EntityType.TASK, { month: taskMonthKey });
+        const doneAtByTask = new Map<string, Date>();
+        for (const entry of taskLogs) {
+            const event = String(entry.event ?? entry.status ?? '').toLowerCase();
+            if (event !== 'done' || !entry.entityId || doneAtByTask.has(entry.entityId)) continue;
+            const timestamp = new Date(entry.timestamp);
+            if (Number.isFinite(timestamp.getTime())) doneAtByTask.set(entry.entityId, timestamp);
+        }
 
         let count = 0;
         for (const task of toCollect) {
-            const doneAt = getTaskDoneAt(task);
+            // Older rows can have a DONE lifecycle log but no canonical
+            // lifecycle.doneAt. Recover only from that exact event timestamp;
+            // never substitute collection time for the completion time.
+            const doneAt = getTaskDoneAt(task) || doneAtByTask.get(task.id);
             const updatedTask = withTaskLifecycle({
                 ...task,
                 status: TaskStatus.COLLECTED,
                 updatedAt: getUTCNow()
-            }, { collectedAt: endOfMonthUTC(doneAt ? (doneAt instanceof Date ? doneAt : new Date(doneAt as string)) : getUTCNow()) });
+            }, {
+                ...(doneAt ? { doneAt } : {}),
+                collectedAt: endOfMonthUTC(doneAt ? (doneAt instanceof Date ? doneAt : new Date(doneAt as string)) : getUTCNow()),
+            });
 
             await upsertTask(updatedTask);
             count++;

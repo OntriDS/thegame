@@ -361,18 +361,14 @@ export function createRecurrentGroup(
     name,
     description,
     type: TaskType.RECURRENT_GROUP,
-    status: TaskStatus.CREATED,
+    status: TaskStatus.NONE,
     priority: TaskPriority.NORMAL,
     station: station as any,
-    progress: 0,
     order: 0,
     parentId: parentId || null,
-    cost: 0,
-    revenue: 0,
-    rewards: { points: { xp: 0, rp: 0, fp: 0, hp: 0 } },
     createdAt: new Date(),
     updatedAt: new Date(),
-    ownerId: null,
+    ownerIds: [],
   };
 }
 

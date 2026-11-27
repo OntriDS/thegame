@@ -105,12 +105,26 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { skipDuplicateCheck, ...taskData } = body as { skipDuplicateCheck?: boolean } & Record<string, unknown>;
     const taskBody = taskData as unknown as Task;
+    const isStructuralGroup = taskBody.type === TaskType.MISSION_GROUP || taskBody.type === TaskType.RECURRENT_GROUP;
     const automationValidation = validateAutomationDefinition(taskBody as any);
     if (automationValidation) return NextResponse.json(automationValidation, { status: 400 });
     const incomingTaskCharacterId = normalizeCharacterId((taskBody as { characterId?: string | null }).characterId);
     const characterId = incomingTaskCharacterId;
 
     const cleanTaskBody = { ...(taskBody as unknown as Record<string, unknown>) } as Record<string, unknown>;
+    if (isStructuralGroup) {
+      // TaskGroupV1 is a logical container: no executable progress, schedule,
+      // or lifecycle. Normalize legacy/UI writes at the canonical API boundary.
+      cleanTaskBody.status = TaskStatus.NONE;
+      delete cleanTaskBody.progress;
+      delete cleanTaskBody.schedule;
+      delete cleanTaskBody.dueDate;
+      delete cleanTaskBody.scheduledStart;
+      delete cleanTaskBody.scheduledEnd;
+      delete cleanTaskBody.lifecycle;
+      delete cleanTaskBody.doneAt;
+      delete cleanTaskBody.collectedAt;
+    }
     const requestedOwnerIds = Array.isArray(taskBody.ownerIds) ? taskBody.ownerIds : undefined;
 
     // These fields are compatibility inputs only. New Task writes use the
@@ -217,7 +231,7 @@ export async function POST(req: NextRequest) {
     }
 
     const existingTask = taskBody.id ? await getTaskById(taskBody.id) : null;
-    const requestedStatus = taskBody.status as TaskStatus | undefined;
+    const requestedStatus = isStructuralGroup ? TaskStatus.NONE : taskBody.status as TaskStatus | undefined;
     const rewardValidation = validateTaskRewardStatus(requestedStatus, rewardPoints);
     if (rewardValidation) return NextResponse.json(rewardValidation, { status: 400 });
     const isTerminalStatus = (status?: TaskStatus) =>
@@ -229,8 +243,8 @@ export async function POST(req: NextRequest) {
       isTerminalStatus(existingTask?.status as TaskStatus) &&
       Boolean(requestedStatus) &&
       !isTerminalStatus(requestedStatus);
-    const requestedDoneAt = taskBody.doneAt ? parseDateToUTC(taskBody.doneAt) : undefined;
-    const requestedCollectedAt = taskBody.collectedAt ? parseDateToUTC(taskBody.collectedAt) : undefined;
+    const requestedDoneAt = !isStructuralGroup && taskBody.doneAt ? parseDateToUTC(taskBody.doneAt) : undefined;
+    const requestedCollectedAt = !isStructuralGroup && taskBody.collectedAt ? parseDateToUTC(taskBody.collectedAt) : undefined;
     const shouldSetDoneAt = Boolean(requestedStatus) &&
       (requestedStatus === TaskStatus.DONE ||
         requestedStatus === TaskStatus.COLLECTED ||
@@ -254,7 +268,7 @@ export async function POST(req: NextRequest) {
     const existingProgress = typeof existingTask?.progress === 'object'
       ? Number((existingTask.progress as { percentage?: unknown }).percentage ?? 0)
       : Number(existingTask?.progress ?? 0);
-    const nextProgress =
+    const nextProgress = isStructuralGroup ? undefined :
       taskBody.progress !== undefined
         ? (typeof taskBody.progress === 'object'
           ? Number((taskBody.progress as { percentage?: unknown }).percentage ?? 0)
@@ -266,20 +280,23 @@ export async function POST(req: NextRequest) {
     const task = {
       ...cleanTaskBody,
       id,
+      status: requestedStatus,
       ...(Object.prototype.hasOwnProperty.call(taskBody, 'parentId') ? { parentId } : {}),
       ...(taskBody.outputItemId ? { outputItemId: taskBody.outputItemId } : {}),
       ...(requestedOwnerIds !== undefined ? { ownerIds: requestedOwnerIds } : {}),
       createdAt: taskBody.createdAt ? parseDateToUTC(taskBody.createdAt as Date | string | number | null | undefined) : getUTCNow(),
       updatedAt: getUTCNow(),
-      schedule: taskBody.schedule || (taskBody.dueDate
-        ? { dueDate: parseDateToUTC(taskBody.dueDate) }
-        : undefined),
-      lifecycle: {
-        ...(taskBody.lifecycle || existingTask?.lifecycle || {}),
-        ...(requestedDoneAt !== undefined || requestedStatus ? { doneAt: nextDoneAt ?? null } : {}),
-        ...(requestedCollectedAt !== undefined || requestedStatus ? { collectedAt: nextCollectedAt ?? null } : {}),
-      },
-      progress: { percentage: Number.isFinite(nextProgress) ? nextProgress : 0 },
+      ...(!isStructuralGroup ? {
+        schedule: taskBody.schedule || (taskBody.dueDate
+          ? { dueDate: parseDateToUTC(taskBody.dueDate) }
+          : undefined),
+        lifecycle: {
+          ...(taskBody.lifecycle || existingTask?.lifecycle || {}),
+          ...(requestedDoneAt !== undefined || requestedStatus ? { doneAt: nextDoneAt ?? null } : {}),
+          ...(requestedCollectedAt !== undefined || requestedStatus ? { collectedAt: nextCollectedAt ?? null } : {}),
+        },
+        progress: { percentage: Number.isFinite(nextProgress) ? nextProgress : 0 },
+      } : {}),
       context: Object.keys({
         ...normalizedContext,
         ...(normalizedFrequencyConfig && (taskBody.type === TaskType.RECURRENT_GROUP || taskBody.type === TaskType.RECURRENT_TEMPLATE)

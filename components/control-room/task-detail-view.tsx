@@ -394,6 +394,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
   }
 
   const { task, children } = node;
+  const isStructuralGroup = task.type === TaskType.MISSION_GROUP || task.type === TaskType.RECURRENT_GROUP;
 
   const hasTemplateChild =
     task.type === TaskType.RECURRENT_GROUP &&
@@ -631,8 +632,8 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
           </div>
         )}
 
-        {/* Progress */}
-        <div className="mb-4">
+        {/* Executable-task progress; logical groups have no progress lifecycle. */}
+        {!isStructuralGroup && <div className="mb-4">
           <div className="flex justify-between items-center mb-2">
             <CardTitle className="text-sm font-medium">Progress</CardTitle>
             <span className="text-sm font-bold text-primary">
@@ -656,7 +657,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
               <span>100%</span>
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* Key Stats */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
@@ -665,7 +666,11 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
               <CardTitle className="text-xs font-medium">Status</CardTitle>
               <Flag className="w-3 h-3 text-muted-foreground" />
             </div>
-            {editingField === 'status' ? (
+            {isStructuralGroup ? (
+              <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${getStatusColor(TaskStatus.NONE, isDarkMode)}`}>
+                {getTaskStatusLabel(TaskStatus.NONE)}
+              </span>
+            ) : editingField === 'status' ? (
               <Select value={tempValue} onValueChange={setTempValue} onOpenChange={(open) => !open && saveEdit()}>
                 <SelectTrigger className="h-7 text-xs">
                   <SelectValue />

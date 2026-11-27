@@ -485,7 +485,8 @@ export default function MissionTreeModalContent({
       return status;
     };
 
-    const finalStatus = determineFinalStatus();
+    const isStructuralGroup = type === TaskType.MISSION_GROUP;
+    const finalStatus = isStructuralGroup ? TaskStatus.NONE : determineFinalStatus();
     const hasCounterparty = Boolean((!isNewCustomer && customerCharacterId) || (isNewCustomer && newCustomerName.trim()));
     const hasProductionIntent = Boolean(outputItemType || outputItemName.trim() || selectedItemId);
     const hasRewards = hasNonZeroTaskPoints(pointsOverride);
@@ -501,21 +502,21 @@ export default function MissionTreeModalContent({
       priority,
       type,
       station,
-      progress,
-      lifecycle: {
+      ...(!isStructuralGroup ? { progress } : {}),
+      ...(!isStructuralGroup ? { lifecycle: {
         ...((task as any)?.lifecycle || {}),
         ...(finalStatus === TaskStatus.DONE || finalStatus === TaskStatus.FAILED || finalStatus === TaskStatus.COLLECTED
           ? { doneAt: localDoneAt }
           : { doneAt: null }),
         ...(finalStatus === TaskStatus.COLLECTED ? { collectedAt: localCollectedAt } : { collectedAt: null }),
-      },
-      schedule: dueDate || finalScheduledStart || finalScheduledEnd
+      } } : {}),
+      ...(!isStructuralGroup ? { schedule: dueDate || finalScheduledStart || finalScheduledEnd
         ? {
             ...(dueDate ? { dueDate: dueDate.toISOString() } : {}),
             ...(finalScheduledStart ? { scheduledStart: finalScheduledStart.toISOString() } : {}),
             ...(finalScheduledEnd ? { scheduledEnd: finalScheduledEnd.toISOString() } : {}),
           }
-        : undefined,
+        : undefined } : {}),
       siteId: formData.site && formData.site !== 'none' ? formData.site : null,
       targetSiteId: formData.targetSite && formData.targetSite !== 'none' ? formData.targetSite : null,
       parentId,
@@ -713,7 +714,7 @@ export default function MissionTreeModalContent({
                 />
               </div>
 
-              <div className="space-y-2 border-t pt-2 mt-2">
+              {type !== TaskType.MISSION_GROUP && <div className="space-y-2 border-t pt-2 mt-2">
                 <Label className="text-xs font-semibold">Schedule</Label>
                 <Button
                   type="button"
@@ -737,7 +738,7 @@ export default function MissionTreeModalContent({
                     </span>
                   </div>
                 </Button>
-              </div>
+              </div>}
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-2">
@@ -756,7 +757,7 @@ export default function MissionTreeModalContent({
                   </Select>
                 </div>
 
-                <div className="space-y-2">
+                {type !== TaskType.MISSION_GROUP && <div className="space-y-2">
                   <Label htmlFor="task-progress" className="text-xs">Progress: {progress}%</Label>
                   <input
                     id="task-progress"
@@ -780,7 +781,7 @@ export default function MissionTreeModalContent({
                     }}
                     className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
                   />
-                </div>
+                </div>}
               </div>
             </div>
 
@@ -1160,7 +1161,11 @@ export default function MissionTreeModalContent({
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
+          {type === TaskType.MISSION_GROUP ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Status:</span><span>{getTaskStatusLabel(TaskStatus.NONE)}</span>
+            </div>
+          ) : <div className="flex items-center gap-2">
             <Label htmlFor="task-status-footer" className="text-xs text-muted-foreground">
               Status:
             </Label>
@@ -1230,7 +1235,7 @@ export default function MissionTreeModalContent({
                   ))}
               </SelectContent>
             </Select>
-          </div>
+          </div>}
           <div className="flex gap-2">
             <Button
               type="button"

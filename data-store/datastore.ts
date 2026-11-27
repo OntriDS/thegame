@@ -1480,6 +1480,28 @@ async function ensureSaleCharacterLink(saleId: string, characterId?: string | nu
 
 export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean }): Promise<Sale> {
   const previous = await getSaleById(sale.id);
+  const isSettledStatus = sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED;
+  const wasSettledStatus = previous?.status === SaleStatus.CHARGED || previous?.status === SaleStatus.COLLECTED;
+  // The storage boundary owns the minimum paid-sale lifecycle. Older callers
+  // (including CLI/API writers) may submit a charged status without the modal's
+  // lifecycle fields; stamp the transition once, without rewriting timestamps
+  // when an already-charged sale is edited later.
+  const saleForPersistence = isSettledStatus && !wasSettledStatus
+    ? (() => {
+        const chargedAt = sale.lifecycle?.chargedAt || sale.lifecycle?.doneAt || getUTCNow();
+        return {
+          ...sale,
+          lifecycle: {
+            ...(sale.lifecycle || {}),
+            chargedAt,
+            doneAt: sale.lifecycle?.doneAt || chargedAt,
+            ...(sale.status === SaleStatus.COLLECTED && !sale.lifecycle?.collectedAt
+              ? { collectedAt: getUTCNow() }
+              : {}),
+          },
+        };
+      })()
+    : sale;
   const relations = (sale as any).__saleRelations || {};
   // A supplied null is an intentional relationship removal. Preserve that
   // distinction so edits can clear canonical Links instead of retaining them.
@@ -1525,9 +1547,9 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
 
   const normalizedSale = roundSaleTotals(
     ensureItemSaleLineIds(normalizeSale(normalizeSaleOutputTaxonomy({
-      ...sale,
+      ...saleForPersistence,
       lifecycle: (() => {
-        const { saleAt: _legacySaleAt, ...canonicalLifecycle } = sale.lifecycle || {};
+        const { saleAt: _legacySaleAt, ...canonicalLifecycle } = saleForPersistence.lifecycle || {};
         return canonicalLifecycle;
       })(),
     })))

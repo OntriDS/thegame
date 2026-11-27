@@ -473,7 +473,8 @@ export default function RecurrentTreeModalContent({
       return status;
     };
 
-    const finalStatus = statusOverride !== undefined ? statusOverride : determineFinalStatus();
+    const isStructuralGroup = type === TaskType.RECURRENT_GROUP;
+    const finalStatus = isStructuralGroup ? TaskStatus.NONE : statusOverride !== undefined ? statusOverride : determineFinalStatus();
     const hasCounterparty = Boolean((!isNewCustomer && customerCharacterId) || (isNewCustomer && newCustomerName.trim()));
     const hasProductionIntent = Boolean(outputItemType || outputItemName.trim() || selectedItemId);
     const hasRewards = hasNonZeroTaskPoints(pointsOverride);
@@ -489,21 +490,21 @@ export default function RecurrentTreeModalContent({
       priority,
       type,
       station,
-      progress,
-      lifecycle: {
+      ...(!isStructuralGroup ? { progress } : {}),
+      ...(!isStructuralGroup ? { lifecycle: {
         ...((task as any)?.lifecycle || {}),
         ...(finalStatus === TaskStatus.DONE || finalStatus === TaskStatus.FAILED || finalStatus === TaskStatus.COLLECTED
           ? { doneAt: localDoneAt }
           : { doneAt: null }),
         ...(finalStatus === TaskStatus.COLLECTED ? { collectedAt: localCollectedAt } : { collectedAt: null }),
-      },
-      schedule: dueDate || finalScheduledStart || finalScheduledEnd
+      } } : {}),
+      ...(!isStructuralGroup ? { schedule: dueDate || finalScheduledStart || finalScheduledEnd
         ? {
             ...(dueDate ? { dueDate: dueDate.toISOString() } : {}),
             ...(finalScheduledStart ? { scheduledStart: finalScheduledStart.toISOString() } : {}),
             ...(finalScheduledEnd ? { scheduledEnd: finalScheduledEnd.toISOString() } : {}),
           }
-        : undefined,
+        : undefined } : {}),
       siteId: formData.site && formData.site !== 'none' ? formData.site : null,
       targetSiteId: formData.targetSite && formData.targetSite !== 'none' ? formData.targetSite : null,
       parentId,
@@ -843,7 +844,7 @@ export default function RecurrentTreeModalContent({
                   </Select>
                 </div>
 
-                <div className="space-y-2">
+                {type !== TaskType.RECURRENT_GROUP && <div className="space-y-2">
                   <Label htmlFor="recurrent-task-progress" className="text-xs">Progress: {progress}%</Label>
                   <input
                     id="recurrent-task-progress"
@@ -862,7 +863,7 @@ export default function RecurrentTreeModalContent({
                     }}
                     className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
                   />
-                </div>
+                </div>}
               </div>
             </div>
 
@@ -1233,7 +1234,11 @@ export default function RecurrentTreeModalContent({
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
+          {type === TaskType.RECURRENT_GROUP ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Status:</span><span>{getTaskStatusLabel(TaskStatus.NONE)}</span>
+            </div>
+          ) : <div className="flex items-center gap-2">
             <Label htmlFor="recurrent-task-status-footer" className="text-xs text-muted-foreground">
               Status:
             </Label>
@@ -1299,7 +1304,7 @@ export default function RecurrentTreeModalContent({
                   ))}
               </SelectContent>
             </Select>
-          </div>
+          </div>}
           <div className="flex gap-2">
             <Button
               type="button"
