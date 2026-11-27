@@ -36,7 +36,7 @@ const MAX_REFERENCE_ENTITIES = 5000;
 const MAX_REFERENCE_LINKS = 10000;
 const MAX_REFERENCE_FINDINGS = 100;
 const FAMILIES: PeriodAuditEntityFamily[] = ['tasks', 'financials', 'items', 'sales'];
-const REFERENCE_SCOPE = 'Canonical Links touching selected-period Tasks, Financials, Items, and Sales; checks endpoint existence only, not missing required Links or business rules.';
+const REFERENCE_SCOPE = 'Canonical Links returned by selected-period entity link indexes; checks endpoint existence only. It does not scan orphaned Link rows, infer missing required Links, or validate Link business rules.';
 
 export function validateTheGamePeriodAuditInput(value: unknown): Required<TheGamePeriodAuditInput> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('PERIOD_AUDIT_INPUT_REQUIRED');
@@ -167,7 +167,7 @@ async function inspectPeriodReferences(
 
 export async function collectTheGamePeriodAudit(input: TheGamePeriodAuditInput): Promise<TheGamePeriodAuditPacketV2> {
   const { year, months } = validateTheGamePeriodAuditInput(input);
-  const sourceStatus = Object.fromEntries(FAMILIES.map((family) => [family, 'available'])) as TheGamePeriodAuditPacketV1['sourceStatus'];
+  const sourceStatus = Object.fromEntries(FAMILIES.map((family) => [family, 'available'])) as TheGamePeriodAuditPacketV2['sourceStatus'];
   const settled = await Promise.allSettled([
     getAllTasks(),
     getAllFinancialsHistorical(),
