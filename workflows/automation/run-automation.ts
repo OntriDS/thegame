@@ -12,7 +12,7 @@ import {
   saveWorkflowExecution,
 } from '@/data-store/workflow-store';
 import { getUTCNow } from '@/lib/utils/utc-utils';
-import { getRegisteredAutomation } from './automation-registry';
+import { getRegisteredAutomationForTask } from './automation-registry';
 
 export type AutomationRunMode = 'dry-run' | 'execute';
 
@@ -28,7 +28,8 @@ export interface RunAutomationInput {
 
 export interface AutomationRunResult {
   automationTaskId: string;
-  automationType: 'monthly-close';
+  automationType: 'close';
+  automationName: 'monthly-close';
   runId: string;
   mode: AutomationRunMode;
   status: 'running' | 'finishing' | 'completed' | 'failed-retryable' | 'failed-terminal';
@@ -223,7 +224,8 @@ async function toResult(taskId: string, execution: WorkflowExecutionV1, mode: Au
             : 'finishing';
   return {
     automationTaskId: taskId,
-    automationType: 'monthly-close',
+    automationType: 'close',
+    automationName: 'monthly-close',
     runId: execution.workflowId,
     mode,
     status,
@@ -254,8 +256,7 @@ export async function runAutomation(input: RunAutomationInput): Promise<Automati
   if (!task) throw new Error('AUTOMATION_TASK_NOT_FOUND');
   if (task.type !== TaskType.AUTOMATION) throw new Error('TASK_IS_NOT_AUTOMATION');
 
-  const automationType = task.context?.automation?.automationType;
-  const registration = automationType ? getRegisteredAutomation(automationType) : null;
+  const registration = getRegisteredAutomationForTask(task);
   if (!registration || !registration.validateTask(task)) throw new Error('AUTOMATION_TYPE_NOT_REGISTERED');
 
   // The Run command is the activation boundary. Automation Tasks may be

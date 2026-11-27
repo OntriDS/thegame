@@ -680,9 +680,13 @@ export interface FinancialIntentFacetV1 {
   revenueIntent?: Money;
 }
 
-/** Closed registry key for an automation Task definition. */
+/**
+ * `automationType` is a small reusable procedure category. `automationName`
+ * selects one closed, registered procedure within that category.
+ */
 export interface AutomationFacetV1 {
-  automationType: 'monthly-close';
+  automationType: 'close' | 'audit' | 'schedule';
+  automationName: string;
 }
 
 export interface RewardIntentFacetV1 {

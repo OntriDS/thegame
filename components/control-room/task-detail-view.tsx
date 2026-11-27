@@ -399,7 +399,9 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
     children.some(child => child.task.type === TaskType.RECURRENT_TEMPLATE);
 
   if (task.type === TaskType.AUTOMATION) {
-    const automationType = (task as any).context?.automation?.automationType || 'unknown';
+    const rawAutomation = (task as any).context?.automation || {};
+    const automationType = rawAutomation.automationType === 'monthly-close' ? 'close' : rawAutomation.automationType || 'unknown';
+    const automationName = rawAutomation.automationName || (rawAutomation.automationType === 'monthly-close' ? 'monthly-close' : 'unknown');
     const runAutomation = async () => {
       if (automationMode === 'execute' && !window.confirm('Execute monthly close for this UTC period? This changes eligible Tasks and Sales to collected.')) return;
       setAutomationRunning(true);
@@ -435,6 +437,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
           <h3 className="font-semibold text-lg text-left">Registered automation</h3>
           <div className="text-sm text-left text-muted-foreground space-y-2">
             <p><span className="font-medium text-foreground">Type:</span> {automationType}</p>
+            <p><span className="font-medium text-foreground">Name:</span> {automationName}</p>
             <p><span className="font-medium text-foreground">Status:</span> {task.status}</p>
             <p>Runs use an explicit UTC period. Dry-run is non-mutating; execute requires confirmation.</p>
             <div className="grid grid-cols-2 gap-3 pt-2 text-left">
@@ -466,7 +469,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
                 <p><span className="font-medium">Eligible:</span> tasks {automationResult.core?.tasksEligible ?? 0}, sales {automationResult.core?.salesEligible ?? 0}</p>
               </div>
             )}
-            <Button className="w-full mt-2" onClick={runAutomation} disabled={automationRunning || task.status !== TaskStatus.IN_PROGRESS || automationType !== 'monthly-close'}>
+            <Button className="w-full mt-2" onClick={runAutomation} disabled={automationRunning || task.status !== TaskStatus.IN_PROGRESS || automationName !== 'monthly-close'}>
               {automationRunning ? 'Running…' : 'Run registered automation'}
             </Button>
             {task.status !== TaskStatus.IN_PROGRESS && <p className="text-xs text-muted-foreground">Set this definition to in-progress to enable Run.</p>}

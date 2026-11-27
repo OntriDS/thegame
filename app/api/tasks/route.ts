@@ -30,14 +30,14 @@ function validateAutomationDefinition(taskBody: Record<string, any>): { error: s
     return { error: 'Automation tasks require context.automation.' };
   }
 
-  const allowed = new Set(['automationType']);
+  const allowed = new Set(['automationType', 'automationName']);
   const unknown = Object.keys(automation).filter((key) => !allowed.has(key));
   if (unknown.length > 0) {
     return { error: `Unknown automation field(s): ${unknown.join(', ')}` };
   }
 
-  if (automation.automationType !== 'monthly-close') {
-    return { error: 'Automation currently supports automationType=monthly-close only.' };
+  if (automation.automationType !== 'close' || automation.automationName !== 'monthly-close') {
+    return { error: 'Automation currently supports automationType=close with automationName=monthly-close only.' };
   }
 
   const allowedStatuses = new Set([

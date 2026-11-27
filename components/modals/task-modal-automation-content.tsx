@@ -90,7 +90,7 @@ export default function AutomationTaskModalContent({
       },
       context: {
         ...((task as any)?.context || {}),
-        automation: { automationType: 'monthly-close' },
+        automation: { automationType: 'close', automationName: 'monthly-close' },
       },
     } as Task;
 
@@ -146,7 +146,11 @@ export default function AutomationTaskModalContent({
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>Registered automation</Label>
+          <Label>Automation type</Label>
+          <Input value="close" readOnly />
+        </div>
+        <div className="space-y-2">
+          <Label>Registered automation name</Label>
           <Input value="monthly-close" readOnly />
         </div>
       </div>
