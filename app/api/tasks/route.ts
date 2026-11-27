@@ -10,6 +10,7 @@ import { requireAdminAuth, requireAdminOrM2MAuth } from '@/lib/api-auth';
 import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
 import { parseDateToUTC } from '@/lib/utils/date-parsers';
 import { hasNonZeroTaskPoints, validateTaskRewardStatus } from '@/lib/task-reward-validation';
+import { getRegisteredAutomation } from '@/workflows/automation/automation-registry';
 
 const normalizeCharacterId = (value: unknown): string | null => {
   if (typeof value !== 'string') return null;
@@ -36,8 +37,8 @@ function validateAutomationDefinition(taskBody: Record<string, any>): { error: s
     return { error: `Unknown automation field(s): ${unknown.join(', ')}` };
   }
 
-  if (automation.automationType !== 'close' || automation.automationName !== 'monthly-close') {
-    return { error: 'Automation currently supports automationType=close with automationName=monthly-close only.' };
+  if (!getRegisteredAutomation(automation.automationType, automation.automationName)) {
+    return { error: 'Unknown registered automation type/name pair.' };
   }
 
   const allowedStatuses = new Set([

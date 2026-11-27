@@ -1336,6 +1336,14 @@ export async function getAllFinancials(): Promise<FinancialRecord[]> {
   return financials.filter(financial => financial.status !== FinancialStatus.PENDING);
 }
 
+/**
+ * Historical/audit reader. Unlike the operational reader above, it preserves
+ * pending rows so an audit can report them rather than hide them.
+ */
+export async function getAllFinancialsHistorical(): Promise<FinancialRecord[]> {
+  return repoGetAllFinancials();
+}
+
 /** Financial rows that still need settlement (unpaid or uncharged). No COLLECTED lifecycle on finrecs. */
   export async function getActiveFinancials(): Promise<FinancialRecord[]> {
     const financials = await repoGetAllFinancials();
@@ -1593,6 +1601,15 @@ export async function getAllSales(): Promise<Sale[]> {
   const sales = await repoGetAllSales();
   const activeSales = sales.filter(sale => sale.status !== SaleStatus.COLLECTED).map(s => normalizeSale(s));
   return Promise.all(activeSales.map(hydrateSaleCompatibility));
+}
+
+/**
+ * Historical/audit reader. Operational views omit collected Sales; period
+ * audits must see them to describe prior months truthfully.
+ */
+export async function getAllSalesHistorical(): Promise<Sale[]> {
+  const sales = reviveDates<Sale[]>(await repoGetAllSales());
+  return Promise.all(sales.map(sale => hydrateSaleCompatibility(normalizeSale(sale))));
 }
 
 // Phase 5: Unified & Optimized Sales fetching (Active + Archive)

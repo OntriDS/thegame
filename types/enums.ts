@@ -870,6 +870,7 @@ export const WORKFLOW_TYPES = [
   'task-collection',
   'sale-settlement',
   'monthly-close',
+  'thegame-entities-period-audit',
   'item-production',
   'item-acquisition',
   'account-triforce-migration',

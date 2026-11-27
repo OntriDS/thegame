@@ -627,7 +627,7 @@ export const ClientAPI = {
     return await res.json();
   },
 
-  runAutomation: async (taskId: string, year: number, month: number, mode: 'dry-run' | 'execute') => {
+  runAutomation: async (taskId: string, input: Record<string, unknown>) => {
     const requestId = crypto.randomUUID();
     const res = await request('/api/automations/run', {
       method: 'POST',
@@ -635,7 +635,7 @@ export const ClientAPI = {
         'Content-Type': 'application/json',
         'Idempotency-Key': requestId,
       },
-      body: JSON.stringify({ taskId, year, month, mode }),
+      body: JSON.stringify({ taskId, input }),
     });
     const result = await res.json();
     if (!res.ok) throw new Error(result?.error || 'Failed to run automation');

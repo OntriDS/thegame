@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import type { WorkflowExecutionV1, MonthlyCloseProgressV1 } from '@/types/entities';
+import type { WorkflowExecutionV1, MonthlyCloseProgressV1, PeriodAuditProgressV1, TheGamePeriodAuditPacketV1 } from '@/types/entities';
 import { SaleStatus, TaskStatus, TaskType, WorkflowStatus } from '@/types/enums';
 import { getTaskById, getTasksForMonth, getSalesForMonth, upsertTask } from '@/data-store/datastore';
 import { CollectionService } from '@/workflows/collection.service';
@@ -13,14 +13,19 @@ import {
 } from '@/data-store/workflow-store';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { getRegisteredAutomationForTask } from './automation-registry';
+import { collectTheGamePeriodAudit, validateTheGamePeriodAuditInput } from './thegame-period-audit';
 
-export type AutomationRunMode = 'dry-run' | 'execute';
+export type AutomationRunMode = 'dry-run' | 'execute' | 'read-only';
+type MonthlyCloseRunMode = Exclude<AutomationRunMode, 'read-only'>;
 
 export interface RunAutomationInput {
   taskId: string;
-  year: number;
-  month: number;
-  mode: AutomationRunMode;
+  /** Closed, registration-specific input. */
+  input?: unknown;
+  /** Legacy monthly-close transport fields; converted at the boundary only. */
+  year?: number;
+  month?: number;
+  mode?: AutomationRunMode;
   /** Optional request idempotency key; retries with the same key reuse the receipt. */
   requestId?: string;
   initiator: 'creator-admin' | 'pixelbrain-m2m' | 'hermes-cron';
@@ -28,8 +33,8 @@ export interface RunAutomationInput {
 
 export interface AutomationRunResult {
   automationTaskId: string;
-  automationType: 'close';
-  automationName: 'monthly-close';
+  automationType: 'close' | 'audit' | 'schedule';
+  automationName: string;
   runId: string;
   mode: AutomationRunMode;
   status: 'running' | 'finishing' | 'completed' | 'failed-retryable' | 'failed-terminal';
@@ -39,12 +44,13 @@ export interface AutomationRunResult {
     salesEligible?: number;
     tasksCollected?: number;
     salesCollected?: number;
+    packet?: TheGamePeriodAuditPacketV1;
     errorCode?: string;
   };
   report: {
     actionId?: string;
-    agentSlug?: 'admin';
-    capability?: 'create-monthly-close-report';
+    agentSlug?: 'admin' | 'analyst';
+    capability?: 'create-monthly-close-report' | 'create-thegame-period-audit-report';
     status: 'not-configured' | 'pending' | 'running' | 'completed' | 'failed-retryable' | 'failed-terminal';
     resultRef?: string;
     errorCode?: string;
@@ -56,14 +62,14 @@ function validatePeriod(year: number, month: number): void {
   if (!Number.isInteger(month) || month < 1 || month > 12) throw new Error('AUTOMATION_MONTH_INVALID');
 }
 
-function executionId(taskId: string, year: number, month: number, mode: AutomationRunMode, requestId?: string): string {
+function executionId(taskId: string, year: number, month: number, mode: MonthlyCloseRunMode, requestId?: string): string {
   const period = `${year}-${String(month).padStart(2, '0')}`;
   return mode === 'execute'
     ? `automation:${taskId}:monthly-close:${period}`
     : `automation:${taskId}:monthly-close:dry-run:${period}:${requestId || randomUUID()}`;
 }
 
-function baseExecution(taskId: string, year: number, month: number, mode: AutomationRunMode, requestId?: string): WorkflowExecutionV1 {
+function baseExecution(taskId: string, year: number, month: number, mode: MonthlyCloseRunMode, requestId?: string): WorkflowExecutionV1 {
   const now = getUTCNow().toISOString();
   return {
     workflowId: executionId(taskId, year, month, mode, requestId),
@@ -170,7 +176,7 @@ async function executeMonthlyClose(execution: WorkflowExecutionV1): Promise<Work
   return execution;
 }
 
-async function ensureReportAction(taskId: string, execution: WorkflowExecutionV1, mode: AutomationRunMode) {
+async function ensureReportAction(taskId: string, execution: WorkflowExecutionV1, mode: MonthlyCloseRunMode) {
   const progress = execution.progress as MonthlyCloseProgressV1 | undefined;
   if (!progress || execution.state !== WorkflowStatus.COMPLETED) return null;
   const actionId = `automation:${execution.workflowId}:admin:create-monthly-close-report`;
@@ -197,7 +203,7 @@ async function ensureReportAction(taskId: string, execution: WorkflowExecutionV1
   return created.action;
 }
 
-async function toResult(taskId: string, execution: WorkflowExecutionV1, mode: AutomationRunMode): Promise<AutomationRunResult> {
+async function toResult(taskId: string, execution: WorkflowExecutionV1, mode: MonthlyCloseRunMode): Promise<AutomationRunResult> {
   const progress = execution.progress as MonthlyCloseProgressV1 | undefined;
   const reportAction = await getAutomationAgentAction(`automation:${execution.workflowId}:admin:create-monthly-close-report`);
   const coreStatus: AutomationRunResult['core']['status'] = execution.state === WorkflowStatus.COMPLETED
@@ -250,14 +256,165 @@ async function toResult(taskId: string, execution: WorkflowExecutionV1, mode: Au
   };
 }
 
+function monthlyCloseInput(input: RunAutomationInput): { year: number; month: number; mode: 'dry-run' | 'execute' } {
+  const raw = input.input && typeof input.input === 'object' && !Array.isArray(input.input)
+    ? input.input as Record<string, unknown>
+    : input as unknown as Record<string, unknown>;
+  const year = Number(raw.year);
+  const month = Number(raw.month);
+  const mode = raw.mode;
+  validatePeriod(year, month);
+  if (mode !== 'dry-run' && mode !== 'execute') throw new Error('MONTHLY_CLOSE_MODE_INVALID');
+  return { year, month, mode };
+}
+
+function auditExecutionId(taskId: string, year: number, months: number[], requestId?: string): string {
+  return `automation:${taskId}:thegame-entities-period-audit:${year}:${months.join('-')}:${requestId || randomUUID()}`;
+}
+
+function baseAuditExecution(taskId: string, year: number, months: number[], requestId?: string): WorkflowExecutionV1 {
+  const now = getUTCNow().toISOString();
+  return {
+    workflowId: auditExecutionId(taskId, year, months, requestId),
+    workflowType: 'thegame-entities-period-audit',
+    rootCommandId: `automation-run:${taskId}:thegame-entities-period-audit:${year}:${months.join('-')}:${requestId || 'new'}`,
+    state: WorkflowStatus.PENDING,
+    revision: 0,
+    currentStep: 'pending',
+    input: { workflowType: 'thegame-entities-period-audit', year, months },
+    completedSteps: [],
+    stepOutcomes: {},
+    attempts: 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+async function ensurePeriodAuditReportAction(taskId: string, execution: WorkflowExecutionV1) {
+  const progress = execution.progress as PeriodAuditProgressV1 | undefined;
+  if (!progress || execution.state !== WorkflowStatus.COMPLETED) return null;
+  const actionId = `automation:${execution.workflowId}:analyst:create-thegame-period-audit-report`;
+  const { workflowType: _workflowType, completedAt: _completedAt, ...packet } = progress;
+  const created = await createOrGetAutomationAgentAction({
+    actionId,
+    runId: execution.workflowId,
+    automationTaskId: taskId,
+    agentSlug: 'analyst',
+    capability: 'create-thegame-period-audit-report',
+    mode: 'read-only',
+    reportInput: packet,
+    status: 'pending',
+    createdAt: getUTCNow().toISOString(),
+    updatedAt: getUTCNow().toISOString(),
+  });
+  return created.action;
+}
+
+async function toPeriodAuditResult(taskId: string, execution: WorkflowExecutionV1): Promise<AutomationRunResult> {
+  const progress = execution.progress as PeriodAuditProgressV1 | undefined;
+  const reportAction = await getAutomationAgentAction(`automation:${execution.workflowId}:analyst:create-thegame-period-audit-report`);
+  const coreStatus: AutomationRunResult['core']['status'] = execution.state === WorkflowStatus.COMPLETED
+    ? 'completed'
+    : execution.state === WorkflowStatus.FAILED_RETRYABLE
+      ? 'failed-retryable'
+      : execution.state === WorkflowStatus.FAILED_TERMINAL
+        ? 'failed-terminal'
+        : 'running';
+  const status: AutomationRunResult['status'] = execution.state !== WorkflowStatus.COMPLETED
+    ? coreStatus
+    : !reportAction || reportAction.status === 'completed'
+      ? 'completed'
+      : reportAction.status === 'failed-retryable'
+        ? 'failed-retryable'
+        : reportAction.status === 'failed-terminal'
+          ? 'failed-terminal'
+          : 'finishing';
+  const { workflowType: _workflowType, completedAt: _completedAt, ...packet } = progress || {} as PeriodAuditProgressV1;
+  return {
+    automationTaskId: taskId,
+    automationType: 'audit',
+    automationName: 'thegame-entities-period-audit',
+    runId: execution.workflowId,
+    mode: 'read-only',
+    status,
+    core: {
+      status: coreStatus,
+      ...(progress ? { packet: packet as TheGamePeriodAuditPacketV1 } : {}),
+      errorCode: execution.lastErrorCode,
+    },
+    report: reportAction
+      ? {
+          actionId: reportAction.actionId,
+          agentSlug: reportAction.agentSlug,
+          capability: reportAction.capability,
+          status: reportAction.status,
+          resultRef: reportAction.resultRef,
+          errorCode: reportAction.errorCode,
+        }
+      : { status: 'not-configured' },
+  };
+}
+
+async function runPeriodAuditAutomation(taskId: string, input: unknown, requestId?: string): Promise<AutomationRunResult> {
+  const auditInput = validateTheGamePeriodAuditInput(input);
+  const initial = baseAuditExecution(taskId, auditInput.year, auditInput.months, requestId);
+  const created = await createOrGetWorkflowExecution(initial);
+  await indexAutomationWorkflowExecution(taskId, created.execution.workflowId);
+  if (!created.created) {
+    if (created.execution.state === WorkflowStatus.COMPLETED) await ensurePeriodAuditReportAction(taskId, created.execution);
+    return toPeriodAuditResult(taskId, created.execution);
+  }
+  try {
+    const packet = await collectTheGamePeriodAudit(auditInput);
+    const completed: WorkflowExecutionV1 = {
+      ...created.execution,
+      state: WorkflowStatus.COMPLETED,
+      currentStep: 'core-completed',
+      progress: {
+        ...packet,
+        workflowType: 'thegame-entities-period-audit',
+        completedAt: getUTCNow().toISOString(),
+      },
+      completedSteps: ['thegame-period-audit-core'],
+      stepOutcomes: {
+        'thegame-period-audit-core': {
+          step: 'thegame-period-audit-core',
+          state: 'completed',
+          completedAt: getUTCNow().toISOString(),
+        },
+      },
+      updatedAt: getUTCNow().toISOString(),
+    };
+    await saveWorkflowExecution(completed);
+    await ensurePeriodAuditReportAction(taskId, completed);
+    return toPeriodAuditResult(taskId, completed);
+  } catch (error) {
+    const failed: WorkflowExecutionV1 = {
+      ...created.execution,
+      state: WorkflowStatus.FAILED_RETRYABLE,
+      currentStep: 'core-failed',
+      lastErrorCode: error instanceof Error ? error.message : 'PERIOD_AUDIT_FAILED',
+      updatedAt: getUTCNow().toISOString(),
+    };
+    await saveWorkflowExecution(failed);
+    return toPeriodAuditResult(taskId, failed);
+  }
+}
+
 export async function runAutomation(input: RunAutomationInput): Promise<AutomationRunResult> {
-  validatePeriod(input.year, input.month);
   const task = await getTaskById(input.taskId);
   if (!task) throw new Error('AUTOMATION_TASK_NOT_FOUND');
   if (task.type !== TaskType.AUTOMATION) throw new Error('TASK_IS_NOT_AUTOMATION');
 
   const registration = getRegisteredAutomationForTask(task);
   if (!registration || !registration.validateTask(task)) throw new Error('AUTOMATION_TYPE_NOT_REGISTERED');
+  const auditInput = registration.automationName === 'thegame-entities-period-audit'
+    ? validateTheGamePeriodAuditInput(input.input)
+    : null;
+  const monthlyInput = registration.automationName === 'monthly-close'
+    ? monthlyCloseInput(input)
+    : null;
+  if (!auditInput && !monthlyInput) throw new Error('AUTOMATION_RUNNER_NOT_REGISTERED');
 
   // The Run command is the activation boundary. Automation Tasks may be
   // created, paused, or left in a previous terminal state; the process that
@@ -277,22 +434,26 @@ export async function runAutomation(input: RunAutomationInput): Promise<Automati
     });
   }
 
-  const initial = baseExecution(input.taskId, input.year, input.month, input.mode, input.requestId);
+  if (registration.automationName === 'thegame-entities-period-audit') {
+    return runPeriodAuditAutomation(input.taskId, auditInput!, input.requestId);
+  }
+
+  const initial = baseExecution(input.taskId, monthlyInput!.year, monthlyInput!.month, monthlyInput!.mode, input.requestId);
   const created = await createOrGetWorkflowExecution(initial);
   await indexAutomationWorkflowExecution(input.taskId, created.execution.workflowId);
 
   if (!created.created) {
     if (created.execution.state === WorkflowStatus.COMPLETED) {
-      await ensureReportAction(input.taskId, created.execution, input.mode);
+      await ensureReportAction(input.taskId, created.execution, monthlyInput!.mode);
     }
-    return toResult(input.taskId, created.execution, input.mode);
+    return toResult(input.taskId, created.execution, monthlyInput!.mode);
   }
 
-  if (input.mode === 'dry-run') {
+  if (monthlyInput!.mode === 'dry-run') {
     const completed = await dryRun(created.execution);
     await saveWorkflowExecution(completed);
-    await ensureReportAction(input.taskId, completed, input.mode);
-    return toResult(input.taskId, completed, input.mode);
+    await ensureReportAction(input.taskId, completed, monthlyInput!.mode);
+    return toResult(input.taskId, completed, monthlyInput!.mode);
   }
 
   const ownerId = `${input.initiator}:${input.taskId}`;
@@ -301,14 +462,14 @@ export async function runAutomation(input: RunAutomationInput): Promise<Automati
 
   try {
     const completed = await executeMonthlyClose(leased);
-    await ensureReportAction(input.taskId, completed, input.mode);
-    return toResult(input.taskId, completed, input.mode);
+    await ensureReportAction(input.taskId, completed, monthlyInput!.mode);
+    return toResult(input.taskId, completed, monthlyInput!.mode);
   } catch (error: any) {
     leased.state = WorkflowStatus.FAILED_RETRYABLE;
     leased.currentStep = 'core-failed';
     leased.lastErrorCode = error instanceof Error ? error.message : 'MONTHLY_CLOSE_FAILED';
     leased.updatedAt = getUTCNow().toISOString();
     await saveWorkflowExecution(leased);
-    return toResult(input.taskId, leased, input.mode);
+    return toResult(input.taskId, leased, monthlyInput!.mode);
   }
 }

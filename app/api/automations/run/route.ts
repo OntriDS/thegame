@@ -11,10 +11,6 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const mode = body?.mode as AutomationRunMode;
-    if (mode !== 'dry-run' && mode !== 'execute') {
-      return NextResponse.json({ error: 'mode must be dry-run or execute' }, { status: 400 });
-    }
     if (typeof body?.taskId !== 'string' || !body.taskId.trim()) {
       return NextResponse.json({ error: 'taskId is required' }, { status: 400 });
     }
@@ -22,11 +18,11 @@ export async function POST(request: NextRequest) {
     const requestIdBody = typeof body?.requestId === 'string' ? body.requestId.trim() : '';
     const requestId = requestIdHeader || requestIdBody || undefined;
 
+    const legacyInput = { year: Number(body.year), month: Number(body.month), mode: body.mode as AutomationRunMode };
+    const closedInput = body?.input === undefined ? legacyInput : body.input;
     const result = await runAutomation({
       taskId: body.taskId.trim(),
-      year: Number(body.year),
-      month: Number(body.month),
-      mode,
+      input: closedInput,
       requestId,
       initiator: 'pixelbrain-m2m',
     });

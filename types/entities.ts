@@ -375,7 +375,8 @@ export interface WorkflowExecutionV1 {
 }
 
 export type WorkflowInputV1 =
-  | { workflowType: 'monthly-close'; year: number; month: number; mode: 'dry-run' | 'execute' };
+  | { workflowType: 'monthly-close'; year: number; month: number; mode: 'dry-run' | 'execute' }
+  | { workflowType: 'thegame-entities-period-audit'; year: number; months: number[] };
 
 export interface MonthlyCloseProgressV1 {
   workflowType: 'monthly-close';
@@ -394,7 +395,48 @@ export interface MonthlyCloseProgressV1 {
   completedAt?: UtcIsoString;
 }
 
-export type WorkflowProgressV1 = MonthlyCloseProgressV1;
+export type PeriodAuditEntityFamilyV1 = 'tasks' | 'financials' | 'items' | 'sales';
+export type PeriodAuditSourceStatusV1 = 'available' | 'unavailable';
+
+export interface PeriodAuditFindingV1 {
+  entityFamily: PeriodAuditEntityFamilyV1;
+  entityId: EntityId;
+  month: number | null;
+  rule: string;
+  severity: 'info' | 'warning' | 'error';
+  observed: string;
+  suggestedAction: string;
+}
+
+export interface PeriodAuditMonthSummaryV1 {
+  month: number;
+  tasks: number;
+  financials: number;
+  items: number;
+  sales: number;
+  notDateable: number;
+  noActivity: boolean;
+}
+
+export interface TheGamePeriodAuditPacketV1 {
+  schemaVersion: 1;
+  year: number;
+  months: number[];
+  generatedAt: UtcIsoString;
+  groupingRules: Record<PeriodAuditEntityFamilyV1, string>;
+  sourceStatus: Record<PeriodAuditEntityFamilyV1, PeriodAuditSourceStatusV1>;
+  monthsSummary: PeriodAuditMonthSummaryV1[];
+  findings: PeriodAuditFindingV1[];
+  findingsTruncated: boolean;
+  references: 'not-checked';
+}
+
+export interface PeriodAuditProgressV1 extends TheGamePeriodAuditPacketV1 {
+  workflowType: 'thegame-entities-period-audit';
+  completedAt?: UtcIsoString;
+}
+
+export type WorkflowProgressV1 = MonthlyCloseProgressV1 | PeriodAuditProgressV1;
 
 export interface StepOutcomeV1 {
   step: string;
@@ -426,7 +468,7 @@ export type AutomationAgentActionStatus =
   | 'failed-retryable'
   | 'failed-terminal';
 
-export interface AutomationAgentActionV1 {
+export interface MonthlyCloseReportAgentActionV1 {
   actionId: string;
   runId: WorkflowId;
   automationTaskId: string;
@@ -450,6 +492,27 @@ export interface AutomationAgentActionV1 {
   createdAt: UtcIsoString;
   updatedAt: UtcIsoString;
 }
+
+export interface TheGamePeriodAuditReportAgentActionV1 {
+  actionId: string;
+  runId: WorkflowId;
+  automationTaskId: string;
+  agentSlug: 'analyst';
+  capability: 'create-thegame-period-audit-report';
+  mode: 'read-only';
+  reportInput: TheGamePeriodAuditPacketV1;
+  status: AutomationAgentActionStatus;
+  claimToken?: string;
+  claimExpiresAt?: UtcIsoString;
+  resultRef?: string;
+  errorCode?: string;
+  createdAt: UtcIsoString;
+  updatedAt: UtcIsoString;
+}
+
+export type AutomationAgentActionV1 =
+  | MonthlyCloseReportAgentActionV1
+  | TheGamePeriodAuditReportAgentActionV1;
 /** Gamification rewards - ONLY Points, J$ earned via Points Exchange */
 export interface Rewards {
   points: {                 // points system - the ONLY rewards

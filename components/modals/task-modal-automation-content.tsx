@@ -16,6 +16,7 @@ import { BUSINESS_STRUCTURE, TaskStatus, TaskType } from '@/types/enums';
 import { v4 as uuid } from 'uuid';
 import type { Station } from '@/types/type-aliases';
 import { Calendar as CalendarIcon } from 'lucide-react';
+import { AUTOMATION_DEFINITION_OPTIONS } from '@/workflows/automation/automation-registry';
 
 interface AutomationTaskModalContentProps {
   task?: Task | null;
@@ -48,6 +49,7 @@ export default function AutomationTaskModalContent({
   const [doneAt, setDoneAt] = useState<Date | undefined>();
   const [collectedAt, setCollectedAt] = useState<Date | undefined>();
   const [showDatesModal, setShowDatesModal] = useState(false);
+  const [automationName, setAutomationName] = useState('monthly-close');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -60,6 +62,7 @@ export default function AutomationTaskModalContent({
     setOwnerId(task?.ownerIds?.[0] || '');
     setDoneAt(runtimeTask?.doneAt ? new Date(runtimeTask.doneAt) : undefined);
     setCollectedAt(runtimeTask?.collectedAt ? new Date(runtimeTask.collectedAt) : undefined);
+    setAutomationName((task as any)?.context?.automation?.automationName || 'monthly-close');
     setError('');
   }, [task]);
 
@@ -69,6 +72,12 @@ export default function AutomationTaskModalContent({
     setError('');
     if (!name.trim() || !description.trim()) {
       setError('Name and exact execution description are required.');
+      return;
+    }
+
+    const definition = AUTOMATION_DEFINITION_OPTIONS.find((option) => option.automationName === automationName);
+    if (!definition) {
+      setError('Select a registered automation.');
       return;
     }
 
@@ -90,7 +99,7 @@ export default function AutomationTaskModalContent({
       },
       context: {
         ...((task as any)?.context || {}),
-        automation: { automationType: 'close', automationName: 'monthly-close' },
+        automation: { automationType: definition.automationType, automationName: definition.automationName },
       },
     } as Task;
 
@@ -146,12 +155,21 @@ export default function AutomationTaskModalContent({
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>Automation type</Label>
-          <Input value="close" readOnly />
-        </div>
-        <div className="space-y-2">
-          <Label>Registered automation name</Label>
-          <Input value="monthly-close" readOnly />
+          <Label>Registered automation</Label>
+          <Select value={automationName} onValueChange={(value) => {
+            setAutomationName(value);
+            const nextDefinition = AUTOMATION_DEFINITION_OPTIONS.find((option) => option.automationName === value);
+            if (!task && nextDefinition) setName(nextDefinition.defaultTaskName);
+          }}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {AUTOMATION_DEFINITION_OPTIONS.map((option) => (
+                <SelectItem key={option.automationName} value={option.automationName}>
+                  {option.automationType} / {option.automationName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       {error && <p className="mt-4 text-sm text-destructive">{error}</p>}

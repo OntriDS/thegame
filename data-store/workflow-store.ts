@@ -195,7 +195,7 @@ export async function getAutomationAgentAction(actionId: string): Promise<Automa
 }
 
 export async function claimNextAutomationAgentAction(
-  agentSlug: 'admin',
+  agentSlug: 'admin' | 'analyst',
   actionId?: string,
   leaseSeconds = 1200,
 ): Promise<AutomationAgentActionV1 | null> {
@@ -239,11 +239,15 @@ export async function completeAutomationAgentAction(input: {
   if (action.status !== 'running' || action.claimToken !== input.claimToken) {
     throw new Error('AUTOMATION_AGENT_ACTION_CLAIM_INVALID');
   }
-  if (input.status === 'completed') {
+  if (input.status === 'completed' && action.capability === 'create-monthly-close-report') {
     const period = `${action.reportInput.year}-${String(action.reportInput.month).padStart(2, '0')}`;
     const expected = action.mode === 'dry-run'
       ? `workspaces/administration-hq/monthly-close-reports/${period}-dry-run.md`
       : `workspaces/administration-hq/monthly-close-reports/${period}.md`;
+    if (input.resultRef !== expected) throw new Error('AUTOMATION_AGENT_ACTION_RESULT_REF_INVALID');
+  }
+  if (input.status === 'completed' && action.capability === 'create-thegame-period-audit-report') {
+    const expected = `workspaces/analysis-observatory/thegame-period-audit/${action.reportInput.year}.md`;
     if (input.resultRef !== expected) throw new Error('AUTOMATION_AGENT_ACTION_RESULT_REF_INVALID');
   }
   const updated = {
