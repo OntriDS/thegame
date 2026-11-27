@@ -1,5 +1,12 @@
 import { randomUUID } from 'crypto';
-import type { WorkflowExecutionV1, MonthlyCloseProgressV1, PeriodAuditProgressV1, TheGamePeriodAuditPacketV1 } from '@/types/entities';
+import type {
+  WorkflowExecutionV1,
+  MonthlyCloseProgressV1,
+  PeriodAuditProgressV1,
+  PeriodAuditProgressV2,
+  TheGamePeriodAuditPacketV1,
+  TheGamePeriodAuditPacketV2,
+} from '@/types/entities';
 import { SaleStatus, TaskStatus, TaskType, WorkflowStatus } from '@/types/enums';
 import { getTaskById, getTasksForMonth, getSalesForMonth, upsertTask } from '@/data-store/datastore';
 import { CollectionService } from '@/workflows/collection.service';
@@ -17,6 +24,8 @@ import { collectTheGamePeriodAudit, validateTheGamePeriodAuditInput } from './th
 
 export type AutomationRunMode = 'dry-run' | 'execute' | 'read-only';
 type MonthlyCloseRunMode = Exclude<AutomationRunMode, 'read-only'>;
+type PeriodAuditProgress = PeriodAuditProgressV1 | PeriodAuditProgressV2;
+type PeriodAuditPacket = TheGamePeriodAuditPacketV1 | TheGamePeriodAuditPacketV2;
 
 export interface RunAutomationInput {
   taskId: string;
@@ -44,7 +53,7 @@ export interface AutomationRunResult {
     salesEligible?: number;
     tasksCollected?: number;
     salesCollected?: number;
-    packet?: TheGamePeriodAuditPacketV1;
+    packet?: PeriodAuditPacket;
     errorCode?: string;
   };
   report: {
@@ -291,7 +300,7 @@ function baseAuditExecution(taskId: string, year: number, months: number[], requ
 }
 
 async function ensurePeriodAuditReportAction(taskId: string, execution: WorkflowExecutionV1) {
-  const progress = execution.progress as PeriodAuditProgressV1 | undefined;
+  const progress = execution.progress as PeriodAuditProgress | undefined;
   if (!progress || execution.state !== WorkflowStatus.COMPLETED) return null;
   const actionId = `automation:${execution.workflowId}:analyst:create-thegame-period-audit-report`;
   const { workflowType: _workflowType, completedAt: _completedAt, ...packet } = progress;
@@ -311,7 +320,7 @@ async function ensurePeriodAuditReportAction(taskId: string, execution: Workflow
 }
 
 async function toPeriodAuditResult(taskId: string, execution: WorkflowExecutionV1): Promise<AutomationRunResult> {
-  const progress = execution.progress as PeriodAuditProgressV1 | undefined;
+  const progress = execution.progress as PeriodAuditProgress | undefined;
   const reportAction = await getAutomationAgentAction(`automation:${execution.workflowId}:analyst:create-thegame-period-audit-report`);
   const coreStatus: AutomationRunResult['core']['status'] = execution.state === WorkflowStatus.COMPLETED
     ? 'completed'
@@ -329,7 +338,7 @@ async function toPeriodAuditResult(taskId: string, execution: WorkflowExecutionV
         : reportAction.status === 'failed-terminal'
           ? 'failed-terminal'
           : 'finishing';
-  const { workflowType: _workflowType, completedAt: _completedAt, ...packet } = progress || {} as PeriodAuditProgressV1;
+  const { workflowType: _workflowType, completedAt: _completedAt, ...packet } = progress || {} as PeriodAuditProgress;
   return {
     automationTaskId: taskId,
     automationType: 'audit',
@@ -339,7 +348,7 @@ async function toPeriodAuditResult(taskId: string, execution: WorkflowExecutionV
     status,
     core: {
       status: coreStatus,
-      ...(progress ? { packet: packet as TheGamePeriodAuditPacketV1 } : {}),
+      ...(progress ? { packet: packet as PeriodAuditPacket } : {}),
       errorCode: execution.lastErrorCode,
     },
     report: reportAction

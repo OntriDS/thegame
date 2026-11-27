@@ -431,12 +431,41 @@ export interface TheGamePeriodAuditPacketV1 {
   references: 'not-checked';
 }
 
+export interface PeriodAuditReferenceIssueV2 {
+  linkId: EntityId;
+  linkType: string;
+  missingEndpoint: 'source' | 'target';
+  entityType: string;
+  entityId: EntityId;
+}
+
+export interface PeriodAuditReferenceCheckV2 {
+  status: 'checked' | 'partial' | 'unavailable';
+  scope: string;
+  entitiesChecked: number;
+  linksChecked: number;
+  issueCount: number;
+  findings: PeriodAuditReferenceIssueV2[];
+  findingsTruncated: boolean;
+}
+
+export interface TheGamePeriodAuditPacketV2 extends Omit<TheGamePeriodAuditPacketV1, 'schemaVersion' | 'references'> {
+  schemaVersion: 2;
+  references: PeriodAuditReferenceCheckV2;
+}
+
 export interface PeriodAuditProgressV1 extends TheGamePeriodAuditPacketV1 {
   workflowType: 'thegame-entities-period-audit';
   completedAt?: UtcIsoString;
 }
 
-export type WorkflowProgressV1 = MonthlyCloseProgressV1 | PeriodAuditProgressV1;
+export interface PeriodAuditProgressV2 extends TheGamePeriodAuditPacketV2 {
+  workflowType: 'thegame-entities-period-audit';
+  completedAt?: UtcIsoString;
+}
+
+export type WorkflowProgressV1 = MonthlyCloseProgressV1 | PeriodAuditProgressV1 | PeriodAuditProgressV2;
+export type TheGamePeriodAuditPacket = TheGamePeriodAuditPacketV1 | TheGamePeriodAuditPacketV2;
 
 export interface StepOutcomeV1 {
   step: string;
@@ -500,7 +529,7 @@ export interface TheGamePeriodAuditReportAgentActionV1 {
   agentSlug: 'analyst';
   capability: 'create-thegame-period-audit-report';
   mode: 'read-only';
-  reportInput: TheGamePeriodAuditPacketV1;
+  reportInput: TheGamePeriodAuditPacket;
   status: AutomationAgentActionStatus;
   claimToken?: string;
   claimExpiresAt?: UtcIsoString;
