@@ -110,6 +110,7 @@ interface TaskModalProps {
   onComplete?: () => void;
   allTasksForOrder?: Task[];
   isRecurrentModal?: boolean;
+  initialCreateKind?: TaskModalContentKind;
   prefetchedData?: TaskModalPrefetchedData;
 }
 
@@ -131,6 +132,7 @@ export default function TaskModal({
   onComplete,
   allTasksForOrder,
   isRecurrentModal = false,
+  initialCreateKind,
   prefetchedData,
 }: TaskModalProps) {
   const [allTasks, setAllTasks] = useState<Task[]>([]);
@@ -139,11 +141,12 @@ export default function TaskModal({
   const [allCharacters, setAllCharacters] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   /** New-task only: override Mission | Recurrent | Automation (null = use isRecurrentModal default). */
-  const [createKindChoice, setCreateKindChoice] = useState<TaskModalContentKind | null>(null);
+  const [createKindChoice, setCreateKindChoice] = useState<TaskModalContentKind | null>(initialCreateKind ?? null);
 
   useEffect(() => {
     if (!open) setCreateKindChoice(null);
-  }, [open]);
+    else if (initialCreateKind) setCreateKindChoice(initialCreateKind);
+  }, [open, initialCreateKind]);
 
   useEffect(() => {
     if (open) {

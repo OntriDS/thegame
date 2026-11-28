@@ -906,6 +906,7 @@ export default function ControlRoom() {
               )
             )
           }
+          initialCreateKind={activeSubTab === 'automation-tree' ? 'Automation' : undefined}
           onSave={async (task) => {
             // Parent only calls DataStore - Adapter processes through Link Connector automatically
             try {

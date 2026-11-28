@@ -629,12 +629,10 @@ export default function TaskTree({
               initialLabel={stationFilterLabel}
             />
           </div>
-          {activeSubTab !== 'automation-tree' && (
-            <Button variant="ghost" size="sm" onClick={onNewTask}>
-              <PlusCircle className="h-4 w-4 mr-2" />
-              + New Task
-            </Button>
-          )}
+          <Button variant="ghost" size="sm" onClick={onNewTask}>
+            <PlusCircle className="h-4 w-4 mr-2" />
+            {activeSubTab === 'automation-tree' ? '+ New Automation Task' : '+ New Task'}
+          </Button>
         </div>
       </div>
 
@@ -668,4 +666,4 @@ export default function TaskTree({
       </div>
     </aside>
   );
-} 
+}
