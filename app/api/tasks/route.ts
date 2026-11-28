@@ -10,7 +10,7 @@ import { requireAdminAuth, requireAdminOrM2MAuth } from '@/lib/api-auth';
 import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
 import { parseDateToUTC } from '@/lib/utils/date-parsers';
 import { hasNonZeroTaskPoints, validateTaskRewardStatus } from '@/lib/task-reward-validation';
-import { getRegisteredAutomation } from '@/workflows/automation/automation-registry';
+import { getAutomationTaskId, getRegisteredAutomation } from '@/workflows/automation/automation-registry';
 
 const normalizeCharacterId = (value: unknown): string | null => {
   if (typeof value !== 'string') return null;
@@ -108,6 +108,9 @@ export async function POST(req: NextRequest) {
     const isStructuralGroup = taskBody.type === TaskType.MISSION_GROUP || taskBody.type === TaskType.RECURRENT_GROUP;
     const automationValidation = validateAutomationDefinition(taskBody as any);
     if (automationValidation) return NextResponse.json(automationValidation, { status: 400 });
+    const automationDefinition = taskBody.type === TaskType.AUTOMATION
+      ? getRegisteredAutomation(taskBody.context?.automation?.automationType, taskBody.context?.automation?.automationName)
+      : null;
     const incomingTaskCharacterId = normalizeCharacterId((taskBody as { characterId?: string | null }).characterId);
     const characterId = incomingTaskCharacterId;
 
@@ -221,7 +224,26 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const id = taskBody.id || uuid();
+    const requestedId = typeof taskBody.id === 'string' && taskBody.id.trim() ? taskBody.id.trim() : undefined;
+    const id = automationDefinition
+      ? getAutomationTaskId(automationDefinition.automationName)
+      : requestedId || uuid();
+    if (automationDefinition && requestedId && requestedId !== id) {
+      const requestedTask = await getTaskById(requestedId);
+      if (requestedTask) {
+        return NextResponse.json({
+          error: 'Automation Task IDs are fixed by their registered automation name.',
+          expectedTaskId: id,
+        }, { status: 409 });
+      }
+    }
+    const existingTask = await getTaskById(id);
+    if (automationDefinition && existingTask && requestedId !== id) {
+      return NextResponse.json({
+        error: 'This registered Automation Task already exists. Edit the existing task instead of creating another.',
+        taskId: id,
+      }, { status: 409 });
+    }
     let parentId = taskBody.parentId;
 
     // Explicitly block self-referential parent assignment (circular reference)
@@ -230,7 +252,6 @@ export async function POST(req: NextRequest) {
       parentId = null;
     }
 
-    const existingTask = taskBody.id ? await getTaskById(taskBody.id) : null;
     const requestedStatus = isStructuralGroup ? TaskStatus.NONE : taskBody.status as TaskStatus | undefined;
     const rewardValidation = validateTaskRewardStatus(requestedStatus, rewardPoints);
     if (rewardValidation) return NextResponse.json(rewardValidation, { status: 400 });

@@ -13,7 +13,6 @@ import { TaskModalFooter } from './task-modal';
 import DatesSubmodal from './submodals/dates-submodal';
 import { Task } from '@/types/entities';
 import { BUSINESS_STRUCTURE, TaskStatus, TaskType } from '@/types/enums';
-import { v4 as uuid } from 'uuid';
 import type { Station } from '@/types/type-aliases';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { AUTOMATION_DEFINITION_OPTIONS } from '@/workflows/automation/automation-registry';
@@ -83,7 +82,7 @@ export default function AutomationTaskModalContent({
 
     const nextTask = {
       ...(task || {}),
-      id: task?.id || uuid(),
+      ...(task?.id ? { id: task.id } : {}),
       name: name.trim(),
       description: description.trim(),
       type: TaskType.AUTOMATION,

@@ -1,8 +1,8 @@
 import 'server-only';
 
 import { CanonicalLinkType, EntityType, LinkType } from '@/types/enums';
-import { buildLinkKey, buildLinksGlobalIndexKey } from '@/data-store/keys';
-import { kvMGet, kvScan, kvSMembers } from '@/lib/utils/kv';
+import { buildDataKey, buildLinkKey, buildLinksGlobalIndexKey } from '@/data-store/keys';
+import { kvGet, kvMGet, kvScan, kvSMembers } from '@/lib/utils/kv';
 import { validateBusinessRules, validateLinkTypeCompatibility } from '@/links/link-validation';
 import type { Link } from '@/types/entities';
 
@@ -84,8 +84,6 @@ async function entityExists(type: string, id: string): Promise<boolean> {
     const { iamService } = await import('@/lib/iam-service');
     return !!(await iamService.getAccountById(id));
   }
-  const { buildDataKey } = await import('@/data-store/keys');
-  const { kvGet } = await import('@/lib/utils/kv');
   return !!(await kvGet(buildDataKey(type as EntityType, id)));
 }
 
@@ -104,6 +102,14 @@ function pushIssue(issues: Issue[], total: { count: number }, issue: Issue) {
   if (issues.length < MAX_ISSUES) issues.push(issue);
 }
 
+async function mapBatched<T, R>(items: T[], batchSize: number, map: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = [];
+  for (let index = 0; index < items.length; index += batchSize) {
+    results.push(...await Promise.all(items.slice(index, index + batchSize).map(map)));
+  }
+  return results;
+}
+
 /** Full read-only scan of Link rows and the active Link indexes. */
 export async function auditLinkRegistry() {
   const issues: Issue[] = [];
@@ -116,8 +122,13 @@ export async function auditLinkRegistry() {
   const selectedLinkKeys = allLinkKeys.slice(0, MAX_LINKS);
   const selectedIndexKeys = indexKeysAll.slice(0, MAX_INDEX_KEYS);
   const persistedLinkIds = new Set(selectedLinkKeys.map((key) => key.slice(LINK_KEY_PREFIX.length)));
-  const rawRows = selectedLinkKeys.length ? await kvMGet<unknown>(selectedLinkKeys) : [];
+  const rawRows: (unknown | null)[] = [];
+  for (let index = 0; index < selectedLinkKeys.length; index += 500) {
+    rawRows.push(...await kvMGet<unknown>(selectedLinkKeys.slice(index, index + 500)));
+  }
   const linksById = new Map<string, LinkRow>();
+  const endpointChecks: Array<{ linkId: string; side: 'source' | 'target'; ref: { type: string; id: string } }> = [];
+  let incomplete = allLinkKeys.length > MAX_LINKS || indexKeysAll.length > MAX_INDEX_KEYS;
   let malformedRows = 0;
 
   for (let index = 0; index < selectedLinkKeys.length; index += 1) {
@@ -162,20 +173,28 @@ export async function auditLinkRegistry() {
       pushIssue(issues, total, { code: 'LINK_SELF_REFERENCE', linkId, detail: `Link points from ${source.type}:${source.id} to itself.` });
     }
 
-    for (const [side, ref] of [['source', source], ['target', target]] as const) {
-      try {
-        if (!(await cachedEntityExists(endpointExistence, ref.type, ref.id))) {
-          pushIssue(issues, total, {
-            code: side === 'source' ? 'LINK_SOURCE_MISSING' : 'LINK_TARGET_MISSING',
-            linkId,
-            entityType: ref.type,
-            entityId: ref.id,
-            detail: `${side} entity ${ref.type}:${ref.id} does not exist in its canonical store.`,
-          });
-        }
-      } catch (error) {
-        pushIssue(issues, total, { code: 'LINK_ENDPOINT_CHECK_UNAVAILABLE', linkId, entityType: ref.type, entityId: ref.id, detail: `Could not verify ${side} entity: ${error instanceof Error ? error.message : 'read failed'}.` });
-      }
+    endpointChecks.push({ linkId, side: 'source', ref: source }, { linkId, side: 'target', ref: target });
+  }
+
+  const endpointResults = await mapBatched(endpointChecks, 25, async (check) => {
+    try {
+      return { check, exists: await cachedEntityExists(endpointExistence, check.ref.type, check.ref.id) };
+    } catch (error) {
+      return { check, error: error instanceof Error ? error.message : 'read failed' };
+    }
+  });
+  for (const { check, exists, error } of endpointResults) {
+    if (error) {
+      incomplete = true;
+      pushIssue(issues, total, { code: 'LINK_ENDPOINT_CHECK_UNAVAILABLE', linkId: check.linkId, entityType: check.ref.type, entityId: check.ref.id, detail: `Could not verify ${check.side} entity: ${error}.` });
+    } else if (!exists) {
+      pushIssue(issues, total, {
+        code: check.side === 'source' ? 'LINK_SOURCE_MISSING' : 'LINK_TARGET_MISSING',
+        linkId: check.linkId,
+        entityType: check.ref.type,
+        entityId: check.ref.id,
+        detail: `${check.side} entity ${check.ref.type}:${check.ref.id} does not exist in its canonical store.`,
+      });
     }
   }
 
@@ -191,17 +210,31 @@ export async function auditLinkRegistry() {
       semanticLinks.set(signature, link.id);
     }
 
-    if (BUSINESS_RULE_LINK_TYPES.has(link.linkType as LinkType)) {
-      try {
-        const rules = await validateBusinessRules(link.linkType as LinkType, source as any, target as any, typeof link.relationship === 'string' ? link.relationship : undefined);
-        if (!rules.isValid) {
-          pushIssue(issues, total, { code: 'LINK_BUSINESS_RULE_INVALID', linkId: link.id, detail: rules.reason || 'Link failed a business rule.' });
-        }
-        for (const warning of rules.warnings ?? []) {
-          pushIssue(issues, total, { code: 'LINK_BUSINESS_RULE_WARNING', linkId: link.id, detail: warning });
-        }
-      } catch (error) {
-        pushIssue(issues, total, { code: 'LINK_BUSINESS_RULE_CHECK_UNAVAILABLE', linkId: link.id, detail: error instanceof Error ? error.message : 'Business-rule check failed.' });
+  }
+
+  const businessRuleLinks = [...linksById.values()].filter((link) => BUSINESS_RULE_LINK_TYPES.has(link.linkType as LinkType));
+  const businessRuleResults = await mapBatched(businessRuleLinks, 20, async (link) => {
+    try {
+      const source = endpoint(link.source)!;
+      const target = endpoint(link.target)!;
+      return {
+        link,
+        rules: await validateBusinessRules(link.linkType as LinkType, source as any, target as any, typeof link.relationship === 'string' ? link.relationship : undefined),
+      };
+    } catch (error) {
+      return { link, error: error instanceof Error ? error.message : 'Business-rule check failed.' };
+    }
+  });
+  for (const { link, rules, error } of businessRuleResults) {
+    if (error) {
+      incomplete = true;
+      pushIssue(issues, total, { code: 'LINK_BUSINESS_RULE_CHECK_UNAVAILABLE', linkId: link.id, detail: error });
+    } else if (rules) {
+      if (!rules.isValid) {
+        pushIssue(issues, total, { code: 'LINK_BUSINESS_RULE_INVALID', linkId: link.id, detail: rules.reason || 'Link failed a business rule.' });
+      }
+      for (const warning of rules.warnings ?? []) {
+        pushIssue(issues, total, { code: 'LINK_BUSINESS_RULE_WARNING', linkId: link.id, detail: warning });
       }
     }
   }
@@ -210,12 +243,23 @@ export async function auditLinkRegistry() {
   let staleEndpointMemberships = 0;
   let missingEndpointMemberships = 0;
   const endpointMembersByKey = new Map<string, Set<string>>();
-  for (const indexKey of selectedIndexKeys) {
+  const indexMemberGroups = await mapBatched(selectedIndexKeys, 50, async (indexKey) => {
+    try {
+      return { indexKey, memberIds: await kvSMembers(indexKey) };
+    } catch (error) {
+      return { indexKey, error: error instanceof Error ? error.message : 'index read failed' };
+    }
+  });
+  for (const { indexKey, memberIds, error } of indexMemberGroups) {
+    if (error || !memberIds) {
+      incomplete = true;
+      pushIssue(issues, total, { code: 'LINK_INDEX_READ_UNAVAILABLE', detail: `Could not read endpoint index ${indexKey}: ${error || 'read failed'}.` });
+      continue;
+    }
     const entityKey = indexKey.slice(ENTITY_INDEX_PREFIX.length);
     const separator = entityKey.indexOf(':');
     const entityType = separator < 0 ? entityKey : entityKey.slice(0, separator);
     const entityId = separator < 0 ? '' : entityKey.slice(separator + 1);
-    const memberIds = await kvSMembers(indexKey);
     endpointMembersByKey.set(indexKey, new Set(memberIds));
     endpointIndexMemberships += memberIds.length;
     for (const linkId of memberIds) {
@@ -246,7 +290,7 @@ export async function auditLinkRegistry() {
     }
   }
 
-  const partial = allLinkKeys.length > MAX_LINKS || indexKeysAll.length > MAX_INDEX_KEYS;
+  const partial = incomplete;
   return {
     ok: total.count === 0 && !partial,
     audit: 'linkRegistryIntegrity',

@@ -87,6 +87,11 @@ export function getRegisteredAutomation(
   return definition?.automationType === automationType ? definition : null;
 }
 
+/** Stable entity identity: one Automation Task definition per registered procedure. */
+export function getAutomationTaskId(automationName: RegisteredAutomationName): string {
+  return `automation-task-${automationName}`;
+}
+
 /** Safe for the Control Room: contains labels and closed input kinds only. */
 export const AUTOMATION_DEFINITION_OPTIONS = Object.values(AUTOMATION_REGISTRY).map((definition) => ({
   automationType: definition.automationType,
