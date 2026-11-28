@@ -15,6 +15,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: [
+      'tests/integrity/link-registry-audit.test.ts',
       'tests/entity-test/task-entity-test-clean.ts',
       'tests/entity-test/task-entity-test-full.ts',
       'tests/entity-test/task-entity-test-full-done.ts',
