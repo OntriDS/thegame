@@ -18,7 +18,7 @@ const CANONICAL_RELATIONSHIPS: Partial<Record<CanonicalLinkType, readonly string
   [CanonicalLinkType.CHARACTER_PLAYER]: ['primary'],
   [CanonicalLinkType.CHARACTER_SITE]: ['owns'],
   [CanonicalLinkType.TASK_TASK]: ['parent'],
-  [CanonicalLinkType.TASK_SITE]: ['performed-at'],
+  [CanonicalLinkType.TASK_SITE]: ['performed-at', 'target-location'],
   [CanonicalLinkType.TASK_CHARACTER]: ['owner', 'customer', 'beneficiary', 'creator'],
   [CanonicalLinkType.TASK_PLAYER]: ['points-earned'],
   [CanonicalLinkType.TASK_FINREC]: ['task-record'],
@@ -165,8 +165,10 @@ export async function auditLinkRegistry() {
       }
     }
     const canonicalRelationships = CANONICAL_RELATIONSHIPS[link.linkType as CanonicalLinkType];
-    if (canonicalRelationships && (!canonicalRelationships.includes(String(link.relationship ?? '')))) {
-      pushIssue(issues, total, { code: 'LINK_RELATIONSHIP_INVALID', linkId, detail: `Relationship ${String(link.relationship ?? '(missing)')} is invalid for ${String(link.linkType)}; expected one of: ${canonicalRelationships.join(', ')}.` });
+    if (canonicalRelationships && !String(link.relationship ?? '').trim()) {
+      pushIssue(issues, total, { code: 'LINK_RELATIONSHIP_MISSING', linkId, detail: `A relationship is required for ${String(link.linkType)}; expected one of: ${canonicalRelationships.join(', ')}.` });
+    } else if (canonicalRelationships && !canonicalRelationships.includes(String(link.relationship))) {
+      pushIssue(issues, total, { code: 'LINK_RELATIONSHIP_INVALID', linkId, detail: `Relationship ${String(link.relationship)} is invalid for ${String(link.linkType)}; expected one of: ${canonicalRelationships.join(', ')}.` });
     }
 
     if (source.type === target.type && source.id === target.id) {

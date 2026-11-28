@@ -228,7 +228,7 @@ export type TaskTaskLinkV1 = LinkEnvelopeV1<
 
 export type TaskSiteLinkV1 = LinkEnvelopeV1<
   CanonicalLinkType.TASK_SITE,
-  { relationship: 'performed-at' }
+  { relationship: 'performed-at' | 'target-location' }
 >;
 
 export type TaskCharacterLinkV1 = LinkEnvelopeV1<
