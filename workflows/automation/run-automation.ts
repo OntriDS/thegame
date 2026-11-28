@@ -6,6 +6,12 @@ import type {
   PeriodAuditProgressV2,
   TheGamePeriodAuditPacketV1,
   TheGamePeriodAuditPacketV2,
+  AkilesWeeklySchedulePacketV1,
+  AkilesWeeklyScheduleCollectionProgressV1,
+  AkilesWeeklyScheduleApplyProgressV1,
+  WeeklyScheduleApplyReceiptV1,
+  WeeklyScheduleChangeV1,
+  Task,
 } from '@/types/entities';
 import { SaleStatus, TaskStatus, TaskType, WorkflowStatus } from '@/types/enums';
 import { getTaskById, getTasksForMonth, getSalesForMonth, upsertTask } from '@/data-store/datastore';
@@ -15,12 +21,17 @@ import {
   createOrGetAutomationAgentAction,
   createOrGetWorkflowExecution,
   getAutomationAgentAction,
+  getWorkflowExecution,
   indexAutomationWorkflowExecution,
   saveWorkflowExecution,
 } from '@/data-store/workflow-store';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { getRegisteredAutomationForTask } from './automation-registry';
 import { collectTheGamePeriodAudit, validateTheGamePeriodAuditInput } from './thegame-period-audit';
+import {
+  applyAkilesWeeklySchedule,
+  collectAkilesWeeklySchedule,
+} from './akiles-weekly-schedule';
 
 export type AutomationRunMode = 'dry-run' | 'execute' | 'read-only';
 type MonthlyCloseRunMode = Exclude<AutomationRunMode, 'read-only'>;
@@ -54,6 +65,8 @@ export interface AutomationRunResult {
     tasksCollected?: number;
     salesCollected?: number;
     packet?: PeriodAuditPacket;
+    schedulePacket?: AkilesWeeklySchedulePacketV1;
+    scheduleReceipt?: WeeklyScheduleApplyReceiptV1;
     errorCode?: string;
   };
   report: {
@@ -277,6 +290,31 @@ function monthlyCloseInput(input: RunAutomationInput): { year: number; month: nu
   return { year, month, mode };
 }
 
+type WeeklyScheduleRunInput =
+  | { operation: 'collect'; selectedDate: string }
+  | { operation: 'apply'; sourceRunId: string; changes: WeeklyScheduleChangeV1[] };
+
+function weeklyScheduleInput(input: RunAutomationInput): WeeklyScheduleRunInput {
+  if (!input.input || typeof input.input !== 'object' || Array.isArray(input.input)) {
+    throw new Error('WEEKLY_SCHEDULE_INPUT_REQUIRED');
+  }
+  const raw = input.input as Record<string, unknown>;
+  if (raw.operation === 'apply') {
+    if (typeof raw.sourceRunId !== 'string' || !raw.sourceRunId.trim() || !Array.isArray(raw.changes)) {
+      throw new Error('WEEKLY_SCHEDULE_APPLY_INPUT_INVALID');
+    }
+    return { operation: 'apply', sourceRunId: raw.sourceRunId, changes: raw.changes as WeeklyScheduleChangeV1[] };
+  }
+  if (raw.operation !== undefined && raw.operation !== 'collect') {
+    throw new Error('WEEKLY_SCHEDULE_OPERATION_INVALID');
+  }
+  const selectedDate = raw.selectedDate;
+  if (typeof selectedDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
+    throw new Error('WEEKLY_SCHEDULE_DATE_INVALID');
+  }
+  return { operation: 'collect', selectedDate };
+}
+
 function auditExecutionId(taskId: string, year: number, months: number[], requestId?: string): string {
   return `automation:${taskId}:thegame-entities-period-audit:${year}:${months.join('-')}:${requestId || randomUUID()}`;
 }
@@ -410,6 +448,157 @@ async function runPeriodAuditAutomation(taskId: string, input: unknown, requestI
   }
 }
 
+function weeklyScheduleExecutionId(taskId: string, input: WeeklyScheduleRunInput, requestId?: string): string {
+  const runKey = input.operation === 'collect'
+    ? `collect:${input.selectedDate}`
+    : `apply:${input.sourceRunId}`;
+  return `automation:${taskId}:akiles-weekly-schedule:${runKey}:${requestId || randomUUID()}`;
+}
+
+function baseWeeklyScheduleExecution(
+  taskId: string,
+  input: WeeklyScheduleRunInput,
+  ownerId: string,
+  requestId?: string,
+): WorkflowExecutionV1 {
+  const now = getUTCNow().toISOString();
+  return {
+    workflowId: weeklyScheduleExecutionId(taskId, input, requestId),
+    workflowType: 'akiles-weekly-schedule',
+    rootCommandId: `automation-run:${taskId}:akiles-weekly-schedule:${input.operation}:${requestId || 'new'}`,
+    state: WorkflowStatus.PENDING,
+    revision: 0,
+    currentStep: 'pending',
+    input: input.operation === 'collect'
+      ? { workflowType: 'akiles-weekly-schedule', operation: 'collect', selectedDate: input.selectedDate, ownerId }
+      : { workflowType: 'akiles-weekly-schedule', operation: 'apply', sourceRunId: input.sourceRunId, changes: input.changes },
+    completedSteps: [],
+    stepOutcomes: {},
+    attempts: 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+async function toWeeklyScheduleResult(taskId: string, execution: WorkflowExecutionV1): Promise<AutomationRunResult> {
+  const progress = execution.progress as AkilesWeeklyScheduleCollectionProgressV1 | AkilesWeeklyScheduleApplyProgressV1 | undefined;
+  const coreStatus: AutomationRunResult['core']['status'] = execution.state === WorkflowStatus.COMPLETED
+    ? 'completed'
+    : execution.state === WorkflowStatus.FAILED_RETRYABLE
+      ? 'failed-retryable'
+      : execution.state === WorkflowStatus.FAILED_TERMINAL
+        ? 'failed-terminal'
+        : 'running';
+  return {
+    automationTaskId: taskId,
+    automationType: 'schedule',
+    automationName: 'akiles-weekly-schedule',
+    runId: execution.workflowId,
+    mode: 'read-only',
+    status: coreStatus,
+    core: {
+      status: coreStatus,
+      ...(progress && progress.operation === 'collect' ? {
+        schedulePacket: {
+          schemaVersion: progress.schemaVersion,
+          selectedDate: progress.selectedDate,
+          weekStartDate: progress.weekStartDate,
+          weekEndDate: progress.weekEndDate,
+          generatedAt: progress.generatedAt,
+          owner: progress.owner,
+          includedStatuses: progress.includedStatuses,
+          excludedCountsByStatus: progress.excludedCountsByStatus,
+          tasks: progress.tasks,
+        },
+      } : {}),
+      ...(progress?.operation === 'apply' ? { scheduleReceipt: progress.receipt } : {}),
+      errorCode: execution.lastErrorCode,
+    },
+    report: { status: 'not-configured' },
+  };
+}
+
+async function runAkilesWeeklyScheduleAutomation(
+  taskId: string,
+  task: Task,
+  input: WeeklyScheduleRunInput,
+  requestId?: string,
+): Promise<AutomationRunResult> {
+  if (task.ownerIds?.length !== 1) throw new Error('WEEKLY_SCHEDULE_REQUIRES_ONE_OWNER');
+  const ownerId = task.ownerIds[0];
+  const initial = baseWeeklyScheduleExecution(taskId, input, ownerId, requestId);
+  const created = await createOrGetWorkflowExecution(initial);
+  await indexAutomationWorkflowExecution(taskId, created.execution.workflowId);
+  if (!created.created) return toWeeklyScheduleResult(taskId, created.execution);
+
+  try {
+    let progress: AkilesWeeklyScheduleCollectionProgressV1 | AkilesWeeklyScheduleApplyProgressV1;
+    let currentStep: string;
+    let stepName: string;
+    if (input.operation === 'collect') {
+      const packet = await collectAkilesWeeklySchedule(task, { selectedDate: input.selectedDate });
+      progress = {
+        ...packet,
+        workflowType: 'akiles-weekly-schedule',
+        operation: 'collect',
+      };
+      currentStep = 'schedule-context-collected';
+      stepName = 'akiles-weekly-schedule-context';
+    } else {
+      if (!input.sourceRunId.startsWith(`automation:${taskId}:akiles-weekly-schedule:collect:`)) {
+        throw new Error('WEEKLY_SCHEDULE_SOURCE_RUN_OUT_OF_SCOPE');
+      }
+      const sourceRun = await getWorkflowExecution(input.sourceRunId);
+      const sourceProgress = sourceRun?.progress as AkilesWeeklyScheduleCollectionProgressV1 | undefined;
+      if (!sourceRun
+        || sourceRun.workflowType !== 'akiles-weekly-schedule'
+        || sourceRun.state !== WorkflowStatus.COMPLETED
+        || sourceProgress?.workflowType !== 'akiles-weekly-schedule'
+        || sourceProgress.operation !== 'collect'
+        || sourceProgress.owner.id !== ownerId) {
+        throw new Error('WEEKLY_SCHEDULE_SOURCE_RUN_INVALID');
+      }
+      const receipt = await applyAkilesWeeklySchedule(input.sourceRunId, sourceProgress, input.changes);
+      progress = {
+        workflowType: 'akiles-weekly-schedule',
+        operation: 'apply',
+        receipt,
+        completedAt: getUTCNow().toISOString(),
+      };
+      currentStep = receipt.status === 'completed' ? 'schedule-applied' : 'schedule-partial';
+      stepName = 'akiles-weekly-schedule-apply';
+    }
+    const completedAt = getUTCNow().toISOString();
+    const completed: WorkflowExecutionV1 = {
+      ...created.execution,
+      state: WorkflowStatus.COMPLETED,
+      currentStep,
+      progress: { ...progress, completedAt },
+      completedSteps: [stepName],
+      stepOutcomes: {
+        [stepName]: {
+          step: stepName,
+          state: 'completed',
+          completedAt,
+        },
+      },
+      updatedAt: completedAt,
+    };
+    await saveWorkflowExecution(completed);
+    return toWeeklyScheduleResult(taskId, completed);
+  } catch (error) {
+    const failed: WorkflowExecutionV1 = {
+      ...created.execution,
+      state: WorkflowStatus.FAILED_TERMINAL,
+      currentStep: input.operation === 'collect' ? 'schedule-context-failed' : 'schedule-apply-failed',
+      lastErrorCode: error instanceof Error ? error.message : 'WEEKLY_SCHEDULE_RUN_FAILED',
+      updatedAt: getUTCNow().toISOString(),
+    };
+    await saveWorkflowExecution(failed);
+    return toWeeklyScheduleResult(taskId, failed);
+  }
+}
+
 export async function runAutomation(input: RunAutomationInput): Promise<AutomationRunResult> {
   const task = await getTaskById(input.taskId);
   if (!task) throw new Error('AUTOMATION_TASK_NOT_FOUND');
@@ -423,7 +612,10 @@ export async function runAutomation(input: RunAutomationInput): Promise<Automati
   const monthlyInput = registration.automationName === 'monthly-close'
     ? monthlyCloseInput(input)
     : null;
-  if (!auditInput && !monthlyInput) throw new Error('AUTOMATION_RUNNER_NOT_REGISTERED');
+  const scheduleInput = registration.automationName === 'akiles-weekly-schedule'
+    ? weeklyScheduleInput(input)
+    : null;
+  if (!auditInput && !monthlyInput && !scheduleInput) throw new Error('AUTOMATION_RUNNER_NOT_REGISTERED');
 
   // The Run command is the activation boundary. Automation Tasks may be
   // created, paused, or left in a previous terminal state; the process that
@@ -445,6 +637,9 @@ export async function runAutomation(input: RunAutomationInput): Promise<Automati
 
   if (registration.automationName === 'thegame-entities-period-audit') {
     return runPeriodAuditAutomation(input.taskId, auditInput!, input.requestId);
+  }
+  if (registration.automationName === 'akiles-weekly-schedule') {
+    return runAkilesWeeklyScheduleAutomation(input.taskId, task, scheduleInput!, input.requestId);
   }
 
   const initial = baseExecution(input.taskId, monthlyInput!.year, monthlyInput!.month, monthlyInput!.mode, input.requestId);

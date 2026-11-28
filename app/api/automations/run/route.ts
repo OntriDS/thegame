@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     const message = error instanceof Error ? error.message : 'Automation run failed.';
     const status = message === 'AUTOMATION_RUN_IN_PROGRESS' ? 409
-      : message.includes('NOT_FOUND') || message.includes('NOT_RUNNABLE') || message.includes('NOT_AUTOMATION') || message.includes('INVALID') || message.includes('NOT_REGISTERED') ? 400
+      : message.includes('NOT_FOUND') || message.includes('NOT_RUNNABLE') || message.includes('NOT_AUTOMATION') || message.includes('INVALID') || message.includes('NOT_REGISTERED') || message.includes('WEEKLY_SCHEDULE') ? 400
         : 500;
     return NextResponse.json({ error: message }, { status });
   }

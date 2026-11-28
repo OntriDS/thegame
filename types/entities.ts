@@ -376,7 +376,65 @@ export interface WorkflowExecutionV1 {
 
 export type WorkflowInputV1 =
   | { workflowType: 'monthly-close'; year: number; month: number; mode: 'dry-run' | 'execute' }
-  | { workflowType: 'thegame-entities-period-audit'; year: number; months: number[] };
+  | { workflowType: 'thegame-entities-period-audit'; year: number; months: number[] }
+  | { workflowType: 'akiles-weekly-schedule'; operation: 'collect'; selectedDate: string; ownerId: EntityId }
+  | { workflowType: 'akiles-weekly-schedule'; operation: 'apply'; sourceRunId: WorkflowId; changes: WeeklyScheduleChangeV1[] };
+
+export interface WeeklyScheduleChangeV1 {
+  taskId: EntityId;
+  scheduledStart: UtcIsoString;
+  scheduledEnd: UtcIsoString;
+  /** Include only when the Creator explicitly requested a priority change. */
+  priority?: TaskPriority;
+}
+
+export interface WeeklyScheduleTaskSnapshotV1 {
+  id: EntityId;
+  version: number;
+  name: string;
+  description?: string;
+  type: Task['type'];
+  status: TaskStatus;
+  priority: TaskPriority;
+  station: Station;
+  parentId?: EntityId | null;
+  ownerIds: EntityId[];
+  schedule?: TaskScheduleV1;
+  recurrence?: TaskContextV1['recurrence'];
+}
+
+export interface AkilesWeeklySchedulePacketV1 {
+  schemaVersion: 1;
+  selectedDate: string;
+  weekStartDate: string;
+  weekEndDate: string;
+  generatedAt: UtcIsoString;
+  owner: { id: EntityId; name: string };
+  includedStatuses: TaskStatus[];
+  excludedCountsByStatus: Partial<Record<TaskStatus, number>>;
+  tasks: WeeklyScheduleTaskSnapshotV1[];
+}
+
+export interface AkilesWeeklyScheduleCollectionProgressV1 extends AkilesWeeklySchedulePacketV1 {
+  workflowType: 'akiles-weekly-schedule';
+  operation: 'collect';
+  completedAt?: UtcIsoString;
+}
+
+export interface WeeklyScheduleApplyReceiptV1 {
+  sourceRunId: WorkflowId;
+  status: 'completed' | 'partial';
+  applied: Array<{ taskId: EntityId; version: number }>;
+  alreadyApplied: EntityId[];
+  skipped: Array<{ taskId: EntityId; reason: string }>;
+}
+
+export interface AkilesWeeklyScheduleApplyProgressV1 {
+  workflowType: 'akiles-weekly-schedule';
+  operation: 'apply';
+  receipt: WeeklyScheduleApplyReceiptV1;
+  completedAt: UtcIsoString;
+}
 
 export interface MonthlyCloseProgressV1 {
   workflowType: 'monthly-close';
@@ -464,7 +522,7 @@ export interface PeriodAuditProgressV2 extends TheGamePeriodAuditPacketV2 {
   completedAt?: UtcIsoString;
 }
 
-export type WorkflowProgressV1 = MonthlyCloseProgressV1 | PeriodAuditProgressV1 | PeriodAuditProgressV2;
+export type WorkflowProgressV1 = MonthlyCloseProgressV1 | PeriodAuditProgressV1 | PeriodAuditProgressV2 | AkilesWeeklyScheduleCollectionProgressV1 | AkilesWeeklyScheduleApplyProgressV1;
 export type TheGamePeriodAuditPacket = TheGamePeriodAuditPacketV1 | TheGamePeriodAuditPacketV2;
 
 export interface StepOutcomeV1 {

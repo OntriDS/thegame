@@ -2,12 +2,13 @@ import type { Task } from '@/types/entities';
 import { TaskType } from '@/types/enums';
 
 export type AutomationType = 'close' | 'audit' | 'schedule';
-export type RegisteredAutomationName = 'monthly-close' | 'thegame-entities-period-audit';
+export type RegisteredAutomationName = 'monthly-close' | 'thegame-entities-period-audit' | 'akiles-weekly-schedule';
 
 /** A small code-owned Run form, never a schema persisted on a Task. */
 export type AutomationInputDescriptor =
   | { kind: 'utc-period'; label: string; supportsMode: true }
-  | { kind: 'year-months'; label: string; supportsMode: false };
+  | { kind: 'year-months'; label: string; supportsMode: false }
+  | { kind: 'utc-week'; label: string; supportsMode: false };
 
 export interface AutomationDefinition {
   automationType: AutomationType;
@@ -54,6 +55,21 @@ export const AUTOMATION_REGISTRY: Record<RegisteredAutomationName, AutomationDef
       task.type === TaskType.AUTOMATION
       && task.context?.automation?.automationType === 'audit'
       && task.context?.automation?.automationName === 'thegame-entities-period-audit'
+    ),
+  },
+  'akiles-weekly-schedule': {
+    automationType: 'schedule',
+    automationName: 'akiles-weekly-schedule',
+    defaultTaskName: 'akiles-weekly-schedule',
+    input: {
+      kind: 'utc-week',
+      label: 'UTC week',
+      supportsMode: false,
+    },
+    validateTask: (task) => (
+      task.type === TaskType.AUTOMATION
+      && task.context?.automation?.automationType === 'schedule'
+      && task.context?.automation?.automationName === 'akiles-weekly-schedule'
     ),
   },
 };

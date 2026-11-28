@@ -71,6 +71,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
   const [automationYear, setAutomationYear] = useState(() => new Date().getUTCFullYear());
   const [automationMonth, setAutomationMonth] = useState(() => new Date().getUTCMonth() + 1);
   const [automationMonths, setAutomationMonths] = useState('');
+  const [automationSelectedDate, setAutomationSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [automationMode, setAutomationMode] = useState<'dry-run' | 'execute'>('dry-run');
   const [automationRunning, setAutomationRunning] = useState(false);
   const [automationResult, setAutomationResult] = useState<any>(null);
@@ -406,6 +407,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
     const automationName = rawAutomation.automationName || (rawAutomation.automationType === 'monthly-close' ? 'monthly-close' : 'unknown');
     const isMonthlyClose = automationName === 'monthly-close';
     const isPeriodAudit = automationName === 'thegame-entities-period-audit';
+    const isWeeklySchedule = automationName === 'akiles-weekly-schedule';
     const runAutomation = async () => {
       if (isMonthlyClose && automationMode === 'execute' && !window.confirm('Execute monthly close for this UTC period? This changes eligible Tasks and Sales to collected.')) return;
       const months = automationMonths.trim() === ''
@@ -413,7 +415,9 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
         : automationMonths.split(',').map((value) => Number(value.trim()));
       const input = isMonthlyClose
         ? { year: automationYear, month: automationMonth, mode: automationMode }
-        : { year: automationYear, ...(months ? { months } : {}) };
+        : isPeriodAudit
+          ? { year: automationYear, ...(months ? { months } : {}) }
+          : { selectedDate: automationSelectedDate };
       setAutomationRunning(true);
       setAutomationError(null);
       setAutomationResult(null);
@@ -449,8 +453,12 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
             <p><span className="font-medium text-foreground">Type:</span> {automationType}</p>
             <p><span className="font-medium text-foreground">Name:</span> {automationName}</p>
             <p><span className="font-medium text-foreground">Status:</span> {task.status}</p>
-            <p>{isMonthlyClose ? 'Runs use an explicit UTC period. Dry-run is non-mutating; execute requires confirmation.' : 'Runs inspect the selected year. Leave months blank to audit all twelve months.'}</p>
-            <div className={`grid ${isMonthlyClose ? 'grid-cols-2' : 'grid-cols-1'} gap-3 pt-2 text-left`}>
+            <p>{isMonthlyClose
+              ? 'Runs use an explicit UTC period. Dry-run is non-mutating; execute requires confirmation.'
+              : isPeriodAudit
+                ? 'Runs inspect the selected year. Leave months blank to audit all twelve months.'
+                : 'Choose any UTC date in the week to collect Akiles’s current schedulable tasks. Kay applies requested schedule changes through the same bounded Automation.'}</p>
+            {!isWeeklySchedule && <div className={`grid ${isMonthlyClose ? 'grid-cols-2' : 'grid-cols-1'} gap-3 pt-2 text-left`}>
               <div>
                 <Label htmlFor="automation-year">UTC year</Label>
                 <Input id="automation-year" type="number" min={2000} max={9999} value={automationYear} onChange={(event) => setAutomationYear(Number(event.target.value))} />
@@ -459,7 +467,11 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
                 <Label htmlFor="automation-month">UTC month</Label>
                 <Input id="automation-month" type="number" min={1} max={12} value={automationMonth} onChange={(event) => setAutomationMonth(Number(event.target.value))} />
               </div>}
-            </div>
+            </div>}
+            {isWeeklySchedule && <div className="pt-2 text-left">
+              <Label htmlFor="automation-week-date">Any date in the target week (UTC)</Label>
+              <Input id="automation-week-date" type="date" value={automationSelectedDate} onChange={(event) => setAutomationSelectedDate(event.target.value)} />
+            </div>}
             {isPeriodAudit && <div className="pt-1 text-left">
               <Label htmlFor="automation-months">Months (optional)</Label>
               <Input id="automation-months" value={automationMonths} onChange={(event) => setAutomationMonths(event.target.value)} placeholder="1, 2, 3 — blank for all months" />
@@ -482,10 +494,12 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
                 <p><span className="font-medium">Core:</span> {automationResult.core?.status}</p>
                 {isMonthlyClose
                   ? <p><span className="font-medium">Eligible:</span> tasks {automationResult.core?.tasksEligible ?? 0}, sales {automationResult.core?.salesEligible ?? 0}</p>
-                  : <p><span className="font-medium">Audit months:</span> {automationResult.core?.packet?.months?.join(', ') || 'none'}</p>}
+                  : isPeriodAudit
+                    ? <p><span className="font-medium">Audit months:</span> {automationResult.core?.packet?.months?.join(', ') || 'none'}</p>
+                    : <p><span className="font-medium">Collected:</span> {automationResult.core?.schedulePacket?.tasks?.length ?? 0} tasks for {automationResult.core?.schedulePacket?.weekStartDate || 'the selected week'}</p>}
               </div>
             )}
-            <Button className="w-full mt-2" onClick={runAutomation} disabled={automationRunning || task.status !== TaskStatus.IN_PROGRESS || (!isMonthlyClose && !isPeriodAudit)}>
+            <Button className="w-full mt-2" onClick={runAutomation} disabled={automationRunning || task.status !== TaskStatus.IN_PROGRESS || (!isMonthlyClose && !isPeriodAudit && !isWeeklySchedule)}>
               {automationRunning ? 'Running…' : 'Run registered automation'}
             </Button>
             {task.status !== TaskStatus.IN_PROGRESS && <p className="text-xs text-muted-foreground">Set this definition to in-progress to enable Run.</p>}

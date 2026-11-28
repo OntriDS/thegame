@@ -9,6 +9,7 @@ import { execute as getSites } from './database/get-sites';
 import { execute as getCharacters } from './database/get-characters';
 
 import { execute as linkConsistency } from './integrity/link-consistency';
+import { execute as linkRegistryIntegrity } from './integrity/link-registry';
 import { execute as statusConsistency } from './integrity/status-consistency';
 import { execute as monthIndex } from './integrity/month-index';
 import { execute as archiveCompleteness } from './integrity/archive-completeness';
@@ -39,6 +40,7 @@ export const toolRegistry = new Map<string, (args: any) => Promise<any>>([
   ['get_sites', getSites],
   ['get_characters', getCharacters],
   ['thegame.integrity.linkConsistency', linkConsistency],
+  ['thegame.integrity.linkRegistry', linkRegistryIntegrity],
   ['thegame.integrity.statusConsistency', statusConsistency],
   ['thegame.integrity.monthIndex', monthIndex],
   ['thegame.integrity.archiveCompleteness', archiveCompleteness],

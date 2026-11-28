@@ -326,6 +326,27 @@
       }
     },
     {
+      "id": "thegame.integrity.linkRegistry",
+      "description": "Bounded read-only audit of all persisted Link rows and active Link indexes. Checks row shape, endpoint existence, LinkType compatibility, canonical relationship values, duplicates, defined business rules, and missing or stale index memberships. Does not infer missing business Links or repair data.",
+      "tags": [
+        "database",
+        "integrity",
+        "links",
+        "thegame"
+      ],
+      "implementation": "thegame/tools/integrity/link-registry.ts",
+      "roles": [
+        "orchestrator",
+        "king",
+        "analyst"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
       "id": "thegame.integrity.statusConsistency",
       "description": "Sale/financial status vs payment and collected flags for the month index.",
       "tags": [
