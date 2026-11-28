@@ -10,7 +10,7 @@ type KVClient = {
   del: (key: string, ...keys: string[]) => Promise<void>;
   mget: (keys: string[]) => Promise<(unknown | null)[]>;
   mset: (keyValues: Record<string, unknown>) => Promise<void>;
-  scan: (cursor: number, options?: { match?: string; count?: number }) => Promise<[string, string[]]>;
+  scan: (cursor: number | string, options?: { match?: string; count?: number }) => Promise<[string, string[]]>;
   sadd: (key: string, ...members: string[]) => Promise<void>;
   srem: (key: string, ...members: string[]) => Promise<void>;
   smembers: (key: string) => Promise<string[]>;
@@ -109,7 +109,9 @@ export async function kvMSet<T>(keyValues: Record<string, T>): Promise<void> {
 
 export async function kvScan(prefix: string, limit = 100): Promise<string[]> {
   const keys: string[] = [];
-  let cursor = 0;
+  // Upstash Redis cursors can exceed Number.MAX_SAFE_INTEGER. Keep them as
+  // strings or precision loss can terminate a multi-page scan early.
+  let cursor = '0';
 
   do {
     const [newCursor, foundKeys] = await kv.scan(cursor, {
@@ -117,8 +119,8 @@ export async function kvScan(prefix: string, limit = 100): Promise<string[]> {
       count: limit
     });
     keys.push(...foundKeys);
-    cursor = parseInt(newCursor);
-  } while (cursor !== 0);
+    cursor = String(newCursor);
+  } while (cursor !== '0');
 
   return keys;
 }
