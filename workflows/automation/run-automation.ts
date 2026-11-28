@@ -3,9 +3,7 @@ import type {
   WorkflowExecutionV1,
   MonthlyCloseProgressV1,
   PeriodAuditProgressV1,
-  PeriodAuditProgressV2,
   TheGamePeriodAuditPacketV1,
-  TheGamePeriodAuditPacketV2,
   AkilesWeeklySchedulePacketV1,
   AkilesWeeklyScheduleCollectionProgressV1,
   AkilesWeeklyScheduleApplyProgressV1,
@@ -35,8 +33,8 @@ import {
 
 export type AutomationRunMode = 'dry-run' | 'execute' | 'read-only';
 type MonthlyCloseRunMode = Exclude<AutomationRunMode, 'read-only'>;
-type PeriodAuditProgress = PeriodAuditProgressV1 | PeriodAuditProgressV2;
-type PeriodAuditPacket = TheGamePeriodAuditPacketV1 | TheGamePeriodAuditPacketV2;
+type PeriodAuditProgress = PeriodAuditProgressV1;
+type PeriodAuditPacket = TheGamePeriodAuditPacketV1;
 
 export interface RunAutomationInput {
   taskId: string;

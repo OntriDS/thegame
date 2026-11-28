@@ -5,10 +5,10 @@ import type {
   Link,
   PeriodAuditFindingV1,
   PeriodAuditMonthSummaryV1,
-  PeriodAuditReferenceCheckV2,
+  PeriodAuditReferenceCheckV1,
   Sale,
   Task,
-  TheGamePeriodAuditPacketV2,
+  TheGamePeriodAuditPacketV1,
 } from '@/types/entities';
 import { EntityType, FinancialStatus, SaleStatus, TaskStatus } from '@/types/enums';
 import {
@@ -29,7 +29,7 @@ export interface TheGamePeriodAuditInput {
   months?: number[];
 }
 
-export type { TheGamePeriodAuditPacketV2 as TheGamePeriodAuditPacket } from '@/types/entities';
+export type { TheGamePeriodAuditPacketV1 as TheGamePeriodAuditPacket } from '@/types/entities';
 
 const MAX_FINDINGS = 100;
 const MAX_REFERENCE_ENTITIES = 5000;
@@ -80,7 +80,7 @@ function referenceEntityKey(reference: EntityRef): string | null {
 async function inspectPeriodReferences(
   selectedEntities: EntityRef[],
   sourceCoverageIncomplete: boolean,
-): Promise<PeriodAuditReferenceCheckV2> {
+): Promise<PeriodAuditReferenceCheckV1> {
   const sortedEntities = [...new Map(
     selectedEntities
       .filter((entity) => entity?.type && entity?.id)
@@ -121,7 +121,7 @@ async function inspectPeriodReferences(
       }
     }
 
-    const findings: PeriodAuditReferenceCheckV2['findings'] = [];
+    const findings: PeriodAuditReferenceCheckV1['findings'] = [];
     let issueCount = 0;
     const recordMissingEndpoint = (link: Link, endpoint: 'source' | 'target') => {
       const reference = link[endpoint];
@@ -165,9 +165,9 @@ async function inspectPeriodReferences(
   }
 }
 
-export async function collectTheGamePeriodAudit(input: TheGamePeriodAuditInput): Promise<TheGamePeriodAuditPacketV2> {
+export async function collectTheGamePeriodAudit(input: TheGamePeriodAuditInput): Promise<TheGamePeriodAuditPacketV1> {
   const { year, months } = validateTheGamePeriodAuditInput(input);
-  const sourceStatus = Object.fromEntries(FAMILIES.map((family) => [family, 'available'])) as TheGamePeriodAuditPacketV2['sourceStatus'];
+  const sourceStatus = Object.fromEntries(FAMILIES.map((family) => [family, 'available'])) as TheGamePeriodAuditPacketV1['sourceStatus'];
   const settled = await Promise.allSettled([
     getAllTasks(),
     getAllFinancialsHistorical(),
@@ -248,7 +248,7 @@ export async function collectTheGamePeriodAudit(input: TheGamePeriodAuditInput):
     Object.values(sourceStatus).some((status) => status !== 'available'),
   );
   return {
-    schemaVersion: 2,
+    schemaVersion: 1,
     year,
     months,
     generatedAt: new Date().toISOString(),

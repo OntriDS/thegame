@@ -486,10 +486,10 @@ export interface TheGamePeriodAuditPacketV1 {
   monthsSummary: PeriodAuditMonthSummaryV1[];
   findings: PeriodAuditFindingV1[];
   findingsTruncated: boolean;
-  references: 'not-checked';
+  references: PeriodAuditReferenceCheckV1;
 }
 
-export interface PeriodAuditReferenceIssueV2 {
+export interface PeriodAuditReferenceIssueV1 {
   linkId: EntityId;
   linkType: string;
   missingEndpoint: 'source' | 'target';
@@ -497,19 +497,14 @@ export interface PeriodAuditReferenceIssueV2 {
   entityId: EntityId;
 }
 
-export interface PeriodAuditReferenceCheckV2 {
-  status: 'checked' | 'partial' | 'unavailable';
+export interface PeriodAuditReferenceCheckV1 {
+  status: 'checked' | 'partial' | 'unavailable' | 'not-checked';
   scope: string;
   entitiesChecked: number;
   linksChecked: number;
   issueCount: number;
-  findings: PeriodAuditReferenceIssueV2[];
+  findings: PeriodAuditReferenceIssueV1[];
   findingsTruncated: boolean;
-}
-
-export interface TheGamePeriodAuditPacketV2 extends Omit<TheGamePeriodAuditPacketV1, 'schemaVersion' | 'references'> {
-  schemaVersion: 2;
-  references: PeriodAuditReferenceCheckV2;
 }
 
 export interface PeriodAuditProgressV1 extends TheGamePeriodAuditPacketV1 {
@@ -517,13 +512,8 @@ export interface PeriodAuditProgressV1 extends TheGamePeriodAuditPacketV1 {
   completedAt?: UtcIsoString;
 }
 
-export interface PeriodAuditProgressV2 extends TheGamePeriodAuditPacketV2 {
-  workflowType: 'thegame-entities-period-audit';
-  completedAt?: UtcIsoString;
-}
-
-export type WorkflowProgressV1 = MonthlyCloseProgressV1 | PeriodAuditProgressV1 | PeriodAuditProgressV2 | AkilesWeeklyScheduleCollectionProgressV1 | AkilesWeeklyScheduleApplyProgressV1;
-export type TheGamePeriodAuditPacket = TheGamePeriodAuditPacketV1 | TheGamePeriodAuditPacketV2;
+export type WorkflowProgressV1 = MonthlyCloseProgressV1 | PeriodAuditProgressV1 | AkilesWeeklyScheduleCollectionProgressV1 | AkilesWeeklyScheduleApplyProgressV1;
+export type TheGamePeriodAuditPacket = TheGamePeriodAuditPacketV1;
 
 export interface StepOutcomeV1 {
   step: string;

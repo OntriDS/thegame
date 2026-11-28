@@ -2,7 +2,9 @@ import type {
   WeeklyScheduleApplyReceiptV1,
   WeeklyScheduleChangeV1,
   AkilesWeeklySchedulePacketV1,
+  ExecutableTaskV1,
   Task,
+  TaskGroupV1,
   WeeklyScheduleTaskSnapshotV1,
 } from '@/types/entities';
 import { EntityType, LinkType, TaskPriority, TaskStatus, TaskType } from '@/types/enums';
@@ -62,7 +64,7 @@ function taskSnapshot(task: Task): WeeklyScheduleTaskSnapshotV1 {
   };
 }
 
-function isStructuralTask(task: Task): boolean {
+function isStructuralTask(task: Task): task is TaskGroupV1 {
   return task.type === TaskType.MISSION_GROUP || task.type === TaskType.RECURRENT_GROUP;
 }
 
@@ -156,7 +158,7 @@ function sameValue(left: unknown, right: unknown): boolean {
   }
 }
 
-function isEligible(task: Task, ownerId: string): boolean {
+function isEligible(task: Task, ownerId: string): task is ExecutableTaskV1 {
   return task.ownerIds?.includes(ownerId) === true
     && INCLUDED_STATUSES.includes(task.status as typeof INCLUDED_STATUSES[number])
     && !isStructuralTask(task);
@@ -289,6 +291,7 @@ export async function applyAkilesWeeklySchedule(
       readBack = null;
     }
     if (!readBack
+      || !isEligible(readBack, packet.owner.id)
       || !sameValue(readBack.schedule?.scheduledStart, desired.start)
       || !sameValue(readBack.schedule?.scheduledEnd, desired.end)
       || (change.priority !== undefined && readBack.priority !== change.priority)) {
