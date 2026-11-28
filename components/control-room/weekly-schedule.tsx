@@ -24,6 +24,16 @@ interface WeeklyScheduleProps {
 const HOURS_IN_DAY = 24;
 const MAX_WORK_HOURS = 12; // Max hours for bar scale
 
+// Recurrence occurrences need an explicit series/instance edit contract before
+// the calendar can safely move them. Ordinary executable tasks can be edited
+// directly through their canonical schedule facet.
+const supportsDirectScheduleDrag = (task: Task) => (
+    task.type !== TaskType.MISSION_GROUP
+    && task.type !== TaskType.RECURRENT_GROUP
+    && task.type !== TaskType.RECURRENT_TEMPLATE
+    && task.type !== TaskType.RECURRENT_INSTANCE
+);
+
 export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpdate }: WeeklyScheduleProps) {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [startHour, setStartHour] = useState(6); // Default start hour: 06:00
@@ -187,11 +197,14 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
                     ...prev,
                     currentY: e.clientY,
                     currentX: e.clientX,
-                    task: {
+                    task: 'schedule' in prev.task && prev.task.schedule ? {
                         ...prev.task,
-                        scheduledStart: newStart,
-                        scheduledEnd: newEnd
-                    }
+                        schedule: {
+                            ...prev.task.schedule,
+                            scheduledStart: newStart.toISOString(),
+                            scheduledEnd: newEnd.toISOString(),
+                        },
+                    } : prev.task,
                 };
             });
         };
@@ -209,6 +222,7 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
 
     const handleDragStart = (e: React.PointerEvent, occurrence: TaskOccurrence, type: 'move' | 'resize-top' | 'resize-bottom') => {
         if (!onTaskUpdate) return;
+        if (!supportsDirectScheduleDrag(occurrence.task)) return;
 
         e.preventDefault();
         e.stopPropagation();
@@ -235,8 +249,15 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
     const getTaskStyle = (occurrence: TaskOccurrence) => {
         // Use dragged state if this is the dragged occurrence
         const isDragging = draggingId === occurrence.occurrenceKey;
-        const currentStart = (isDragging && dragState) ? new Date((dragState.task as any).scheduledStart!) : new Date(occurrence.start);
-        const currentEnd = (isDragging && dragState) ? new Date((dragState.task as any).scheduledEnd!) : new Date(occurrence.end);
+        const draggedSchedule = isDragging && dragState && 'schedule' in dragState.task
+            ? dragState.task.schedule
+            : undefined;
+        const currentStart = draggedSchedule?.scheduledStart
+            ? new Date(draggedSchedule.scheduledStart)
+            : new Date(occurrence.start);
+        const currentEnd = draggedSchedule?.scheduledEnd
+            ? new Date(draggedSchedule.scheduledEnd)
+            : new Date(occurrence.end);
 
         // Calculate position relative to startHour
         let startHourVal = getHours(currentStart);
@@ -258,7 +279,7 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
             zIndex: isDragging ? 50 : 10,
             opacity: isDragging ? 0.9 : 1,
             boxShadow: isDragging ? '0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.2)' : undefined,
-            cursor: 'grab' // Default cursor for the task body
+            cursor: supportsDirectScheduleDrag(occurrence.task) ? 'grab' : 'default'
         };
     };
 
@@ -486,6 +507,17 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
                                                         const isVeryCompact = cellHeight < 35;
                                                         const isCompact = cellHeight < 55;
                                                         const isDetailed = cellHeight >= 70;
+                                                        const previewSchedule = dragState
+                                                            && draggingId === occ.occurrenceKey
+                                                            && 'schedule' in dragState.task
+                                                            ? dragState.task.schedule
+                                                            : undefined;
+                                                        const displayStart = previewSchedule?.scheduledStart
+                                                            ? new Date(previewSchedule.scheduledStart)
+                                                            : new Date(occ.start);
+                                                        const displayEnd = previewSchedule?.scheduledEnd
+                                                            ? new Date(previewSchedule.scheduledEnd)
+                                                            : new Date(occ.end);
 
                                                         return (
                                                             <div
@@ -499,7 +531,7 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
                                                             >
                                                                 {/* Resize Handle Top */}
                                                                 <div
-                                                                    className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize z-20 hover:bg-white/30"
+                                                                    className={cn("absolute top-0 left-0 right-0 h-2 cursor-ns-resize z-20 hover:bg-white/30", !supportsDirectScheduleDrag(occ.task) && "hidden")}
                                                                     onPointerDown={(e) => handleDragStart(e, occ, 'resize-top')}
                                                                 />
 
@@ -523,8 +555,8 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
 
                                                                         {/* Time - Always visible in center */}
                                                                         <span className="text-[0.7rem] text-muted-foreground/80 whitespace-nowrap">
-                                                                            {format(new Date(draggingId === occ.occurrenceKey && dragState ? (dragState.task as any).scheduledStart! : occ.start), 'HH:mm')} -
-                                                                            {format(new Date(draggingId === occ.occurrenceKey && dragState ? (dragState.task as any).scheduledEnd! : occ.end), 'HH:mm')}
+                                                                            {format(displayStart, 'HH:mm')} -
+                                                                            {format(displayEnd, 'HH:mm')}
                                                                         </span>
 
                                                                         {/* Points - Always visible */}
@@ -562,7 +594,7 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
 
                                                                 {/* Resize Handle Bottom */}
                                                                 <div
-                                                                    className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize z-20 hover:bg-white/30"
+                                                                    className={cn("absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize z-20 hover:bg-white/30", !supportsDirectScheduleDrag(occ.task) && "hidden")}
                                                                     onPointerDown={(e) => handleDragStart(e, occ, 'resize-bottom')}
                                                                 />
                                                             </div>
